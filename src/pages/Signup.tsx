@@ -76,10 +76,19 @@ const Signup = () => {
         if (profileError) {
           // Profile update error, but account created
           toast.warning("Account created, but some details couldn't be saved");
-        } else {
-          toast.success("Account created successfully!");
         }
-        navigate("/onboarding");
+        
+        // Check if email confirmation is required
+        if (data.user.identities && data.user.identities.length === 0) {
+          toast.success("Account created! Please check your email to verify your account.", {
+            duration: 6000,
+          });
+        } else {
+          toast.success("Account created successfully! You can now login.");
+        }
+        
+        // Navigate to login page instead of onboarding
+        setTimeout(() => navigate("/login"), 2000);
       }
     } catch (error: any) {
       toast.error("An unexpected error occurred. Please try again.");
