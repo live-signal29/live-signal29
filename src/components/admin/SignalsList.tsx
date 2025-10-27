@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import SignalForm from "./SignalForm";
 
 const SignalsList = () => {
   const queryClient = useQueryClient();
+  const [editingSignal, setEditingSignal] = useState<any>(null);
 
   const { data: signals, isLoading } = useQuery({
     queryKey: ["admin-signals"],
@@ -48,7 +51,7 @@ const SignalsList = () => {
       // Update signal with new status if all TPs are hit
       const updateData: any = { [field]: !currentValue };
       if (allTpsHit) {
-        updateData.status = "Closed";
+        updateData.status = "All TP Hit";
       }
 
       const { error } = await supabase
@@ -113,6 +116,23 @@ const SignalsList = () => {
 
   if (isLoading) return <div>Loading...</div>;
 
+  if (editingSignal) {
+    return (
+      <div>
+        <Button variant="outline" onClick={() => setEditingSignal(null)} className="mb-4">
+          Cancel Edit
+        </Button>
+        <SignalForm 
+          editSignal={editingSignal} 
+          onSuccess={() => {
+            setEditingSignal(null);
+            queryClient.invalidateQueries({ queryKey: ["admin-signals"] });
+          }} 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {signals?.map((signal) => (
@@ -134,7 +154,7 @@ const SignalsList = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">🟢 Running</SelectItem>
-                    <SelectItem value="Closed">🎯 Target Hit</SelectItem>
+                    <SelectItem value="All TP Hit">🎯 All TP Hit</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2">
@@ -142,6 +162,9 @@ const SignalsList = () => {
                 </p>
               </div>
               <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setEditingSignal(signal)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => togglePublished(signal.id, signal.published)}>
                   {signal.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 </Button>

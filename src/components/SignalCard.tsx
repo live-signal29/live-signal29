@@ -98,9 +98,9 @@ const SignalCard = ({ signal }: SignalCardProps) => {
 
         <div className="flex justify-between items-center pt-2 border-t border-border/40">
           <div className="flex items-center gap-2">
-            {signal.status === "Closed" ? (
-              <Badge className="bg-success text-success-foreground">🎯 Target Hit</Badge>
-            ) : signal.status === "SL Hit" ? (
+            {allTpHit || signal.status === "All TP Hit" ? (
+              <Badge className="bg-success text-success-foreground">🎯 All TP Hit</Badge>
+            ) : signal.status === "SL Hit" || signal.status === "Closed" ? (
               <Badge className="bg-destructive text-destructive-foreground">🔴 SL Hit</Badge>
             ) : (
               <Badge className="bg-warning text-warning-foreground">🟢 Running</Badge>
