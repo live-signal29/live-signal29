@@ -14,16 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      chart_analysis: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string
+          published: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url: string
+          published?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string
+          published?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          country_code: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          phone_number: string | null
+          terms_accepted: boolean | null
+          trial_end_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          country_code?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id: string
+          phone_number?: string | null
+          terms_accepted?: boolean | null
+          trial_end_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          country_code?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          phone_number?: string | null
+          terms_accepted?: boolean | null
+          trial_end_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      signals: {
+        Row: {
+          category: string
+          chart_image_url: string | null
+          created_at: string
+          entry: string
+          id: string
+          main_category: string | null
+          note: string | null
+          pair: string
+          published: boolean | null
+          sl: string
+          status: string | null
+          sub_category: string | null
+          tp1: string
+          tp1_hit: boolean | null
+          tp2: string | null
+          tp2_hit: boolean | null
+          tp3: string | null
+          tp3_hit: boolean | null
+          tp4: string | null
+          tp4_hit: boolean | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          chart_image_url?: string | null
+          created_at?: string
+          entry: string
+          id?: string
+          main_category?: string | null
+          note?: string | null
+          pair: string
+          published?: boolean | null
+          sl: string
+          status?: string | null
+          sub_category?: string | null
+          tp1: string
+          tp1_hit?: boolean | null
+          tp2?: string | null
+          tp2_hit?: boolean | null
+          tp3?: string | null
+          tp3_hit?: boolean | null
+          tp4?: string | null
+          tp4_hit?: boolean | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          chart_image_url?: string | null
+          created_at?: string
+          entry?: string
+          id?: string
+          main_category?: string | null
+          note?: string | null
+          pair?: string
+          published?: boolean | null
+          sl?: string
+          status?: string | null
+          sub_category?: string | null
+          tp1?: string
+          tp1_hit?: boolean | null
+          tp2?: string | null
+          tp2_hit?: boolean | null
+          tp3?: string | null
+          tp3_hit?: boolean | null
+          tp4?: string | null
+          tp4_hit?: boolean | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +317,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
