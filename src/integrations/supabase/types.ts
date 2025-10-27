@@ -90,6 +90,7 @@ export type Database = {
           main_category: string | null
           note: string | null
           pair: string
+          profit_note: string | null
           published: boolean | null
           sl: string
           status: string | null
@@ -114,6 +115,7 @@ export type Database = {
           main_category?: string | null
           note?: string | null
           pair: string
+          profit_note?: string | null
           published?: boolean | null
           sl: string
           status?: string | null
@@ -138,6 +140,7 @@ export type Database = {
           main_category?: string | null
           note?: string | null
           pair?: string
+          profit_note?: string | null
           published?: boolean | null
           sl?: string
           status?: string | null

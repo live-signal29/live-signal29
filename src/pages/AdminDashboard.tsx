@@ -63,14 +63,14 @@ const AdminDashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen p-2 sm:p-4 md:p-8">
       <div className="container mx-auto max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold gradient-text">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage signals and chart analysis</p>
+            <h1 className="text-2xl sm:text-3xl font-bold gradient-text">Admin Dashboard</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Manage signals and chart analysis</p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
             <LogOut className="h-4 w-4 mr-2" />
             Logout
           </Button>

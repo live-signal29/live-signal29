@@ -118,26 +118,26 @@ const SignalsList = () => {
       {signals?.map((signal) => (
         <Card key={signal.id}>
           <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  {signal.pair}
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+              <div className="flex-1">
+                <CardTitle className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-base sm:text-lg">{signal.pair}</span>
                   <Badge className={signal.type === "Buy" ? "badge-buy" : "badge-sell"}>
                     {signal.type}
                   </Badge>
-                  <Badge variant="outline">{signal.main_category}</Badge>
-                  <Badge variant="secondary">{signal.sub_category}</Badge>
-                  <Select value={signal.status || "Active"} onValueChange={(value) => updateStatus(signal.id, value)}>
-                    <SelectTrigger className="w-[140px] h-7">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Active">🟢 Running</SelectItem>
-                      <SelectItem value="Closed">🎯 Target Hit</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Badge variant="outline" className="text-xs">{signal.main_category}</Badge>
+                  <Badge variant="secondary" className="text-xs">{signal.sub_category}</Badge>
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <Select value={signal.status || "Active"} onValueChange={(value) => updateStatus(signal.id, value)}>
+                  <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">🟢 Running</SelectItem>
+                    <SelectItem value="Closed">🎯 Target Hit</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2">
                   {format(new Date(signal.created_at), "MMM dd, yyyy HH:mm")}
                 </p>
               </div>
@@ -152,25 +152,25 @@ const SignalsList = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
               <div>
-                <span className="text-sm text-muted-foreground">Entry:</span>
-                <p className="font-semibold">{signal.entry}</p>
+                <span className="text-xs sm:text-sm text-muted-foreground">Entry:</span>
+                <p className="text-sm sm:text-base font-semibold">{signal.entry}</p>
               </div>
               <div>
-                <span className="text-sm text-muted-foreground">SL:</span>
-                <p className="font-semibold text-destructive">{signal.sl}</p>
+                <span className="text-xs sm:text-sm text-muted-foreground">SL:</span>
+                <p className="text-sm sm:text-base font-semibold text-destructive">{signal.sl}</p>
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-semibold">Take Profits:</p>
-              <div className="flex flex-wrap gap-4">
+              <p className="text-xs sm:text-sm font-semibold">Take Profits:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <label className="flex items-center gap-2">
                   <Checkbox
                     checked={signal.tp1_hit}
                     onCheckedChange={() => toggleTpHit(signal.id, "tp1_hit", signal.tp1_hit)}
                   />
-                  <span className="text-sm">TP1: {signal.tp1}</span>
+                  <span className="text-xs sm:text-sm">TP1: {signal.tp1}</span>
                 </label>
                 {signal.tp2 && (
                   <label className="flex items-center gap-2">
@@ -178,7 +178,7 @@ const SignalsList = () => {
                       checked={signal.tp2_hit}
                       onCheckedChange={() => toggleTpHit(signal.id, "tp2_hit", signal.tp2_hit)}
                     />
-                    <span className="text-sm">TP2: {signal.tp2}</span>
+                    <span className="text-xs sm:text-sm">TP2: {signal.tp2}</span>
                   </label>
                 )}
                 {signal.tp3 && (
@@ -187,7 +187,7 @@ const SignalsList = () => {
                       checked={signal.tp3_hit}
                       onCheckedChange={() => toggleTpHit(signal.id, "tp3_hit", signal.tp3_hit)}
                     />
-                    <span className="text-sm">TP3: {signal.tp3}</span>
+                    <span className="text-xs sm:text-sm">TP3: {signal.tp3}</span>
                   </label>
                 )}
                 {signal.tp4 && (
@@ -196,14 +196,19 @@ const SignalsList = () => {
                       checked={signal.tp4_hit}
                       onCheckedChange={() => toggleTpHit(signal.id, "tp4_hit", signal.tp4_hit)}
                     />
-                    <span className="text-sm">TP4: {signal.tp4}</span>
+                    <span className="text-xs sm:text-sm">TP4: {signal.tp4}</span>
                   </label>
                 )}
               </div>
             </div>
+            {(signal as any).profit_note && (
+              <div className="mt-3 p-2 bg-warning/10 border border-warning/20 rounded">
+                <p className="text-xs text-warning italic">{(signal as any).profit_note}</p>
+              </div>
+            )}
             {signal.note && (
               <div className="mt-4 p-3 bg-muted/50 rounded">
-                <p className="text-sm">{signal.note}</p>
+                <p className="text-xs sm:text-sm">{signal.note}</p>
               </div>
             )}
           </CardContent>

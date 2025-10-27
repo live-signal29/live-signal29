@@ -30,6 +30,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     tp4: editSignal?.tp4 || "",
     sl: editSignal?.sl || "",
     note: editSignal?.note || "",
+    profit_note: editSignal?.profit_note || "",
     status: editSignal?.status || "Active",
   });
 
@@ -67,6 +68,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         tp4: validation.data.tp4 || null,
         sl: validation.data.sl,
         note: validation.data.note || null,
+        profit_note: formData.profit_note || null,
         status: formData.status,
       };
 
@@ -213,6 +215,17 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             required
           />
         </div>
+      </div>
+      <div>
+        <Label>Profit Note</Label>
+        <Input
+          placeholder="e.g., 100 pips running profit"
+          value={formData.profit_note}
+          onChange={(e) => setFormData({ ...formData, profit_note: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Small note shown below TPs (e.g., running profit status)
+        </p>
       </div>
       <div>
         <Label>Note</Label>

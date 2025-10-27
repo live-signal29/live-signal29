@@ -59,7 +59,7 @@ const SignalCard = ({ signal }: SignalCardProps) => {
           </span>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="text-center">
             <p className="text-xs text-muted-foreground mb-1">TAKE PROFIT 1</p>
             <div className={`px-2 py-1 rounded border-2 ${signal.tp1_hit ? 'border-success text-success' : 'border-border text-foreground'}`}>
@@ -89,6 +89,12 @@ const SignalCard = ({ signal }: SignalCardProps) => {
             </div>
           </div>
         </div>
+
+        {(signal as any).profit_note && (
+          <div className="mt-2 text-center">
+            <p className="text-xs text-warning italic">{(signal as any).profit_note}</p>
+          </div>
+        )}
 
         <div className="flex justify-between items-center pt-2 border-t border-border/40">
           <div className="flex items-center gap-2">
