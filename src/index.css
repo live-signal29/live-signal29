@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Dark blue gradient theme for trading platform */
+    --background: 220 40% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 35% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 35% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Gold/Amber accent for trading elements */
+    --primary: 45 100% 51%;
+    --primary-foreground: 220 40% 8%;
+
+    --secondary: 220 30% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 220 25% 20%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 195 100% 45%;
+    --accent-foreground: 220 40% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 25% 20%;
+    --input: 220 25% 16%;
+    --ring: 45 100% 51%;
+
+    --radius: 0.75rem;
+
+    /* Custom trading colors */
+    --success: 142 76% 45%;
+    --success-foreground: 210 40% 98%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 40% 8%;
+
+    /* Gradient stops */
+    --gradient-start: 220 45% 10%;
+    --gradient-end: 195 45% 15%;
+  }
+
+  /* Light mode disabled for trading platform */
+  .dark {
+    --background: 220 40% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 35% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 35% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 45 100% 51%;
+    --primary-foreground: 220 40% 8%;
+
+    --secondary: 220 30% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 220 25% 20%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 195 100% 45%;
+    --accent-foreground: 220 40% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 25% 20%;
+    --input: 220 25% 16%;
+    --ring: 45 100% 51%;
+
+    --success: 142 76% 45%;
+    --success-foreground: 210 40% 98%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 40% 8%;
+
+    --gradient-start: 220 45% 10%;
+    --gradient-end: 195 45% 15%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
+  }
+}
+
+@layer components {
+  /* Trading signal status badges */
+  .badge-buy {
+    @apply bg-success/20 text-success border-success/30;
+  }
+  
+  .badge-sell {
+    @apply bg-destructive/20 text-destructive border-destructive/30;
+  }
+
+  .badge-active {
+    @apply bg-primary/20 text-primary border-primary/30;
+  }
+
+  .badge-hit {
+    @apply bg-success/20 text-success border-success/30;
+  }
+
+  /* Animated gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
+    background-size: 200% auto;
+    animation: shimmer 3s linear infinite;
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10;
+  }
+
+  /* Button glow effect */
+  .btn-glow {
+    @apply shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300;
+  }
+}
+
+@layer utilities {
+  @keyframes shimmer {
+    to {
+      background-position: 200% center;
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Hide scrollbar for horizontal scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
