@@ -60,39 +60,39 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
           </div>
         </div>
 
-        {/* TP/SL Table */}
-        <div className="p-4">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center py-2 border-b border-border/40">
-              <span className="text-sm text-muted-foreground">TAKE PROFIT 1</span>
-              <span className={`text-sm font-mono font-semibold ${signal.tp1_hit ? 'text-success' : ''}`}>
+        {/* TP/SL Grid */}
+        <div className="p-4 bg-background">
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">TAKE PROFIT 1</p>
+              <p className={`text-lg font-bold ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
                 {signal.tp1}
-              </span>
+              </p>
             </div>
             
             {signal.tp2 && (
-              <div className="flex justify-between items-center py-2 border-b border-border/40">
-                <span className="text-sm text-muted-foreground">TAKE PROFIT 2</span>
-                <span className={`text-sm font-mono font-semibold ${signal.tp2_hit ? 'text-success' : ''}`}>
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">TAKE PROFIT 2</p>
+                <p className={`text-lg font-bold ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
                   {signal.tp2}
-                </span>
+                </p>
               </div>
             )}
             
             {signal.tp3 && (
-              <div className="flex justify-between items-center py-2 border-b border-border/40">
-                <span className="text-sm text-muted-foreground">TAKE PROFIT 3</span>
-                <span className={`text-sm font-mono font-semibold ${signal.tp3_hit ? 'text-success' : ''}`}>
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">TAKE PROFIT 3</p>
+                <p className={`text-lg font-bold ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
                   {signal.tp3}
-                </span>
+                </p>
               </div>
             )}
             
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-muted-foreground">
-                SL-{signal.type === "Buy" ? "BELOW" : "ABOVE"}
-              </span>
-              <span className="text-sm font-mono font-semibold">{signal.sl}</span>
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">SL-{signal.type === "Buy" ? "BELOW" : "ABOVE"}</p>
+              <p className="text-lg font-bold text-destructive border border-destructive rounded px-2 py-1">
+                {signal.sl}
+              </p>
             </div>
           </div>
         </div>
