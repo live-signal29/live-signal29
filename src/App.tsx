@@ -25,6 +25,10 @@ import Onboarding from "./pages/Onboarding";
 import Profile from "./pages/Profile";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import Premium from "./pages/Premium";
+import FreeTrial from "./pages/FreeTrial";
+import Benefits from "./pages/Benefits";
+import Settings from "./pages/Settings";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<any>(null);
@@ -84,6 +88,10 @@ const App = () => (
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+          <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
+          <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

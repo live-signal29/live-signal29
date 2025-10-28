@@ -52,6 +52,11 @@ export type Database = {
           full_name: string
           id: string
           phone_number: string | null
+          selected_categories: string[] | null
+          subscription_end_date: string | null
+          subscription_plan: string | null
+          subscription_start_date: string | null
+          subscription_status: string | null
           terms_accepted: boolean | null
           trial_end_date: string | null
           updated_at: string | null
@@ -63,6 +68,11 @@ export type Database = {
           full_name: string
           id: string
           phone_number?: string | null
+          selected_categories?: string[] | null
+          subscription_end_date?: string | null
+          subscription_plan?: string | null
+          subscription_start_date?: string | null
+          subscription_status?: string | null
           terms_accepted?: boolean | null
           trial_end_date?: string | null
           updated_at?: string | null
@@ -74,6 +84,11 @@ export type Database = {
           full_name?: string
           id?: string
           phone_number?: string | null
+          selected_categories?: string[] | null
+          subscription_end_date?: string | null
+          subscription_plan?: string | null
+          subscription_start_date?: string | null
+          subscription_status?: string | null
           terms_accepted?: boolean | null
           trial_end_date?: string | null
           updated_at?: string | null
@@ -155,6 +170,45 @@ export type Database = {
           tp4_hit?: boolean | null
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string | null
+          end_date: string
+          id: string
+          plan_type: string
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string | null
+          end_date: string
+          id?: string
+          plan_type: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          plan_type?: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import SignalCard from "@/components/SignalCard";
+import SignalCardNew from "@/components/SignalCardNew";
+import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import FilterBar from "@/components/FilterBar";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -214,7 +215,7 @@ const SignalsDashboard = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {signals?.map((signal) => (
-                    <SignalCard key={signal.id} signal={signal as any} />
+                    <SignalCardNew key={signal.id} signal={signal as any} />
                   ))}
                 </div>
               )}
@@ -229,6 +230,7 @@ const SignalsDashboard = () => {
         </div>
       </main>
 
+      <BrokerAccountButton />
       <Footer />
     </div>
   );
