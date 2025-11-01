@@ -10,6 +10,7 @@ import SignalForm from "@/components/admin/SignalForm";
 import SignalsList from "@/components/admin/SignalsList";
 import ChartAnalysisForm from "@/components/admin/ChartAnalysisForm";
 import ChartAnalysisList from "@/components/admin/ChartAnalysisList";
+import UserManagement from "@/components/admin/UserManagement";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -77,9 +78,10 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="signals">Trading Signals</TabsTrigger>
             <TabsTrigger value="charts">Chart Analysis</TabsTrigger>
+            <TabsTrigger value="users">User Management</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signals" className="space-y-4">
@@ -120,6 +122,10 @@ const AdminDashboard = () => {
               )}
             </Card>
             <ChartAnalysisList />
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-4">
+            <UserManagement />
           </TabsContent>
         </Tabs>
       </div>

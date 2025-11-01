@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -9,8 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
 const SignalsDashboard = () => {
+  const { hasAccess, loading: accessLoading } = useSubscriptionAccess();
   const [filter, setFilter] = useState("latest");
   const [mainCategory, setMainCategory] = useState("FOREX");
   const [subCategory, setSubCategory] = useState<string>("all");
@@ -23,7 +26,7 @@ const SignalsDashboard = () => {
     "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
   };
 
-  const { data: signals, isLoading } = useQuery({
+  const { data: signals, isLoading, refetch } = useQuery({
     queryKey: ["signals", mainCategory, subCategory, filter],
     queryFn: async () => {
       let query = supabase
@@ -50,6 +53,28 @@ const SignalsDashboard = () => {
     enabled: mainCategory !== "CHART ANALYSIS",
   });
 
+  // Setup realtime subscription for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('signals-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'signals',
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
   const { data: chartAnalysis, isLoading: isLoadingCharts } = useQuery({
     queryKey: ["chart-analysis"],
     queryFn: async () => {
@@ -69,12 +94,28 @@ const SignalsDashboard = () => {
     setSubCategory("all");
   };
 
+  if (accessLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       
       <main className="flex-1">
         <div className="container mx-auto px-4 py-6">
+          {!hasAccess ? (
+            <TrialExpiredLockScreen />
+          ) : (
+            <>
           {/* Main Category Tabs - Horizontal Scrollable */}
           <div className="mb-6 overflow-x-auto scrollbar-hide">
             <div className="flex gap-8 min-w-max pb-2 px-2">
@@ -227,6 +268,8 @@ const SignalsDashboard = () => {
               )}
             </>
           )}
+        </>
+        )}
         </div>
       </main>
 

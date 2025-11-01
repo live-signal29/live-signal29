@@ -29,6 +29,7 @@ import Premium from "./pages/Premium";
 import FreeTrial from "./pages/FreeTrial";
 import Benefits from "./pages/Benefits";
 import Settings from "./pages/Settings";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<any>(null);
@@ -92,6 +93,7 @@ const App = () => (
           <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
           <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
