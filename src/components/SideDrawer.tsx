@@ -20,7 +20,6 @@ export const SideDrawer = () => {
     { label: "Live Signals", path: "/signals" },
     { label: "Free Trial", path: "/free-trial" },
     { label: "Premium", path: "/premium" },
-    { label: "Crypto Deposit", path: "/crypto-deposit" },
     { label: "My Profile", path: "/profile" },
     { label: "Extra Benefits", path: "/benefits" },
     { label: "Contact Us", path: "/contact" },

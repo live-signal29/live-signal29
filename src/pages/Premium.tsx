@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
@@ -12,12 +12,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const Premium = () => {
   const [selectedCategory, setSelectedCategory] = useState("COMMODITY");
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [currencies, setCurrencies] = useState<string[]>([]);
+  const [selectedCrypto, setSelectedCrypto] = useState("");
+
+  useEffect(() => {
+    fetchCurrencies();
+  }, []);
+
+  const fetchCurrencies = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('nowpayments-currencies');
+      if (error) throw error;
+      setCurrencies(data.currencies || []);
+      if (data.currencies?.length > 0) {
+        setSelectedCrypto(data.currencies[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching currencies:', error);
+      toast.error('Failed to load payment options');
+    }
+  };
 
   const categories = ["FOREX", "COMMODITY", "INDEX", "CRYPTO"];
 
@@ -91,6 +114,24 @@ const Premium = () => {
   };
 
   const handleSelectPlan = async (plan: any) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Please login first");
+      return;
+    }
+
+    if (!selectedCrypto) {
+      toast.error("Please select a cryptocurrency");
+      return;
+    }
+
+    setShowPaymentDialog(true);
+    setPaymentDetails({ plan, finalPrice: calculateFinalPrice(plan.payOnly) });
+  };
+
+  const createPayment = async () => {
+    if (!paymentDetails) return;
+
     try {
       setProcessingPayment(true);
 
@@ -100,61 +141,61 @@ const Premium = () => {
         return;
       }
 
-      const finalPrice = calculateFinalPrice(plan.payOnly);
-
-      // Create NowPayments payment
-      // In production, this should be done via edge function for security
-      const nowPaymentsApiKey = import.meta.env.VITE_NOWPAYMENTS_API_KEY;
-      
-      if (!nowPaymentsApiKey) {
-        toast.error("Payment system not configured. Please contact support.");
-        return;
-      }
-
-      const paymentData = {
-        price_amount: finalPrice,
-        price_currency: "USD",
-        order_id: `${user.id}-${Date.now()}`,
-        order_description: `${selectedCategory} - ${plan.name} Plan`,
-        ipn_callback_url: `${window.location.origin}/api/payment-callback`,
-        success_url: `${window.location.origin}/payment-success`,
-        cancel_url: `${window.location.origin}/premium`,
-      };
-
-      // This is a simplified version - in production use an edge function
-      const response = await fetch("https://api.nowpayments.io/v1/invoice", {
-        method: "POST",
-        headers: {
-          "x-api-key": nowPaymentsApiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(paymentData),
+      // Create payment using edge function
+      const { data, error } = await supabase.functions.invoke('nowpayments-create-payment', {
+        body: {
+          price_amount: paymentDetails.finalPrice,
+          pay_currency: selectedCrypto,
+        }
       });
 
-      if (!response.ok) {
-        throw new Error("Payment creation failed");
-      }
-
-      const result = await response.json();
+      if (error) throw error;
 
       // Store pending subscription
       await supabase.from('subscriptions').insert({
         user_id: user.id,
-        plan_type: plan.name.toLowerCase(),
+        plan_type: paymentDetails.plan.name.toLowerCase(),
         category: selectedCategory,
-        amount: finalPrice,
+        amount: paymentDetails.finalPrice,
         status: 'pending',
-        end_date: new Date(Date.now() + (plan.totalPrice / plan.pricePerMonth) * 30 * 24 * 60 * 60 * 1000).toISOString(),
+        end_date: new Date(Date.now() + (paymentDetails.plan.totalPrice / paymentDetails.plan.pricePerMonth) * 30 * 24 * 60 * 60 * 1000).toISOString(),
       });
 
-      // Redirect to payment page
-      window.location.href = result.invoice_url;
+      setPaymentDetails({ ...paymentDetails, payment: data });
+      toast.success("Payment created! Please send the exact amount to the address shown.");
+
+      // Start checking payment status
+      checkPaymentStatus(data.payment_id);
     } catch (error) {
       console.error("Payment error:", error);
-      toast.error("Failed to process payment. Please try again.");
+      toast.error("Failed to create payment. Please try again.");
     } finally {
       setProcessingPayment(false);
     }
+  };
+
+  const checkPaymentStatus = async (paymentId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('nowpayments-check-payment', {
+          body: { payment_id: paymentId }
+        });
+
+        if (error) throw error;
+
+        if (data.payment_status === 'finished') {
+          clearInterval(interval);
+          toast.success("Payment confirmed! Subscription activated.");
+          setShowPaymentDialog(false);
+          window.location.href = '/payment-success';
+        }
+      } catch (error) {
+        console.error("Error checking payment:", error);
+      }
+    }, 30000); // Check every 30 seconds
+
+    // Clear interval after 30 minutes
+    setTimeout(() => clearInterval(interval), 30 * 60 * 1000);
   };
 
   return (
@@ -358,6 +399,86 @@ const Premium = () => {
 
       <BrokerAccountButton />
       <Footer />
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Complete Payment</DialogTitle>
+          </DialogHeader>
+          
+          {!paymentDetails?.payment ? (
+            <div className="space-y-4">
+              <div>
+                <Label>Select Cryptocurrency</Label>
+                <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency} value={currency}>
+                        {currency.toUpperCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm mb-2">Plan: <strong>{paymentDetails?.plan?.name}</strong></p>
+                <p className="text-sm mb-2">Category: <strong>{selectedCategory}</strong></p>
+                <p className="text-2xl font-bold text-primary">
+                  Amount: ${paymentDetails?.finalPrice?.toFixed(2)} USD
+                </p>
+              </div>
+
+              <Button 
+                onClick={createPayment} 
+                disabled={processingPayment || !selectedCrypto}
+                className="w-full"
+              >
+                {processingPayment ? "Creating Payment..." : "Proceed to Pay"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-4 bg-success/10 border border-success rounded-lg">
+                <p className="text-success font-semibold mb-2">✅ Payment Created Successfully!</p>
+                <p className="text-sm text-muted-foreground">Please send your deposit to complete the payment.</p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Payment Address</Label>
+                  <div className="p-3 bg-muted rounded border mt-1 break-all font-mono text-sm">
+                    {paymentDetails.payment.pay_address}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground">Amount to Send</Label>
+                  <div className="p-3 bg-muted rounded border mt-1 font-mono text-lg font-bold">
+                    {paymentDetails.payment.pay_amount} {selectedCrypto.toUpperCase()}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-warning/10 border border-warning/30 rounded text-sm">
+                  ⏱️ Checking payment status every 30 seconds...
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => setShowPaymentDialog(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
