@@ -1,1 +1,13 @@
 project_id = "scqgxekharzvanhhfoir"
+
+[functions.trial-notifications]
+verify_jwt = false
+
+[functions.nowpayments-currencies]
+verify_jwt = true
+
+[functions.nowpayments-create-payment]
+verify_jwt = true
+
+[functions.nowpayments-check-payment]
+verify_jwt = true

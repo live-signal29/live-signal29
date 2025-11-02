@@ -44,8 +44,51 @@ export type Database = {
         }
         Relationships: []
       }
+      deposits: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          pay_address: string | null
+          pay_amount: string | null
+          pay_currency: string
+          payment_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          id?: string
+          pay_address?: string | null
+          pay_amount?: string | null
+          pay_currency: string
+          payment_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          pay_address?: string | null
+          pay_amount?: string | null
+          pay_currency?: string
+          payment_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          balance: number
           country_code: string | null
           created_at: string | null
           email: string
@@ -62,6 +105,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          balance?: number
           country_code?: string | null
           created_at?: string | null
           email: string
@@ -78,6 +122,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          balance?: number
           country_code?: string | null
           created_at?: string | null
           email?: string

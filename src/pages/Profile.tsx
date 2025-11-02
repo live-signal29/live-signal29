@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Mail, Phone, Calendar, Crown, CreditCard, Gift } from "lucide-react";
+import { Loader2, User, Mail, Phone, Calendar, Crown, CreditCard, Gift, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const Profile = () => {
@@ -130,6 +130,30 @@ const Profile = () => {
                       </Button>
                     )}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Balance Card */}
+            <Card className="mb-6 border-primary/30 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <Wallet className="h-8 w-8 text-primary" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Your Balance</p>
+                      <p className="text-3xl font-bold">
+                        ${profile?.balance ? parseFloat(profile.balance).toFixed(2) : '0.00'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => navigate('/crypto-deposit')}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Deposit Funds
+                  </Button>
                 </div>
               </CardContent>
             </Card>
