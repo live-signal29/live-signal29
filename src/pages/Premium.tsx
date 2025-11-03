@@ -120,11 +120,6 @@ const Premium = () => {
       return;
     }
 
-    if (!selectedCrypto) {
-      toast.error("Please select a cryptocurrency");
-      return;
-    }
-
     setShowPaymentDialog(true);
     setPaymentDetails({ plan, finalPrice: calculateFinalPrice(plan.payOnly) });
   };
