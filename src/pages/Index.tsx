@@ -29,7 +29,7 @@ const Index = () => {
       <main className="flex-1">
         <Hero />
         
-        <section className="container mx-auto px-4 py-16">
+        <section className="container mx-auto px-4 py-16 max-w-7xl">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2">
               <span className="gradient-text">Latest Signals</span>

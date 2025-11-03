@@ -111,7 +111,7 @@ const SignalsDashboard = () => {
       <Header />
       
       <main className="flex-1">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
           {!hasAccess ? (
             <TrialExpiredLockScreen />
           ) : (

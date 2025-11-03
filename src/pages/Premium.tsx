@@ -136,6 +136,13 @@ const Premium = () => {
         return;
       }
 
+      // Validate minimum amount (NOWPayments requires minimum $20 for most cryptos)
+      if (paymentDetails.finalPrice < 20) {
+        toast.error("Minimum payment amount is $20. Please select a different plan or use a coupon.");
+        setProcessingPayment(false);
+        return;
+      }
+
       // Create payment using edge function
       const { data, error } = await supabase.functions.invoke('nowpayments-create-payment', {
         body: {
@@ -144,10 +151,17 @@ const Premium = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Create payment error:", error);
+        throw new Error("Failed to create payment session");
+      }
+
+      if (!data || !data.payment_id) {
+        throw new Error("Invalid payment response");
+      }
 
       // Store pending subscription
-      await supabase.from('subscriptions').insert({
+      const { error: subError } = await supabase.from('subscriptions').insert({
         user_id: user.id,
         plan_type: paymentDetails.plan.name.toLowerCase(),
         category: selectedCategory,
@@ -156,48 +170,80 @@ const Premium = () => {
         end_date: new Date(Date.now() + (paymentDetails.plan.totalPrice / paymentDetails.plan.pricePerMonth) * 30 * 24 * 60 * 60 * 1000).toISOString(),
       });
 
+      if (subError) {
+        console.error("Subscription creation error:", subError);
+      }
+
       setPaymentDetails({ ...paymentDetails, payment: data });
-      toast.success("Payment created! Please send the exact amount to the address shown.");
+      toast.success("Payment session created! Send crypto to the address shown below.");
 
       // Start checking payment status
       checkPaymentStatus(data.payment_id);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Payment error:", error);
-      toast.error("Failed to create payment. Please try again.");
+      toast.error(error?.message || "Failed to create payment. Please try again or contact support.");
     } finally {
       setProcessingPayment(false);
     }
   };
 
   const checkPaymentStatus = async (paymentId: string) => {
+    let checkCount = 0;
+    const maxChecks = 60; // 30 minutes (60 checks x 30 seconds)
+
     const interval = setInterval(async () => {
       try {
+        checkCount++;
+        
         const { data, error } = await supabase.functions.invoke('nowpayments-check-payment', {
           body: { payment_id: paymentId }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error checking payment:", error);
+          return;
+        }
 
-        if (data.payment_status === 'finished') {
+        console.log(`Payment status check ${checkCount}:`, data.payment_status);
+
+        if (data.payment_status === 'finished' || data.payment_status === 'confirmed') {
           clearInterval(interval);
-          toast.success("Payment confirmed! Subscription activated.");
+          toast.success("✅ Payment confirmed! Your subscription is now active.");
+          
+          // Update user profile subscription status
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from('profiles').update({
+              subscription_status: 'premium',
+              subscription_plan: paymentDetails.plan.name.toLowerCase(),
+              subscription_end_date: new Date(Date.now() + (paymentDetails.plan.totalPrice / paymentDetails.plan.pricePerMonth) * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            }).eq('id', user.id);
+          }
+          
+          setTimeout(() => {
+            window.location.href = '/signals-dashboard';
+          }, 2000);
+        } else if (data.payment_status === 'expired' || data.payment_status === 'failed') {
+          clearInterval(interval);
+          toast.error("Payment failed or expired. Please try again.");
           setShowPaymentDialog(false);
-          window.location.href = '/payment-success';
+        } else if (checkCount >= maxChecks) {
+          clearInterval(interval);
+          toast.warning("Payment is taking longer than expected. Please check your email for confirmation or contact support.");
+        } else if (data.payment_status === 'waiting' || data.payment_status === 'sending') {
+          toast.info(`Waiting for payment confirmation... (${data.payment_status})`, { duration: 2000 });
         }
       } catch (error) {
         console.error("Error checking payment:", error);
       }
     }, 30000); // Check every 30 seconds
-
-    // Clear interval after 30 minutes
-    setTimeout(() => clearInterval(interval), 30 * 60 * 1000);
   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         {/* Carousel Section */}
         <div className="mb-8">
           <Carousel className="w-full max-w-4xl mx-auto">
@@ -438,9 +484,9 @@ const Premium = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="p-4 bg-success/10 border border-success rounded-lg">
-                <p className="text-success font-semibold mb-2">✅ Payment Created Successfully!</p>
-                <p className="text-sm text-muted-foreground">Please send your deposit to complete the payment.</p>
+              <div className="p-4 bg-warning/10 border border-warning rounded-lg">
+                <p className="text-warning font-semibold mb-2">⏳ Waiting for Payment...</p>
+                <p className="text-sm text-muted-foreground">Please send the exact amount to the address below. Payment will be confirmed automatically.</p>
               </div>
 
               <div className="space-y-3">
