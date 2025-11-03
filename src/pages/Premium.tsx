@@ -450,6 +450,17 @@ const Premium = () => {
           
           {!paymentDetails?.payment ? (
             <div className="space-y-4">
+              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <h3 className="font-semibold mb-2 text-blue-600 dark:text-blue-400">📋 How to Complete Payment:</h3>
+                <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
+                  <li>Select your preferred cryptocurrency below</li>
+                  <li>Click "Proceed to Pay" button</li>
+                  <li>Copy the payment address that appears</li>
+                  <li>Send the exact amount shown to that address</li>
+                  <li>Wait for automatic confirmation (usually 5-15 minutes)</li>
+                </ol>
+              </div>
+
               <div>
                 <Label>Select Cryptocurrency</Label>
                 <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
@@ -472,6 +483,9 @@ const Premium = () => {
                 <p className="text-2xl font-bold text-primary">
                   Amount: ${paymentDetails?.finalPrice?.toFixed(2)} USD
                 </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  ⚠️ Minimum payment: $20 USD
+                </p>
               </div>
 
               <Button 
@@ -485,36 +499,67 @@ const Premium = () => {
           ) : (
             <div className="space-y-4">
               <div className="p-4 bg-warning/10 border border-warning rounded-lg">
-                <p className="text-warning font-semibold mb-2">⏳ Waiting for Payment...</p>
-                <p className="text-sm text-muted-foreground">Please send the exact amount to the address below. Payment will be confirmed automatically.</p>
+                <p className="text-warning font-semibold mb-2">⏳ Payment Pending - Follow These Steps:</p>
+                <ol className="text-sm space-y-2 list-decimal list-inside">
+                  <li className="font-medium">Copy the payment address below</li>
+                  <li className="font-medium">Open your crypto wallet app</li>
+                  <li className="font-medium">Send the EXACT amount shown to the address</li>
+                  <li className="font-medium">Wait for confirmation (5-15 minutes)</li>
+                  <li className="font-medium">Your subscription will activate automatically</li>
+                </ol>
+                <p className="text-xs text-muted-foreground mt-3">
+                  ⚠️ Important: Send the exact amount. Incorrect amounts may cause delays.
+                </p>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Payment Address</Label>
+                  <Label className="text-xs text-muted-foreground">1️⃣ Payment Address (Copy This)</Label>
                   <div className="p-3 bg-muted rounded border mt-1 break-all font-mono text-sm">
                     {paymentDetails.payment.pay_address}
                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(paymentDetails.payment.pay_address);
+                      toast.success("Address copied to clipboard!");
+                    }}
+                  >
+                    📋 Copy Address
+                  </Button>
                 </div>
 
                 <div>
-                  <Label className="text-xs text-muted-foreground">Amount to Send</Label>
-                  <div className="p-3 bg-muted rounded border mt-1 font-mono text-lg font-bold">
+                  <Label className="text-xs text-muted-foreground">2️⃣ Exact Amount to Send</Label>
+                  <div className="p-3 bg-primary/10 rounded border border-primary mt-1 font-mono text-lg font-bold text-center">
                     {paymentDetails.payment.pay_amount} {selectedCrypto.toUpperCase()}
                   </div>
+                  <p className="text-xs text-center text-muted-foreground mt-1">
+                    = ${paymentDetails.finalPrice.toFixed(2)} USD
+                  </p>
                 </div>
 
-                <div className="p-3 bg-warning/10 border border-warning/30 rounded text-sm">
-                  ⏱️ Checking payment status every 30 seconds...
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                    🔄 Automatic Verification Active
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    We're checking your payment every 30 seconds. Keep this window open for faster confirmation.
+                  </p>
                 </div>
               </div>
 
               <Button 
-                onClick={() => setShowPaymentDialog(false)}
                 variant="outline"
                 className="w-full"
+                onClick={() => {
+                  setShowPaymentDialog(false);
+                  setPaymentDetails(null);
+                }}
               >
-                Close
+                Close & Check Later
               </Button>
             </div>
           )}
