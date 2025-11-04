@@ -18,29 +18,24 @@ const Premium = () => {
   const [selectedCategory, setSelectedCategory] = useState("COMMODITY");
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null);
-  const [processingPayment, setProcessingPayment] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
-  const [currencies, setCurrencies] = useState<string[]>([]);
-  const [selectedCrypto, setSelectedCrypto] = useState("");
+  const [selectedCrypto, setSelectedCrypto] = useState("USDT_TRC20");
 
-  useEffect(() => {
-    fetchCurrencies();
-  }, []);
-
-  const fetchCurrencies = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('nowpayments-currencies');
-      if (error) throw error;
-      setCurrencies(data.currencies || []);
-      if (data.currencies?.length > 0) {
-        setSelectedCrypto(data.currencies[0]);
-      }
-    } catch (error) {
-      console.error('Error fetching currencies:', error);
-      toast.error('Failed to load payment options');
-    }
+  // Fixed wallet addresses
+  const cryptoAddresses = {
+    "USDT_TRC20": "TEeeH4G5uKcW41UXkLC7DDq9da8DPr7vH3",
+    "BTC": "1MFC63PWiPGWG1Z852t7oJ3pX8hGZYtPAU",
+    "BNB": "0xf499d2ba461aaaad0a2f74c4fcfc16fc4fcaf365",
+    "ETH": "0xf499d2ba461aaaad0a2f74c4fcfc16fc4fcaf365"
   };
+
+  const cryptoOptions = [
+    { value: "USDT_TRC20", label: "USDT (TRC20)" },
+    { value: "BTC", label: "Bitcoin (BTC)" },
+    { value: "BNB", label: "Binance Coin (BNB)" },
+    { value: "ETH", label: "Ethereum (ETH)" }
+  ];
 
   const categories = ["FOREX", "COMMODITY", "INDEX", "CRYPTO"];
 
@@ -122,121 +117,6 @@ const Premium = () => {
 
     setShowPaymentDialog(true);
     setPaymentDetails({ plan, finalPrice: calculateFinalPrice(plan.payOnly) });
-  };
-
-  const createPayment = async () => {
-    if (!paymentDetails) return;
-
-    try {
-      setProcessingPayment(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Please login first");
-        return;
-      }
-
-      // Validate minimum amount (NOWPayments requires minimum $20 for most cryptos)
-      if (paymentDetails.finalPrice < 20) {
-        toast.error("Minimum payment amount is $20. Please select a different plan or use a coupon.");
-        setProcessingPayment(false);
-        return;
-      }
-
-      // Create payment using edge function
-      const { data, error } = await supabase.functions.invoke('nowpayments-create-payment', {
-        body: {
-          price_amount: paymentDetails.finalPrice,
-          pay_currency: selectedCrypto,
-        }
-      });
-
-      if (error) {
-        console.error("Create payment error:", error);
-        throw new Error("Failed to create payment session");
-      }
-
-      if (!data || !data.payment_id) {
-        throw new Error("Invalid payment response");
-      }
-
-      // Store pending subscription
-      const { error: subError } = await supabase.from('subscriptions').insert({
-        user_id: user.id,
-        plan_type: paymentDetails.plan.name.toLowerCase(),
-        category: selectedCategory,
-        amount: paymentDetails.finalPrice,
-        status: 'pending',
-        end_date: new Date(Date.now() + (paymentDetails.plan.totalPrice / paymentDetails.plan.pricePerMonth) * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-
-      if (subError) {
-        console.error("Subscription creation error:", subError);
-      }
-
-      setPaymentDetails({ ...paymentDetails, payment: data });
-      toast.success("Payment session created! Send crypto to the address shown below.");
-
-      // Start checking payment status
-      checkPaymentStatus(data.payment_id);
-    } catch (error: any) {
-      console.error("Payment error:", error);
-      toast.error(error?.message || "Failed to create payment. Please try again or contact support.");
-    } finally {
-      setProcessingPayment(false);
-    }
-  };
-
-  const checkPaymentStatus = async (paymentId: string) => {
-    let checkCount = 0;
-    const maxChecks = 60; // 30 minutes (60 checks x 30 seconds)
-
-    const interval = setInterval(async () => {
-      try {
-        checkCount++;
-        
-        const { data, error } = await supabase.functions.invoke('nowpayments-check-payment', {
-          body: { payment_id: paymentId }
-        });
-
-        if (error) {
-          console.error("Error checking payment:", error);
-          return;
-        }
-
-        console.log(`Payment status check ${checkCount}:`, data.payment_status);
-
-        if (data.payment_status === 'finished' || data.payment_status === 'confirmed') {
-          clearInterval(interval);
-          toast.success("✅ Payment confirmed! Your subscription is now active.");
-          
-          // Update user profile subscription status
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.from('profiles').update({
-              subscription_status: 'premium',
-              subscription_plan: paymentDetails.plan.name.toLowerCase(),
-              subscription_end_date: new Date(Date.now() + (paymentDetails.plan.totalPrice / paymentDetails.plan.pricePerMonth) * 30 * 24 * 60 * 60 * 1000).toISOString(),
-            }).eq('id', user.id);
-          }
-          
-          setTimeout(() => {
-            window.location.href = '/signals-dashboard';
-          }, 2000);
-        } else if (data.payment_status === 'expired' || data.payment_status === 'failed') {
-          clearInterval(interval);
-          toast.error("Payment failed or expired. Please try again.");
-          setShowPaymentDialog(false);
-        } else if (checkCount >= maxChecks) {
-          clearInterval(interval);
-          toast.warning("Payment is taking longer than expected. Please check your email for confirmation or contact support.");
-        } else if (data.payment_status === 'waiting' || data.payment_status === 'sending') {
-          toast.info(`Waiting for payment confirmation... (${data.payment_status})`, { duration: 2000 });
-        }
-      } catch (error) {
-        console.error("Error checking payment:", error);
-      }
-    }, 30000); // Check every 30 seconds
   };
 
   return (
@@ -416,9 +296,8 @@ const Premium = () => {
                       className="w-full bg-warning hover:bg-warning/90 text-black font-semibold" 
                       size="lg"
                       onClick={() => handleSelectPlan(plan)}
-                      disabled={processingPayment}
                     >
-                      {processingPayment ? "Processing..." : "SELECT"}
+                      SELECT
                     </Button>
                   </CardContent>
                 </Card>
@@ -429,10 +308,10 @@ const Premium = () => {
           {/* Payment Methods Info */}
           <div className="mt-12 text-center">
             <p className="text-sm text-muted-foreground mb-4">
-              💳 We accept cryptocurrency payments via NowPayments
+              💳 We accept cryptocurrency payments
             </p>
             <p className="text-xs text-muted-foreground">
-              Secure payment processing • BTC, ETH, USDT, and 150+ cryptocurrencies accepted
+              Secure payment processing • BTC, ETH, USDT (TRC20), and BNB accepted
             </p>
           </div>
         </div>
@@ -448,121 +327,82 @@ const Premium = () => {
             <DialogTitle>Complete Payment</DialogTitle>
           </DialogHeader>
           
-          {!paymentDetails?.payment ? (
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                <h3 className="font-semibold mb-2 text-blue-600 dark:text-blue-400">📋 How to Complete Payment:</h3>
-                <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
-                  <li>Select your preferred cryptocurrency below</li>
-                  <li>Click "Proceed to Pay" button</li>
-                  <li>Copy the payment address that appears</li>
-                  <li>Send the exact amount shown to that address</li>
-                  <li>Wait for automatic confirmation (usually 5-15 minutes)</li>
-                </ol>
-              </div>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <h3 className="font-semibold mb-2 text-blue-600 dark:text-blue-400">📋 How to Complete Payment:</h3>
+              <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
+                <li>Select your preferred cryptocurrency below</li>
+                <li>Copy the wallet address shown</li>
+                <li>Open your crypto wallet app</li>
+                <li>Send the exact amount (${paymentDetails?.finalPrice?.toFixed(2)} USD equivalent)</li>
+                <li>Contact support with your transaction ID for activation</li>
+              </ol>
+            </div>
 
+            <div>
+              <Label>Select Cryptocurrency</Label>
+              <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {cryptoOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm mb-2">Plan: <strong>{paymentDetails?.plan?.name}</strong></p>
+              <p className="text-sm mb-2">Category: <strong>{selectedCategory}</strong></p>
+              <p className="text-2xl font-bold text-primary mb-3">
+                Amount: ${paymentDetails?.finalPrice?.toFixed(2)} USD
+              </p>
+            </div>
+
+            <div className="space-y-3">
               <div>
-                <Label>Select Cryptocurrency</Label>
-                <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((currency) => (
-                      <SelectItem key={currency} value={currency}>
-                        {currency.toUpperCase()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs text-muted-foreground">Wallet Address</Label>
+                <div className="p-3 bg-muted rounded border mt-1 break-all font-mono text-sm">
+                  {cryptoAddresses[selectedCrypto as keyof typeof cryptoAddresses]}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(cryptoAddresses[selectedCrypto as keyof typeof cryptoAddresses]);
+                    toast.success("Address copied to clipboard!");
+                  }}
+                >
+                  📋 Copy Address
+                </Button>
               </div>
 
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm mb-2">Plan: <strong>{paymentDetails?.plan?.name}</strong></p>
-                <p className="text-sm mb-2">Category: <strong>{selectedCategory}</strong></p>
-                <p className="text-2xl font-bold text-primary">
-                  Amount: ${paymentDetails?.finalPrice?.toFixed(2)} USD
+              <div className="p-3 bg-warning/10 border border-warning/30 rounded">
+                <p className="text-xs font-semibold text-warning mb-1">
+                  ⚠️ Important
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  ⚠️ Minimum payment: $20 USD
+                <p className="text-xs text-muted-foreground">
+                  After sending payment, please contact our support with your transaction ID to activate your subscription.
                 </p>
               </div>
-
-              <Button 
-                onClick={createPayment} 
-                disabled={processingPayment || !selectedCrypto}
-                className="w-full"
-              >
-                {processingPayment ? "Creating Payment..." : "Proceed to Pay"}
-              </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="p-4 bg-warning/10 border border-warning rounded-lg">
-                <p className="text-warning font-semibold mb-2">⏳ Payment Pending - Follow These Steps:</p>
-                <ol className="text-sm space-y-2 list-decimal list-inside">
-                  <li className="font-medium">Copy the payment address below</li>
-                  <li className="font-medium">Open your crypto wallet app</li>
-                  <li className="font-medium">Send the EXACT amount shown to the address</li>
-                  <li className="font-medium">Wait for confirmation (5-15 minutes)</li>
-                  <li className="font-medium">Your subscription will activate automatically</li>
-                </ol>
-                <p className="text-xs text-muted-foreground mt-3">
-                  ⚠️ Important: Send the exact amount. Incorrect amounts may cause delays.
-                </p>
-              </div>
 
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">1️⃣ Payment Address (Copy This)</Label>
-                  <div className="p-3 bg-muted rounded border mt-1 break-all font-mono text-sm">
-                    {paymentDetails.payment.pay_address}
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full mt-2"
-                    onClick={() => {
-                      navigator.clipboard.writeText(paymentDetails.payment.pay_address);
-                      toast.success("Address copied to clipboard!");
-                    }}
-                  >
-                    📋 Copy Address
-                  </Button>
-                </div>
-
-                <div>
-                  <Label className="text-xs text-muted-foreground">2️⃣ Exact Amount to Send</Label>
-                  <div className="p-3 bg-primary/10 rounded border border-primary mt-1 font-mono text-lg font-bold text-center">
-                    {paymentDetails.payment.pay_amount} {selectedCrypto.toUpperCase()}
-                  </div>
-                  <p className="text-xs text-center text-muted-foreground mt-1">
-                    = ${paymentDetails.finalPrice.toFixed(2)} USD
-                  </p>
-                </div>
-
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
-                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                    🔄 Automatic Verification Active
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    We're checking your payment every 30 seconds. Keep this window open for faster confirmation.
-                  </p>
-                </div>
-              </div>
-
-              <Button 
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setShowPaymentDialog(false);
-                  setPaymentDetails(null);
-                }}
-              >
-                Close & Check Later
-              </Button>
-            </div>
-          )}
+            <Button 
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setShowPaymentDialog(false);
+                setPaymentDetails(null);
+              }}
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
