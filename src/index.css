@@ -8,88 +8,93 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Dark blue gradient theme for trading platform */
-    --background: 220 40% 8%;
-    --foreground: 210 40% 98%;
+    /* Dark trading dashboard theme - matching screenshot */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
 
-    --card: 220 35% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 35% 10%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    /* Gold/Amber accent for trading elements */
-    --primary: 45 100% 51%;
-    --primary-foreground: 220 40% 8%;
+    /* Cyan accent for asset names */
+    --primary: 180 100% 45%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 220 30% 18%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 100% 60%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 25% 20%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 195 100% 45%;
-    --accent-foreground: 220 40% 8%;
+    --accent: 180 100% 45%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 25% 20%;
-    --input: 220 25% 16%;
-    --ring: 45 100% 51%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 180 100% 45%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Custom trading colors */
-    --success: 142 76% 45%;
-    --success-foreground: 210 40% 98%;
+    /* Trading colors */
+    --success: 142 76% 40%;
+    --success-foreground: 0 0% 98%;
     
     --warning: 38 92% 50%;
-    --warning-foreground: 220 40% 8%;
+    --warning-foreground: 0 0% 7%;
+
+    --buy: 142 76% 40%;
+    --sell: 0 100% 60%;
 
     /* Gradient stops */
-    --gradient-start: 220 45% 10%;
-    --gradient-end: 195 45% 15%;
+    --gradient-start: 0 0% 7%;
+    --gradient-end: 0 0% 10%;
   }
 
-  /* Light mode disabled for trading platform */
   .dark {
-    --background: 220 40% 8%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
 
-    --card: 220 35% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 35% 10%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 45 100% 51%;
-    --primary-foreground: 220 40% 8%;
+    --primary: 180 100% 45%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 220 30% 18%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 100% 60%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 25% 20%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 195 100% 45%;
-    --accent-foreground: 220 40% 8%;
+    --accent: 180 100% 45%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 25% 20%;
-    --input: 220 25% 16%;
-    --ring: 45 100% 51%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 180 100% 45%;
 
-    --success: 142 76% 45%;
-    --success-foreground: 210 40% 98%;
+    --success: 142 76% 40%;
+    --success-foreground: 0 0% 98%;
     
     --warning: 38 92% 50%;
-    --warning-foreground: 220 40% 8%;
+    --warning-foreground: 0 0% 7%;
 
-    --gradient-start: 220 45% 10%;
-    --gradient-end: 195 45% 15%;
+    --buy: 142 76% 40%;
+    --sell: 0 100% 60%;
+
+    --gradient-start: 0 0% 7%;
+    --gradient-end: 0 0% 10%;
   }
 }
 
