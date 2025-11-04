@@ -111,17 +111,17 @@ const SignalsDashboard = () => {
       <Header />
       
       <main className="flex-1">
-        <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
           {!hasAccess ? (
             <TrialExpiredLockScreen />
           ) : (
             <>
           {/* Main Category Tabs - Horizontal Scrollable */}
-          <div className="mb-6 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-8 min-w-max pb-2 px-2">
+          <div className="mb-4 sm:mb-6 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-4 sm:gap-8 min-w-max pb-2 px-1">
               <button
                 onClick={() => handleCategoryChange("FOREX")}
-                className={`text-lg font-semibold pb-3 border-b-2 transition-colors ${
+                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
                   mainCategory === "FOREX"
                     ? "text-primary border-primary"
                     : "text-muted-foreground border-transparent"
@@ -131,7 +131,7 @@ const SignalsDashboard = () => {
               </button>
               <button
                 onClick={() => handleCategoryChange("COMMODITIES")}
-                className={`text-lg font-semibold pb-3 border-b-2 transition-colors ${
+                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
                   mainCategory === "COMMODITIES"
                     ? "text-primary border-primary"
                     : "text-muted-foreground border-transparent"
@@ -141,7 +141,7 @@ const SignalsDashboard = () => {
               </button>
               <button
                 onClick={() => handleCategoryChange("INDICES")}
-                className={`text-lg font-semibold pb-3 border-b-2 transition-colors ${
+                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
                   mainCategory === "INDICES"
                     ? "text-primary border-primary"
                     : "text-muted-foreground border-transparent"
@@ -151,7 +151,7 @@ const SignalsDashboard = () => {
               </button>
               <button
                 onClick={() => handleCategoryChange("CRYPTO")}
-                className={`text-lg font-semibold pb-3 border-b-2 transition-colors ${
+                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
                   mainCategory === "CRYPTO"
                     ? "text-primary border-primary"
                     : "text-muted-foreground border-transparent"
@@ -161,7 +161,7 @@ const SignalsDashboard = () => {
               </button>
               <button
                 onClick={() => handleCategoryChange("DERIV/BINARY")}
-                className={`text-lg font-semibold pb-3 border-b-2 transition-colors whitespace-nowrap ${
+                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors whitespace-nowrap ${
                   mainCategory === "DERIV/BINARY"
                     ? "text-primary border-primary"
                     : "text-muted-foreground border-transparent"
@@ -171,7 +171,7 @@ const SignalsDashboard = () => {
               </button>
               <button
                 onClick={() => handleCategoryChange("CHART ANALYSIS")}
-                className={`text-lg font-semibold pb-3 border-b-2 transition-colors whitespace-nowrap ${
+                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors whitespace-nowrap ${
                   mainCategory === "CHART ANALYSIS"
                     ? "text-primary border-primary"
                     : "text-muted-foreground border-transparent"
@@ -184,13 +184,13 @@ const SignalsDashboard = () => {
 
           {/* Sub-Category Filter (only show for non-chart analysis) */}
           {mainCategory !== "CHART ANALYSIS" && (
-            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-2 sm:gap-4">
               <div className="w-full sm:w-64">
                 <Select value={subCategory} onValueChange={setSubCategory}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs sm:text-sm h-9 sm:h-10">
                     <SelectValue placeholder="Filter by asset" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-card">
                     <SelectItem value="all">All Assets</SelectItem>
                     {subCategoryOptions[mainCategory]?.map((option) => (
                       <SelectItem key={option} value={option}>
@@ -254,7 +254,7 @@ const SignalsDashboard = () => {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                   {signals?.map((signal) => (
                     <SignalCardNew key={signal.id} signal={signal as any} />
                   ))}

@@ -29,12 +29,12 @@ const Index = () => {
       <main className="flex-1">
         <Hero />
         
-        <section className="container mx-auto px-4 py-16 max-w-7xl">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">
+        <section className="container mx-auto px-2 sm:px-4 py-8 sm:py-16 max-w-7xl">
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">
               <span className="gradient-text">Latest Signals</span>
             </h2>
-            <p className="text-muted-foreground">Most recent trading signals across all categories</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Most recent trading signals across all categories</p>
           </div>
 
           {isLoading ? (
@@ -42,7 +42,7 @@ const Index = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {signals?.map((signal) => (
                 <SignalCard key={signal.id} signal={signal as any} />
               ))}

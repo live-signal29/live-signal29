@@ -78,20 +78,20 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="signals">Trading Signals</TabsTrigger>
-            <TabsTrigger value="charts">Chart Analysis</TabsTrigger>
-            <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
+            <TabsTrigger value="charts" className="text-xs sm:text-sm py-2">Charts</TabsTrigger>
+            <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signals" className="space-y-4">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Manage Signals</CardTitle>
-                  <Button onClick={() => setShowSignalForm(!showSignalForm)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {showSignalForm ? "Hide Form" : "Add Signal"}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                  <CardTitle className="text-base sm:text-lg">Manage Signals</CardTitle>
+                  <Button onClick={() => setShowSignalForm(!showSignalForm)} className="text-xs sm:text-sm h-8 sm:h-9">
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    {showSignalForm ? "Hide" : "Add"}
                   </Button>
                 </div>
               </CardHeader>
@@ -107,11 +107,11 @@ const AdminDashboard = () => {
           <TabsContent value="charts" className="space-y-4">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Manage Chart Analysis</CardTitle>
-                  <Button onClick={() => setShowChartForm(!showChartForm)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {showChartForm ? "Hide Form" : "Add Analysis"}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                  <CardTitle className="text-base sm:text-lg">Chart Analysis</CardTitle>
+                  <Button onClick={() => setShowChartForm(!showChartForm)} className="text-xs sm:text-sm h-8 sm:h-9">
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    {showChartForm ? "Hide" : "Add"}
                   </Button>
                 </div>
               </CardHeader>

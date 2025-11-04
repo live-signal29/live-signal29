@@ -46,56 +46,59 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
     <Card className="overflow-hidden bg-card border-border">
       <CardContent className="p-0">
         {/* Header */}
-        <div className="flex justify-between items-center p-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <span className={`text-base font-bold ${signal.type === "Buy" ? "text-[hsl(var(--buy))]" : "text-[hsl(var(--sell))]"}`}>
+        <div className="flex justify-between items-start gap-2 p-2 sm:p-3 border-b border-border">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <span className={`text-xs sm:text-sm font-bold ${signal.type === "Buy" ? "text-[hsl(var(--buy))]" : "text-[hsl(var(--sell))]"}`}>
               {signal.type.toUpperCase()}
             </span>
-            <span className="text-base font-bold text-primary">
+            <span className="text-xs sm:text-sm font-bold text-primary">
               {signal.pair}
             </span>
-            <span className="text-base font-semibold text-foreground">
+            <span className="text-xs sm:text-sm font-semibold text-foreground">
               {signal.entry}
             </span>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-muted-foreground">
-              {format(new Date(signal.created_at), "EEE, hh:mm a dd-MMM-yyyy")}
+          <div className="text-right flex-shrink-0">
+            <div className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+              {format(new Date(signal.created_at), "hh:mm a")}
+            </div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+              {format(new Date(signal.created_at), "dd-MMM")}
             </div>
           </div>
         </div>
 
         {/* TP/SL Grid */}
-        <div className="p-4 bg-background">
-          <div className="grid grid-cols-4 gap-3 text-center">
-            <div>
-              <p className="text-xs text-muted-foreground mb-2 uppercase">Take Profit 1</p>
-              <p className={`text-base font-semibold ${signal.tp1_hit ? 'text-success border border-success rounded px-2 py-1' : 'text-foreground'}`}>
+        <div className="p-2 sm:p-3 bg-background">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center">
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-1 uppercase truncate">TP 1</p>
+              <p className={`text-xs sm:text-sm font-semibold truncate ${signal.tp1_hit ? 'text-success border border-success rounded px-1 py-0.5' : 'text-foreground'}`}>
                 {signal.tp1}
               </p>
             </div>
             
             {signal.tp2 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-2 uppercase">Take Profit 2</p>
-                <p className={`text-base font-semibold ${signal.tp2_hit ? 'text-success border border-success rounded px-2 py-1' : 'text-foreground'}`}>
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-1 uppercase truncate">TP 2</p>
+                <p className={`text-xs sm:text-sm font-semibold truncate ${signal.tp2_hit ? 'text-success border border-success rounded px-1 py-0.5' : 'text-foreground'}`}>
                   {signal.tp2}
                 </p>
               </div>
             )}
             
             {signal.tp3 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-2 uppercase">Take Profit 3</p>
-                <p className={`text-base font-semibold ${signal.tp3_hit ? 'text-success border border-success rounded px-2 py-1' : 'text-foreground'}`}>
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-1 uppercase truncate">TP 3</p>
+                <p className={`text-xs sm:text-sm font-semibold truncate ${signal.tp3_hit ? 'text-success border border-success rounded px-1 py-0.5' : 'text-foreground'}`}>
                   {signal.tp3}
                 </p>
               </div>
             )}
             
-            <div>
-              <p className="text-xs text-muted-foreground mb-2 uppercase">SL-{signal.type === "Buy" ? "Below" : "Above"}</p>
-              <p className="text-base font-semibold text-destructive border border-destructive rounded px-2 py-1">
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-1 uppercase truncate">SL</p>
+              <p className="text-xs sm:text-sm font-semibold text-destructive border border-destructive rounded px-1 py-0.5 truncate">
                 {signal.sl}
               </p>
             </div>
@@ -103,12 +106,12 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
         </div>
 
         {/* Status Bar */}
-        <div className={`flex justify-between items-center px-4 py-2 border-t border-border`}>
-          <span className={`text-sm font-medium ${getStatusText() === "All TP Hit" ? "text-success" : getStatusText() === "SL Hit" ? "text-destructive" : "text-foreground"}`}>
+        <div className={`flex justify-between items-center px-2 sm:px-3 py-1.5 sm:py-2 border-t border-border`}>
+          <span className={`text-xs sm:text-sm font-medium ${getStatusText() === "All TP Hit" ? "text-success" : getStatusText() === "SL Hit" ? "text-destructive" : "text-foreground"}`}>
             {getStatusText()}
           </span>
           {signal.profit_note && (
-            <span className={`text-sm font-semibold ${signal.profit_note.includes("+") ? "text-success" : "text-destructive"}`}>
+            <span className={`text-xs sm:text-sm font-semibold ${signal.profit_note.includes("+") ? "text-success" : "text-destructive"}`}>
               {signal.profit_note}
             </span>
           )}
@@ -116,8 +119,8 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
 
         {/* Note (if exists) */}
         {signal.note && (
-          <div className="px-4 py-2 bg-muted/20 border-t border-border">
-            <p className="text-xs text-muted-foreground">{signal.note}</p>
+          <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-muted/20 border-t border-border">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{signal.note}</p>
           </div>
         )}
       </CardContent>
