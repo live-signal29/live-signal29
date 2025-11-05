@@ -13,6 +13,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
 
   useEffect(() => {
@@ -49,6 +50,26 @@ const Profile = () => {
           
           if (diffDays > 0) {
             setDaysRemaining(diffDays);
+            
+            // Calculate months and years
+            const years = Math.floor(diffDays / 365);
+            const months = Math.floor((diffDays % 365) / 30);
+            const days = diffDays % 30;
+            
+            let timeStr = "";
+            if (years > 0) {
+              timeStr += `${years} year${years > 1 ? 's' : ''}`;
+            }
+            if (months > 0) {
+              if (timeStr) timeStr += ", ";
+              timeStr += `${months} month${months > 1 ? 's' : ''}`;
+            }
+            if (days > 0 && years === 0) {
+              if (timeStr) timeStr += ", ";
+              timeStr += `${days} day${days > 1 ? 's' : ''}`;
+            }
+            
+            setTimeRemaining(timeStr || `${diffDays} days`);
           }
         }
       }
@@ -91,22 +112,40 @@ const Profile = () => {
             </h1>
 
             {/* Plan Status Card */}
-            <Card className={`mb-6 ${isPremium ? 'border-success bg-success/5' : isTrial ? 'border-warning bg-warning/5' : 'border-destructive bg-destructive/5'}`}>
+            <Card className={`mb-6 ${isPremium ? 'border-success bg-gradient-to-r from-success/10 to-success/5' : isTrial ? 'border-warning bg-warning/5' : 'border-destructive bg-destructive/5'}`}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-3">
-                    <Crown className={`h-8 w-8 ${isPremium ? 'text-success' : 'text-warning'}`} />
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg ${isPremium ? 'bg-success/20' : 'bg-warning/20'}`}>
+                      <Crown className={`h-8 w-8 ${isPremium ? 'text-success' : 'text-warning'}`} />
+                    </div>
                     <div>
-                      <p className="font-semibold text-lg">
-                        {isPremium ? 'Premium Member' : isTrial ? 'Free Trial Active' : 'Trial Expired'}
-                      </p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-bold text-xl">
+                          {isPremium ? 'Premium Member' : isTrial ? 'Free Trial' : 'Trial Expired'}
+                        </p>
+                        {isPremium && (
+                          <Badge className="bg-success text-success-foreground font-bold">
+                            PREMIUM
+                          </Badge>
+                        )}
+                      </div>
                       {daysRemaining !== null && daysRemaining > 0 ? (
-                        <p className="text-muted-foreground">
-                          {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} remaining
+                        <p className={`text-base font-semibold ${isPremium ? 'text-success' : 'text-warning'}`}>
+                          {timeRemaining} remaining
                         </p>
                       ) : (
-                        <p className="text-destructive">
+                        <p className="text-destructive font-semibold">
                           Access expired
+                        </p>
+                      )}
+                      {isPremium && profile?.subscription_end_date && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Valid until {new Date(profile.subscription_end_date).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
                         </p>
                       )}
                     </div>
@@ -115,18 +154,20 @@ const Profile = () => {
                     {!isPremium && (
                       <Button 
                         onClick={() => navigate('/premium')}
-                        className="bg-warning hover:bg-warning/90 text-black"
+                        className="bg-warning hover:bg-warning/90 text-black font-semibold"
                       >
                         <Gift className="h-4 w-4 mr-2" />
-                        Upgrade Plan
+                        Upgrade to Premium
                       </Button>
                     )}
                     {isPremium && (
                       <Button 
                         onClick={() => navigate('/premium')}
                         variant="outline"
+                        className="border-success text-success hover:bg-success/10"
                       >
-                        Renew Plan
+                        <Crown className="h-4 w-4 mr-2" />
+                        Extend Premium
                       </Button>
                     )}
                   </div>
