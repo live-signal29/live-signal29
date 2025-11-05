@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Edit } from "lucide-react";
+import { Loader2, Edit, CheckSquare } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -43,6 +44,11 @@ const UserManagement = () => {
   const [newPlan, setNewPlan] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState("");
+  const [bulkPlan, setBulkPlan] = useState("");
+  const [bulkEndDate, setBulkEndDate] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -124,6 +130,73 @@ const UserManagement = () => {
     setNewEndDate("");
   };
 
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUsers.length === users.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(users.map(u => u.id));
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (selectedUsers.length === 0) {
+      toast.error("Please select at least one user");
+      return;
+    }
+
+    if (!bulkAction) {
+      toast.error("Please select an action");
+      return;
+    }
+
+    try {
+      const updates: any = {};
+      
+      if (bulkAction === 'activate_premium') {
+        updates.subscription_status = 'premium';
+        updates.subscription_start_date = new Date().toISOString();
+        if (bulkPlan) updates.subscription_plan = bulkPlan;
+        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
+      } else if (bulkAction === 'deactivate') {
+        updates.subscription_status = 'expired';
+      } else if (bulkAction === 'extend_trial') {
+        updates.subscription_status = 'free_trial';
+        if (bulkEndDate) updates.trial_end_date = bulkEndDate;
+      } else if (bulkAction === 'extend_premium') {
+        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
+      }
+
+      // Update all selected users
+      for (const userId of selectedUsers) {
+        const { error } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', userId);
+
+        if (error) throw error;
+      }
+
+      toast.success(`Successfully updated ${selectedUsers.length} user(s)`);
+      setSelectedUsers([]);
+      setBulkActionDialogOpen(false);
+      setBulkAction("");
+      setBulkPlan("");
+      setBulkEndDate("");
+      fetchUsers();
+    } catch (error) {
+      console.error("Error performing bulk action:", error);
+      toast.error("Failed to perform bulk action");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -140,13 +213,86 @@ const UserManagement = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>User Management</CardTitle>
+            {selectedUsers.length > 0 && (
+              <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" size="sm">
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Bulk Actions ({selectedUsers.length})
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Bulk Update {selectedUsers.length} User(s)</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Action</Label>
+                      <Select value={bulkAction} onValueChange={setBulkAction}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select action" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="activate_premium">Activate Premium</SelectItem>
+                          <SelectItem value="deactivate">Deactivate (Expire)</SelectItem>
+                          <SelectItem value="extend_trial">Extend Trial</SelectItem>
+                          <SelectItem value="extend_premium">Extend Premium</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {bulkAction === 'activate_premium' && (
+                      <div className="space-y-2">
+                        <Label>Plan Type</Label>
+                        <Select value={bulkPlan} onValueChange={setBulkPlan}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select plan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="half-yearly">Half-Yearly</SelectItem>
+                            <SelectItem value="yearly">Yearly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {(bulkAction === 'activate_premium' || bulkAction === 'extend_premium' || bulkAction === 'extend_trial') && (
+                      <div className="space-y-2">
+                        <Label>
+                          {bulkAction === 'extend_trial' ? 'Trial End Date' : 'Premium End Date'}
+                        </Label>
+                        <Input
+                          type="date"
+                          value={bulkEndDate}
+                          onChange={(e) => setBulkEndDate(e.target.value)}
+                        />
+                      </div>
+                    )}
+
+                    <Button onClick={handleBulkAction} className="w-full">
+                      Apply to {selectedUsers.length} User(s)
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox 
+                      checked={selectedUsers.length === users.length && users.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Plan Type</TableHead>
@@ -162,6 +308,12 @@ const UserManagement = () => {
                   const userSubs = getUserSubscriptions(user.id);
                   return (
                     <TableRow key={user.id}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedUsers.includes(user.id)}
+                          onCheckedChange={() => toggleUserSelection(user.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{user.email}</TableCell>
                       <TableCell>{user.full_name}</TableCell>
                       <TableCell>
