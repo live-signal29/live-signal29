@@ -153,6 +153,7 @@ export type Database = {
           profit_note: string | null
           published: boolean | null
           sl: string
+          sl_hit: boolean | null
           status: string | null
           sub_category: string | null
           tp1: string
@@ -178,6 +179,7 @@ export type Database = {
           profit_note?: string | null
           published?: boolean | null
           sl: string
+          sl_hit?: boolean | null
           status?: string | null
           sub_category?: string | null
           tp1: string
@@ -203,6 +205,7 @@ export type Database = {
           profit_note?: string | null
           published?: boolean | null
           sl?: string
+          sl_hit?: boolean | null
           status?: string | null
           sub_category?: string | null
           tp1?: string

@@ -180,10 +180,6 @@ const SignalsList = () => {
                 <span className="text-xs sm:text-sm text-muted-foreground">Entry:</span>
                 <p className="text-sm sm:text-base font-semibold">{signal.entry}</p>
               </div>
-              <div>
-                <span className="text-xs sm:text-sm text-muted-foreground">SL:</span>
-                <p className="text-sm sm:text-base font-semibold text-destructive">{signal.sl}</p>
-              </div>
             </div>
             <div className="space-y-2">
               <p className="text-xs sm:text-sm font-semibold">Take Profits:</p>
@@ -223,6 +219,16 @@ const SignalsList = () => {
                   </label>
                 )}
               </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-xs sm:text-sm font-semibold mb-2">Stop Loss:</p>
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={signal.sl_hit}
+                  onCheckedChange={() => toggleTpHit(signal.id, "sl_hit", signal.sl_hit)}
+                />
+                <span className="text-xs sm:text-sm">SL: {signal.sl}</span>
+              </label>
             </div>
             {(signal as any).profit_note && (
               <div className="mt-3 p-2 bg-warning/10 border border-warning/20 rounded">

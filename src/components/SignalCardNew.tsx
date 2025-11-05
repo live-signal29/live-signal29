@@ -16,6 +16,7 @@ interface SignalCardProps {
     tp2_hit: boolean;
     tp3_hit: boolean;
     tp4_hit: boolean;
+    sl_hit?: boolean;
     status: string;
     note?: string;
     profit_note?: string;
@@ -98,7 +99,7 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
             
             <div className="min-w-0">
               <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-1 uppercase truncate">SL</p>
-              <p className="text-xs sm:text-sm font-semibold text-destructive border border-destructive rounded px-1 py-0.5 truncate">
+              <p className={`text-xs sm:text-sm font-semibold border rounded px-1 py-0.5 truncate ${signal.sl_hit ? 'text-[#FF4D4D] border-[#FF4D4D]' : 'text-[#FFFFFF] border-[#FFFFFF]'}`}>
                 {signal.sl}
               </p>
             </div>
@@ -111,7 +112,7 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
             {getStatusText()}
           </span>
           {signal.profit_note && (
-            <span className={`text-xs sm:text-sm font-semibold ${signal.profit_note.includes("+") ? "text-success" : "text-destructive"}`}>
+            <span className="text-xs sm:text-sm font-semibold text-[#00FF7F]">
               {signal.profit_note}
             </span>
           )}
