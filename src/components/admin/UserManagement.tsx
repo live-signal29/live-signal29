@@ -89,6 +89,26 @@ const UserManagement = () => {
     return diffDays > 0 ? `${diffDays} days` : "Expired";
   };
 
+  const logAdminAction = async (actionType: string, targetUserId: string, targetUserEmail: string, details: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from('admin_activity_log')
+        .insert({
+          admin_id: user.id,
+          admin_email: user.email || '',
+          action_type: actionType,
+          target_user_id: targetUserId,
+          target_user_email: targetUserEmail,
+          details: details
+        });
+    } catch (error) {
+      console.error("Error logging admin action:", error);
+    }
+  };
+
   const handleUpdateUser = async () => {
     if (!editingUser) return;
 
@@ -113,6 +133,19 @@ const UserManagement = () => {
         .eq('id', editingUser.id);
 
       if (error) throw error;
+
+      // Log the action
+      await logAdminAction(
+        'user_update',
+        editingUser.id,
+        editingUser.email,
+        {
+          old_status: editingUser.subscription_status,
+          new_status: newStatus,
+          plan: newPlan,
+          end_date: newEndDate
+        }
+      );
 
       toast.success("User updated successfully");
       setEditingUser(null);
@@ -183,6 +216,19 @@ const UserManagement = () => {
 
         if (error) throw error;
       }
+
+      // Log the bulk action
+      await logAdminAction(
+        `bulk_${bulkAction}`,
+        '',
+        '',
+        {
+          user_count: selectedUsers.length,
+          action: bulkAction,
+          plan: bulkPlan,
+          end_date: bulkEndDate
+        }
+      );
 
       toast.success(`Successfully updated ${selectedUsers.length} user(s)`);
       setSelectedUsers([]);

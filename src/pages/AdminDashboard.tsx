@@ -11,6 +11,7 @@ import SignalsList from "@/components/admin/SignalsList";
 import ChartAnalysisForm from "@/components/admin/ChartAnalysisForm";
 import ChartAnalysisList from "@/components/admin/ChartAnalysisList";
 import UserManagement from "@/components/admin/UserManagement";
+import ActivityLog from "@/components/admin/ActivityLog";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -78,10 +79,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsList className="grid w-full grid-cols-4 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="charts" className="text-xs sm:text-sm py-2">Charts</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
+            <TabsTrigger value="activity" className="text-xs sm:text-sm py-2">Activity Log</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signals" className="space-y-4">
@@ -126,6 +128,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="activity" className="space-y-4">
+            <ActivityLog />
           </TabsContent>
         </Tabs>
       </div>
