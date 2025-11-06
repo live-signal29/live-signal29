@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, ChevronDown, ExternalLink } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
+  const [otherAppsOpen, setOtherAppsOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -58,6 +60,26 @@ export const SideDrawer = () => {
                 {item.label}
               </Link>
             ))}
+            
+            {/* Other Apps Section */}
+            <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
+              <CollapsibleTrigger className="w-full px-4 py-3 rounded-md hover:bg-accent transition-colors text-foreground hover:text-primary font-medium flex items-center justify-between">
+                <span>Other Apps</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${otherAppsOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <a
+                  href="http://cryptoincome.vercel.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpen(false)}
+                  className="pl-8 pr-4 py-3 rounded-md hover:bg-accent transition-colors text-foreground hover:text-primary font-medium flex items-center justify-between group"
+                >
+                  <span>Crypto Investment</span>
+                  <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </a>
+              </CollapsibleContent>
+            </Collapsible>
           </nav>
 
           {/* Logout Button */}
