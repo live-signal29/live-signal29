@@ -78,6 +78,16 @@ export const SideDrawer = () => {
                   <span>Crypto Investment</span>
                   <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </a>
+                <a
+                  href="https://one.exnessonelink.com/a/vtkbbmje"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpen(false)}
+                  className="pl-8 pr-4 py-3 rounded-md hover:bg-accent transition-colors text-foreground hover:text-primary font-medium flex items-center justify-between group"
+                >
+                  <span>Open Forex Account</span>
+                  <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </a>
               </CollapsibleContent>
             </Collapsible>
           </nav>
