@@ -322,32 +322,58 @@ const Premium = () => {
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Complete Payment</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-3 pb-4 border-b">
+            <DialogTitle className="text-2xl font-bold">Complete Your Payment</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Follow the steps below to complete your premium subscription
+            </p>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <h3 className="font-semibold mb-2 text-blue-600 dark:text-blue-400">📋 How to Complete Payment:</h3>
-              <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
-                <li>Select your preferred cryptocurrency below</li>
-                <li>Copy the wallet address shown</li>
-                <li>Open your crypto wallet app</li>
-                <li>Send the exact amount (${paymentDetails?.finalPrice?.toFixed(2)} USD equivalent)</li>
-                <li>Contact support with your transaction ID for activation</li>
-              </ol>
+          <div className="space-y-6 py-4">
+            {/* Order Summary */}
+            <div className="bg-gradient-to-br from-primary/5 to-purple-500/5 border border-primary/20 rounded-xl p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span className="text-2xl">📦</span>
+                Order Summary
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Selected Plan</p>
+                  <p className="font-semibold text-lg">{paymentDetails?.plan?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Category</p>
+                  <p className="font-semibold text-lg">{selectedCategory}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Duration</p>
+                  <p className="font-semibold">{paymentDetails?.plan?.duration}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Total Amount</p>
+                  <p className="font-bold text-2xl text-primary">
+                    ${paymentDetails?.finalPrice?.toFixed(2)}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label>Select Cryptocurrency</Label>
+            {/* Step 1: Select Crypto */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                  1
+                </div>
+                <h3 className="font-semibold text-lg">Select Your Cryptocurrency</h3>
+              </div>
               <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 text-base">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {cryptoOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem key={option.value} value={option.value} className="text-base py-3">
                       {option.label}
                     </SelectItem>
                   ))}
@@ -355,45 +381,127 @@ const Premium = () => {
               </Select>
             </div>
 
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm mb-2">Plan: <strong>{paymentDetails?.plan?.name}</strong></p>
-              <p className="text-sm mb-2">Category: <strong>{selectedCategory}</strong></p>
-              <p className="text-2xl font-bold text-primary mb-3">
-                Amount: ${paymentDetails?.finalPrice?.toFixed(2)} USD
-              </p>
-            </div>
-
+            {/* Step 2: Wallet Address */}
             <div className="space-y-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">Wallet Address</Label>
-                <div className="p-3 bg-muted rounded border mt-1 break-all font-mono text-sm">
-                  {cryptoAddresses[selectedCrypto as keyof typeof cryptoAddresses]}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                  2
+                </div>
+                <h3 className="font-semibold text-lg">Copy Wallet Address</h3>
+              </div>
+              <div className="bg-muted/50 border-2 border-primary/20 rounded-xl p-5 space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Wallet Address</Label>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                    {cryptoOptions.find(c => c.value === selectedCrypto)?.label}
+                  </span>
+                </div>
+                <div className="p-4 bg-background rounded-lg border border-border">
+                  <p className="font-mono text-sm break-all text-center">
+                    {cryptoAddresses[selectedCrypto as keyof typeof cryptoAddresses]}
+                  </p>
                 </div>
                 <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full mt-2"
+                  size="lg"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                   onClick={() => {
                     navigator.clipboard.writeText(cryptoAddresses[selectedCrypto as keyof typeof cryptoAddresses]);
-                    toast.success("Address copied to clipboard!");
+                    toast.success("✓ Address copied to clipboard!");
                   }}
                 >
-                  📋 Copy Address
+                  <span className="mr-2">📋</span>
+                  Copy Wallet Address
                 </Button>
               </div>
+            </div>
 
-              <div className="p-3 bg-warning/10 border border-warning/30 rounded">
-                <p className="text-xs font-semibold text-warning mb-1">
-                  ⚠️ Important
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  After sending payment, please contact our support with your transaction ID to activate your subscription.
-                </p>
+            {/* Step 3: Send Payment */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                  3
+                </div>
+                <h3 className="font-semibold text-lg">Send Payment</h3>
               </div>
+              <div className="bg-gradient-to-r from-success/10 to-success/5 border border-success/30 rounded-xl p-5">
+                <div className="flex items-start gap-3 mb-4">
+                  <span className="text-2xl">💰</span>
+                  <div className="flex-1">
+                    <p className="font-medium mb-1">Open Your Crypto Wallet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Open your preferred crypto wallet app (Trust Wallet, MetaMask, Binance, etc.)
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-4 border border-success/20">
+                  <p className="text-xs text-muted-foreground mb-2">Amount to Send (USD Equivalent)</p>
+                  <p className="text-3xl font-bold text-success">
+                    ${paymentDetails?.finalPrice?.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4: Contact Support */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                  4
+                </div>
+                <h3 className="font-semibold text-lg">Confirm Transaction</h3>
+              </div>
+              <div className="bg-warning/10 border border-warning/30 rounded-xl p-5">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">📞</span>
+                  <div className="flex-1">
+                    <p className="font-medium mb-2">Contact Our Support Team</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      After sending the payment, please share your transaction ID (TXID) with our support team via the Contact page to activate your premium subscription immediately.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        window.open('/contact', '_blank');
+                      }}
+                      className="border-warning hover:bg-warning hover:text-black"
+                    >
+                      Go to Contact Support
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Important Notes */}
+            <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                <span className="text-xl">ℹ️</span>
+                Important Notes
+              </h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>Send the <strong>exact USD equivalent</strong> in your selected cryptocurrency</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>Ensure you select the <strong>correct network</strong> when sending (e.g., TRC20 for USDT)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>Transaction confirmation may take 5-30 minutes depending on network congestion</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>Keep your transaction ID (TXID) safe for verification</span>
+                </li>
+              </ul>
             </div>
 
             <Button 
               variant="outline"
+              size="lg"
               className="w-full"
               onClick={() => {
                 setShowPaymentDialog(false);
