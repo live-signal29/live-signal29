@@ -1,64 +1,59 @@
 import { useEffect, useRef } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AdBannerProps {
   className?: string;
-  format?: 'banner' | 'leaderboard' | 'rectangle';
 }
 
-const adFormats = {
-  banner: { width: 320, height: 50, key: 'a53fa1b8f096290b04c59e353da8fd87' },
-  leaderboard: { width: 728, height: 90, key: 'a53fa1b8f096290b04c59e353da8fd87' },
-  rectangle: { width: 300, height: 250, key: 'a53fa1b8f096290b04c59e353da8fd87' }
-};
-
-const AdBanner = ({ className = "", format = 'banner' }: AdBannerProps) => {
+const AdBanner = ({ className = "" }: AdBannerProps) => {
   const adContainerRef = useRef<HTMLDivElement>(null);
-  const isInitialized = useRef(false);
-  const isMobile = useIsMobile();
-
-  // Use mobile banner on mobile, desktop format on desktop
-  const activeFormat = isMobile ? 'banner' : format;
-  const adConfig = adFormats[activeFormat];
+  const uniqueId = useRef(`ad-${Math.random().toString(36).substr(2, 9)}`);
 
   useEffect(() => {
     // Only run on client side
-    if (typeof window === 'undefined' || isInitialized.current) return;
+    if (typeof window === 'undefined' || !adContainerRef.current) return;
 
-    // Set atOptions globally
-    (window as any).atOptions = {
-      'key': adConfig.key,
-      'format': 'iframe',
-      'height': adConfig.height,
-      'width': adConfig.width,
-      'params': {}
-    };
+    const container = adContainerRef.current;
+    
+    // Create a unique container for this ad instance
+    const adDiv = document.createElement('div');
+    adDiv.id = uniqueId.current;
+    container.appendChild(adDiv);
 
-    // Create and append the ad script
+    // Create and append the ad script with unique options
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `//www.highperformanceformat.com/${adConfig.key}/invoke.js`;
-    script.async = true;
+    script.innerHTML = `
+      atOptions = {
+        'key': 'a53fa1b8f096290b04c59e353da8fd87',
+        'format': 'iframe',
+        'height': 50,
+        'width': 320,
+        'params': {}
+      };
+    `;
+    container.appendChild(script);
 
-    if (adContainerRef.current) {
-      adContainerRef.current.appendChild(script);
-      isInitialized.current = true;
-    }
+    // Add the invoke script
+    const invokeScript = document.createElement('script');
+    invokeScript.type = 'text/javascript';
+    invokeScript.src = '//www.highperformanceformat.com/a53fa1b8f096290b04c59e353da8fd87/invoke.js';
+    invokeScript.async = true;
+    container.appendChild(invokeScript);
 
     return () => {
-      // Cleanup if needed
-      if (adContainerRef.current && script.parentNode) {
-        script.parentNode.removeChild(script);
+      // Cleanup
+      if (container && container.parentNode) {
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
       }
-      isInitialized.current = false;
     };
-  }, [adConfig.key, adConfig.height, adConfig.width]);
+  }, []);
 
   return (
     <div 
       ref={adContainerRef}
-      className={`flex justify-center items-center w-full ${className}`}
-      style={{ minHeight: `${adConfig.height + 10}px` }}
+      className={`flex justify-center items-center min-h-[60px] w-full overflow-hidden ${className}`}
       aria-label="Advertisement"
     />
   );
