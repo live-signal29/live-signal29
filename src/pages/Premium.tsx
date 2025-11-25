@@ -323,7 +323,7 @@ const Premium = () => {
             }}
           >
             <CarouselContent className="-ml-2 md:-ml-4">
-              {plans.map((plan) => {
+              {plans.map((plan, index) => {
                 const originalPrice = plan.payOnly;
                 const finalPrice = calculateFinalPrice(originalPrice, plan.name);
                 const savings = originalPrice - finalPrice;
@@ -333,87 +333,159 @@ const Premium = () => {
                   appliedCoupon.applicable_plans.includes(plan.name);
 
                 return (
-                  <CarouselItem key={plan.name} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                    <Card className={`relative h-full ${plan.popular ? 'border-primary border-2 shadow-lg shadow-primary/20' : ''}`}>
+                  <CarouselItem 
+                    key={plan.name} 
+                    className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                  >
+                    <Card 
+                      className={`
+                        relative h-full overflow-hidden group
+                        transition-all duration-500 ease-out
+                        hover:scale-[1.02] hover:shadow-2xl
+                        animate-fade-in
+                        ${plan.popular 
+                          ? 'border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl shadow-primary/10' 
+                          : 'border-border/50 hover:border-primary/30'
+                        }
+                      `}
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      {/* Gradient overlay on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                      
+                      {/* Popular badge with animation */}
                       {plan.popular && (
-                        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1">
-                          ⭐ Most Popular
-                        </Badge>
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 animate-bounce">
+                          <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-6 py-1.5 text-sm font-bold shadow-lg">
+                            ⭐ Most Popular
+                          </Badge>
+                        </div>
                       )}
                       
-                      <CardHeader className="text-center pb-4 pt-6">
-                        <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
-                        <div className="space-y-1">
-                          <p className="text-4xl font-bold text-primary">${plan.pricePerMonth}</p>
-                          <p className="text-sm text-muted-foreground">per month</p>
+                      {/* Discount corner badge */}
+                      {plan.discount && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <div className="bg-gradient-to-br from-success to-success/80 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg animate-pulse">
+                            {plan.discount}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <CardHeader className="text-center pb-6 pt-8 relative z-10">
+                        <CardTitle className="text-2xl font-bold mb-4 group-hover:text-primary transition-colors">
+                          {plan.name}
+                        </CardTitle>
+                        
+                        {/* Price display with gradient */}
+                        <div className="space-y-2">
+                          <div className="relative inline-block">
+                            <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+                            <p className="relative text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                              ${plan.pricePerMonth}
+                            </p>
+                          </div>
+                          <p className="text-sm text-muted-foreground font-medium">per month</p>
+                          <p className="text-xs text-muted-foreground/70">{plan.duration}</p>
                         </div>
                       </CardHeader>
 
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2 py-4 border-t border-b">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Actual Price:</span>
-                            <span className="line-through">${plan.totalPrice}</span>
+                      <CardContent className="space-y-6 relative z-10">
+                        {/* Pricing breakdown with modern design */}
+                        <div className="space-y-3 p-4 rounded-lg bg-muted/30 backdrop-blur-sm border border-border/50">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground font-medium">Original Price</span>
+                            <span className="line-through text-muted-foreground">${plan.totalPrice}</span>
                           </div>
                           
                           {appliedCoupon && isPlanApplicable ? (
                             <>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Base Price:</span>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground font-medium">Before Coupon</span>
                                 <span className="line-through text-muted-foreground">${originalPrice}</span>
                               </div>
-                              <div className="flex justify-between text-base font-bold">
-                                <span>Final Price:</span>
-                                <span className="text-success text-xl">${finalPrice.toFixed(2)}</span>
+                              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-base">Final Price</span>
+                                <span className="text-2xl font-black bg-gradient-to-r from-success to-success/70 bg-clip-text text-transparent">
+                                  ${finalPrice.toFixed(2)}
+                                </span>
                               </div>
-                              <Alert className="border-success bg-success/10 py-2">
-                                <AlertDescription className="text-success text-center font-semibold text-sm">
-                                  💰 You save ${savings.toFixed(2)}!
-                                </AlertDescription>
-                              </Alert>
+                              <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-success/10 to-success/5 p-3 border border-success/20">
+                                <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent animate-pulse" />
+                                <p className="relative text-success text-center font-bold text-sm flex items-center justify-center gap-2">
+                                  <span className="text-lg">💰</span>
+                                  You save ${savings.toFixed(2)}!
+                                </p>
+                              </div>
                             </>
                           ) : (
-                            <div className="flex justify-between text-base font-bold">
-                              <span>Pay Only:</span>
-                              <span className="text-primary text-xl">${originalPrice}</span>
-                            </div>
-                          )}
-                          
-                          {plan.discount && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground text-sm">Base Discount:</span>
-                              <Badge variant="secondary" className="font-semibold">{plan.discount}</Badge>
-                            </div>
+                            <>
+                              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-base">Pay Only</span>
+                                <span className="text-2xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                                  ${originalPrice}
+                                </span>
+                              </div>
+                            </>
                           )}
 
                           {appliedCoupon && !isPlanApplicable && (
-                            <Alert className="border-warning bg-warning/10 py-2">
-                              <AlertCircle className="h-4 w-4 text-warning" />
-                              <AlertDescription className="text-warning text-xs">
-                                Coupon not applicable to this plan
-                              </AlertDescription>
-                            </Alert>
+                            <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-warning/10 to-warning/5 p-3 border border-warning/20">
+                              <p className="text-warning text-center text-xs font-medium flex items-center justify-center gap-2">
+                                <AlertCircle className="h-3.5 w-3.5" />
+                                Coupon not applicable
+                              </p>
+                            </div>
                           )}
                         </div>
 
-                        <div className="space-y-2">
+                        {/* Features list with animations */}
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Includes:</p>
                           {features.map((feature, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                              <span className="text-sm">{feature}</span>
+                            <div 
+                              key={idx} 
+                              className="flex items-start gap-3 group/item"
+                              style={{ animationDelay: `${(index * 100) + (idx * 50)}ms` }}
+                            >
+                              <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-success/10 flex items-center justify-center group-hover/item:bg-success/20 transition-colors">
+                                <Check className="h-3 w-3 text-success" />
+                              </div>
+                              <span className="text-sm leading-relaxed group-hover/item:text-foreground transition-colors">
+                                {feature}
+                              </span>
                             </div>
                           ))}
-                          <div className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                            <span className="text-sm font-semibold">{plan.duration} validity</span>
+                          <div 
+                            className="flex items-start gap-3 group/item"
+                            style={{ animationDelay: `${(index * 100) + (features.length * 50)}ms` }}
+                          >
+                            <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-success/10 flex items-center justify-center group-hover/item:bg-success/20 transition-colors">
+                              <Check className="h-3 w-3 text-success" />
+                            </div>
+                            <span className="text-sm font-semibold leading-relaxed group-hover/item:text-foreground transition-colors">
+                              {plan.duration} validity
+                            </span>
                           </div>
                         </div>
 
+                        {/* CTA Button with gradient */}
                         <Button 
-                          className="w-full bg-primary hover:bg-primary/90 font-semibold text-base h-11" 
+                          className="
+                            w-full h-12 font-bold text-base
+                            bg-gradient-to-r from-primary to-primary/80
+                            hover:from-primary/90 hover:to-primary/70
+                            shadow-lg shadow-primary/25
+                            hover:shadow-xl hover:shadow-primary/40
+                            transition-all duration-300
+                            group-hover:scale-[1.02]
+                            relative overflow-hidden
+                          " 
                           onClick={() => handleSelectPlan(plan)}
                         >
-                          SELECT PLAN
+                          <span className="relative z-10">SELECT PLAN</span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         </Button>
                       </CardContent>
                     </Card>
