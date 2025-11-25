@@ -21,7 +21,7 @@ import { differenceInDays, startOfDay } from "date-fns";
 
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading } = useSubscriptionAccess();
-  const [mainCategory, setMainCategory] = useState("FOREX");
+  const [mainCategory, setMainCategory] = useState("COMMODITIES");
   const [subCategory, setSubCategory] = useState<string>("all");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -165,8 +165,8 @@ const SignalsDashboard = () => {
           <div className="mb-4 sm:mb-6 overflow-x-auto scrollbar-hide">
             <div className="flex gap-3 sm:gap-6 min-w-max pb-2 px-1">
               {[
-                { key: "FOREX", label: "FOREX" },
                 { key: "COMMODITIES", label: "COMM" },
+                { key: "FOREX", label: "FOREX" },
                 { key: "INDICES", label: "INDEX" },
                 { key: "CRYPTO", label: "CRYPTO" },
                 { key: "DERIV/BINARY", label: "DERIV" },
