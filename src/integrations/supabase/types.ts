@@ -175,16 +175,22 @@ export type Database = {
       }
       signals: {
         Row: {
+          analysis_reason: string | null
           category: string
           chart_image_url: string | null
           created_at: string
           entry: string
           id: string
+          is_favorite: boolean | null
           main_category: string | null
           note: string | null
           pair: string
+          pips_result: string | null
           profit_note: string | null
           published: boolean | null
+          risk_level: string | null
+          signal_status: string | null
+          signal_type: string | null
           sl: string
           sl_hit: boolean | null
           status: string | null
@@ -201,16 +207,22 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          analysis_reason?: string | null
           category: string
           chart_image_url?: string | null
           created_at?: string
           entry: string
           id?: string
+          is_favorite?: boolean | null
           main_category?: string | null
           note?: string | null
           pair: string
+          pips_result?: string | null
           profit_note?: string | null
           published?: boolean | null
+          risk_level?: string | null
+          signal_status?: string | null
+          signal_type?: string | null
           sl: string
           sl_hit?: boolean | null
           status?: string | null
@@ -227,16 +239,22 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          analysis_reason?: string | null
           category?: string
           chart_image_url?: string | null
           created_at?: string
           entry?: string
           id?: string
+          is_favorite?: boolean | null
           main_category?: string | null
           note?: string | null
           pair?: string
+          pips_result?: string | null
           profit_note?: string | null
           published?: boolean | null
+          risk_level?: string | null
+          signal_status?: string | null
+          signal_type?: string | null
           sl?: string
           sl_hit?: boolean | null
           status?: string | null
