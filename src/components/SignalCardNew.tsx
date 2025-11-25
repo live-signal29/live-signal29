@@ -5,6 +5,7 @@ import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Lock, Crown, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFavorites } from "@/hooks/useFavorites";
+import AdBanner from "@/components/AdBanner";
 
 interface SignalCardProps {
   signal: {
@@ -227,6 +228,11 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
             <p className="text-xs sm:text-sm font-semibold text-success">{signal.profit_note}</p>
           </div>
         )}
+
+        {/* Ad Banner inside Signal Card */}
+        <div className="px-3 sm:px-4 py-3 border-t border-border">
+          <AdBanner className="scale-90" />
+        </div>
       </CardContent>
     </Card>
   );
