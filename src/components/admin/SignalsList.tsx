@@ -14,6 +14,9 @@ import SignalForm from "./SignalForm";
 const SignalsList = () => {
   const queryClient = useQueryClient();
   const [editingSignal, setEditingSignal] = useState<any>(null);
+  const [riskFilter, setRiskFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const { data: signals, isLoading } = useQuery({
     queryKey: ["admin-signals"],
@@ -25,6 +28,14 @@ const SignalsList = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Filter signals based on selected filters
+  const filteredSignals = signals?.filter((signal) => {
+    const matchesRisk = riskFilter === "all" || signal.risk_level === riskFilter;
+    const matchesStatus = statusFilter === "all" || signal.signal_status === statusFilter;
+    const matchesType = typeFilter === "all" || signal.signal_type === typeFilter;
+    return matchesRisk && matchesStatus && matchesType;
   });
 
   const toggleTpHit = async (id: string, field: string, currentValue: boolean) => {
@@ -135,7 +146,80 @@ const SignalsList = () => {
 
   return (
     <div className="space-y-4">
-      {signals?.map((signal) => (
+      {/* Filter Controls */}
+      <Card className="bg-card/50 backdrop-blur">
+        <CardHeader>
+          <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs sm:text-sm font-medium mb-2 block">Risk Level</label>
+              <Select value={riskFilter} onValueChange={setRiskFilter}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="all">All Risk Levels</SelectItem>
+                  <SelectItem value="Low">Low Risk</SelectItem>
+                  <SelectItem value="Medium">Medium Risk</SelectItem>
+                  <SelectItem value="High">High Risk</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs sm:text-sm font-medium mb-2 block">Signal Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="OPEN">🟢 OPEN</SelectItem>
+                  <SelectItem value="LIVE">🔵 LIVE</SelectItem>
+                  <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs sm:text-sm font-medium mb-2 block">Signal Type</label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Scalping">Scalping</SelectItem>
+                  <SelectItem value="Intraday">Intraday</SelectItem>
+                  <SelectItem value="Swing">Swing</SelectItem>
+                  <SelectItem value="Long Term">Long Term</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {(riskFilter !== "all" || statusFilter !== "all" || typeFilter !== "all") && (
+            <div className="mt-3 flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setRiskFilter("all");
+                  setStatusFilter("all");
+                  setTypeFilter("all");
+                }}
+              >
+                Clear Filters
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Showing {filteredSignals?.length || 0} of {signals?.length || 0} signals
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Signals List */}
+      {filteredSignals?.map((signal) => (
         <Card key={signal.id}>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
