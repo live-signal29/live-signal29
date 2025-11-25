@@ -34,7 +34,7 @@ const LazyImage = ({
           }
         });
       },
-      { rootMargin: "50px" }
+      { rootMargin: "100px" } // Load images earlier
     );
 
     observer.observe(imgRef.current);
@@ -52,6 +52,7 @@ const LazyImage = ({
       width={width}
       height={height}
       loading="lazy"
+      decoding="async"
       className={cn(
         "transition-opacity duration-300",
         isLoaded ? "opacity-100" : "opacity-0",
