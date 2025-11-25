@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart, Star } from "lucide-react";
+import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart, Star, Maximize2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { useSignalNotifications } from "@/hooks/useSignalNotifications";
 import { useFavorites } from "@/hooks/useFavorites";
+import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
 
 const SignalsDashboard = () => {
@@ -20,6 +21,8 @@ const SignalsDashboard = () => {
   const [mainCategory, setMainCategory] = useState("FOREX");
   const [subCategory, setSubCategory] = useState<string>("all");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const { favorites } = useFavorites();
 
   // Initialize notification system
@@ -106,6 +109,11 @@ const SignalsDashboard = () => {
     enabled: mainCategory === "CHART ANALYSIS",
   });
 
+  const openLightbox = (index: number) => {
+    setSelectedChartIndex(index);
+    setLightboxOpen(true);
+  };
+
   const handleCategoryChange = (category: string) => {
     setMainCategory(category);
     setSubCategory("all");
@@ -183,28 +191,54 @@ const SignalsDashboard = () => {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {chartAnalysis?.map((analysis) => (
-                    <Card key={analysis.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{analysis.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <img 
-                          src={analysis.image_url} 
-                          alt={analysis.title} 
-                          className="w-full h-48 object-cover rounded-lg"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {chartAnalysis?.map((analysis, index) => (
+                    <Card 
+                      key={analysis.id} 
+                      className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
+                      onClick={() => openLightbox(index)}
+                    >
+                      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                        <img
+                          src={analysis.image_url}
+                          alt={analysis.title}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                        {analysis.description && (
-                          <p className="text-sm text-muted-foreground">{analysis.description}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(analysis.created_at).toLocaleDateString()}
-                        </p>
-                      </CardContent>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                          <Button
+                            size="icon"
+                            variant="secondary"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 hover:bg-white"
+                          >
+                            <Maximize2 className="h-5 w-5 text-black" />
+                          </Button>
+                        </div>
+                      </div>
+                      <CardHeader>
+                        <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                          {analysis.title}
+                        </CardTitle>
+                      </CardHeader>
+                      {analysis.description && (
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {analysis.description}
+                          </p>
+                        </CardContent>
+                      )}
                     </Card>
                   ))}
                 </div>
+              )}
+
+              {/* Chart Lightbox */}
+              {chartAnalysis && chartAnalysis.length > 0 && (
+                <ChartLightbox
+                  isOpen={lightboxOpen}
+                  onClose={() => setLightboxOpen(false)}
+                  charts={chartAnalysis}
+                  initialIndex={selectedChartIndex}
+                />
               )}
 
               {!isLoadingCharts && chartAnalysis?.length === 0 && (
