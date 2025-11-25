@@ -41,7 +41,7 @@ interface SignalCardProps {
 const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: SignalCardProps) => {
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24;
+  const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
   
   const getStatusText = () => {
     return signal.signal_status || "OPEN";
