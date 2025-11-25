@@ -5,18 +5,22 @@ import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart } from "lucide-react";
+import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart, Star } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { useSignalNotifications } from "@/hooks/useSignalNotifications";
+import { useFavorites } from "@/hooks/useFavorites";
 import { differenceInDays, startOfDay } from "date-fns";
 
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("FOREX");
   const [subCategory, setSubCategory] = useState<string>("all");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const { favorites } = useFavorites();
 
   // Initialize notification system
   useSignalNotifications();
@@ -156,7 +160,20 @@ const SignalsDashboard = () => {
             </div>
           </div>
 
-          {/* Removed All Assets filter as requested */}
+          {/* Favorites Filter Button */}
+          {mainCategory !== "CHART ANALYSIS" && (
+            <div className="mb-4 flex justify-end">
+              <Button
+                variant={showFavoritesOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className="gap-2"
+              >
+                <Star className={`h-4 w-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                {showFavoritesOnly ? 'Show All Signals' : 'My Favorites'}
+              </Button>
+            </div>
+          )}
 
           {/* Chart Analysis View */}
           {mainCategory === "CHART ANALYSIS" && (
@@ -208,8 +225,26 @@ const SignalsDashboard = () => {
               ) : (
                 <div className="space-y-6">
                   {signals && signals.length > 0 && (() => {
-                    const groupedSignals: { [key: string]: typeof signals } = {};
-                    signals.forEach((signal) => {
+                    // Filter by favorites if enabled
+                    const filteredSignals = showFavoritesOnly 
+                      ? signals.filter(signal => favorites.has(signal.id))
+                      : signals;
+
+                    if (filteredSignals.length === 0) {
+                      return (
+                        <div className="text-center py-20">
+                          <Star className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                          <p className="text-muted-foreground text-lg">
+                            {showFavoritesOnly 
+                              ? 'No favorite signals yet. Star your favorite signals to see them here!' 
+                              : 'No signals found in the last 7 days'}
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    const groupedSignals: { [key: string]: typeof filteredSignals } = {};
+                    filteredSignals.forEach((signal) => {
                       const date = startOfDay(new Date(signal.created_at)).toISOString();
                       if (!groupedSignals[date]) {
                         groupedSignals[date] = [];
