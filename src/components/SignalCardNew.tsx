@@ -1,6 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
+import { Lock, Crown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface SignalCardProps {
   signal: {
@@ -29,9 +32,11 @@ interface SignalCardProps {
     created_at: string;
     category: string;
   };
+  hasAccess?: boolean;
 }
 
-const SignalCardNew = ({ signal }: SignalCardProps) => {
+const SignalCardNew = ({ signal, hasAccess = true }: SignalCardProps) => {
+  const navigate = useNavigate();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24;
   
   const getStatusText = () => {
@@ -112,9 +117,9 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
           )}
         </div>
 
-        {/* TP/SL Table */}
-        <div className="p-3 sm:p-4">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        {/* TP/SL Table with Premium Blur */}
+        <div className="relative p-3 sm:p-4">
+          <div className={`grid grid-cols-2 gap-x-4 gap-y-2 text-sm ${!hasAccess ? 'blur-md select-none' : ''}`}>
             <div className="flex justify-between items-center py-1.5 border-b border-border/50">
               <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 1</span>
               <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
@@ -147,6 +152,33 @@ const SignalCardNew = ({ signal }: SignalCardProps) => {
               </span>
             </div>
           </div>
+
+          {/* Premium Overlay for Free Users */}
+          {!hasAccess && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <div className="text-center space-y-3 p-4">
+                <div className="flex justify-center">
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <Lock className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <p className="font-semibold text-sm sm:text-base mb-1">Premium Content</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Upgrade to view TP/SL levels
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/premium")}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Premium
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Analysis Reason */}

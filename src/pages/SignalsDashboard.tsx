@@ -217,7 +217,11 @@ const SignalsDashboard = () => {
                       <div key={date} className="space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                           {daySignals.map((signal) => (
-                            <SignalCardNew key={signal.id} signal={signal as any} />
+                            <SignalCardNew 
+                              key={signal.id} 
+                              signal={signal as any}
+                              hasAccess={hasAccess}
+                            />
                           ))}
                         </div>
                         <div className="border-t border-border/50 my-4"></div>
