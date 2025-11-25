@@ -59,7 +59,21 @@ const Premium = () => {
 
   const categories = ["FOREX", "COMMODITY", "INDEX", "CRYPTO"];
 
-  // Fetch active special offer
+  // Fetch active special offers for carousel
+  const { data: specialOffers } = useQuery({
+    queryKey: ["special-offers-carousel"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("special_offers")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      if (error) return [];
+      return data || [];
+    },
+  });
+
+  // Fetch first active special offer for countdown
   const { data: activeOffer } = useQuery({
     queryKey: ["active-special-offer"],
     queryFn: async () => {
@@ -235,7 +249,7 @@ const Premium = () => {
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        {/* Banner Carousel - Auto-sliding */}
+        {/* Banner Carousel - Auto-sliding with Special Offers */}
         <div className="mb-8">
           <Carousel 
             className="w-full max-w-5xl mx-auto"
@@ -243,6 +257,7 @@ const Premium = () => {
             opts={{ loop: true }}
           >
             <CarouselContent>
+              {/* Default Happy New Year Banner */}
               <CarouselItem>
                 <div className="relative h-48 md:h-64 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-xl flex items-center justify-center overflow-hidden">
                   <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
@@ -252,6 +267,8 @@ const Premium = () => {
                   </div>
                 </div>
               </CarouselItem>
+
+              {/* Default Limited Time Offer Banner */}
               <CarouselItem>
                 <div className="relative h-48 md:h-64 bg-gradient-to-r from-yellow-500 via-red-500 to-pink-500 rounded-xl flex items-center justify-center overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/30"></div>
@@ -262,6 +279,32 @@ const Premium = () => {
                   </div>
                 </div>
               </CarouselItem>
+
+              {/* Dynamic Special Offers from Admin Panel */}
+              {specialOffers && specialOffers.map((offer, index) => (
+                <CarouselItem key={offer.id}>
+                  <div 
+                    className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
+                      index % 4 === 0 ? 'bg-gradient-to-r from-green-600 via-teal-600 to-blue-600' :
+                      index % 4 === 1 ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-red-600' :
+                      index % 4 === 2 ? 'bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600' :
+                      'bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600'
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
+                    <div className="text-center text-white p-6 relative z-10">
+                      <h2 className="text-3xl md:text-6xl font-bold mb-3 drop-shadow-lg animate-fade-in">
+                        {offer.title}
+                      </h2>
+                      {offer.description && (
+                        <p className="text-lg md:text-2xl font-semibold drop-shadow-md">
+                          {offer.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
             </CarouselContent>
             <CarouselPrevious className="left-2" />
             <CarouselNext className="right-2" />
