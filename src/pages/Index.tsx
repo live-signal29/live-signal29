@@ -3,6 +3,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
 import SignalCard from "@/components/SignalCard";
+import SEO from "@/components/SEO";
+import { getWebsiteStructuredData, getOrganizationStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -22,8 +24,23 @@ const Index = () => {
     },
   });
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      getWebsiteStructuredData(),
+      getOrganizationStructuredData()
+    ]
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="TREND IS FRIEND - Live Trading Signals | Forex, Crypto, Commodities & Indices"
+        description="Get real-time trading signals for Forex, Crypto, Commodities, and Indices. Professional analysis, high accuracy, instant notifications. Start your 8-day free trial today!"
+        keywords="trading signals, forex signals, crypto signals, commodities trading, indices signals, live trading, buy sell signals, trading analysis, technical analysis, trading alerts"
+        url="https://yourdomain.com"
+        structuredData={structuredData}
+      />
       <Header />
       
       <main className="flex-1">
