@@ -284,24 +284,60 @@ const Premium = () => {
               {specialOffers && specialOffers.map((offer, index) => (
                 <CarouselItem key={offer.id}>
                   <div 
-                    className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
-                      index % 4 === 0 ? 'bg-gradient-to-r from-green-600 via-teal-600 to-blue-600' :
-                      index % 4 === 1 ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-red-600' :
-                      index % 4 === 2 ? 'bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600' :
-                      'bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600'
-                    }`}
+                    className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden group ${
+                      index % 4 === 0 ? 'bg-gradient-to-br from-green-500 via-teal-500 to-blue-600' :
+                      index % 4 === 1 ? 'bg-gradient-to-br from-purple-500 via-pink-500 to-red-600' :
+                      index % 4 === 2 ? 'bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600' :
+                      'bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600'
+                    } shadow-2xl hover:shadow-3xl transition-all duration-300`}
                   >
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
-                    <div className="text-center text-white p-6 relative z-10">
-                      <h2 className="text-3xl md:text-6xl font-bold mb-3 drop-shadow-lg animate-fade-in">
+                    {/* Animated Background Pattern */}
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20 animate-pulse"></div>
+                    
+                    {/* Shimmer Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]"></div>
+                    
+                    {/* Glow Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    
+                    {/* Floating Particles */}
+                    <div className="absolute top-4 left-4 w-2 h-2 bg-white/40 rounded-full animate-[float_3s_ease-in-out_infinite]"></div>
+                    <div className="absolute top-8 right-8 w-3 h-3 bg-white/30 rounded-full animate-[float_4s_ease-in-out_infinite_0.5s]"></div>
+                    <div className="absolute bottom-6 left-12 w-2 h-2 bg-white/50 rounded-full animate-[float_5s_ease-in-out_infinite_1s]"></div>
+                    <div className="absolute bottom-10 right-16 w-2 h-2 bg-white/40 rounded-full animate-[float_3.5s_ease-in-out_infinite_1.5s]"></div>
+                    
+                    {/* Sparkle Stars */}
+                    <div className="absolute top-1/4 left-1/4 text-white/60 animate-[spin_4s_linear_infinite]">✨</div>
+                    <div className="absolute top-1/3 right-1/4 text-white/50 animate-[spin_5s_linear_infinite_reverse]">⭐</div>
+                    <div className="absolute bottom-1/4 left-1/3 text-white/40 animate-[spin_6s_linear_infinite]">💫</div>
+                    
+                    {/* Content */}
+                    <div className="text-center text-white p-6 relative z-10 transform group-hover:scale-105 transition-transform duration-300">
+                      <div className="mb-4">
+                        <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30 text-xs px-3 py-1 animate-bounce">
+                          🎁 SPECIAL OFFER
+                        </Badge>
+                      </div>
+                      <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-2xl animate-fade-in bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
                         {offer.title}
                       </h2>
                       {offer.description && (
-                        <p className="text-lg md:text-2xl font-semibold drop-shadow-md">
+                        <p className="text-lg md:text-2xl font-semibold drop-shadow-lg animate-fade-in backdrop-blur-sm bg-black/20 rounded-lg px-4 py-2 inline-block">
                           {offer.description}
                         </p>
                       )}
+                      <div className="mt-4 flex justify-center gap-2">
+                        <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-ping animation-delay-200"></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-ping animation-delay-400"></div>
+                      </div>
                     </div>
+                    
+                    {/* Corner Decorations */}
+                    <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-white/30 rounded-tl-xl"></div>
+                    <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-white/30 rounded-tr-xl"></div>
+                    <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-white/30 rounded-bl-xl"></div>
+                    <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-white/30 rounded-br-xl"></div>
                   </div>
                 </CarouselItem>
               ))}
