@@ -2,8 +2,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
-import { Lock, Crown } from "lucide-react";
+import { Lock, Crown, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useFavorites } from "@/hooks/useFavorites";
 
 interface SignalCardProps {
   signal: {
@@ -33,10 +34,12 @@ interface SignalCardProps {
     category: string;
   };
   hasAccess?: boolean;
+  showFavoriteButton?: boolean;
 }
 
-const SignalCardNew = ({ signal, hasAccess = true }: SignalCardProps) => {
+const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: SignalCardProps) => {
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24;
   
   const getStatusText = () => {
@@ -88,9 +91,30 @@ const SignalCardNew = ({ signal, hasAccess = true }: SignalCardProps) => {
               @ {signal.entry}
             </Badge>
           </div>
-          <div className="text-right flex-shrink-0">
-            <div className="text-[10px] sm:text-xs text-muted-foreground">
-              {formatDate(signal.created_at)}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {showFavoriteButton && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:bg-accent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(signal.id);
+                }}
+              >
+                <Star 
+                  className={`h-4 w-4 transition-all ${
+                    isFavorite(signal.id) 
+                      ? 'fill-yellow-400 text-yellow-400' 
+                      : 'text-muted-foreground hover:text-yellow-400'
+                  }`}
+                />
+              </Button>
+            )}
+            <div className="text-right">
+              <div className="text-[10px] sm:text-xs text-muted-foreground">
+                {formatDate(signal.created_at)}
+              </div>
             </div>
           </div>
         </div>
