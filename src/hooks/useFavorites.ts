@@ -69,6 +69,17 @@ export const useFavorites = () => {
 
       const isFavorite = favorites.has(signalId);
 
+      // Optimistically update UI immediately
+      if (isFavorite) {
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(signalId);
+          return newSet;
+        });
+      } else {
+        setFavorites(prev => new Set(prev).add(signalId));
+      }
+
       if (isFavorite) {
         // Remove from favorites
         const { error } = await supabase
@@ -79,25 +90,20 @@ export const useFavorites = () => {
 
         if (error) throw error;
 
-        setFavorites(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(signalId);
-          return newSet;
-        });
-
         toast({
           title: "Removed from favorites",
           description: "Signal removed from your favorites",
         });
       } else {
-        // Add to favorites
+        // Add to favorites with upsert to handle conflicts
         const { error } = await supabase
           .from('user_favorites')
-          .insert({ user_id: user.id, signal_id: signalId });
+          .upsert(
+            { user_id: user.id, signal_id: signalId },
+            { onConflict: 'user_id,signal_id', ignoreDuplicates: true }
+          );
 
         if (error) throw error;
-
-        setFavorites(prev => new Set(prev).add(signalId));
 
         toast({
           title: "Added to favorites",
@@ -106,6 +112,8 @@ export const useFavorites = () => {
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
+      // Revert optimistic update on error
+      fetchFavorites();
       toast({
         title: "Error",
         description: "Failed to update favorites",
