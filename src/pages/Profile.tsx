@@ -4,9 +4,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Mail, Phone, Calendar, Crown, CreditCard, Gift, Wallet } from "lucide-react";
+import { Loader2, User, Mail, Phone, Calendar, Crown, CreditCard, Gift, Edit2, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -15,6 +17,8 @@ const Profile = () => {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
 
   useEffect(() => {
     loadProfile();
@@ -37,8 +41,9 @@ const Profile = () => {
 
       if (profileData) {
         setProfile(profileData);
+        setEditedName(profileData.full_name || "");
         
-        const endDate = profileData.subscription_status === 'premium' 
+        const endDate = profileData.subscription_status === 'premium'
           ? profileData.subscription_end_date
           : profileData.trial_end_date;
 
@@ -87,6 +92,37 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateName = async () => {
+    if (!editedName.trim()) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: editedName.trim() })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setProfile({ ...profile, full_name: editedName.trim() });
+      setIsEditingName(false);
+      toast.success("Name updated successfully");
+    } catch (error) {
+      console.error("Error updating name:", error);
+      toast.error("Failed to update name");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedName(profile?.full_name || "");
+    setIsEditingName(false);
   };
 
   if (loading) {
@@ -175,30 +211,6 @@ const Profile = () => {
               </CardContent>
             </Card>
 
-            {/* Balance Card */}
-            <Card className="mb-6 border-primary/30 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-3">
-                    <Wallet className="h-8 w-8 text-primary" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Your Balance</p>
-                      <p className="text-3xl font-bold">
-                        ${profile?.balance ? parseFloat(profile.balance).toFixed(2) : '0.00'}
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={() => navigate('/crypto-deposit')}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Deposit Funds
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Subscription Info */}
             {profile?.subscription_plan && (
               <Card className="mb-6">
@@ -248,16 +260,53 @@ const Profile = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/50">
                   <User className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Full Name</p>
-                    <p className="font-medium">{profile?.full_name || "Not set"}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Full Name</p>
+                    {isEditingName ? (
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          value={editedName}
+                          onChange={(e) => setEditedName(e.target.value)}
+                          className="h-9"
+                          autoFocus
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={handleUpdateName}
+                          className="h-9 w-9 p-0"
+                        >
+                          <Check className="h-4 w-4 text-success" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={handleCancelEdit}
+                          className="h-9 w-9 p-0"
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{profile?.full_name || "Not set"}</p>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => setIsEditingName(true)}
+                          className="h-8 px-2"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/50">
                   <Mail className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="text-sm text-muted-foreground">Email (cannot be changed)</p>
                     <p className="font-medium">{profile?.email}</p>
                   </div>
                 </div>
