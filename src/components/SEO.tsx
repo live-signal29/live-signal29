@@ -17,7 +17,7 @@ const SEO = ({
   title = "TREND IS FRIEND - Live Trading Signals | Forex, Crypto, Commodities & Indices",
   description = "Get real-time trading signals for Forex, Crypto, Commodities, and Indices. Professional analysis, high accuracy, instant notifications. Start your 8-day free trial today!",
   keywords = "trading signals, forex signals, crypto signals, commodities trading, indices signals, live trading, buy sell signals, trading analysis, technical analysis, trading alerts",
-  image = "https://yourdomain.com/og-image.jpg",
+  image = "/og-share-preview.jpg",
   url = "https://yourdomain.com",
   type = "website",
   structuredData,
@@ -45,8 +45,8 @@ const SEO = ({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
-      <meta property="og:image:width" content="1200" />
-      <meta property="og:image:height" content="630" />
+      <meta property="og:image:width" content="1920" />
+      <meta property="og:image:height" content="1008" />
       <meta property="og:site_name" content="TREND IS FRIEND" />
       <meta property="og:locale" content="en_US" />
       
