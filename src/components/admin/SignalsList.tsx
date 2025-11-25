@@ -96,40 +96,15 @@ const SignalsList = () => {
 
   const toggleTpHit = async (id: string, field: string, currentValue: boolean) => {
     try {
-      // First, get the current signal to check all TPs
-      const { data: currentSignal, error: fetchError } = await supabase
-        .from("signals")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Update the TP hit status
-      const updatedSignal = { ...currentSignal, [field]: !currentValue };
-
-      // Check if all TPs are hit
-      const allTpsHit = 
-        updatedSignal.tp1_hit &&
-        (!updatedSignal.tp2 || updatedSignal.tp2_hit) &&
-        (!updatedSignal.tp3 || updatedSignal.tp3_hit) &&
-        (!updatedSignal.tp4 || updatedSignal.tp4_hit);
-
-      // Update signal with new status if all TPs are hit
-      const updateData: any = { [field]: !currentValue };
-      if (allTpsHit) {
-        updateData.status = "All TP Hit";
-      }
-
       const { error } = await supabase
         .from("signals")
-        .update(updateData)
+        .update({ [field]: !currentValue })
         .eq("id", id);
       
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["admin-signals"] });
       queryClient.invalidateQueries({ queryKey: ["signals"] });
-      toast.success(allTpsHit ? "All TPs hit! Signal closed." : "Updated successfully");
+      toast.success("Updated successfully");
     } catch (error: any) {
       toast.error("Update failed");
     }
@@ -151,19 +126,19 @@ const SignalsList = () => {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: string) => {
+  const updateSignalStatus = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from("signals")
-        .update({ status: newStatus })
+        .update({ signal_status: newStatus })
         .eq("id", id);
       
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["admin-signals"] });
       queryClient.invalidateQueries({ queryKey: ["signals"] });
-      toast.success(`Status updated to ${newStatus === "Active" ? "Running" : "Target Hit"}`);
+      toast.success(`Signal status updated to ${newStatus}`);
     } catch (error: any) {
-      toast.error("Failed to update status");
+      toast.error("Failed to update signal status");
     }
   };
 
@@ -374,13 +349,14 @@ const SignalsList = () => {
                       <Badge variant="outline" className="text-xs">{signal.signal_type}</Badge>
                     )}
                   </CardTitle>
-                  <Select value={signal.status || "Active"} onValueChange={(value) => updateStatus(signal.id, value)}>
+                  <Select value={signal.signal_status || "OPEN"} onValueChange={(value) => updateSignalStatus(signal.id, value)}>
                     <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-background z-50">
-                      <SelectItem value="Active">🟢 Running</SelectItem>
-                      <SelectItem value="All TP Hit">🎯 All TP Hit</SelectItem>
+                      <SelectItem value="OPEN">🟢 OPEN</SelectItem>
+                      <SelectItem value="LIVE">🔵 LIVE</SelectItem>
+                      <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-2">
