@@ -4,6 +4,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import CountdownTimer from "@/components/CountdownTimer";
+import SEO from "@/components/SEO";
+import { getProductStructuredData, getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +30,17 @@ const Premium = () => {
   const [selectedCrypto, setSelectedCrypto] = useState("USDT_TRC20");
 
   const autoplayPlugin = Autoplay({ delay: 3000, stopOnInteraction: true });
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      getProductStructuredData("Premium Trading Signals", 180, "USD"),
+      getBreadcrumbStructuredData([
+        { name: "Home", url: "https://yourdomain.com" },
+        { name: "Premium Plans", url: "https://yourdomain.com/premium" }
+      ])
+    ]
+  };
 
   // Fixed wallet addresses
   const cryptoAddresses: Record<string, string> = {
@@ -190,6 +203,13 @@ const Premium = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="Premium Trading Signals Plans - TREND IS FRIEND"
+        description="Choose from flexible monthly, quarterly, half-yearly, and yearly premium plans. Get unlimited trading signals for Forex, Crypto, Commodities, and Indices with up to 50% off annual plans."
+        keywords="premium trading signals, subscription plans, forex signals subscription, crypto signals premium, trading signals pricing, annual trading plans"
+        url="https://yourdomain.com/premium"
+        structuredData={structuredData}
+      />
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">

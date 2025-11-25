@@ -5,6 +5,8 @@ import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import AdBanner from "@/components/AdBanner";
+import SEO from "@/components/SEO";
+import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart, Star, Maximize2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +30,11 @@ const SignalsDashboard = () => {
 
   // Initialize notification system
   useSignalNotifications();
+
+  const breadcrumbData = getBreadcrumbStructuredData([
+    { name: "Home", url: "https://yourdomain.com" },
+    { name: "Live Signals Dashboard", url: "https://yourdomain.com/signals-dashboard" }
+  ]);
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -134,6 +141,13 @@ const SignalsDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="Live Signals Dashboard - Real-time Trading Signals"
+        description="Access real-time trading signals for Forex, Crypto, Commodities, and Indices. Get instant notifications, professional analysis, and high-accuracy signals."
+        keywords="live signals dashboard, trading signals, forex signals live, crypto signals real-time, commodities trading, indices signals"
+        url="https://yourdomain.com/signals-dashboard"
+        structuredData={breadcrumbData}
+      />
       <Header />
       
       <main className="flex-1">
