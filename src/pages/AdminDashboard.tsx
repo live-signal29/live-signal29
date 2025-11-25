@@ -14,6 +14,7 @@ import UserManagement from "@/components/admin/UserManagement";
 import ActivityLog from "@/components/admin/ActivityLog";
 import CouponManagement from "@/components/admin/CouponManagement";
 import SpecialOfferManagement from "@/components/admin/SpecialOfferManagement";
+import UserActivityDashboard from "@/components/admin/UserActivityDashboard";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -81,12 +82,13 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="charts" className="text-xs sm:text-sm py-2">Charts</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
             <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2">Coupons</TabsTrigger>
             <TabsTrigger value="offers" className="text-xs sm:text-sm py-2">Offers</TabsTrigger>
+            <TabsTrigger value="user-activity" className="text-xs sm:text-sm py-2">Analytics</TabsTrigger>
             <TabsTrigger value="activity" className="text-xs sm:text-sm py-2">Activity</TabsTrigger>
           </TabsList>
 
@@ -140,6 +142,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="offers" className="space-y-4">
             <SpecialOfferManagement />
+          </TabsContent>
+
+          <TabsContent value="user-activity" className="space-y-4">
+            <UserActivityDashboard />
           </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
