@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Edit, Trash2, Eye, EyeOff, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import SignalForm from "./SignalForm";
@@ -17,6 +17,9 @@ const SignalsList = () => {
   const [riskFilter, setRiskFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [selectedSignals, setSelectedSignals] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<string>("");
+  const [bulkValue, setBulkValue] = useState<string>("");
 
   const { data: signals, isLoading } = useQuery({
     queryKey: ["admin-signals"],
@@ -37,6 +40,59 @@ const SignalsList = () => {
     const matchesType = typeFilter === "all" || signal.signal_type === typeFilter;
     return matchesRisk && matchesStatus && matchesType;
   });
+
+  const toggleSelectSignal = (id: string) => {
+    const newSelected = new Set(selectedSignals);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedSignals(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSignals.size === filteredSignals?.length) {
+      setSelectedSignals(new Set());
+    } else {
+      setSelectedSignals(new Set(filteredSignals?.map(s => s.id) || []));
+    }
+  };
+
+  const applyBulkAction = async () => {
+    if (selectedSignals.size === 0) {
+      toast.error("Please select at least one signal");
+      return;
+    }
+
+    if (!bulkAction || !bulkValue) {
+      toast.error("Please select an action and value");
+      return;
+    }
+
+    try {
+      const updates: any = {};
+      if (bulkAction === "risk_level") updates.risk_level = bulkValue;
+      if (bulkAction === "signal_status") updates.signal_status = bulkValue;
+      if (bulkAction === "signal_type") updates.signal_type = bulkValue;
+
+      const { error } = await supabase
+        .from("signals")
+        .update(updates)
+        .in("id", Array.from(selectedSignals));
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["admin-signals"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success(`Updated ${selectedSignals.size} signals successfully`);
+      setSelectedSignals(new Set());
+      setBulkAction("");
+      setBulkValue("");
+    } catch (error: any) {
+      toast.error("Bulk update failed");
+    }
+  };
 
   const toggleTpHit = async (id: string, field: string, currentValue: boolean) => {
     try {
@@ -146,10 +202,82 @@ const SignalsList = () => {
 
   return (
     <div className="space-y-4">
+      {/* Bulk Actions */}
+      {selectedSignals.size > 0 && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium">{selectedSignals.size} selected</span>
+              </div>
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Select value={bulkAction} onValueChange={setBulkAction}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select action" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="risk_level">Change Risk Level</SelectItem>
+                    <SelectItem value="signal_status">Change Status</SelectItem>
+                    <SelectItem value="signal_type">Change Type</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={bulkValue} onValueChange={setBulkValue} disabled={!bulkAction}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select value" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    {bulkAction === "risk_level" && (
+                      <>
+                        <SelectItem value="Low">Low Risk</SelectItem>
+                        <SelectItem value="Medium">Medium Risk</SelectItem>
+                        <SelectItem value="High">High Risk</SelectItem>
+                      </>
+                    )}
+                    {bulkAction === "signal_status" && (
+                      <>
+                        <SelectItem value="OPEN">🟢 OPEN</SelectItem>
+                        <SelectItem value="LIVE">🔵 LIVE</SelectItem>
+                        <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
+                      </>
+                    )}
+                    {bulkAction === "signal_type" && (
+                      <>
+                        <SelectItem value="Scalping">Scalping</SelectItem>
+                        <SelectItem value="Intraday">Intraday</SelectItem>
+                        <SelectItem value="Swing">Swing</SelectItem>
+                        <SelectItem value="Long Term">Long Term</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2">
+                  <Button onClick={applyBulkAction} className="flex-1">Apply</Button>
+                  <Button variant="outline" onClick={() => setSelectedSignals(new Set())}>Clear</Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filter Controls */}
       <Card className="bg-card/50 backdrop-blur">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2"
+          >
+            {selectedSignals.size === filteredSignals?.length ? (
+              <CheckSquare className="h-4 w-4" />
+            ) : (
+              <Square className="h-4 w-4" />
+            )}
+            {selectedSignals.size === filteredSignals?.length ? "Deselect All" : "Select All"}
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -220,30 +348,45 @@ const SignalsList = () => {
 
       {/* Signals List */}
       {filteredSignals?.map((signal) => (
-        <Card key={signal.id}>
+        <Card key={signal.id} className={selectedSignals.has(signal.id) ? "border-primary" : ""}>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
-              <div className="flex-1">
-                <CardTitle className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="text-base sm:text-lg">{signal.pair}</span>
-                  <Badge className={signal.type === "Buy" ? "badge-buy" : "badge-sell"}>
-                    {signal.type}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">{signal.main_category}</Badge>
-                  <Badge variant="secondary" className="text-xs">{signal.sub_category}</Badge>
-                </CardTitle>
-                <Select value={signal.status || "Active"} onValueChange={(value) => updateStatus(signal.id, value)}>
-                  <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">🟢 Running</SelectItem>
-                    <SelectItem value="All TP Hit">🎯 All TP Hit</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                  {format(new Date(signal.created_at), "MMM dd, yyyy HH:mm")}
-                </p>
+              <div className="flex items-start gap-3 flex-1">
+                <Checkbox
+                  checked={selectedSignals.has(signal.id)}
+                  onCheckedChange={() => toggleSelectSignal(signal.id)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <CardTitle className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="text-base sm:text-lg">{signal.pair}</span>
+                    <Badge className={signal.type === "Buy" ? "badge-buy" : "badge-sell"}>
+                      {signal.type}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">{signal.main_category}</Badge>
+                    <Badge variant="secondary" className="text-xs">{signal.sub_category}</Badge>
+                    {signal.risk_level && (
+                      <Badge variant={signal.risk_level === "High" ? "destructive" : signal.risk_level === "Low" ? "default" : "secondary"} className="text-xs">
+                        {signal.risk_level} Risk
+                      </Badge>
+                    )}
+                    {signal.signal_type && (
+                      <Badge variant="outline" className="text-xs">{signal.signal_type}</Badge>
+                    )}
+                  </CardTitle>
+                  <Select value={signal.status || "Active"} onValueChange={(value) => updateStatus(signal.id, value)}>
+                    <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="Active">🟢 Running</SelectItem>
+                      <SelectItem value="All TP Hit">🎯 All TP Hit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                    {format(new Date(signal.created_at), "MMM dd, yyyy HH:mm")}
+                  </p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setEditingSignal(signal)}>
