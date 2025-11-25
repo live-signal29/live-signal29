@@ -73,6 +73,28 @@ const Premium = () => {
     },
   });
 
+  // Fetch active coupons for banner display
+  const { data: activeCoupons } = useQuery({
+    queryKey: ["active-coupons-banner"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      
+      if (error) return [];
+      
+      // Filter out expired coupons
+      const validCoupons = data.filter(coupon => {
+        if (!coupon.expiry_date) return true;
+        return new Date(coupon.expiry_date) > new Date();
+      });
+      
+      return validCoupons;
+    },
+  });
+
   const plans = [
     {
       name: "Monthly",
@@ -245,6 +267,68 @@ const Premium = () => {
             <CarouselNext className="right-2" />
           </Carousel>
         </div>
+
+        {/* Active Coupons Banner */}
+        {activeCoupons && activeCoupons.length > 0 && (
+          <div className="max-w-5xl mx-auto mb-8">
+            <Carousel 
+              className="w-full"
+              plugins={[Autoplay({ delay: 4000, stopOnInteraction: true })]}
+              opts={{ loop: true }}
+            >
+              <CarouselContent>
+                {activeCoupons.map((coupon) => (
+                  <CarouselItem key={coupon.id}>
+                    <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className="bg-primary/20 p-3 rounded-full animate-pulse">
+                              <Tag className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="text-left">
+                              <h3 className="text-lg md:text-xl font-bold text-primary mb-1">
+                                🎉 New Discount Available!
+                              </h3>
+                              <p className="text-sm md:text-base text-muted-foreground">
+                                Use code <span className="font-mono font-bold text-primary text-lg px-2 py-0.5 bg-primary/10 rounded">{coupon.code}</span> for{" "}
+                                <span className="font-bold text-success">
+                                  {coupon.discount_type === "percentage" 
+                                    ? `${coupon.discount_value}% OFF` 
+                                    : `$${coupon.discount_value} OFF`}
+                                </span>
+                              </p>
+                              {coupon.expiry_date && (
+                                <p className="text-xs text-muted-foreground/70 mt-1">
+                                  Valid until {new Date(coupon.expiry_date).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button 
+                            onClick={() => {
+                              setCouponCode(coupon.code);
+                              applyCoupon();
+                            }}
+                            className="bg-primary hover:bg-primary/90 font-semibold shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                          >
+                            Apply Now
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {activeCoupons.length > 1 && (
+                <>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </>
+              )}
+            </Carousel>
+          </div>
+        )}
 
         {/* Countdown Timer */}
         {activeOffer && (
