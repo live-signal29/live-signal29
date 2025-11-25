@@ -206,7 +206,7 @@ const Premium = () => {
                   <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
                   <div className="text-center text-white p-6 relative z-10">
                     <h2 className="text-4xl md:text-6xl font-bold mb-3 drop-shadow-lg animate-pulse">HAPPY NEW YEAR 🎊</h2>
-                    <p className="text-xl md:text-3xl font-semibold drop-shadow-md">2025 Special Offer</p>
+                    <p className="text-xl md:text-3xl font-semibold drop-shadow-md">2026 Special Offer</p>
                   </div>
                 </div>
               </CarouselItem>
