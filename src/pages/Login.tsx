@@ -44,6 +44,21 @@ const Login = () => {
       }
 
       if (data.session) {
+        // Track login event
+        try {
+          await supabase.from('user_login_history').insert({
+            user_id: data.session.user.id,
+            ip_address: null, // Could be enhanced with IP detection
+            user_agent: navigator.userAgent,
+            device_type: /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+            browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
+                     navigator.userAgent.includes('Firefox') ? 'Firefox' : 
+                     navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'
+          });
+        } catch (trackError) {
+          console.error('Failed to track login:', trackError);
+        }
+        
         toast.success("Login successful!");
         navigate("/onboarding");
       }

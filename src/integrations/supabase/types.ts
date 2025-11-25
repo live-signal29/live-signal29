@@ -480,6 +480,36 @@ export type Database = {
           },
         ]
       }
+      user_login_history: {
+        Row: {
+          browser: string | null
+          device_type: string | null
+          id: string
+          ip_address: string | null
+          login_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -500,6 +530,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_signal_views: {
+        Row: {
+          id: string
+          signal_id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          signal_id: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          signal_id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_signal_views_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "signals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
