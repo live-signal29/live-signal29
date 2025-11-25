@@ -21,9 +21,14 @@ const Header = () => {
                 <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse group-hover:scale-110 transition-transform duration-300" />
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300"></div>
               </div>
-              <span className="text-sm sm:text-base md:text-lg font-bold gradient-text bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent animate-fade-in group-hover:scale-105 transition-transform duration-300">
-                Live Signals
-              </span>
+              <div className="flex flex-col">
+                <span className="text-sm sm:text-base md:text-lg font-bold text-white group-hover:scale-105 transition-transform duration-300">
+                  Live Signals
+                </span>
+                <span className="text-xs text-white/70">
+                  welcome 🤗
+                </span>
+              </div>
             </Link>
           </div>
 
