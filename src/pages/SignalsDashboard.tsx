@@ -10,12 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
+import { useSignalNotifications } from "@/hooks/useSignalNotifications";
 import { differenceInDays, startOfDay } from "date-fns";
 
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("FOREX");
   const [subCategory, setSubCategory] = useState<string>("all");
+
+  // Initialize notification system
+  useSignalNotifications();
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
