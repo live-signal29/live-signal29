@@ -3,6 +3,7 @@ import { Globe } from "lucide-react";
 import TrialBanner from "./TrialBanner";
 import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
+import { NotificationBell } from "./NotificationBell";
 
 const Header = () => {
 
@@ -26,8 +27,11 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Top Menu Dropdown */}
-          <TopMenuDropdown />
+          {/* Notification Bell & Top Menu Dropdown */}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <TopMenuDropdown />
+          </div>
         </div>
       </header>
     </>
