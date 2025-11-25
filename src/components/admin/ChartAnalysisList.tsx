@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2, Eye, EyeOff, Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 const ChartAnalysisList = () => {
   const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "" });
 
   const { data: analyses, isLoading } = useQuery({
     queryKey: ["admin-chart-analysis"],
@@ -20,6 +25,40 @@ const ChartAnalysisList = () => {
       return data;
     },
   });
+
+  const startEdit = (analysis: any) => {
+    setEditingId(analysis.id);
+    setEditForm({
+      title: analysis.title,
+      description: analysis.description || "",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ title: "", description: "" });
+  };
+
+  const saveEdit = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("chart_analysis")
+        .update({
+          title: editForm.title,
+          description: editForm.description,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["admin-chart-analysis"] });
+      queryClient.invalidateQueries({ queryKey: ["chart-analysis"] });
+      toast.success("Chart analysis updated");
+      cancelEdit();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
 
   const togglePublished = async (id: string, currentValue: boolean) => {
     try {
@@ -58,26 +97,69 @@ const ChartAnalysisList = () => {
       {analyses?.map((analysis) => (
         <Card key={analysis.id}>
           <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle>{analysis.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(analysis.created_at), "MMM dd, yyyy")}
-                </p>
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1">
+                {editingId === analysis.id ? (
+                  <div className="space-y-3">
+                    <Input
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      placeholder="Title"
+                      className="font-semibold"
+                    />
+                    <Textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      placeholder="Description"
+                      rows={2}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <CardTitle>{analysis.title}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(analysis.created_at), "MMM dd, yyyy")}
+                    </p>
+                  </>
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => togglePublished(analysis.id, analysis.published)}>
-                  {analysis.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => deleteAnalysis(analysis.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <div className="flex gap-2 flex-shrink-0">
+                {editingId === analysis.id ? (
+                  <>
+                    <Button size="sm" variant="default" onClick={() => saveEdit(analysis.id)}>
+                      <Save className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => startEdit(analysis)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => togglePublished(analysis.id, analysis.published)}>
+                      {analysis.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => deleteAnalysis(analysis.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <img src={analysis.image_url} alt={analysis.title} className="w-full max-h-60 object-cover rounded mb-4" />
-            {analysis.description && <p className="text-muted-foreground">{analysis.description}</p>}
+            <div className="relative group">
+              <img 
+                src={analysis.image_url} 
+                alt={analysis.title} 
+                className="w-full max-h-60 object-cover rounded mb-4 cursor-pointer hover:opacity-90 transition-opacity" 
+              />
+            </div>
+            {!editingId && analysis.description && (
+              <p className="text-muted-foreground">{analysis.description}</p>
+            )}
           </CardContent>
         </Card>
       ))}

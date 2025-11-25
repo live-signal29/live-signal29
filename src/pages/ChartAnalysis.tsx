@@ -1,12 +1,18 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Maximize2 } from "lucide-react";
 import { format } from "date-fns";
+import ChartLightbox from "@/components/ChartLightbox";
 
 const ChartAnalysis = () => {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedChartIndex, setSelectedChartIndex] = useState(0);
+
   const { data: analyses, isLoading } = useQuery({
     queryKey: ["chart-analysis"],
     queryFn: async () => {
@@ -20,6 +26,11 @@ const ChartAnalysis = () => {
       return data;
     },
   });
+
+  const openLightbox = (index: number) => {
+    setSelectedChartIndex(index);
+    setLightboxOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -40,29 +51,58 @@ const ChartAnalysis = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {analyses?.map((analysis) => (
-                <Card key={analysis.id} className="card-hover overflow-hidden">
+              {analyses?.map((analysis, index) => (
+                <Card 
+                  key={analysis.id} 
+                  className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  onClick={() => openLightbox(index)}
+                >
                   {analysis.image_url && (
-                    <div className="aspect-video w-full overflow-hidden">
+                    <div className="relative aspect-video w-full overflow-hidden bg-muted">
                       <img
                         src={analysis.image_url}
                         alt={analysis.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 hover:bg-white"
+                        >
+                          <Maximize2 className="h-5 w-5 text-black" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                   <CardHeader>
-                    <CardTitle className="text-xl">{analysis.title}</CardTitle>
+                    <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                      {analysis.title}
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(analysis.created_at), "MMM dd, yyyy")}
                     </p>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">{analysis.description}</p>
-                  </CardContent>
+                  {analysis.description && (
+                    <CardContent>
+                      <p className="text-muted-foreground line-clamp-2">
+                        {analysis.description}
+                      </p>
+                    </CardContent>
+                  )}
                 </Card>
               ))}
             </div>
+          )}
+
+          {/* Lightbox */}
+          {analyses && analyses.length > 0 && (
+            <ChartLightbox
+              isOpen={lightboxOpen}
+              onClose={() => setLightboxOpen(false)}
+              charts={analyses}
+              initialIndex={selectedChartIndex}
+            />
           )}
 
           {!isLoading && analyses?.length === 0 && (
