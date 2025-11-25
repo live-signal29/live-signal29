@@ -12,6 +12,8 @@ import ChartAnalysisForm from "@/components/admin/ChartAnalysisForm";
 import ChartAnalysisList from "@/components/admin/ChartAnalysisList";
 import UserManagement from "@/components/admin/UserManagement";
 import ActivityLog from "@/components/admin/ActivityLog";
+import CouponManagement from "@/components/admin/CouponManagement";
+import SpecialOfferManagement from "@/components/admin/SpecialOfferManagement";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -79,11 +81,13 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="charts" className="text-xs sm:text-sm py-2">Charts</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
-            <TabsTrigger value="activity" className="text-xs sm:text-sm py-2">Activity Log</TabsTrigger>
+            <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2">Coupons</TabsTrigger>
+            <TabsTrigger value="offers" className="text-xs sm:text-sm py-2">Offers</TabsTrigger>
+            <TabsTrigger value="activity" className="text-xs sm:text-sm py-2">Activity</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signals" className="space-y-4">
@@ -128,6 +132,14 @@ const AdminDashboard = () => {
 
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="coupons" className="space-y-4">
+            <CouponManagement />
+          </TabsContent>
+
+          <TabsContent value="offers" className="space-y-4">
+            <SpecialOfferManagement />
           </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
