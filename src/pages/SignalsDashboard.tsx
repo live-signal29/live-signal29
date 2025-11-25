@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
+import AdBanner from "@/components/AdBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart, Star, Maximize2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -141,6 +142,11 @@ const SignalsDashboard = () => {
             <TrialExpiredLockScreen />
           ) : (
             <>
+          {/* Top Ad Banner */}
+          <div className="mb-4">
+            <AdBanner />
+          </div>
+
           {/* Main Category Tabs - Horizontal Scrollable with Icons */}
           <div className="mb-4 sm:mb-6 overflow-x-auto scrollbar-hide">
             <div className="flex gap-3 sm:gap-6 min-w-max pb-2 px-1">
@@ -311,6 +317,11 @@ const SignalsDashboard = () => {
               )}
             </>
           )}
+
+          {/* Bottom Ad Banner */}
+          <div className="mt-6">
+            <AdBanner />
+          </div>
         </>
         )}
         </div>
