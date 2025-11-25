@@ -39,12 +39,12 @@ export const SideDrawer = () => {
         <div className="flex flex-col h-full">
           {/* Logo & App Name */}
           <div className="flex items-center gap-3 pb-6 border-b border-border">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">TF</span>
+            <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+              <span className="text-background font-bold text-xl">TF</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold">TREND IS FRIEND</h2>
-              <p className="text-xs text-muted-foreground">Live Trading Signals</p>
+              <h2 className="text-lg font-bold tracking-wide">TREND IS FRIEND</h2>
+              <p className="text-sm text-muted-foreground">Live Trading Signals</p>
             </div>
           </div>
 
