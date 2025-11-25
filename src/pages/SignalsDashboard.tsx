@@ -142,9 +142,9 @@ const SignalsDashboard = () => {
             <TrialExpiredLockScreen />
           ) : (
             <>
-          {/* Top Ad Banner */}
+          {/* Top Ad Banner - Leaderboard on desktop, banner on mobile */}
           <div className="mb-4">
-            <AdBanner />
+            <AdBanner format="leaderboard" />
           </div>
 
           {/* Main Category Tabs - Horizontal Scrollable with Icons */}
@@ -318,9 +318,9 @@ const SignalsDashboard = () => {
             </>
           )}
 
-          {/* Bottom Ad Banner */}
+          {/* Bottom Ad Banner - Rectangle on desktop, banner on mobile */}
           <div className="mt-6">
-            <AdBanner />
+            <AdBanner format="rectangle" />
           </div>
         </>
         )}
