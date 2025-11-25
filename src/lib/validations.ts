@@ -34,6 +34,9 @@ export const signalSchema = z.object({
   sl: z.string().trim().min(1, { message: "Stop Loss is required" }).max(100),
   note: z.string().trim().max(1000, { message: "Note must be less than 1000 characters" }).optional(),
   profit_note: z.string().trim().max(200).optional().or(z.literal("")),
+  signal_type: z.string().trim().max(50).optional().or(z.literal("")),
+  risk_level: z.string().trim().max(20).optional().or(z.literal("")),
+  analysis_reason: z.string().trim().max(500).optional().or(z.literal("")),
   status: z.string().optional(),
   signal_status: z.string().optional(),
 });

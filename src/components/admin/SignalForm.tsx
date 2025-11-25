@@ -32,6 +32,9 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     profit_note: editSignal?.profit_note || "",
     status: editSignal?.status || "Active",
     signal_status: editSignal?.signal_status || "OPEN",
+    signal_type: editSignal?.signal_type || "",
+    risk_level: editSignal?.risk_level || "",
+    analysis_reason: editSignal?.analysis_reason || "",
   });
 
   const subCategoryOptions: Record<string, string[]> = {
@@ -70,6 +73,9 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         profit_note: validation.data.profit_note || null,
         status: formData.status,
         signal_status: formData.signal_status,
+        signal_type: validation.data.signal_type || null,
+        risk_level: validation.data.risk_level || null,
+        analysis_reason: validation.data.analysis_reason || null,
       };
 
       if (editSignal) {
@@ -218,6 +224,45 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Signal Type</Label>
+          <Select value={formData.signal_type} onValueChange={(value) => setFormData({ ...formData, signal_type: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Scalping">Scalping</SelectItem>
+              <SelectItem value="Intraday">Intraday</SelectItem>
+              <SelectItem value="Swing">Swing</SelectItem>
+              <SelectItem value="Long Term">Long Term</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Risk Level</Label>
+          <Select value={formData.risk_level} onValueChange={(value) => setFormData({ ...formData, risk_level: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select risk" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Low">Low</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label>Analysis / Reason (Optional)</Label>
+        <Textarea
+          placeholder="e.g., Trendline breakout, Support/Resistance, News impact..."
+          value={formData.analysis_reason}
+          onChange={(e) => setFormData({ ...formData, analysis_reason: e.target.value })}
+        />
+      </div>
+
       <div>
         <Label>Profit Note (Optional)</Label>
         <Input
@@ -227,7 +272,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         />
       </div>
       <div>
-        <Label>Note</Label>
+        <Label>Note (Optional)</Label>
         <Textarea
           placeholder="Additional notes..."
           value={formData.note}
