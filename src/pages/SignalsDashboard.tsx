@@ -152,26 +152,7 @@ const SignalsDashboard = () => {
             </div>
           </div>
 
-          {/* Sub-Category Filter (only show for non-chart analysis) */}
-          {mainCategory !== "CHART ANALYSIS" && (
-            <div className="mb-4 sm:mb-6">
-              <div className="w-full sm:w-64">
-                <Select value={subCategory} onValueChange={setSubCategory}>
-                  <SelectTrigger className="text-xs sm:text-sm h-9 sm:h-10">
-                    <SelectValue placeholder="Filter by asset" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card">
-                    <SelectItem value="all">All Assets</SelectItem>
-                    {subCategoryOptions[mainCategory]?.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
+          {/* Removed All Assets filter as requested */}
 
           {/* Chart Analysis View */}
           {mainCategory === "CHART ANALYSIS" && (
