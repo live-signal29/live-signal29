@@ -27,16 +27,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     tp1: editSignal?.tp1 || "",
     tp2: editSignal?.tp2 || "",
     tp3: editSignal?.tp3 || "",
-    tp4: editSignal?.tp4 || "",
     sl: editSignal?.sl || "",
     note: editSignal?.note || "",
     profit_note: editSignal?.profit_note || "",
     status: editSignal?.status || "Active",
     signal_status: editSignal?.signal_status || "OPEN",
-    pips_result: editSignal?.pips_result || "",
-    risk_level: editSignal?.risk_level || "Medium",
-    signal_type: editSignal?.signal_type || "Intraday",
-    analysis_reason: editSignal?.analysis_reason || "",
   });
 
   const subCategoryOptions: Record<string, string[]> = {
@@ -70,16 +65,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         tp1: validation.data.tp1,
         tp2: validation.data.tp2 || null,
         tp3: validation.data.tp3 || null,
-        tp4: validation.data.tp4 || null,
         sl: validation.data.sl,
         note: validation.data.note || null,
-        profit_note: formData.profit_note || null,
+        profit_note: validation.data.profit_note || null,
         status: formData.status,
         signal_status: formData.signal_status,
-        pips_result: formData.pips_result || null,
-        risk_level: formData.risk_level,
-        signal_type: formData.signal_type,
-        analysis_reason: formData.analysis_reason || null,
       };
 
       if (editSignal) {
@@ -175,111 +165,65 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             </SelectContent>
           </Select>
         </div>
-        <div>
-          <Label>Risk Level</Label>
-          <Select value={formData.risk_level} onValueChange={(value) => setFormData({ ...formData, risk_level: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Low">Low Risk</SelectItem>
-              <SelectItem value="Medium">Medium Risk</SelectItem>
-              <SelectItem value="High">High Risk</SelectItem>
-            </SelectContent>
-          </Select>
+      </div>
+
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Entry Price</Label>
+            <Input
+              placeholder="e.g., 2650.00 or Gold Buy Zone"
+              value={formData.entry}
+              onChange={(e) => setFormData({ ...formData, entry: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label>Stop Loss (SL)</Label>
+            <Input
+              placeholder="e.g., 2640.00 or Below Support"
+              value={formData.sl}
+              onChange={(e) => setFormData({ ...formData, sl: e.target.value })}
+              required
+            />
+          </div>
         </div>
-        <div>
-          <Label>Signal Type</Label>
-          <Select value={formData.signal_type} onValueChange={(value) => setFormData({ ...formData, signal_type: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Scalping">Scalping</SelectItem>
-              <SelectItem value="Intraday">Intraday</SelectItem>
-              <SelectItem value="Swing">Swing</SelectItem>
-              <SelectItem value="Long Term">Long Term</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Pips Result</Label>
-          <Input
-            placeholder="e.g., +150 pips"
-            value={formData.pips_result}
-            onChange={(e) => setFormData({ ...formData, pips_result: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Entry</Label>
-          <Input
-            placeholder="2650.00"
-            value={formData.entry}
-            onChange={(e) => setFormData({ ...formData, entry: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <Label>TP1</Label>
-          <Input
-            placeholder="2660.00"
-            value={formData.tp1}
-            onChange={(e) => setFormData({ ...formData, tp1: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <Label>TP2</Label>
-          <Input
-            placeholder="2670.00"
-            value={formData.tp2}
-            onChange={(e) => setFormData({ ...formData, tp2: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>TP3</Label>
-          <Input
-            placeholder="2680.00"
-            value={formData.tp3}
-            onChange={(e) => setFormData({ ...formData, tp3: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>TP4</Label>
-          <Input
-            placeholder="2690.00"
-            value={formData.tp4}
-            onChange={(e) => setFormData({ ...formData, tp4: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Stop Loss</Label>
-          <Input
-            placeholder="2640.00"
-            value={formData.sl}
-            onChange={(e) => setFormData({ ...formData, sl: e.target.value })}
-            required
-          />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label>Take Profit 1 (TP1)</Label>
+            <Input
+              placeholder="e.g., 2660.00 or First Target"
+              value={formData.tp1}
+              onChange={(e) => setFormData({ ...formData, tp1: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label>Take Profit 2 (TP2)</Label>
+            <Input
+              placeholder="Optional"
+              value={formData.tp2}
+              onChange={(e) => setFormData({ ...formData, tp2: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Take Profit 3 (TP3)</Label>
+            <Input
+              placeholder="Optional"
+              value={formData.tp3}
+              onChange={(e) => setFormData({ ...formData, tp3: e.target.value })}
+            />
+          </div>
         </div>
       </div>
+
       <div>
-        <Label>Profit Note</Label>
+        <Label>Profit Note (Optional)</Label>
         <Input
-          placeholder="e.g., 100 pips running profit"
+          placeholder="e.g., +100 pips running profit"
           value={formData.profit_note}
           onChange={(e) => setFormData({ ...formData, profit_note: e.target.value })}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Small note shown below TPs (e.g., running profit status)
-        </p>
-      </div>
-      <div>
-        <Label>Analysis / Reason</Label>
-        <Textarea
-          placeholder="e.g., Trendline break, S/R level, Breakout, News impact..."
-          value={formData.analysis_reason}
-          onChange={(e) => setFormData({ ...formData, analysis_reason: e.target.value })}
-          rows={2}
         />
       </div>
       <div>

@@ -21,22 +21,21 @@ export const signupSchema = z.object({
 });
 
 // Trading signal schemas
-const priceRegex = /^\d+(\.\d{1,5})?$/;
-
 export const signalSchema = z.object({
   pair: z.string().trim().min(1, { message: "Pair is required" }).max(50, { message: "Pair name too long" }),
   type: z.enum(["Buy", "Sell"], { message: "Type must be Buy or Sell" }),
   category: z.string().trim().min(1, { message: "Category is required" }).max(50),
   main_category: z.string().trim().min(1, { message: "Main category is required" }).max(50),
   sub_category: z.string().trim().max(50).optional(),
-  entry: z.string().trim().regex(priceRegex, { message: "Entry must be a valid price (e.g., 2650.00)" }),
-  tp1: z.string().trim().regex(priceRegex, { message: "TP1 must be a valid price" }),
-  tp2: z.string().trim().regex(priceRegex, { message: "TP2 must be a valid price" }).optional().or(z.literal("")),
-  tp3: z.string().trim().regex(priceRegex, { message: "TP3 must be a valid price" }).optional().or(z.literal("")),
-  tp4: z.string().trim().regex(priceRegex, { message: "TP4 must be a valid price" }).optional().or(z.literal("")),
-  sl: z.string().trim().regex(priceRegex, { message: "Stop Loss must be a valid price" }),
+  entry: z.string().trim().min(1, { message: "Entry is required" }).max(100),
+  tp1: z.string().trim().min(1, { message: "TP1 is required" }).max(100),
+  tp2: z.string().trim().max(100).optional().or(z.literal("")),
+  tp3: z.string().trim().max(100).optional().or(z.literal("")),
+  sl: z.string().trim().min(1, { message: "Stop Loss is required" }).max(100),
   note: z.string().trim().max(1000, { message: "Note must be less than 1000 characters" }).optional(),
+  profit_note: z.string().trim().max(200).optional().or(z.literal("")),
   status: z.string().optional(),
+  signal_status: z.string().optional(),
 });
 
 // Chart analysis schema
