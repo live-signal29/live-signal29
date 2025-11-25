@@ -4,19 +4,30 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
-import FilterBar from "@/components/FilterBar";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
+import { differenceInDays, startOfDay } from "date-fns";
 
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading } = useSubscriptionAccess();
-  const [filter, setFilter] = useState("latest");
   const [mainCategory, setMainCategory] = useState("FOREX");
   const [subCategory, setSubCategory] = useState<string>("all");
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "FOREX": return <TrendingUp className="h-4 w-4" />;
+      case "COMMODITIES": return <Coins className="h-4 w-4" />;
+      case "INDICES": return <Activity className="h-4 w-4" />;
+      case "CRYPTO": return <Bitcoin className="h-4 w-4" />;
+      case "DERIV/BINARY": return <BarChart3 className="h-4 w-4" />;
+      case "CHART ANALYSIS": return <LineChart className="h-4 w-4" />;
+      default: return null;
+    }
+  };
 
   const subCategoryOptions: Record<string, string[]> = {
     FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
@@ -27,23 +38,21 @@ const SignalsDashboard = () => {
   };
 
   const { data: signals, isLoading, refetch } = useQuery({
-    queryKey: ["signals", mainCategory, subCategory, filter],
+    queryKey: ["signals", mainCategory, subCategory],
     queryFn: async () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
       let query = supabase
         .from("signals")
         .select("*")
         .eq("main_category", mainCategory)
         .eq("published", true)
+        .gte("created_at", sevenDaysAgo.toISOString())
         .order("created_at", { ascending: false });
 
       if (subCategory && subCategory !== "all") {
         query = query.eq("sub_category", subCategory);
-      }
-
-      if (filter === "all_tp_hit") {
-        query = query.eq("status", "All TP Hit");
-      } else if (filter === "running") {
-        query = query.eq("status", "Active");
       }
 
       const { data, error } = await query;
@@ -116,75 +125,36 @@ const SignalsDashboard = () => {
             <TrialExpiredLockScreen />
           ) : (
             <>
-          {/* Main Category Tabs - Horizontal Scrollable */}
+          {/* Main Category Tabs - Horizontal Scrollable with Icons */}
           <div className="mb-4 sm:mb-6 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-4 sm:gap-8 min-w-max pb-2 px-1">
-              <button
-                onClick={() => handleCategoryChange("FOREX")}
-                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
-                  mainCategory === "FOREX"
-                    ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent"
-                }`}
-              >
-                FOREX
-              </button>
-              <button
-                onClick={() => handleCategoryChange("COMMODITIES")}
-                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
-                  mainCategory === "COMMODITIES"
-                    ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent"
-                }`}
-              >
-                COMM
-              </button>
-              <button
-                onClick={() => handleCategoryChange("INDICES")}
-                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
-                  mainCategory === "INDICES"
-                    ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent"
-                }`}
-              >
-                INDEX
-              </button>
-              <button
-                onClick={() => handleCategoryChange("CRYPTO")}
-                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors ${
-                  mainCategory === "CRYPTO"
-                    ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent"
-                }`}
-              >
-                CRYPTO
-              </button>
-              <button
-                onClick={() => handleCategoryChange("DERIV/BINARY")}
-                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors whitespace-nowrap ${
-                  mainCategory === "DERIV/BINARY"
-                    ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent"
-                }`}
-              >
-                DERIV
-              </button>
-              <button
-                onClick={() => handleCategoryChange("CHART ANALYSIS")}
-                className={`text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-colors whitespace-nowrap ${
-                  mainCategory === "CHART ANALYSIS"
-                    ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent"
-                }`}
-              >
-                CHARTS
-              </button>
+            <div className="flex gap-3 sm:gap-6 min-w-max pb-2 px-1">
+              {[
+                { key: "FOREX", label: "FOREX" },
+                { key: "COMMODITIES", label: "COMM" },
+                { key: "INDICES", label: "INDEX" },
+                { key: "CRYPTO", label: "CRYPTO" },
+                { key: "DERIV/BINARY", label: "DERIV" },
+                { key: "CHART ANALYSIS", label: "CHARTS" },
+              ].map((category) => (
+                <button
+                  key={category.key}
+                  onClick={() => handleCategoryChange(category.key)}
+                  className={`flex items-center gap-2 text-sm sm:text-base font-semibold pb-2 sm:pb-3 border-b-2 transition-all ${
+                    mainCategory === category.key
+                      ? "text-primary border-primary scale-105"
+                      : "text-muted-foreground border-transparent hover:text-primary/70"
+                  }`}
+                >
+                  {getCategoryIcon(category.key)}
+                  <span className="whitespace-nowrap">{category.label}</span>
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Sub-Category Filter (only show for non-chart analysis) */}
           {mainCategory !== "CHART ANALYSIS" && (
-            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <div className="mb-4 sm:mb-6">
               <div className="w-full sm:w-64">
                 <Select value={subCategory} onValueChange={setSubCategory}>
                   <SelectTrigger className="text-xs sm:text-sm h-9 sm:h-10">
@@ -199,9 +169,6 @@ const SignalsDashboard = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex-1">
-                <FilterBar activeFilter={filter} onFilterChange={setFilter} />
               </div>
             </div>
           )}
@@ -246,7 +213,7 @@ const SignalsDashboard = () => {
             </>
           )}
 
-          {/* Signals View */}
+          {/* Signals View with Day Separators */}
           {mainCategory !== "CHART ANALYSIS" && (
             <>
               {isLoading ? (
@@ -254,16 +221,34 @@ const SignalsDashboard = () => {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-                  {signals?.map((signal) => (
-                    <SignalCardNew key={signal.id} signal={signal as any} />
-                  ))}
+                <div className="space-y-6">
+                  {signals && signals.length > 0 && (() => {
+                    const groupedSignals: { [key: string]: typeof signals } = {};
+                    signals.forEach((signal) => {
+                      const date = startOfDay(new Date(signal.created_at)).toISOString();
+                      if (!groupedSignals[date]) {
+                        groupedSignals[date] = [];
+                      }
+                      groupedSignals[date].push(signal);
+                    });
+
+                    return Object.entries(groupedSignals).map(([date, daySignals]) => (
+                      <div key={date} className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                          {daySignals.map((signal) => (
+                            <SignalCardNew key={signal.id} signal={signal as any} />
+                          ))}
+                        </div>
+                        <div className="border-t border-border/50 my-4"></div>
+                      </div>
+                    ));
+                  })()}
                 </div>
               )}
 
               {!isLoading && signals?.length === 0 && (
                 <div className="text-center py-20">
-                  <p className="text-muted-foreground text-lg">No signals found</p>
+                  <p className="text-muted-foreground text-lg">No signals found in the last 7 days</p>
                 </div>
               )}
             </>

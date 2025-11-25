@@ -32,6 +32,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     note: editSignal?.note || "",
     profit_note: editSignal?.profit_note || "",
     status: editSignal?.status || "Active",
+    signal_status: editSignal?.signal_status || "OPEN",
+    pips_result: editSignal?.pips_result || "",
+    risk_level: editSignal?.risk_level || "Medium",
+    signal_type: editSignal?.signal_type || "Intraday",
+    analysis_reason: editSignal?.analysis_reason || "",
   });
 
   const subCategoryOptions: Record<string, string[]> = {
@@ -70,6 +75,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         note: validation.data.note || null,
         profit_note: formData.profit_note || null,
         status: formData.status,
+        signal_status: formData.signal_status,
+        pips_result: formData.pips_result || null,
+        risk_level: formData.risk_level,
+        signal_type: formData.signal_type,
+        analysis_reason: formData.analysis_reason || null,
       };
 
       if (editSignal) {
@@ -153,16 +163,52 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           </Select>
         </div>
         <div>
-          <Label>Status</Label>
-          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+          <Label>Signal Status</Label>
+          <Select value={formData.signal_status} onValueChange={(value) => setFormData({ ...formData, signal_status: value })}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Active">🟢 Running</SelectItem>
-              <SelectItem value="Closed">🎯 Target Hit</SelectItem>
+              <SelectItem value="OPEN">🟢 OPEN</SelectItem>
+              <SelectItem value="LIVE">🔵 LIVE</SelectItem>
+              <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div>
+          <Label>Risk Level</Label>
+          <Select value={formData.risk_level} onValueChange={(value) => setFormData({ ...formData, risk_level: value })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Low">Low Risk</SelectItem>
+              <SelectItem value="Medium">Medium Risk</SelectItem>
+              <SelectItem value="High">High Risk</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Signal Type</Label>
+          <Select value={formData.signal_type} onValueChange={(value) => setFormData({ ...formData, signal_type: value })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Scalping">Scalping</SelectItem>
+              <SelectItem value="Intraday">Intraday</SelectItem>
+              <SelectItem value="Swing">Swing</SelectItem>
+              <SelectItem value="Long Term">Long Term</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Pips Result</Label>
+          <Input
+            placeholder="e.g., +150 pips"
+            value={formData.pips_result}
+            onChange={(e) => setFormData({ ...formData, pips_result: e.target.value })}
+          />
         </div>
         <div>
           <Label>Entry</Label>
@@ -226,6 +272,15 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         <p className="text-xs text-muted-foreground mt-1">
           Small note shown below TPs (e.g., running profit status)
         </p>
+      </div>
+      <div>
+        <Label>Analysis / Reason</Label>
+        <Textarea
+          placeholder="e.g., Trendline break, S/R level, Breakout, News impact..."
+          value={formData.analysis_reason}
+          onChange={(e) => setFormData({ ...formData, analysis_reason: e.target.value })}
+          rows={2}
+        />
       </div>
       <div>
         <Label>Note</Label>
