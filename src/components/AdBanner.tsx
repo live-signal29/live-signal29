@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface AdBannerProps {
   className?: string;
@@ -7,6 +7,19 @@ interface AdBannerProps {
 const AdBanner = ({ className = "" }: AdBannerProps) => {
   const adContainerRef = useRef<HTMLDivElement>(null);
   const uniqueId = useRef(`ad-${Math.random().toString(36).substr(2, 9)}`);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if mobile on mount and window resize
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Only run on client side
@@ -14,20 +27,30 @@ const AdBanner = ({ className = "" }: AdBannerProps) => {
 
     const container = adContainerRef.current;
     
+    // Clear any existing content
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+    
     // Create a unique container for this ad instance
     const adDiv = document.createElement('div');
     adDiv.id = uniqueId.current;
     container.appendChild(adDiv);
 
-    // Create and append the ad script with unique options
+    // Responsive ad dimensions
+    const adConfig = isMobile 
+      ? { width: 300, height: 250 } // Mobile: 300x250 rectangle
+      : { width: 468, height: 60 }; // Desktop: 468x60 banner
+
+    // Create and append the ad script with responsive options
     const script = document.createElement('script');
     script.type = 'text/javascript';
     script.innerHTML = `
       atOptions = {
         'key': 'a53fa1b8f096290b04c59e353da8fd87',
         'format': 'iframe',
-        'height': 50,
-        'width': 320,
+        'height': ${adConfig.height},
+        'width': ${adConfig.width},
         'params': {}
       };
     `;
@@ -48,14 +71,25 @@ const AdBanner = ({ className = "" }: AdBannerProps) => {
         }
       }
     };
-  }, []);
+  }, [isMobile]);
 
   return (
     <div 
-      ref={adContainerRef}
-      className={`flex justify-center items-center min-h-[60px] w-full overflow-hidden ${className}`}
+      className={`w-full bg-muted/30 rounded-lg border border-border/50 overflow-hidden ${className}`}
       aria-label="Advertisement"
-    />
+    >
+      <div className="text-[10px] text-muted-foreground text-center py-1 border-b border-border/30">
+        Advertisement
+      </div>
+      <div 
+        ref={adContainerRef}
+        className="flex justify-center items-center p-2"
+        style={{
+          minHeight: isMobile ? '260px' : '70px',
+          width: '100%'
+        }}
+      />
+    </div>
   );
 };
 
