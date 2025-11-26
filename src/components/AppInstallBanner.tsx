@@ -1,38 +1,66 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Download, X } from "lucide-react";
 import { Button } from "./ui/button";
 
 const AppInstallBanner = () => {
   const [showBanner, setShowBanner] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const manuallyDismissed = useRef(false);
 
   useEffect(() => {
     const bannerDismissed = localStorage.getItem("appInstallBannerDismissed");
     if (!bannerDismissed) {
-      setShowBanner(true);
-      // Trigger animation after mount
-      setTimeout(() => setIsVisible(true), 100);
-      
-      // Auto-hide after 10 seconds
-      const autoHideTimer = setTimeout(() => {
-        handleDismiss();
-      }, 10000);
-
-      return () => clearTimeout(autoHideTimer);
+      showBannerWithAutoHide();
     }
   }, []);
 
-  const handleDismiss = () => {
+  // Scroll listener to show banner again after auto-hide
+  useEffect(() => {
+    const handleScroll = () => {
+      const bannerDismissed = localStorage.getItem("appInstallBannerDismissed");
+      if (!bannerDismissed && !showBanner && !manuallyDismissed.current) {
+        showBannerWithAutoHide();
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [showBanner]);
+
+  const showBannerWithAutoHide = () => {
+    setShowBanner(true);
+    setTimeout(() => setIsVisible(true), 100);
+    
+    // Clear existing timer if any
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
+    }
+    
+    // Auto-hide after 10 seconds
+    autoHideTimerRef.current = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(() => {
+        setShowBanner(false);
+      }, 300);
+    }, 10000);
+  };
+
+  const handleManualDismiss = () => {
+    manuallyDismissed.current = true;
     setIsVisible(false);
     setTimeout(() => {
       setShowBanner(false);
       localStorage.setItem("appInstallBannerDismissed", "true");
     }, 300);
+    
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
+    }
   };
 
   const handleDownload = () => {
     window.open("/live-signals_29.apk", "_blank");
-    // Don't auto-dismiss on download, let user see it completed
   };
 
   if (!showBanner) return null;
@@ -54,7 +82,7 @@ const AppInstallBanner = () => {
             Download APK
           </Button>
           <button
-            onClick={handleDismiss}
+            onClick={handleManualDismiss}
             className="p-1 hover:bg-white/20 hover:rotate-90 rounded-full transition-all duration-200 ml-1"
             aria-label="Close banner"
           >
