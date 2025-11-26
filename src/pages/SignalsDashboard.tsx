@@ -16,6 +16,7 @@ import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { useSignalNotifications } from "@/hooks/useSignalNotifications";
 import { useFavorites } from "@/hooks/useFavorites";
+import SignalsSkeleton from "@/components/SignalsSkeleton";
 import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
 
@@ -68,7 +69,8 @@ const SignalsDashboard = () => {
         .eq("main_category", mainCategory)
         .eq("published", true)
         .gte("created_at", sevenDaysAgo.toISOString())
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(50); // Limit initial load to 50 signals
 
       if (subCategory && subCategory !== "all") {
         query = query.eq("sub_category", subCategory);
@@ -79,28 +81,33 @@ const SignalsDashboard = () => {
       return data;
     },
     enabled: mainCategory !== "CHART ANALYSIS",
+    staleTime: 30000, // Cache for 30 seconds
   });
 
-  // Setup realtime subscription for instant updates
+  // Setup realtime subscription for instant updates (deferred)
   useEffect(() => {
-    const channel = supabase
-      .channel('signals-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'signals',
-        },
-        () => {
-          refetch();
-        }
-      )
-      .subscribe();
+    const timeoutId = setTimeout(() => {
+      const channel = supabase
+        .channel('signals-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'signals',
+          },
+          () => {
+            refetch();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
   }, [refetch]);
 
   const { data: chartAnalysis, isLoading: isLoadingCharts } = useQuery({
@@ -110,11 +117,13 @@ const SignalsDashboard = () => {
         .from("chart_analysis")
         .select("*")
         .eq("published", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(30); // Limit charts to 30
       if (error) throw error;
       return data;
     },
     enabled: mainCategory === "CHART ANALYSIS",
+    staleTime: 60000, // Cache for 60 seconds
   });
 
   const openLightbox = (index: number) => {
@@ -127,17 +136,7 @@ const SignalsDashboard = () => {
     setSubCategory("all");
   };
 
-  if (accessLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  // Removed blocking loading screen - show content immediately
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -273,9 +272,7 @@ const SignalsDashboard = () => {
           {mainCategory !== "CHART ANALYSIS" && (
             <>
               {isLoading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
+                <SignalsSkeleton />
               ) : (
                 <div className="space-y-6">
                   {signals && signals.length > 0 && (() => {
