@@ -279,8 +279,8 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
         )}
 
         {/* Ad Banner inside Signal Card */}
-        <div className="p-3 sm:p-4 border-t border-border bg-background">
-          <AdBanner />
+        <div className="px-3 sm:px-4 py-3 border-t border-border">
+          <AdBanner className="scale-90" />
         </div>
       </CardContent>
     </Card>
