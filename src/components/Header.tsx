@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Globe } from "lucide-react";
 import TrialBanner from "./TrialBanner";
+import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
 import { NotificationBell } from "./NotificationBell";
@@ -9,6 +10,7 @@ const Header = () => {
 
   return (
     <>
+      <AppInstallBanner />
       <TrialBanner />
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background backdrop-blur supports-[backdrop-filter]:bg-background/95">
         <div className="flex h-14 sm:h-16 items-center justify-between px-2 sm:px-4">
