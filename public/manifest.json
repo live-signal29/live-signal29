@@ -13,23 +13,27 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192.jpg",
       "sizes": "256x256",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512.jpg",
       "sizes": "512x512",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icon-maskable-192.png",
+      "src": "/icon-maskable-192.jpg",
       "sizes": "256x256",
+      "type": "image/jpeg",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-maskable-512.png",
+      "src": "/icon-maskable-512.jpg",
       "sizes": "512x512",
+      "type": "image/jpeg",
       "purpose": "maskable"
     }
   ],
@@ -50,8 +54,9 @@
       "url": "/signals-dashboard",
       "icons": [
         {
-          "src": "/icon-192.png",
-          "sizes": "256x256"
+          "src": "/icon-192.jpg",
+          "sizes": "256x256",
+          "type": "image/jpeg"
         }
       ]
     },
@@ -62,8 +67,9 @@
       "url": "/premium",
       "icons": [
         {
-          "src": "/icon-192.png",
-          "sizes": "256x256"
+          "src": "/icon-192.jpg",
+          "sizes": "256x256",
+          "type": "image/jpeg"
         }
       ]
     }
