@@ -2,10 +2,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
-import { Lock, Crown, Star } from "lucide-react";
+import { Lock, Crown, Star, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFavorites } from "@/hooks/useFavorites";
 import AdBanner from "@/components/AdBanner";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SignalCardProps {
   signal: {
@@ -42,6 +49,25 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
   const navigate = useNavigate();
   const { isFavoritePair, toggleFavoritePair } = useFavorites();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
+  
+  const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
+    const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;
+    const shareText = `🔔 New ${signal.type.toUpperCase()} Signal Alert!\n\n` +
+      `📊 Pair: ${signal.pair}\n` +
+      `💰 Entry: ${signal.entry}\n` +
+      `🎯 TP1: ${signal.tp1}\n` +
+      `⛔ SL: ${signal.sl}\n\n` +
+      `View full signal details: ${shareUrl}`;
+
+    if (platform === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+    } else if (platform === 'telegram') {
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+    } else if (platform === 'copy') {
+      navigator.clipboard.writeText(shareText);
+      toast.success("Signal link copied to clipboard!");
+    }
+  };
   
   const getStatusText = () => {
     return signal.signal_status || "OPEN";
@@ -112,6 +138,29 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
                 />
               </Button>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 hover:bg-accent"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Share2 className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                  Share on WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('telegram')}>
+                  Share on Telegram
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('copy')}>
+                  Copy Link
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="text-right">
               <div className="text-[10px] sm:text-xs text-muted-foreground">
                 {formatDate(signal.created_at)}

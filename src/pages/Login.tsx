@@ -14,6 +14,10 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  
+  // Get return URL from query params
+  const searchParams = new URLSearchParams(window.location.search);
+  const returnUrl = searchParams.get('returnUrl') || '/onboarding';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +64,7 @@ const Login = () => {
         }
         
         toast.success("Login successful!");
-        navigate("/onboarding");
+        navigate(returnUrl);
       }
     } catch (error: any) {
       toast.error("An unexpected error occurred. Please try again.");
@@ -74,7 +78,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/onboarding`,
+          redirectTo: `${window.location.origin}${returnUrl}`,
         }
       });
 
