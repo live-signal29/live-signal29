@@ -3,7 +3,7 @@
   "name": "TREND IS FRIEND - Live Trading Signals",
   "short_name": "TrendIsFriend",
   "description": "Get real-time trading signals for Forex, Crypto, Commodities, and Indices with professional analysis and instant notifications",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#0EA5E9",
@@ -14,7 +14,7 @@
   "icons": [
     {
       "src": "/icon-192.png",
-      "sizes": "256x256",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
@@ -26,7 +26,7 @@
     },
     {
       "src": "/icon-maskable-192.png",
-      "sizes": "256x256",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
@@ -55,7 +55,7 @@
       "icons": [
         {
           "src": "/icon-192.png",
-          "sizes": "256x256",
+          "sizes": "192x192",
           "type": "image/png"
         }
       ]
@@ -68,7 +68,7 @@
       "icons": [
         {
           "src": "/icon-192.png",
-          "sizes": "256x256",
+          "sizes": "192x192",
           "type": "image/png"
         }
       ]
