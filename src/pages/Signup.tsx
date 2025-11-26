@@ -68,31 +68,14 @@ const Signup = () => {
       }
 
       if (data.user) {
-        // Update profile with additional info
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            country_code: validation.data.countryCode || null,
-            phone_number: validation.data.phoneNumber || null,
-          })
-          .eq('id', data.user.id);
-
-        if (profileError) {
-          // Profile update error, but account created
-          toast.warning("Account created, but some details couldn't be saved");
-        }
+        toast.success("Account created successfully!");
+        navigate(`/login${returnUrl !== '/onboarding' ? `?returnUrl=${returnUrl}` : ''}`);
         
-        // Check if email confirmation is required
-        if (data.user.identities && data.user.identities.length === 0) {
-          toast.success("Account created! Please check your email to verify your account.", {
-            duration: 6000,
-          });
-        } else {
-          toast.success("Account created successfully! You can now login.");
-        }
-        
-        // Navigate to login page with return URL or to onboarding
-        setTimeout(() => navigate(`/login${returnUrl !== '/onboarding' ? `?returnUrl=${returnUrl}` : ''}`), 2000);
+        // Update profile asynchronously (non-blocking)
+        supabase.from('profiles').update({
+          country_code: validation.data.countryCode || null,
+          phone_number: validation.data.phoneNumber || null,
+        }).eq('id', data.user.id);
       }
     } catch (error: any) {
       toast.error("An unexpected error occurred. Please try again.");
