@@ -152,102 +152,106 @@ export const useSignalNotifications = () => {
     }
   };
 
-  // Monitor signals for changes
+  // Monitor signals for changes (deferred to not block initial load)
   useEffect(() => {
     if (!settings.enabled || permission !== "granted") return;
 
-    const channel = supabase
-      .channel("signal-notifications")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "signals",
-          filter: "published=eq.true",
-        },
-        (payload) => {
-          if (settings.newSignal) {
-            const signal = payload.new;
-            showNotification(
-              "🆕 New Signal Available!",
-              `${signal.type} ${signal.pair} @ ${signal.entry}`,
-              "info"
-            );
-            toast.success(`New ${signal.type} signal: ${signal.pair}`);
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "signals",
-          filter: "published=eq.true",
-        },
-        (payload) => {
-          const oldSignal = payload.old;
-          const newSignal = payload.new;
-
-          // Check for TP hits
-          if (settings.tpHit) {
-            if (!oldSignal.tp1_hit && newSignal.tp1_hit) {
+    const timeoutId = setTimeout(() => {
+      const channel = supabase
+        .channel("signal-notifications")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "signals",
+            filter: "published=eq.true",
+          },
+          (payload) => {
+            if (settings.newSignal) {
+              const signal = payload.new;
               showNotification(
-                "🎯 Take Profit 1 Hit!",
-                `${newSignal.pair} - TP1 reached at ${newSignal.tp1}`,
-                "success"
+                "🆕 New Signal Available!",
+                `${signal.type} ${signal.pair} @ ${signal.entry}`,
+                "info"
               );
-              toast.success(`TP1 hit on ${newSignal.pair}!`);
-            }
-            if (!oldSignal.tp2_hit && newSignal.tp2_hit) {
-              showNotification(
-                "🎯 Take Profit 2 Hit!",
-                `${newSignal.pair} - TP2 reached at ${newSignal.tp2}`,
-                "success"
-              );
-              toast.success(`TP2 hit on ${newSignal.pair}!`);
-            }
-            if (!oldSignal.tp3_hit && newSignal.tp3_hit) {
-              showNotification(
-                "🎯 Take Profit 3 Hit!",
-                `${newSignal.pair} - TP3 reached at ${newSignal.tp3}`,
-                "success"
-              );
-              toast.success(`TP3 hit on ${newSignal.pair}!`);
+              toast.success(`New ${signal.type} signal: ${signal.pair}`);
             }
           }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "signals",
+            filter: "published=eq.true",
+          },
+          (payload) => {
+            const oldSignal = payload.old;
+            const newSignal = payload.new;
 
-          // Check for SL hit
-          if (settings.slHit && !oldSignal.sl_hit && newSignal.sl_hit) {
-            showNotification(
-              "⚠️ Stop Loss Hit!",
-              `${newSignal.pair} - SL hit at ${newSignal.sl}`,
-              "alert"
-            );
-            toast.error(`Stop loss hit on ${newSignal.pair}`);
+            // Check for TP hits
+            if (settings.tpHit) {
+              if (!oldSignal.tp1_hit && newSignal.tp1_hit) {
+                showNotification(
+                  "🎯 Take Profit 1 Hit!",
+                  `${newSignal.pair} - TP1 reached at ${newSignal.tp1}`,
+                  "success"
+                );
+                toast.success(`TP1 hit on ${newSignal.pair}!`);
+              }
+              if (!oldSignal.tp2_hit && newSignal.tp2_hit) {
+                showNotification(
+                  "🎯 Take Profit 2 Hit!",
+                  `${newSignal.pair} - TP2 reached at ${newSignal.tp2}`,
+                  "success"
+                );
+                toast.success(`TP2 hit on ${newSignal.pair}!`);
+              }
+              if (!oldSignal.tp3_hit && newSignal.tp3_hit) {
+                showNotification(
+                  "🎯 Take Profit 3 Hit!",
+                  `${newSignal.pair} - TP3 reached at ${newSignal.tp3}`,
+                  "success"
+                );
+                toast.success(`TP3 hit on ${newSignal.pair}!`);
+              }
+            }
+
+            // Check for SL hit
+            if (settings.slHit && !oldSignal.sl_hit && newSignal.sl_hit) {
+              showNotification(
+                "⚠️ Stop Loss Hit!",
+                `${newSignal.pair} - SL hit at ${newSignal.sl}`,
+                "alert"
+              );
+              toast.error(`Stop loss hit on ${newSignal.pair}`);
+            }
+
+            // Check for signal closed
+            if (
+              settings.signalClosed &&
+              oldSignal.signal_status !== "CLOSE" &&
+              newSignal.signal_status === "CLOSE"
+            ) {
+              showNotification(
+                "✅ Signal Closed",
+                `${newSignal.pair} signal has been closed`,
+                "info"
+              );
+              toast.info(`${newSignal.pair} signal closed`);
+            }
           }
+        )
+        .subscribe();
 
-          // Check for signal closed
-          if (
-            settings.signalClosed &&
-            oldSignal.signal_status !== "CLOSE" &&
-            newSignal.signal_status === "CLOSE"
-          ) {
-            showNotification(
-              "✅ Signal Closed",
-              `${newSignal.pair} signal has been closed`,
-              "info"
-            );
-            toast.info(`${newSignal.pair} signal closed`);
-          }
-        }
-      )
-      .subscribe();
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, 3000); // Defer by 3 seconds
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => clearTimeout(timeoutId);
   }, [settings, permission]);
 
   return {

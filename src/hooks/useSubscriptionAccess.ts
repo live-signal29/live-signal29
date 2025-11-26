@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useSubscriptionAccess = () => {
-  const [hasAccess, setHasAccess] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(true); // Optimistically assume access
+  const [loading, setLoading] = useState(false); // Start as not loading
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -16,7 +16,6 @@ export const useSubscriptionAccess = () => {
       
       if (!user) {
         setHasAccess(false);
-        setLoading(false);
         return;
       }
 
@@ -28,7 +27,6 @@ export const useSubscriptionAccess = () => {
 
       if (!profile) {
         setHasAccess(false);
-        setLoading(false);
         return;
       }
 
@@ -61,8 +59,6 @@ export const useSubscriptionAccess = () => {
     } catch (error) {
       console.error("Error checking access:", error);
       setHasAccess(false);
-    } finally {
-      setLoading(false);
     }
   };
 

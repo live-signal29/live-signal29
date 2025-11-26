@@ -10,25 +10,29 @@ export const useFavorites = () => {
   useEffect(() => {
     fetchFavorites();
     
-    // Real-time sync for favorites
-    const channel = supabase
-      .channel('user-favorite-pairs-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_favorite_pairs'
-        },
-        () => {
-          fetchFavorites();
-        }
-      )
-      .subscribe();
+    // Defer realtime setup to avoid blocking initial render
+    const timeoutId = setTimeout(() => {
+      const channel = supabase
+        .channel('user-favorite-pairs-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_favorite_pairs'
+          },
+          () => {
+            fetchFavorites();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const fetchFavorites = async () => {
