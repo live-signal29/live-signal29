@@ -89,10 +89,14 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-            <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
-            <Route path="/signals" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
+            {/* Public routes first */}
+            <Route path="/signal/:id" element={<SharedSignal />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
+            <Route path="/signals" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/commodities-signals" element={<ProtectedRoute><CommoditiesSignals /></ProtectedRoute>} />
@@ -115,7 +119,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
             <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
-            <Route path="/signal/:id" element={<SharedSignal />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
