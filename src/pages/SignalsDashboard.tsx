@@ -26,7 +26,7 @@ const SignalsDashboard = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
-  const { favorites } = useFavorites();
+  const { favoritePairs } = useFavorites();
 
   // Initialize notification system
   useSignalNotifications();
@@ -279,9 +279,9 @@ const SignalsDashboard = () => {
               ) : (
                 <div className="space-y-6">
                   {signals && signals.length > 0 && (() => {
-                    // Filter by favorites if enabled
+                    // Filter by favorite pairs if enabled
                     const filteredSignals = showFavoritesOnly 
-                      ? signals.filter(signal => favorites.has(signal.id))
+                      ? signals.filter(signal => favoritePairs.has(signal.pair))
                       : signals;
 
                     if (filteredSignals.length === 0) {

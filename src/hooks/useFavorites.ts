@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export const useFavorites = () => {
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritePairs, setFavoritePairs] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -12,13 +12,13 @@ export const useFavorites = () => {
     
     // Real-time sync for favorites
     const channel = supabase
-      .channel('user-favorites-changes')
+      .channel('user-favorite-pairs-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'user_favorites'
+          table: 'user_favorite_pairs'
         },
         () => {
           fetchFavorites();
@@ -40,89 +40,102 @@ export const useFavorites = () => {
       }
 
       const { data, error } = await supabase
-        .from('user_favorites')
-        .select('signal_id')
+        .from('user_favorite_pairs')
+        .select('pair_name')
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      const favoriteIds = new Set(data?.map(f => f.signal_id) || []);
-      setFavorites(favoriteIds);
+      const favoritePairNames = new Set(data?.map(f => f.pair_name) || []);
+      setFavoritePairs(favoritePairNames);
     } catch (error) {
-      console.error('Error fetching favorites:', error);
+      console.error('Error fetching favorite pairs:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleFavorite = async (signalId: string) => {
+  const toggleFavoritePair = async (pairName: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
           title: "Authentication Required",
-          description: "Please log in to save favorites",
+          description: "Please log in to save favorite pairs",
           variant: "destructive",
         });
         return;
       }
 
-      const isFavorite = favorites.has(signalId);
+      const isFavorite = favoritePairs.has(pairName);
 
       // Optimistically update UI immediately
       if (isFavorite) {
-        setFavorites(prev => {
+        setFavoritePairs(prev => {
           const newSet = new Set(prev);
-          newSet.delete(signalId);
+          newSet.delete(pairName);
           return newSet;
         });
       } else {
-        setFavorites(prev => new Set(prev).add(signalId));
+        setFavoritePairs(prev => new Set(prev).add(pairName));
       }
 
       if (isFavorite) {
         // Remove from favorites
         const { error } = await supabase
-          .from('user_favorites')
+          .from('user_favorite_pairs')
           .delete()
           .eq('user_id', user.id)
-          .eq('signal_id', signalId);
+          .eq('pair_name', pairName);
 
         if (error) throw error;
 
         toast({
           title: "Removed from favorites",
-          description: "Signal removed from your favorites",
+          description: `${pairName} removed from your favorite pairs`,
         });
       } else {
         // Add to favorites with upsert to handle conflicts
         const { error } = await supabase
-          .from('user_favorites')
+          .from('user_favorite_pairs')
           .upsert(
-            { user_id: user.id, signal_id: signalId },
-            { onConflict: 'user_id,signal_id', ignoreDuplicates: true }
+            { user_id: user.id, pair_name: pairName },
+            { onConflict: 'user_id,pair_name', ignoreDuplicates: true }
           );
 
         if (error) throw error;
 
         toast({
           title: "Added to favorites",
-          description: "Signal saved to your favorites",
+          description: `${pairName} saved to your favorite pairs`,
         });
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error('Error toggling favorite pair:', error);
       // Revert optimistic update on error
       fetchFavorites();
       toast({
         title: "Error",
-        description: "Failed to update favorites",
+        description: "Failed to update favorite pairs",
         variant: "destructive",
       });
     }
   };
 
-  const isFavorite = (signalId: string) => favorites.has(signalId);
+  const isFavoritePair = (pairName: string) => favoritePairs.has(pairName);
 
-  return { favorites, isFavorite, toggleFavorite, loading };
+  // Keep old method names for compatibility but map to pairs
+  const toggleFavorite = toggleFavoritePair;
+  const isFavorite = isFavoritePair;
+
+  return { 
+    favoritePairs, 
+    isFavoritePair, 
+    toggleFavoritePair, 
+    loading,
+    // Legacy compatibility
+    favorites: favoritePairs,
+    isFavorite,
+    toggleFavorite
+  };
 };

@@ -40,7 +40,7 @@ interface SignalCardProps {
 
 const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: SignalCardProps) => {
   const navigate = useNavigate();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavoritePair, toggleFavoritePair } = useFavorites();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
   
   const getStatusText = () => {
@@ -100,12 +100,12 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
                 className="h-7 w-7 hover:bg-accent"
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleFavorite(signal.id);
+                  toggleFavoritePair(signal.pair);
                 }}
               >
                 <Star 
                   className={`h-4 w-4 transition-all ${
-                    isFavorite(signal.id) 
+                    isFavoritePair(signal.pair) 
                       ? 'fill-yellow-400 text-yellow-400' 
                       : 'text-muted-foreground hover:text-yellow-400'
                   }`}
