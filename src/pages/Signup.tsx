@@ -19,6 +19,10 @@ const Signup = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  
+  // Get return URL from query params
+  const searchParams = new URLSearchParams(window.location.search);
+  const returnUrl = searchParams.get('returnUrl') || '/onboarding';
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +49,7 @@ const Signup = () => {
         email: validation.data.email,
         password: validation.data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}${returnUrl}`,
           data: {
             full_name: validation.data.fullName,
             terms_accepted: validation.data.termsAccepted,
@@ -87,8 +91,8 @@ const Signup = () => {
           toast.success("Account created successfully! You can now login.");
         }
         
-        // Navigate to login page instead of onboarding
-        setTimeout(() => navigate("/login"), 2000);
+        // Navigate to login page with return URL or to onboarding
+        setTimeout(() => navigate(`/login${returnUrl !== '/onboarding' ? `?returnUrl=${returnUrl}` : ''}`), 2000);
       }
     } catch (error: any) {
       toast.error("An unexpected error occurred. Please try again.");
