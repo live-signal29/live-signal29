@@ -3,7 +3,7 @@
   "name": "TREND IS FRIEND - Live Trading Signals",
   "short_name": "TrendIsFriend",
   "description": "Get real-time trading signals for Forex, Crypto, Commodities, and Indices with professional analysis and instant notifications",
-  "start_url": "/?utm_source=pwa",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#0EA5E9",
