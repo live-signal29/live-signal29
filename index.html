@@ -55,6 +55,25 @@
 
   <body>
     <div id="root"></div>
+    
+    <!-- Disable WebIntoApp exit popup -->
+    <script>
+      // Block WebIntoApp back button popup
+      document.addEventListener("backbutton", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+      
+      // Additional override for Cordova/PhoneGap back button
+      document.addEventListener("deviceready", function() {
+        document.addEventListener("backbutton", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }, false);
+      }, false);
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
