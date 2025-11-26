@@ -1,5 +1,5 @@
 // Service worker with Workbox and offline fallback
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
 
 const CACHE = "trendisfriend-v1";
 const offlineFallbackPage = "offline.html";
