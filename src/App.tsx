@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { OneSignalProvider } from "@/components/OneSignalProvider";
 
 // Lazy load all pages for better performance
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -85,12 +86,13 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
+    <OneSignalProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
             {/* Public routes first */}
             <Route path="/signal/:id" element={<SharedSignal />} />
             <Route path="/login" element={<Login />} />
@@ -128,6 +130,7 @@ const App = () => (
         </Suspense>
       </BrowserRouter>
     </TooltipProvider>
+    </OneSignalProvider>
   </QueryClientProvider>
 );
 
