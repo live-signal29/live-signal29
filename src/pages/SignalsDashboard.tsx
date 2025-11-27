@@ -5,8 +5,6 @@ import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import AdBanner from "@/components/AdBanner";
-import { ExnessBanner } from "@/components/ExnessBanner";
-import { ExnessPopup } from "@/components/ExnessPopup";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
@@ -157,9 +155,6 @@ const SignalsDashboard = () => {
             <TrialExpiredLockScreen />
           ) : (
             <>
-          {/* Exness Affiliate Banner */}
-          <ExnessBanner />
-
           {/* Top Ad Banner */}
           <div className="mb-4">
             <AdBanner />
@@ -344,7 +339,6 @@ const SignalsDashboard = () => {
       </main>
 
       <BrokerAccountButton />
-      <ExnessPopup />
       <Footer />
     </div>
   );
