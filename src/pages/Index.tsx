@@ -4,6 +4,8 @@ import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
 import SignalCard from "@/components/SignalCard";
 import SEO from "@/components/SEO";
+import { ExnessAffiliateBanner } from "@/components/ExnessAffiliateBanner";
+import { ExnessPopup } from "@/components/ExnessPopup";
 import { getWebsiteStructuredData, getOrganizationStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -59,15 +61,20 @@ const Index = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-              {signals?.map((signal) => (
-                <SignalCard key={signal.id} signal={signal as any} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                {signals?.map((signal) => (
+                  <SignalCard key={signal.id} signal={signal as any} />
+                ))}
+              </div>
+              
+              <ExnessAffiliateBanner />
+            </>
           )}
         </section>
       </main>
 
+      <ExnessPopup />
       <Footer />
     </div>
   );

@@ -34,8 +34,16 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Notification Bell & Top Menu Dropdown */}
+          {/* Exness CTA, Notification Bell & Top Menu Dropdown */}
           <div className="flex items-center gap-2">
+            <a
+              href="https://one.exnessonelink.com/a/vtkbbmje"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-xs rounded-md transition-colors shadow-sm"
+            >
+              <span>Join Exness</span>
+            </a>
             <NotificationBell />
             <TopMenuDropdown />
           </div>

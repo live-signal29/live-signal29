@@ -1,6 +1,5 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gift, TrendingUp, Bell, Shield, HeadphonesIcon, Award } from "lucide-react";
 
@@ -82,7 +81,6 @@ const Benefits = () => {
         </div>
       </main>
 
-      <BrokerAccountButton />
       <Footer />
     </div>
   );
