@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import exnessLogo from "@/assets/exness-logo.png";
-import xmLogo from "@/assets/xm-logo.png";
+import exnessLogo from "@/assets/exness-logo-real.png";
+import xmLogo from "@/assets/xm-logo-real.png";
 import { ExternalLink } from "lucide-react";
 
 const affiliates = [

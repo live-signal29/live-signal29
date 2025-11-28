@@ -5,6 +5,7 @@ import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
 import { NotificationBell } from "./NotificationBell";
+import exnessLogo from "@/assets/exness-logo-real.png";
 
 const Header = () => {
 
@@ -42,6 +43,7 @@ const Header = () => {
               rel="noopener noreferrer"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-affiliate hover:bg-affiliate/90 text-affiliate-foreground font-semibold text-xs rounded-md transition-colors shadow-sm"
             >
+              <img src={exnessLogo} alt="Exness" className="w-4 h-4 rounded-full" />
               <span>Join Exness</span>
             </a>
             <NotificationBell />
