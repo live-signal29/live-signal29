@@ -1,6 +1,5 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import NotificationSettings from "@/components/NotificationSettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -39,7 +38,6 @@ const Settings = () => {
         </div>
       </main>
 
-      <BrokerAccountButton />
       <Footer />
     </div>
   );

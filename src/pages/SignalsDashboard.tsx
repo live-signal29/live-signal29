@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
-import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
@@ -338,7 +337,6 @@ const SignalsDashboard = () => {
         </div>
       </main>
 
-      <BrokerAccountButton />
       <Footer />
     </div>
   );

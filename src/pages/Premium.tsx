@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { BrokerAccountButton } from "@/components/BrokerAccountButton";
 import CountdownTimer from "@/components/CountdownTimer";
 import SEO from "@/components/SEO";
 import { getProductStructuredData, getBreadcrumbStructuredData } from "@/components/StructuredData";
@@ -791,7 +790,6 @@ const Premium = () => {
         </Dialog>
       </main>
 
-      <BrokerAccountButton />
       <Footer />
     </div>
   );
