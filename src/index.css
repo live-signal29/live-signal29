@@ -8,58 +8,59 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Dark trading dashboard theme - matching screenshot */
-    --background: 0 0% 7%;
-    --foreground: 0 0% 98%;
+    /* Light theme - Professional trading platform */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
 
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
 
     /* Cyan accent for asset names */
-    --primary: 180 100% 45%;
+    --primary: 180 100% 35%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 100% 60%;
+    --secondary: 210 100% 50%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 180 100% 45%;
+    --accent: 180 100% 35%;
     --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 100% 60%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
-    --ring: 180 100% 45%;
+    --border: 0 0% 88%;
+    --input: 0 0% 92%;
+    --ring: 180 100% 35%;
 
     --radius: 0.5rem;
 
     /* Trading colors */
-    --success: 142 76% 40%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 98%;
     
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 7%;
+    --warning-foreground: 0 0% 98%;
 
-    --buy: 142 76% 40%;
-    --sell: 0 100% 60%;
+    --buy: 142 76% 36%;
+    --sell: 0 84% 60%;
     
     /* Affiliate CTA */
     --affiliate: 45 93% 47%;
     --affiliate-foreground: 0 0% 7%;
 
     /* Gradient stops */
-    --gradient-start: 0 0% 7%;
-    --gradient-end: 0 0% 10%;
+    --gradient-start: 0 0% 98%;
+    --gradient-end: 0 0% 95%;
   }
 
   .dark {
+    /* Dark trading dashboard theme */
     --background: 0 0% 7%;
     --foreground: 0 0% 98%;
 
@@ -112,7 +113,7 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
+    @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen transition-colors duration-300;
   }
 }
 

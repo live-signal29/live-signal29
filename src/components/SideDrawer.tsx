@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ThemeToggle } from "./ThemeToggle";
 import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
 export const SideDrawer = () => {
@@ -45,10 +46,11 @@ export const SideDrawer = () => {
               alt="TREND IS FRIEND Logo" 
               className="w-14 h-14 rounded-full shadow-lg shadow-primary/20"
             />
-            <div>
+            <div className="flex-1">
               <h2 className="text-lg font-bold tracking-wide">TREND IS FRIEND</h2>
               <p className="text-sm text-muted-foreground">Live Trading Signals</p>
             </div>
+            <ThemeToggle />
           </div>
 
           {/* Menu Items */}
