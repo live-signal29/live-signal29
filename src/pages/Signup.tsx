@@ -85,19 +85,35 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-accent/20">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 p-3 rounded-full bg-primary/10 w-fit">
-            <UserPlus className="h-8 w-8 text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 py-12 relative overflow-hidden bg-gradient-to-br from-background via-background to-accent/5">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 right-10 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute top-1/3 right-1/3 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '3s' }}></div>
+      </div>
+      
+      <Card className="w-full max-w-md animate-fade-in shadow-2xl border-primary/10 relative z-10 backdrop-blur-sm bg-card/95">
+        <CardHeader className="text-center space-y-4 pb-6">
+          <div className="mx-auto mb-2 relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 animate-pulse"></div>
+            <div className="relative p-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 w-fit mx-auto transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
+              <UserPlus className="h-10 w-10 text-primary animate-pulse" />
+            </div>
           </div>
-          <CardTitle className="text-2xl gradient-text">Create Account</CardTitle>
-          <p className="text-muted-foreground">Join VIP Gold Signals today</p>
+          <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              Create Account
+            </CardTitle>
+            <p className="text-muted-foreground animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              Join VIP Gold Signals today
+            </p>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           <form onSubmit={handleSignup} className="space-y-4">
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+              <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
               <Input
                 id="fullName"
                 type="text"
@@ -105,11 +121,12 @@ const Signup = () => {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
               />
             </div>
 
-            <div>
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -117,34 +134,37 @@ const Signup = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label htmlFor="countryCode">Code</Label>
+            <div className="grid grid-cols-3 gap-2 animate-fade-in" style={{ animationDelay: '0.5s' }}>
+              <div className="space-y-2">
+                <Label htmlFor="countryCode" className="text-sm font-medium">Code</Label>
                 <Input
                   id="countryCode"
                   type="text"
                   placeholder="+1"
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
                 />
               </div>
-              <div className="col-span-2">
-                <Label htmlFor="phoneNumber">Phone Number</Label>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number</Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
                   placeholder="1234567890"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
                 />
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -152,34 +172,42 @@ const Signup = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
               />
             </div>
 
-            <div className="flex items-start space-x-2">
+            <div className="flex items-start space-x-2 animate-fade-in" style={{ animationDelay: '0.7s' }}>
               <Checkbox
                 id="terms"
                 checked={termsAccepted}
                 onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                className="mt-1"
               />
-              <label htmlFor="terms" className="text-sm text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 I agree to the{" "}
-                <a href="/terms" className="text-primary hover:underline">
+                <a href="/terms" className="text-primary hover:underline font-semibold transition-all">
                   Terms & Conditions
                 </a>{" "}
                 and{" "}
-                <a href="/privacy" className="text-primary hover:underline">
+                <a href="/privacy" className="text-primary hover:underline font-semibold transition-all">
                   Privacy Policy
                 </a>
               </label>
             </div>
 
-            <Button type="submit" className="w-full btn-glow" disabled={loading}>
-              {loading ? "Creating Account..." : "Sign Up"}
+            <Button 
+              type="submit" 
+              className="w-full btn-glow relative overflow-hidden group animate-fade-in transform hover:scale-[1.02] transition-all duration-300" 
+              disabled={loading}
+              style={{ animationDelay: '0.8s' }}
+            >
+              <span className="relative z-10">{loading ? "Creating Account..." : "Sign Up"}</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '0.9s' }}>
               Already have an account?{" "}
-              <a href="/login" className="text-primary hover:underline">
+              <a href="/login" className="text-primary hover:underline font-semibold transition-all hover:text-primary/80">
                 Sign in
               </a>
             </p>
