@@ -304,18 +304,27 @@ const SignalsDashboard = () => {
                       groupedSignals[date].push(signal);
                     });
 
-                    return Object.entries(groupedSignals).map(([date, daySignals]) => (
-                      <div key={date} className="space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-                          {daySignals.map((signal) => (
-                            <SignalCardNew 
-                              key={signal.id} 
-                              signal={signal as any}
-                              hasAccess={hasAccess}
-                            />
-                          ))}
+                    const dateEntries = Object.entries(groupedSignals);
+                    
+                    return dateEntries.map(([date, daySignals], index) => (
+                      <div key={date}>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                            {daySignals.map((signal) => (
+                              <SignalCardNew 
+                                key={signal.id} 
+                                signal={signal as any}
+                                hasAccess={hasAccess}
+                              />
+                            ))}
+                          </div>
+                          <div className="border-t border-border/50 my-4"></div>
                         </div>
-                        <div className="border-t border-border/50 my-4"></div>
+                        
+                        {/* Show Exness banner after first date group (Today's signals) */}
+                        {index === 0 && dateEntries.length > 1 && (
+                          <ExnessAffiliateBanner />
+                        )}
                       </div>
                     ));
                   })()}
@@ -327,9 +336,6 @@ const SignalsDashboard = () => {
                   <p className="text-muted-foreground text-lg">No signals found in the last 7 days</p>
                 </div>
               )}
-
-              {/* Exness Affiliate Banner */}
-              <ExnessAffiliateBanner />
             </>
           )}
 
