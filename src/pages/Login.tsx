@@ -85,19 +85,35 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-accent/20">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 p-3 rounded-full bg-primary/10 w-fit">
-            <LogIn className="h-8 w-8 text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+      
+      <Card className="w-full max-w-md animate-fade-in shadow-2xl border-primary/10 relative z-10 backdrop-blur-sm bg-card/95">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto mb-2 relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 animate-pulse"></div>
+            <div className="relative p-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 w-fit mx-auto transform group-hover:scale-110 transition-transform duration-500">
+              <LogIn className="h-10 w-10 text-primary animate-pulse" />
+            </div>
           </div>
-          <CardTitle className="text-2xl gradient-text">Welcome Back</CardTitle>
-          <p className="text-muted-foreground">Sign in to your account</p>
+          <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+              Welcome Back
+            </CardTitle>
+            <p className="text-muted-foreground animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              Sign in to your account
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -105,10 +121,11 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
               />
             </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -116,26 +133,34 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
               />
             </div>
-            <Button type="submit" className="w-full btn-glow" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+            <Button 
+              type="submit" 
+              className="w-full btn-glow relative overflow-hidden group animate-fade-in transform hover:scale-[1.02] transition-all duration-300" 
+              disabled={loading}
+              style={{ animationDelay: '0.5s' }}
+            >
+              <span className="relative z-10">{loading ? "Signing in..." : "Sign In"}</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
             </Button>
 
-            <div className="relative">
+            <div className="relative animate-fade-in" style={{ animationDelay: '0.6s' }}>
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
 
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full group hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 animate-fade-in"
               onClick={handleGoogleLogin}
+              style={{ animationDelay: '0.7s' }}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
@@ -155,12 +180,12 @@ const Login = () => {
                   fill="#EA4335"
                 />
               </svg>
-              Sign in with Google
+              <span className="group-hover:scale-110 transition-transform duration-300 inline-block">Sign in with Google</span>
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '0.8s' }}>
               Don't have an account?{" "}
-              <a href="/signup" className="text-primary hover:underline">
+              <a href="/signup" className="text-primary hover:underline font-semibold transition-all hover:text-primary/80">
                 Sign up
               </a>
             </p>
