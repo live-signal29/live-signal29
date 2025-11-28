@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import trendFriendLogo from "@/assets/trend-friend-logo.png";
+import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
 export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
