@@ -54,11 +54,11 @@ All colors MUST be HSL.
     --affiliate: 45 93% 47%;
     --affiliate-foreground: 0 0% 7%;
 
-    /* Pastel gradient stops - soft pink, peach, blue, mint */
-    --gradient-pink: 340 100% 97%;
-    --gradient-peach: 25 100% 96%;
-    --gradient-blue: 200 100% 96%;
-    --gradient-mint: 160 100% 96%;
+    /* Pastel gradient stops - ultra soft colors matching reference */
+    --gradient-cream: 30 50% 97%;
+    --gradient-pink: 330 40% 95%;
+    --gradient-blue: 200 45% 94%;
+    --gradient-mint: 150 35% 95%;
   }
 
   .dark {
@@ -117,16 +117,18 @@ All colors MUST be HSL.
   body {
     @apply text-foreground min-h-screen transition-colors duration-300;
     background: linear-gradient(135deg, 
-      hsl(var(--gradient-pink)) 0%, 
-      hsl(var(--gradient-peach)) 25%, 
-      hsl(var(--gradient-blue)) 60%, 
+      hsl(var(--gradient-cream)) 0%, 
+      hsl(var(--gradient-pink)) 30%, 
+      hsl(var(--gradient-blue)) 65%, 
       hsl(var(--gradient-mint)) 100%);
+    background-attachment: fixed;
   }
   
   .dark body {
     background: linear-gradient(to bottom right, 
       hsl(var(--gradient-start)), 
       hsl(var(--gradient-end)));
+    background-attachment: fixed;
   }
 }
 
