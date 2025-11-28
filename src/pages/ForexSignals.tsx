@@ -6,6 +6,7 @@ import SignalCard from "@/components/SignalCard";
 import FilterBar from "@/components/FilterBar";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 
 const ForexSignals = () => {
   const [filter, setFilter] = useState("latest");
@@ -53,8 +54,24 @@ const ForexSignals = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {signals?.map((signal) => (
-                <SignalCard key={signal.id} signal={signal as any} />
+              {signals?.map((signal, index) => (
+                <>
+                  <SignalCard key={signal.id} signal={signal as any} />
+                  
+                  {/* Add affiliate banner after first signal */}
+                  {index === 0 && signals && signals.length > 1 && (
+                    <div className="lg:col-span-3 md:col-span-2">
+                      <AffiliateBannerCarousel />
+                    </div>
+                  )}
+                  
+                  {/* Add affiliate banner before last signal */}
+                  {signals && index === signals.length - 2 && signals.length > 2 && (
+                    <div className="lg:col-span-3 md:col-span-2">
+                      <AffiliateBannerCarousel />
+                    </div>
+                  )}
+                </>
               ))}
             </div>
           )}
