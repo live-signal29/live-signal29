@@ -5,6 +5,7 @@ import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
 import { NotificationBell } from "./NotificationBell";
+import { ThemeToggle } from "./ThemeToggle";
 import exnessLogo from "@/assets/exness-logo-real.png";
 
 const Header = () => {
@@ -35,8 +36,9 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Exness CTA, Notification Bell & Top Menu Dropdown */}
+          {/* Theme Toggle, Exness CTA, Notification Bell & Top Menu Dropdown */}
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <a
               href="https://one.exnessonelink.com/a/vtkbbmje"
               target="_blank"
