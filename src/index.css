@@ -60,50 +60,50 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark trading dashboard theme */
-    --background: 0 0% 7%;
-    --foreground: 0 0% 98%;
+    /* Modern professional dark theme - slate/blue tint */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 222 47% 14%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 98%;
 
     --primary: 180 100% 45%;
-    --primary-foreground: 0 0% 98%;
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 210 100% 60%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
     --accent: 180 100% 45%;
-    --accent-foreground: 0 0% 98%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 100% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
+    --border: 217 33% 21%;
+    --input: 217 33% 17%;
     --ring: 180 100% 45%;
 
-    --success: 142 76% 40%;
-    --success-foreground: 0 0% 98%;
+    --success: 142 76% 45%;
+    --success-foreground: 222 47% 11%;
     
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 7%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 47% 11%;
 
-    --buy: 142 76% 40%;
-    --sell: 0 100% 60%;
+    --buy: 142 76% 45%;
+    --sell: 0 100% 63%;
     
     /* Affiliate CTA */
-    --affiliate: 45 93% 47%;
-    --affiliate-foreground: 0 0% 7%;
+    --affiliate: 45 93% 50%;
+    --affiliate-foreground: 222 47% 11%;
 
-    --gradient-start: 0 0% 7%;
-    --gradient-end: 0 0% 10%;
+    --gradient-start: 222 47% 11%;
+    --gradient-end: 222 47% 14%;
   }
 }
 
