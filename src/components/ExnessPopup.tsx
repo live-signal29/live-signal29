@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import exnessLogo from "@/assets/exness-logo.png";
+import xmLogo from "@/assets/xm-logo.png";
 
 const brokers = [
   {
@@ -12,7 +13,7 @@ const brokers = [
   {
     name: "XM",
     url: "https://www.xmwebsite.net/referral?token=8dCpm56oL4T6QLUFfmxdSg",
-    logo: null, // XM logo will use text
+    logo: xmLogo,
     description: "Start Trading Now",
   }
 ];
@@ -65,15 +66,11 @@ export const ExnessPopup = () => {
         >
           <div className="flex items-start gap-2.5">
             <div className="w-10 h-10 bg-white rounded-lg p-1.5 flex items-center justify-center shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-              {broker.logo ? (
-                <img 
-                  src={broker.logo} 
-                  alt={broker.name} 
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="text-lg font-black text-green-600">{broker.name}</div>
-              )}
+              <img 
+                src={broker.logo} 
+                alt={broker.name} 
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="flex-1">
               <p className="text-xs font-bold text-foreground mb-0.5">
