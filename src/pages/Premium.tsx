@@ -18,8 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Autoplay from "embla-carousel-autoplay";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ExnessAffiliateBanner } from "@/components/ExnessAffiliateBanner";
-import { XMAffiliateBanner } from "@/components/XMAffiliateBanner";
+import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 
 const Premium = () => {
   const [selectedCategory, setSelectedCategory] = useState("COMMODITY");
@@ -682,10 +681,9 @@ const Premium = () => {
           </Carousel>
         </div>
 
-        {/* Affiliate Banners */}
+        {/* Affiliate Banner Carousel */}
         <div className="max-w-5xl mx-auto">
-          <ExnessAffiliateBanner />
-          <XMAffiliateBanner />
+          <AffiliateBannerCarousel />
         </div>
 
         {/* Payment Dialog */}
