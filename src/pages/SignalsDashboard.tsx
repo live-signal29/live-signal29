@@ -18,6 +18,8 @@ import { useFavorites } from "@/hooks/useFavorites";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
+import { ExnessAffiliateBanner } from "@/components/ExnessAffiliateBanner";
+import { ExnessPopup } from "@/components/ExnessPopup";
 
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading } = useSubscriptionAccess();
@@ -325,6 +327,9 @@ const SignalsDashboard = () => {
                   <p className="text-muted-foreground text-lg">No signals found in the last 7 days</p>
                 </div>
               )}
+
+              {/* Exness Affiliate Banner */}
+              <ExnessAffiliateBanner />
             </>
           )}
 
@@ -337,6 +342,7 @@ const SignalsDashboard = () => {
         </div>
       </main>
 
+      <ExnessPopup />
       <Footer />
     </div>
   );
