@@ -325,6 +325,11 @@ const SignalsDashboard = () => {
                         {index === 0 && dateEntries.length > 1 && (
                           <AffiliateBannerCarousel />
                         )}
+                        
+                        {/* Show affiliate banner before last date group */}
+                        {index === dateEntries.length - 2 && dateEntries.length > 2 && (
+                          <AffiliateBannerCarousel />
+                        )}
                       </div>
                     ));
                   })()}
