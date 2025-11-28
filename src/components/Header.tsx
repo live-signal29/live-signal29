@@ -26,10 +26,10 @@ const Header = () => {
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300"></div>
               </div>
               <div className="flex flex-col">
-                <span className="text-sm sm:text-base md:text-lg font-bold text-white group-hover:scale-105 transition-transform duration-300">
+                <span className="text-sm sm:text-base md:text-lg font-bold text-foreground group-hover:scale-105 transition-transform duration-300">
                   Live Signals
                 </span>
-                <span className="text-xs text-white/70">
+                <span className="text-xs text-muted-foreground">
                   welcome 🤗
                 </span>
               </div>
