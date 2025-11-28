@@ -49,6 +49,10 @@ All colors MUST be HSL.
 
     --buy: 142 76% 40%;
     --sell: 0 100% 60%;
+    
+    /* Affiliate CTA */
+    --affiliate: 45 93% 47%;
+    --affiliate-foreground: 0 0% 7%;
 
     /* Gradient stops */
     --gradient-start: 0 0% 7%;
@@ -92,6 +96,10 @@ All colors MUST be HSL.
 
     --buy: 142 76% 40%;
     --sell: 0 100% 60%;
+    
+    /* Affiliate CTA */
+    --affiliate: 45 93% 47%;
+    --affiliate-foreground: 0 0% 7%;
 
     --gradient-start: 0 0% 7%;
     --gradient-end: 0 0% 10%;
