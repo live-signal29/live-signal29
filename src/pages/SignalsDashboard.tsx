@@ -19,6 +19,7 @@ import SignalsSkeleton from "@/components/SignalsSkeleton";
 import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
 import { ExnessAffiliateBanner } from "@/components/ExnessAffiliateBanner";
+import { XMAffiliateBanner } from "@/components/XMAffiliateBanner";
 import { ExnessPopup } from "@/components/ExnessPopup";
 
 const SignalsDashboard = () => {
@@ -321,9 +322,12 @@ const SignalsDashboard = () => {
                           <div className="border-t border-border/50 my-4"></div>
                         </div>
                         
-                        {/* Show Exness banner after first date group (Today's signals) */}
+                        {/* Show affiliate banners after first date group (Today's signals) */}
                         {index === 0 && dateEntries.length > 1 && (
-                          <ExnessAffiliateBanner />
+                          <>
+                            <ExnessAffiliateBanner />
+                            <XMAffiliateBanner />
+                          </>
                         )}
                       </div>
                     ));
