@@ -292,6 +292,7 @@ export type Database = {
           entry: string
           id: string
           is_favorite: boolean | null
+          is_premium: boolean | null
           main_category: string | null
           note: string | null
           pair: string
@@ -324,6 +325,7 @@ export type Database = {
           entry: string
           id?: string
           is_favorite?: boolean | null
+          is_premium?: boolean | null
           main_category?: string | null
           note?: string | null
           pair: string
@@ -356,6 +358,7 @@ export type Database = {
           entry?: string
           id?: string
           is_favorite?: boolean | null
+          is_premium?: boolean | null
           main_category?: string | null
           note?: string | null
           pair?: string
