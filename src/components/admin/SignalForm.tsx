@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { signalSchema } from "@/lib/validations";
+import { Crown } from "lucide-react";
 
 interface SignalFormProps {
   onSuccess: () => void;
@@ -35,6 +37,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     signal_type: editSignal?.signal_type || "",
     risk_level: editSignal?.risk_level || "",
     analysis_reason: editSignal?.analysis_reason || "",
+    is_premium: editSignal?.is_premium || false,
   });
 
   const subCategoryOptions: Record<string, string[]> = {
@@ -76,6 +79,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         signal_type: validation.data.signal_type || null,
         risk_level: validation.data.risk_level || null,
         analysis_reason: validation.data.analysis_reason || null,
+        is_premium: formData.is_premium,
       };
 
       if (editSignal) {
@@ -279,6 +283,22 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           onChange={(e) => setFormData({ ...formData, note: e.target.value })}
         />
       </div>
+
+      {/* Premium Access Toggle */}
+      <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/20">
+        <div className="flex items-center gap-3">
+          <Crown className="h-5 w-5 text-yellow-500" />
+          <div>
+            <Label className="text-base font-semibold">Premium Access</Label>
+            <p className="text-xs text-muted-foreground">Lock this signal for premium users only</p>
+          </div>
+        </div>
+        <Switch
+          checked={formData.is_premium}
+          onCheckedChange={(checked) => setFormData({ ...formData, is_premium: checked })}
+        />
+      </div>
+
       <Button type="submit" className="w-full btn-glow" disabled={loading}>
         {loading ? "Saving..." : editSignal ? "Update Signal" : "Create Signal"}
       </Button>

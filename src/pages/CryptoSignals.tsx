@@ -2,14 +2,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import SignalCard from "@/components/SignalCard";
+import SignalCardNew from "@/components/SignalCardNew";
 import FilterBar from "@/components/FilterBar";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
 const CryptoSignals = () => {
   const [filter, setFilter] = useState("latest");
+  const { hasAccess } = useSubscriptionAccess();
 
   const { data: signals, isLoading } = useQuery({
     queryKey: ["signals", "Crypto", filter],
@@ -56,7 +58,11 @@ const CryptoSignals = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {signals?.map((signal, index) => (
                 <>
-                  <SignalCard key={signal.id} signal={signal as any} />
+                  <SignalCardNew 
+                    key={signal.id} 
+                    signal={signal as any}
+                    hasAccess={hasAccess}
+                  />
                   
                   {/* Add affiliate banner after first signal */}
                   {index === 0 && signals && signals.length > 1 && (

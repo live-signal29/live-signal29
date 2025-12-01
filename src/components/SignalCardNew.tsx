@@ -40,6 +40,7 @@ interface SignalCardProps {
     analysis_reason?: string;
     created_at: string;
     category: string;
+    is_premium?: boolean;
   };
   hasAccess?: boolean;
   showFavoriteButton?: boolean;
@@ -49,6 +50,9 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
   const navigate = useNavigate();
   const { isFavoritePair, toggleFavoritePair } = useFavorites();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
+  
+  // Check if signal should be locked (signal is premium AND user doesn't have access)
+  const isLocked = signal.is_premium && !hasAccess;
   
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
     const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;
@@ -111,6 +115,9 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
             <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs`}>
               {signal.type.toUpperCase()}
             </Badge>
+            {signal.is_premium && (
+              <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+            )}
             <span className="text-sm sm:text-base font-bold text-foreground">
               {signal.pair}
             </span>
@@ -119,7 +126,7 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
             </Badge>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {showFavoriteButton && (
+            {showFavoriteButton && !isLocked && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -138,29 +145,31 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
                 />
               </Button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 hover:bg-accent"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Share2 className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
-                  Share on WhatsApp
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('telegram')}>
-                  Share on Telegram
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('copy')}>
-                  Copy Link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {!isLocked && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 hover:bg-accent"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Share2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                    Share on WhatsApp
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('telegram')}>
+                    Share on Telegram
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('copy')}>
+                    Copy Link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <div className="text-right">
               <div className="text-[10px] sm:text-xs text-muted-foreground">
                 {formatDate(signal.created_at)}
@@ -191,9 +200,34 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
           )}
         </div>
 
-        {/* TP/SL Table with Premium Blur */}
+        {/* TP/SL Table with Premium Lock */}
         <div className="relative p-3 sm:p-4">
-          <div className={`grid grid-cols-2 gap-x-4 gap-y-2 text-sm ${!hasAccess ? 'blur-md select-none' : ''}`}>
+          {isLocked ? (
+            /* Locked State for Free Users */
+            <div className="flex flex-col items-center justify-center py-12 px-4 space-y-4">
+              <div className="bg-yellow-500/10 p-4 rounded-full">
+                <Lock className="h-10 w-10 text-yellow-500" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-bold text-foreground">
+                  🔒 BUY Premium to Unlock This Signal
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Get access to exclusive premium signals with detailed TP/SL levels and analysis
+                </p>
+              </div>
+              <Button
+                size="lg"
+                onClick={() => navigate("/premium")}
+                className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold shadow-lg"
+              >
+                <Crown className="h-5 w-5 mr-2" />
+                Upgrade to Premium
+              </Button>
+            </div>
+          ) : (
+            /* Unlocked State */
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <div className="flex justify-between items-center py-1.5 border-b border-border/50">
               <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 1</span>
               <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
@@ -225,32 +259,6 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
                 {signal.sl} {signal.sl_hit && '✗'}
               </span>
             </div>
-          </div>
-
-          {/* Premium Overlay for Free Users */}
-          {!hasAccess && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <div className="text-center space-y-3 p-4">
-                <div className="flex justify-center">
-                  <div className="bg-primary/10 p-3 rounded-full">
-                    <Lock className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-                <div>
-                  <p className="font-semibold text-sm sm:text-base mb-1">Premium Content</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Upgrade to view TP/SL levels
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => navigate("/premium")}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                >
-                  <Crown className="h-4 w-4 mr-2" />
-                  Upgrade to Premium
-                </Button>
-              </div>
             </div>
           )}
         </div>

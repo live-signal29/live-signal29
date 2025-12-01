@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Trash2, Eye, EyeOff, CheckSquare, Square } from "lucide-react";
+import { Edit, Trash2, Eye, EyeOff, CheckSquare, Square, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import SignalForm from "./SignalForm";
@@ -121,6 +122,22 @@ const SignalsList = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-signals"] });
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       toast.success(currentValue ? "Signal unpublished" : "Signal published");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const togglePremium = async (id: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("signals")
+        .update({ is_premium: !currentValue })
+        .eq("id", id);
+      
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["admin-signals"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success(currentValue ? "Signal unlocked for all users" : "Signal locked for premium users");
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -348,17 +365,33 @@ const SignalsList = () => {
                     {signal.signal_type && (
                       <Badge variant="outline" className="text-xs">{signal.signal_type}</Badge>
                     )}
+                    {signal.is_premium && (
+                      <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500 border text-xs">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Premium
+                      </Badge>
+                    )}
                   </CardTitle>
-                  <Select value={signal.signal_status || "OPEN"} onValueChange={(value) => updateSignalStatus(signal.id, value)}>
-                    <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-                      <SelectItem value="LIVE">🔵 LIVE</SelectItem>
-                      <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Select value={signal.signal_status || "OPEN"} onValueChange={(value) => updateSignalStatus(signal.id, value)}>
+                      <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="OPEN">🟢 OPEN</SelectItem>
+                        <SelectItem value="LIVE">🔵 LIVE</SelectItem>
+                        <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md">
+                      <Crown className="h-4 w-4 text-yellow-500" />
+                      <span className="text-xs font-medium">Premium Lock</span>
+                      <Switch
+                        checked={signal.is_premium || false}
+                        onCheckedChange={() => togglePremium(signal.id, signal.is_premium)}
+                      />
+                    </div>
+                  </div>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-2">
                     {format(new Date(signal.created_at), "MMM dd, yyyy HH:mm")}
                   </p>
