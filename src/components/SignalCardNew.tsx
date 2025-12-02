@@ -203,14 +203,14 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
         {/* TP/SL Table with Premium Lock */}
         <div className="relative p-3 sm:p-4">
           {isLocked ? (
-            /* Locked State for Free Users */
+            /* Locked State for Free Users - Only show lock message */
             <div className="flex flex-col items-center justify-center py-12 px-4 space-y-4">
               <div className="bg-yellow-500/10 p-4 rounded-full">
                 <Lock className="h-10 w-10 text-yellow-500" />
               </div>
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-bold text-foreground">
-                  🔒 BUY Premium to Unlock This Signal
+                  🔒 BUY Premium to See Signal
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   Get access to exclusive premium signals with detailed TP/SL levels and analysis
@@ -226,65 +226,67 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
               </Button>
             </div>
           ) : (
-            /* Unlocked State */
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-              <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 1</span>
-              <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
-                {signal.tp1} {signal.tp1_hit && '✓'}
-              </span>
-            </div>
-            
-            {signal.tp2 && (
-              <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 2</span>
-                <span className={`font-semibold text-xs sm:text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
-                  {signal.tp2} {signal.tp2_hit && '✓'}
-                </span>
+            /* Unlocked State - Show all details */
+            <>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 1</span>
+                  <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
+                    {signal.tp1} {signal.tp1_hit && '✓'}
+                  </span>
+                </div>
+                
+                {signal.tp2 && (
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 2</span>
+                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
+                      {signal.tp2} {signal.tp2_hit && '✓'}
+                    </span>
+                  </div>
+                )}
+                
+                {signal.tp3 && (
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 3</span>
+                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
+                      {signal.tp3} {signal.tp3_hit && '✓'}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground text-xs sm:text-sm">SL-BELOW</span>
+                  <span className={`font-semibold text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
+                    {signal.sl} {signal.sl_hit && '✗'}
+                  </span>
+                </div>
               </div>
-            )}
-            
-            {signal.tp3 && (
-              <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 3</span>
-                <span className={`font-semibold text-xs sm:text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
-                  {signal.tp3} {signal.tp3_hit && '✓'}
-                </span>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-              <span className="text-muted-foreground text-xs sm:text-sm">SL-BELOW</span>
-              <span className={`font-semibold text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
-                {signal.sl} {signal.sl_hit && '✗'}
-              </span>
-            </div>
-            </div>
+
+              {/* Analysis Reason */}
+              {signal.analysis_reason && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    <span className="font-semibold">Analysis:</span> {signal.analysis_reason}
+                  </p>
+                </div>
+              )}
+
+              {/* Note */}
+              {signal.note && (
+                <div className="mt-2 pt-2 border-t border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{signal.note}</p>
+                </div>
+              )}
+
+              {/* Profit Note */}
+              {signal.profit_note && (
+                <div className="mt-2 pt-2 border-t border-success/20">
+                  <p className="text-xs sm:text-sm font-semibold text-success">{signal.profit_note}</p>
+                </div>
+              )}
+            </>
           )}
         </div>
-
-        {/* Analysis Reason */}
-        {signal.analysis_reason && (
-          <div className="px-3 sm:px-4 py-2 bg-muted/20 border-t border-border">
-            <p className="text-[10px] sm:text-xs text-muted-foreground">
-              <span className="font-semibold">Analysis:</span> {signal.analysis_reason}
-            </p>
-          </div>
-        )}
-
-        {/* Note */}
-        {signal.note && (
-          <div className="px-3 sm:px-4 py-2 bg-muted/20 border-t border-border">
-            <p className="text-[10px] sm:text-xs text-muted-foreground">{signal.note}</p>
-          </div>
-        )}
-
-        {/* Profit Note */}
-        {signal.profit_note && (
-          <div className="px-3 sm:px-4 py-2 bg-success/5 border-t border-success/20">
-            <p className="text-xs sm:text-sm font-semibold text-success">{signal.profit_note}</p>
-          </div>
-        )}
 
         {/* Ad Banner inside Signal Card */}
         <div className="px-3 sm:px-4 py-3 border-t border-border">
