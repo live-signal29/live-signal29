@@ -34,7 +34,7 @@ export const useSubscriptionAccess = () => {
 
       const now = new Date();
 
-      // Only premium users have access to locked signals
+      // Check if premium
       if (profile.subscription_status === 'premium') {
         const endDate = profile.subscription_end_date ? new Date(profile.subscription_end_date) : null;
         if (endDate && endDate > now) {
@@ -43,7 +43,16 @@ export const useSubscriptionAccess = () => {
           setHasAccess(false);
         }
       }
-      // Free trial and free users do NOT have access to premium signals
+      // Check if free trial
+      else if (profile.subscription_status === 'free_trial') {
+        const trialEndDate = profile.trial_end_date ? new Date(profile.trial_end_date) : null;
+        if (trialEndDate && trialEndDate > now) {
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+        }
+      }
+      // Otherwise no access
       else {
         setHasAccess(false);
       }

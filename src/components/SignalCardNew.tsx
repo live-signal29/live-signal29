@@ -204,21 +204,26 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
         <div className="relative p-3 sm:p-4">
           {isLocked ? (
             /* Locked State for Free Users - Only show lock message */
-            <div 
-              onClick={() => navigate("/premium")}
-              className="flex flex-col items-center justify-center py-12 px-4 space-y-4 cursor-pointer hover:bg-accent/5 transition-colors rounded-lg"
-            >
+            <div className="flex flex-col items-center justify-center py-12 px-4 space-y-4">
               <div className="bg-yellow-500/10 p-4 rounded-full">
                 <Lock className="h-10 w-10 text-yellow-500" />
               </div>
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-bold text-foreground">
-                  🔒 BUY Premium to Unlock This Signal
+                  🔒 BUY Premium to See Signal
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Click here to view premium plans
+                  Get access to exclusive premium signals with detailed TP/SL levels and analysis
                 </p>
               </div>
+              <Button
+                size="lg"
+                onClick={() => navigate("/premium")}
+                className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold shadow-lg"
+              >
+                <Crown className="h-5 w-5 mr-2" />
+                Upgrade to Premium
+              </Button>
             </div>
           ) : (
             /* Unlocked State - Show all details */
