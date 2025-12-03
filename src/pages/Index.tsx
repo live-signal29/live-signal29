@@ -9,8 +9,10 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import { getWebsiteStructuredData, getOrganizationStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
 const Index = () => {
+  const { hasAccess } = useSubscriptionAccess();
   const { data: signals, isLoading } = useQuery({
     queryKey: ["latest-signals"],
     queryFn: async () => {
@@ -64,7 +66,7 @@ const Index = () => {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                 {signals?.map((signal) => (
-                  <SignalCard key={signal.id} signal={signal as any} />
+                  <SignalCard key={signal.id} signal={signal as any} hasAccess={hasAccess} />
                 ))}
               </div>
               
