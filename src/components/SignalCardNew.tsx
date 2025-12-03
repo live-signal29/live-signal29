@@ -98,10 +98,12 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
   };
 
   return (
-    <Card className="overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md relative">
+    <Card className={`overflow-hidden border-border transition-all duration-300 shadow-sm relative ${
+      isLocked ? 'bg-muted/50 grayscale-[30%] opacity-90' : 'bg-card hover:border-primary/50 hover:shadow-md'
+    }`}>
       <CardContent className="p-0">
-        {/* NEW Badge */}
-        {isNewSignal && (
+        {/* NEW Badge - only on unlocked */}
+        {isNewSignal && !isLocked && (
           <div className="absolute top-2 right-2 z-10">
             <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 animate-pulse">
               NEW
@@ -109,23 +111,20 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex justify-between items-start gap-2 p-3 sm:p-4 border-b border-border bg-muted/30">
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Header - Always Visible */}
+        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-border">
+          <div className="flex items-center gap-2">
             <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs`}>
               {signal.type.toUpperCase()}
             </Badge>
             {signal.is_premium && (
               <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />
             )}
-            <span className="text-sm sm:text-base font-bold text-foreground">
+            <span className="text-sm sm:text-base font-bold text-primary">
               {signal.pair}
             </span>
-            <Badge variant="outline" className="text-xs font-semibold">
-              @ {signal.entry}
-            </Badge>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
             {showFavoriteButton && !isLocked && (
               <Button
                 variant="ghost"
@@ -170,59 +169,66 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <div className="text-right">
-              <div className="text-[10px] sm:text-xs text-muted-foreground">
-                {formatDate(signal.created_at)}
-              </div>
-            </div>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">
+              {formatDate(signal.created_at)}
+            </span>
           </div>
         </div>
 
-        {/* Badges Row */}
-        <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-background border-b border-border">
-          <Badge className={`${getStatusColor()} border text-[10px] sm:text-xs font-semibold`}>
-            {getStatusText()}
-          </Badge>
-          {signal.risk_level && (
-            <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
-              {signal.risk_level} Risk
-            </Badge>
-          )}
-          {signal.signal_type && (
-            <Badge variant="outline" className="text-[10px] sm:text-xs">
-              {signal.signal_type}
-            </Badge>
-          )}
-          {signal.pips_result && (
-            <Badge className="bg-success/10 text-success border-success border text-[10px] sm:text-xs font-semibold">
-              {signal.pips_result}
-            </Badge>
-          )}
-        </div>
-
-        {/* TP/SL Table with Premium Lock */}
-        <div className="relative p-3 sm:p-4">
-          {isLocked ? (
-            /* Locked State for Free/Trial Users - Only show lock message */
-            <div className="flex flex-col items-center justify-center py-8 px-4 space-y-3">
-              <div className="bg-yellow-500/10 p-3 rounded-full">
-                <Lock className="h-8 w-8 text-yellow-500" />
+        {isLocked ? (
+          /* Locked State - Clean minimal design */
+          <>
+            <div className="flex flex-col items-center justify-center py-6 px-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="bg-muted p-2 rounded-full">
+                  <Lock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <span className="text-sm font-semibold text-muted-foreground">
+                  BUY premium to see signal
+                </span>
               </div>
-              <h3 className="text-lg font-bold text-foreground text-center">
-                🔒 BUY Premium to See Signal
-              </h3>
               <Button
-                size="default"
+                size="sm"
                 onClick={() => navigate("/premium")}
-                className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold shadow-lg"
+                className="bg-success hover:bg-success/90 text-white font-semibold rounded-full px-6"
               >
-                <Crown className="h-4 w-4 mr-2" />
-                Upgrade to Premium
+                Buy Premium
               </Button>
             </div>
-          ) : (
-            /* Unlocked State - Show all details */
-            <>
+            {/* Footer showing status */}
+            <div className="px-3 py-2 border-t border-border text-center">
+              <span className="text-xs text-muted-foreground">
+                Open • {signal.signal_status === 'LIVE' ? 'LIVE SIGNAL' : getStatusText()}
+              </span>
+            </div>
+          </>
+        ) : (
+          /* Unlocked State - Show all details */
+          <>
+            {/* Badges Row */}
+            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-background border-b border-border">
+              <Badge className={`${getStatusColor()} border text-[10px] sm:text-xs font-semibold`}>
+                {getStatusText()}
+              </Badge>
+              {signal.risk_level && (
+                <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
+                  {signal.risk_level} Risk
+                </Badge>
+              )}
+              {signal.signal_type && (
+                <Badge variant="outline" className="text-[10px] sm:text-xs">
+                  {signal.signal_type}
+                </Badge>
+              )}
+              {signal.pips_result && (
+                <Badge className="bg-success/10 text-success border-success border text-[10px] sm:text-xs font-semibold">
+                  {signal.pips_result}
+                </Badge>
+              )}
+            </div>
+
+            {/* TP/SL Table */}
+            <div className="p-3 sm:p-4">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <div className="flex justify-between items-center py-1.5 border-b border-border/50">
                   <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 1</span>
@@ -279,14 +285,14 @@ const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: 
                   <p className="text-xs sm:text-sm font-semibold text-success">{signal.profit_note}</p>
                 </div>
               )}
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Ad Banner inside Signal Card */}
-        <div className="px-3 sm:px-4 py-3 border-t border-border">
-          <AdBanner className="scale-90" />
-        </div>
+            {/* Ad Banner inside Signal Card */}
+            <div className="px-3 sm:px-4 py-3 border-t border-border">
+              <AdBanner className="scale-90" />
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
