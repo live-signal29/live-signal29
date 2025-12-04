@@ -181,22 +181,16 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
         {isLocked ? (
           /* Locked State - Clean minimal design */
           <>
-            <div className="flex flex-col items-center justify-center py-6 px-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="bg-muted p-2 rounded-full">
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <span className="text-sm font-semibold text-muted-foreground">
-                  BUY premium to see signal
-                </span>
+            <div 
+              className="flex items-center justify-center gap-2 py-6 px-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/premium")}
+            >
+              <div className="bg-muted p-2 rounded-full">
+                <Lock className="h-5 w-5 text-muted-foreground" />
               </div>
-              <Button
-                size="sm"
-                onClick={() => navigate("/premium")}
-                className="bg-success hover:bg-success/90 text-white font-semibold rounded-full px-6"
-              >
-                Buy Premium
-              </Button>
+              <span className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
+                BUY premium to see signal
+              </span>
             </div>
             {/* Footer showing status */}
             <div className="px-3 py-2 border-t border-border text-center">
