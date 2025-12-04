@@ -10,7 +10,7 @@ import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
 const XAUUSDSignals = () => {
   const [filter, setFilter] = useState("latest");
-  const { hasAccess } = useSubscriptionAccess();
+  const { hasAccess, subscriptionStatus } = useSubscriptionAccess();
 
   const { data: signals, isLoading } = useQuery({
     queryKey: ["signals", "XAUUSD", filter],
@@ -56,7 +56,7 @@ const XAUUSDSignals = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {signals?.map((signal) => (
-                <SignalCardNew key={signal.id} signal={signal as any} hasAccess={hasAccess} />
+                <SignalCardNew key={signal.id} signal={signal as any} hasAccess={hasAccess} subscriptionStatus={subscriptionStatus} />
               ))}
             </div>
           )}

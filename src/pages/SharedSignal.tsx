@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import SignalCardNew from "@/components/SignalCardNew";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
 const SharedSignal = () => {
   const { id } = useParams();
@@ -12,6 +13,7 @@ const SharedSignal = () => {
   const [signal, setSignal] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { hasAccess, subscriptionStatus } = useSubscriptionAccess();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -83,7 +85,7 @@ const SharedSignal = () => {
           </div>
         </div>
 
-        <SignalCardNew signal={signal} hasAccess={true} showFavoriteButton={true} />
+        <SignalCardNew signal={signal} hasAccess={hasAccess} subscriptionStatus={subscriptionStatus} showFavoriteButton={true} />
 
         <Button
           onClick={() => navigate("/")}
