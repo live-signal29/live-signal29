@@ -43,16 +43,19 @@ interface SignalCardProps {
     is_premium?: boolean;
   };
   hasAccess?: boolean;
+  subscriptionStatus?: string | null;
   showFavoriteButton?: boolean;
 }
 
-const SignalCardNew = ({ signal, hasAccess = true, showFavoriteButton = true }: SignalCardProps) => {
+const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavoriteButton = true }: SignalCardProps) => {
   const navigate = useNavigate();
   const { isFavoritePair, toggleFavoritePair } = useFavorites();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
   
-  // Check if signal should be locked (signal is premium AND user doesn't have access)
-  const isLocked = signal.is_premium && !hasAccess;
+  // For premium signals: ONLY premium subscribers can see them (not free trial users)
+  // For regular signals: both premium and free trial users can see them
+  const isPremiumUser = subscriptionStatus === 'premium';
+  const isLocked = signal.is_premium && !isPremiumUser;
   
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
     const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;

@@ -22,7 +22,7 @@ import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 
 const SignalsDashboard = () => {
-  const { hasAccess, loading: accessLoading } = useSubscriptionAccess();
+  const { hasAccess, loading: accessLoading, subscriptionStatus } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
   const [subCategory, setSubCategory] = useState<string>("all");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -315,6 +315,7 @@ const SignalsDashboard = () => {
                                 key={signal.id} 
                                 signal={signal as any}
                                 hasAccess={hasAccess}
+                                subscriptionStatus={subscriptionStatus}
                               />
                             ))}
                           </div>

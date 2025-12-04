@@ -11,7 +11,7 @@ import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
 const ForexSignals = () => {
   const [filter, setFilter] = useState("latest");
-  const { hasAccess } = useSubscriptionAccess();
+  const { hasAccess, subscriptionStatus } = useSubscriptionAccess();
 
   const { data: signals, isLoading } = useQuery({
     queryKey: ["signals", "Forex", filter],
@@ -62,6 +62,7 @@ const ForexSignals = () => {
                     key={signal.id} 
                     signal={signal as any}
                     hasAccess={hasAccess}
+                    subscriptionStatus={subscriptionStatus}
                   />
                   
                   {/* Add affiliate banner after first signal */}
