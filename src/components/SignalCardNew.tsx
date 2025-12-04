@@ -201,7 +201,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
             {/* Footer showing status */}
             <div className="px-3 py-2 border-t border-border text-center">
               <span className="text-xs text-muted-foreground">
-                Open • {signal.signal_status === 'LIVE' ? 'LIVE SIGNAL' : getStatusText()}
+                {getStatusText()}
               </span>
             </div>
           </>
