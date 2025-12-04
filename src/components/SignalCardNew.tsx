@@ -101,8 +101,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
   };
 
   return (
-    <Card className={`overflow-hidden border-border transition-all duration-300 shadow-sm relative ${
-      isLocked ? 'bg-muted/50 grayscale-[30%] opacity-90' : 'bg-card hover:border-primary/50 hover:shadow-md'
+    <Card className={`overflow-hidden border-border transition-all duration-300 shadow-sm relative bg-card ${
+      !isLocked && 'hover:border-primary/50 hover:shadow-md'
     }`}>
       <CardContent className="p-0">
         {/* NEW Badge - only on unlocked */}
