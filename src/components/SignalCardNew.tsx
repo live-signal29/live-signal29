@@ -126,6 +126,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
             <span className="text-sm sm:text-base font-bold text-primary">
               {signal.pair}
             </span>
+            <span className="text-xs sm:text-sm font-semibold text-muted-foreground">
+              @ {signal.entry}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             {showFavoriteButton && !isLocked && (
