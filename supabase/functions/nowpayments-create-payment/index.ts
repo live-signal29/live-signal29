@@ -17,12 +17,19 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
     if (!apiKey) {
-      throw new Error('NOWPAYMENTS_API_KEY not configured');
+      console.error('NOWPAYMENTS_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'Payment service temporarily unavailable. Please contact support.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -30,13 +37,20 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      throw new Error('Unauthorized');
+      console.error('User authentication failed:', userError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Authentication failed. Please log in again.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
 
     const { price_amount, pay_currency } = await req.json();
 
     if (!price_amount || !pay_currency) {
-      throw new Error('Missing required fields: price_amount or pay_currency');
+      return new Response(
+        JSON.stringify({ error: 'Invalid payment details provided' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     console.log(`Creating payment for user ${user.id}: ${price_amount} USD in ${pay_currency}`);
@@ -63,7 +77,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('NOWPayments API error:', errorText);
-      throw new Error(`NOWPayments API error: ${response.status}`);
+      return new Response(
+        JSON.stringify({ error: 'Payment service temporarily unavailable. Please try again later.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     const paymentResult = await response.json();
@@ -85,6 +102,7 @@ serve(async (req) => {
 
     if (depositError) {
       console.error('Error storing deposit:', depositError);
+      // Don't expose internal error to client - payment was created successfully
     }
 
     return new Response(
@@ -96,9 +114,8 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in nowpayments-create-payment:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Payment processing failed. Please try again.' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

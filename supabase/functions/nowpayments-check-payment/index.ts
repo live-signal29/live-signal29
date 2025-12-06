@@ -17,12 +17,19 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
     if (!apiKey) {
-      throw new Error('NOWPAYMENTS_API_KEY not configured');
+      console.error('NOWPAYMENTS_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'Payment service temporarily unavailable. Please contact support.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -30,13 +37,20 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      throw new Error('Unauthorized');
+      console.error('User authentication failed:', userError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Authentication failed. Please log in again.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
 
     const { payment_id } = await req.json();
 
     if (!payment_id) {
-      throw new Error('Missing payment_id');
+      return new Response(
+        JSON.stringify({ error: 'Payment ID is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     console.log(`Checking payment status for ${payment_id}`);
@@ -51,7 +65,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('NOWPayments API error:', errorText);
-      throw new Error(`NOWPayments API error: ${response.status}`);
+      return new Response(
+        JSON.stringify({ error: 'Unable to verify payment status. Please try again.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     const paymentStatus = await response.json();
@@ -66,6 +83,7 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Error updating deposit:', updateError);
+      // Don't expose internal error to client
     }
 
     // If payment is finished, update user balance
@@ -109,9 +127,8 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in nowpayments-check-payment:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Unable to check payment status. Please try again.' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
