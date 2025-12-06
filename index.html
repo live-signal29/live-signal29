@@ -90,18 +90,52 @@
       }, false);
     </script>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration with WebView fixes -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker
-            .register('/service-worker.js')
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-            })
-            .catch((error) => {
-              console.log('SW registration failed: ', error);
+        window.addEventListener('load', async () => {
+          try {
+            // Unregister old service workers first to clear cache issues
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              // Force update check
+              await registration.update();
+            }
+            
+            const registration = await navigator.serviceWorker.register('/service-worker.js', {
+              updateViaCache: 'none' // Prevent caching of service worker
             });
+            
+            console.log('SW registered: ', registration);
+            
+            // Skip waiting and activate new service worker immediately
+            if (registration.waiting) {
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              }
+            });
+          } catch (error) {
+            console.log('SW registration failed: ', error);
+          }
+        });
+        
+        // Handle controller change (new service worker activated)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          // Don't reload in WebView to avoid loops
+          if (!window.isWebViewReloading) {
+            window.isWebViewReloading = true;
+            // Soft reload without full page refresh
+            console.log('New service worker activated');
+          }
         });
       }
     </script>
