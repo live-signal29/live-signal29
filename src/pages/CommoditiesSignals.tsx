@@ -16,22 +16,16 @@ const CommoditiesSignals = () => {
   const { data: signals, isLoading } = useQuery({
     queryKey: ["signals", "Commodities", filter],
     queryFn: async () => {
-      let query = supabase
-        .from("signals")
-        .select("*")
-        .eq("category", "Commodities")
-        .eq("published", true)
-        .order("created_at", { ascending: false });
+      const statusFilter = filter === "all_tp_hit" ? "All TP Hit" : filter === "running" ? "Active" : null;
+      
+      const { data, error } = await supabase.rpc('get_signals_filtered', {
+        p_category: "Commodities",
+        p_status: statusFilter,
+        p_limit: 100
+      });
 
-      if (filter === "all_tp_hit") {
-        query = query.eq("status", "All TP Hit");
-      } else if (filter === "running") {
-        query = query.eq("status", "Active");
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
