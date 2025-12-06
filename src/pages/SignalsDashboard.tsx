@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
@@ -21,6 +21,8 @@ import { differenceInDays, startOfDay } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 
+const SIGNALS_PER_PAGE = 20;
+
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading, subscriptionStatus } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
@@ -29,6 +31,7 @@ const SignalsDashboard = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const { favoritePairs } = useFavorites();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Initialize notification system
   useSignalNotifications();
@@ -58,20 +61,24 @@ const SignalsDashboard = () => {
     "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
   };
 
-  const { data: signals, isLoading, refetch } = useQuery({
-    queryKey: ["signals", mainCategory, subCategory],
-    queryFn: async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
+  // Infinite query for signals - no date filter, loads all signals
+  const {
+    data: signalsData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ["signals-infinite", mainCategory, subCategory],
+    queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("signals")
         .select("*")
         .eq("main_category", mainCategory)
         .eq("published", true)
-        .gte("created_at", sevenDaysAgo.toISOString())
         .order("created_at", { ascending: false })
-        .limit(50); // Limit initial load to 50 signals
+        .range(pageParam * SIGNALS_PER_PAGE, (pageParam + 1) * SIGNALS_PER_PAGE - 1);
 
       if (subCategory && subCategory !== "all") {
         query = query.eq("sub_category", subCategory);
@@ -79,11 +86,15 @@ const SignalsDashboard = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return { data, nextPage: data.length === SIGNALS_PER_PAGE ? pageParam + 1 : undefined };
     },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+    initialPageParam: 0,
     enabled: mainCategory !== "CHART ANALYSIS",
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
   });
+
+  const signals = signalsData?.pages.flatMap(page => page.data) || [];
 
   // Setup realtime subscription for instant updates (deferred)
   useEffect(() => {
@@ -110,6 +121,24 @@ const SignalsDashboard = () => {
 
     return () => clearTimeout(timeoutId);
   }, [refetch]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const { data: chartAnalysis, isLoading: isLoadingCharts } = useQuery({
     queryKey: ["chart-analysis"],
@@ -289,7 +318,7 @@ const SignalsDashboard = () => {
                           <p className="text-muted-foreground text-lg">
                             {showFavoritesOnly 
                               ? 'No favorite signals yet. Star your favorite signals to see them here!' 
-                              : 'No signals found in the last 7 days'}
+                              : 'No signals found'}
                           </p>
                         </div>
                       );
@@ -334,12 +363,22 @@ const SignalsDashboard = () => {
                       </div>
                     ));
                   })()}
+                  
+                  {/* Infinite scroll loader */}
+                  <div ref={loadMoreRef} className="py-8 flex justify-center">
+                    {isFetchingNextPage && (
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    )}
+                    {!hasNextPage && signals.length > 0 && (
+                      <p className="text-muted-foreground text-sm">All signals loaded</p>
+                    )}
+                  </div>
                 </div>
               )}
 
               {!isLoading && signals?.length === 0 && (
                 <div className="text-center py-20">
-                  <p className="text-muted-foreground text-lg">No signals found in the last 7 days</p>
+                  <p className="text-muted-foreground text-lg">No signals found</p>
                 </div>
               )}
             </>
