@@ -126,8 +126,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
             <span className="text-sm sm:text-base font-bold text-primary">
               {signal.pair}
             </span>
-            <span className="text-xs sm:text-sm font-semibold text-muted-foreground">
-              @ {signal.entry}
+            <span className="text-xs sm:text-sm font-semibold text-muted-foreground ml-1">
+              {signal.entry}
             </span>
           </div>
           <div className="flex items-center gap-2">
