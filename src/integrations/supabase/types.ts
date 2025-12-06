@@ -589,42 +589,87 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_signals_filtered: {
-        Args: never
-        Returns: {
-          analysis_reason: string
-          category: string
-          chart_image_url: string
-          created_at: string
-          entry: string
-          id: string
-          is_favorite: boolean
-          is_premium: boolean
-          main_category: string
-          note: string
-          pair: string
-          pips_result: string
-          profit_note: string
-          published: boolean
-          risk_level: string
-          signal_status: string
-          signal_type: string
-          sl: string
-          sl_hit: boolean
-          status: string
-          sub_category: string
-          tp1: string
-          tp1_hit: boolean
-          tp2: string
-          tp2_hit: boolean
-          tp3: string
-          tp3_hit: boolean
-          tp4: string
-          tp4_hit: boolean
-          type: string
-          updated_at: string
-        }[]
-      }
+      get_signals_filtered:
+        | {
+            Args: never
+            Returns: {
+              analysis_reason: string
+              category: string
+              chart_image_url: string
+              created_at: string
+              entry: string
+              id: string
+              is_favorite: boolean
+              is_premium: boolean
+              main_category: string
+              note: string
+              pair: string
+              pips_result: string
+              profit_note: string
+              published: boolean
+              risk_level: string
+              signal_status: string
+              signal_type: string
+              sl: string
+              sl_hit: boolean
+              status: string
+              sub_category: string
+              tp1: string
+              tp1_hit: boolean
+              tp2: string
+              tp2_hit: boolean
+              tp3: string
+              tp3_hit: boolean
+              tp4: string
+              tp4_hit: boolean
+              type: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              p_category?: string
+              p_limit?: number
+              p_main_category?: string
+              p_offset?: number
+              p_signal_id?: string
+              p_status?: string
+              p_sub_category?: string
+            }
+            Returns: {
+              analysis_reason: string
+              category: string
+              chart_image_url: string
+              created_at: string
+              entry: string
+              id: string
+              is_favorite: boolean
+              is_premium: boolean
+              main_category: string
+              note: string
+              pair: string
+              pips_result: string
+              profit_note: string
+              published: boolean
+              risk_level: string
+              signal_status: string
+              signal_type: string
+              sl: string
+              sl_hit: boolean
+              status: string
+              sub_category: string
+              tp1: string
+              tp1_hit: boolean
+              tp2: string
+              tp2_hit: boolean
+              tp3: string
+              tp3_hit: boolean
+              tp4: string
+              tp4_hit: boolean
+              type: string
+              updated_at: string
+            }[]
+          }
       has_premium_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {

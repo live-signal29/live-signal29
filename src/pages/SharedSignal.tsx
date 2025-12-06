@@ -34,21 +34,21 @@ const SharedSignal = () => {
 
   const fetchSignal = async () => {
     try {
-      const { data, error } = await supabase
-        .from('signals')
-        .select('*')
-        .eq('id', id)
-        .single();
+      // Use secure RPC function to fetch single signal
+      const { data, error } = await supabase.rpc('get_signals_filtered', {
+        p_signal_id: id,
+        p_limit: 1
+      });
 
       if (error) throw error;
 
-      if (!data) {
+      if (!data || data.length === 0) {
         toast.error("Signal not found");
         navigate("/");
         return;
       }
 
-      setSignal(data);
+      setSignal(data[0]);
     } catch (error) {
       console.error('Error fetching signal:', error);
       toast.error("Failed to load signal");

@@ -61,7 +61,7 @@ const SignalsDashboard = () => {
     "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
   };
 
-  // Infinite query for signals - no date filter, loads all signals
+  // Infinite query for signals using secure RPC function
   const {
     data: signalsData,
     isLoading,
@@ -72,21 +72,15 @@ const SignalsDashboard = () => {
   } = useInfiniteQuery({
     queryKey: ["signals-infinite", mainCategory, subCategory],
     queryFn: async ({ pageParam = 0 }) => {
-      let query = supabase
-        .from("signals")
-        .select("*")
-        .eq("main_category", mainCategory)
-        .eq("published", true)
-        .order("created_at", { ascending: false })
-        .range(pageParam * SIGNALS_PER_PAGE, (pageParam + 1) * SIGNALS_PER_PAGE - 1);
+      const { data, error } = await supabase.rpc('get_signals_filtered', {
+        p_main_category: mainCategory,
+        p_sub_category: subCategory || 'all',
+        p_limit: SIGNALS_PER_PAGE,
+        p_offset: pageParam * SIGNALS_PER_PAGE
+      });
 
-      if (subCategory && subCategory !== "all") {
-        query = query.eq("sub_category", subCategory);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return { data, nextPage: data.length === SIGNALS_PER_PAGE ? pageParam + 1 : undefined };
+      return { data: data || [], nextPage: (data?.length || 0) === SIGNALS_PER_PAGE ? pageParam + 1 : undefined };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
