@@ -59,12 +59,20 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
   
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
     const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;
-    const shareText = `🔔 New ${signal.type.toUpperCase()} Signal Alert!\n\n` +
-      `📊 Pair: ${signal.pair}\n` +
-      `💰 Entry: ${signal.entry}\n` +
-      `🎯 TP1: ${signal.tp1}\n` +
-      `⛔ SL: ${signal.sl}\n\n` +
-      `View full signal details: ${shareUrl}`;
+    
+    // Different share text for premium vs free signals
+    const shareText = isLocked || signal.is_premium
+      ? `🔔 Premium ${signal.type.toUpperCase()} Signal Alert!\n\n` +
+        `📊 Pair: ${signal.pair}\n` +
+        `💰 Entry: ${signal.entry}\n` +
+        `🔒 TP/SL: Buy Premium to unlock\n\n` +
+        `👉 Get premium access: ${shareUrl}`
+      : `🔔 New ${signal.type.toUpperCase()} Signal Alert!\n\n` +
+        `📊 Pair: ${signal.pair}\n` +
+        `💰 Entry: ${signal.entry}\n` +
+        `🎯 TP1: ${signal.tp1}\n` +
+        `⛔ SL: ${signal.sl}\n\n` +
+        `View full signal details: ${shareUrl}`;
 
     if (platform === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
@@ -136,7 +144,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {showFavoriteButton && !isLocked && (
+            {showFavoriteButton && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -155,31 +163,29 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
                 />
               </Button>
             )}
-            {!isLocked && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 hover:bg-accent"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Share2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
-                    Share on WhatsApp
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleShare('telegram')}>
-                    Share on Telegram
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleShare('copy')}>
-                    Copy Link
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 hover:bg-accent"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Share2 className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                  Share on WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('telegram')}>
+                  Share on Telegram
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('copy')}>
+                  Copy Link
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span className="text-[10px] sm:text-xs text-muted-foreground">
               {formatDate(signal.created_at)}
             </span>
