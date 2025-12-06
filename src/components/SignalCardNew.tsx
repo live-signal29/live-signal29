@@ -130,11 +130,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
               <span className="text-xs sm:text-sm font-medium">
                 <span className="text-muted-foreground">Entry:</span>
                 <span className={`font-semibold ml-1 ${
-                  isLocked 
-                    ? 'text-yellow-500' 
-                    : signal.type.toLowerCase().includes('buy') 
-                      ? 'text-blue-500' 
-                      : 'text-orange-500'
+                  isLocked ? 'text-yellow-500' : 'text-blue-500'
                 }`}>{signal.entry}</span>
               </span>
             </div>
