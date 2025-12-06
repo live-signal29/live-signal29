@@ -115,18 +115,20 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
         )}
 
         {/* Header - Always Visible */}
-        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs`}>
-              {signal.type.toUpperCase()}
-            </Badge>
-            {signal.is_premium && (
-              <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-            )}
-            <span className="text-sm sm:text-base font-bold text-primary">
-              {signal.pair}
-            </span>
-            <span className="text-xs sm:text-sm font-semibold text-muted-foreground ml-1">
+        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border">
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs`}>
+                {signal.type.toUpperCase()}
+              </Badge>
+              {signal.is_premium && (
+                <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+              )}
+              <span className="text-sm sm:text-base font-bold text-primary">
+                {signal.pair}
+              </span>
+            </div>
+            <span className="text-xs sm:text-sm font-semibold text-muted-foreground pl-1">
               {signal.entry}
             </span>
           </div>
