@@ -1,8 +1,8 @@
 // Service worker with Workbox and offline fallback
-// Fixed for WebView APK compatibility
+// Fixed for WebView APK + VPN compatibility
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
 
-const CACHE = "trendisfriend-v2";
+const CACHE = "trendisfriend-v3";
 const offlineFallbackPage = "/offline.html";
 
 // Skip waiting to activate new service worker immediately
@@ -18,14 +18,12 @@ self.addEventListener('install', async (event) => {
       .then((cache) => cache.add(offlineFallbackPage))
       .catch((err) => console.log('Cache install error:', err))
   );
-  // Force immediate activation
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
-      // Clean up old caches
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
@@ -35,7 +33,6 @@ self.addEventListener('activate', (event) => {
           })
         );
       }),
-      // Take control immediately
       clients.claim()
     ])
   );
@@ -45,7 +42,38 @@ if (workbox && workbox.navigationPreload && workbox.navigationPreload.isSupporte
   workbox.navigationPreload.enable();
 }
 
-// Improved fetch handler for WebView compatibility
+// VPN-friendly fetch with retry logic
+async function fetchWithRetry(request, retries = 2, timeout = 15000) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(request, {
+        signal: controller.signal,
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok || response.status < 500) {
+        return response;
+      }
+      
+      // On 500 error, wait and retry
+      if (i < retries) {
+        await new Promise(r => setTimeout(r, 500 * (i + 1)));
+      }
+    } catch (error) {
+      if (i === retries) throw error;
+      await new Promise(r => setTimeout(r, 500 * (i + 1)));
+    }
+  }
+  throw new Error('Fetch failed after retries');
+}
+
+// Improved fetch handler for WebView + VPN compatibility
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -72,27 +100,20 @@ self.addEventListener('fetch', (event) => {
       try {
         // Try preload response first
         const preloadResp = await event.preloadResponse;
-        if (preloadResp) {
+        if (preloadResp && preloadResp.ok) {
           return preloadResp;
         }
 
-        // Try network with timeout for WebView
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        // Try network with retry for VPN connections
+        const networkResp = await fetchWithRetry(request);
         
-        const networkResp = await fetch(request, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        // Only return successful responses
         if (networkResp.ok) {
           return networkResp;
         }
         
-        // For 500 errors, try to serve index.html from cache or network
+        // For server errors, serve index.html
         if (networkResp.status >= 500) {
-          const indexResp = await fetch('/index.html');
+          const indexResp = await fetchWithRetry(new Request('/index.html'));
           if (indexResp.ok) {
             return indexResp;
           }
@@ -100,45 +121,39 @@ self.addEventListener('fetch', (event) => {
         
         return networkResp;
       } catch (error) {
-        // Network failed - try to serve cached index.html first, then offline page
+        // Network failed - try index.html directly
         try {
-          const indexResp = await fetch('/index.html');
+          const indexResp = await fetch('/index.html', { cache: 'no-store' });
           if (indexResp.ok) {
             return indexResp;
           }
-        } catch (e) {
-          // Index.html also failed, serve offline page
-        }
+        } catch (e) {}
         
+        // Try cached offline page
         const cache = await caches.open(CACHE);
         const cachedResp = await cache.match(offlineFallbackPage);
         if (cachedResp) {
           return cachedResp;
         }
         
-        // Last resort - return a basic HTML response
+        // Last resort - inline HTML
         return new Response(
           '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TREND IS FRIEND</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;background:#1a1a2e;color:white;margin:0;"><div style="text-align:center;"><h1>Loading...</h1><p>Please check your connection</p><button onclick="location.reload()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;margin-top:20px;">Retry</button></div></body></html>',
-          { 
-            headers: { 'Content-Type': 'text/html' },
-            status: 200
-          }
+          { headers: { 'Content-Type': 'text/html' }, status: 200 }
         );
       }
     })());
     return;
   }
 
-  // For static assets, use cache-first strategy
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)
-  ) {
+  // For static assets, use cache-first with network fallback
+  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
           return cachedResponse;
         }
-        return fetch(request).then((response) => {
+        return fetch(request, { cache: 'no-store' }).then((response) => {
           if (response.ok) {
             const responseClone = response.clone();
             caches.open(CACHE).then((cache) => {
@@ -146,6 +161,9 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return response;
+        }).catch(() => {
+          // Return empty response for failed assets
+          return new Response('', { status: 404 });
         });
       })
     );
