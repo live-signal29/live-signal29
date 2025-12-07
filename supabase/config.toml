@@ -11,3 +11,15 @@ verify_jwt = true
 
 [functions.nowpayments-check-payment]
 verify_jwt = true
+
+[functions.telegram-signal-post]
+verify_jwt = true
+
+[functions.fetch-forex-news]
+verify_jwt = false
+
+[functions.fetch-live-prices]
+verify_jwt = false
+
+[functions.calculate-daily-stats]
+verify_jwt = false
