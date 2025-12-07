@@ -90,12 +90,45 @@ export default {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-20px)" },
         },
+        "premium-glow": {
+          "0%, 100%": { 
+            boxShadow: "0 0 15px 2px hsl(45 100% 50% / 0.3), 0 0 30px 5px hsl(45 100% 50% / 0.1)",
+            borderColor: "hsl(45 100% 50% / 0.5)"
+          },
+          "50%": { 
+            boxShadow: "0 0 25px 5px hsl(45 100% 50% / 0.4), 0 0 50px 10px hsl(45 100% 50% / 0.2)",
+            borderColor: "hsl(45 100% 60% / 0.7)"
+          },
+        },
+        "premium-shimmer": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        "crown-bounce": {
+          "0%, 100%": { transform: "translateY(0) rotate(0deg)" },
+          "25%": { transform: "translateY(-2px) rotate(-5deg)" },
+          "75%": { transform: "translateY(-2px) rotate(5deg)" },
+        },
+        "border-glow": {
+          "0%, 100%": { 
+            borderColor: "hsl(45 100% 50% / 0.4)",
+            boxShadow: "inset 0 0 10px hsl(45 100% 50% / 0.1)"
+          },
+          "50%": { 
+            borderColor: "hsl(45 100% 60% / 0.7)",
+            boxShadow: "inset 0 0 20px hsl(45 100% 50% / 0.2)"
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 3s ease-in-out infinite",
         float: "float 3s ease-in-out infinite",
+        "premium-glow": "premium-glow 2s ease-in-out infinite",
+        "premium-shimmer": "premium-shimmer 3s linear infinite",
+        "crown-bounce": "crown-bounce 2s ease-in-out infinite",
+        "border-glow": "border-glow 2s ease-in-out infinite",
       },
     },
   },
