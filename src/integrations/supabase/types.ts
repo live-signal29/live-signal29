@@ -196,6 +196,48 @@ export type Database = {
         }
         Relationships: []
       }
+      forex_news_alerts: {
+        Row: {
+          actual: string | null
+          created_at: string
+          currency: string
+          event_time: string
+          forecast: string | null
+          id: string
+          impact: string
+          is_notified: boolean | null
+          previous: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          actual?: string | null
+          created_at?: string
+          currency: string
+          event_time: string
+          forecast?: string | null
+          id?: string
+          impact: string
+          is_notified?: boolean | null
+          previous?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          actual?: string | null
+          created_at?: string
+          currency?: string
+          event_time?: string
+          forecast?: string | null
+          id?: string
+          impact?: string
+          is_notified?: boolean | null
+          previous?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -283,13 +325,97 @@ export type Database = {
         }
         Relationships: []
       }
+      security_logs: {
+        Row: {
+          action_type: string
+          browser: string | null
+          country: string | null
+          created_at: string
+          details: Json | null
+          device_type: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          browser?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json | null
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          browser?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json | null
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      signal_stats: {
+        Row: {
+          created_at: string
+          id: string
+          stat_date: string
+          top_symbols: Json | null
+          total_breakeven: number | null
+          total_losses: number | null
+          total_pips: number | null
+          total_signals: number | null
+          total_wins: number | null
+          updated_at: string
+          win_rate: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          stat_date: string
+          top_symbols?: Json | null
+          total_breakeven?: number | null
+          total_losses?: number | null
+          total_pips?: number | null
+          total_signals?: number | null
+          total_wins?: number | null
+          updated_at?: string
+          win_rate?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          stat_date?: string
+          top_symbols?: Json | null
+          total_breakeven?: number | null
+          total_losses?: number | null
+          total_pips?: number | null
+          total_signals?: number | null
+          total_wins?: number | null
+          updated_at?: string
+          win_rate?: number | null
+        }
+        Relationships: []
+      }
       signals: {
         Row: {
           analysis_reason: string | null
+          auto_closed: boolean | null
           category: string
           chart_image_url: string | null
           created_at: string
+          current_price: string | null
           entry: string
+          expiry_time: string | null
           id: string
           is_favorite: boolean | null
           is_premium: boolean | null
@@ -319,10 +445,13 @@ export type Database = {
         }
         Insert: {
           analysis_reason?: string | null
+          auto_closed?: boolean | null
           category: string
           chart_image_url?: string | null
           created_at?: string
+          current_price?: string | null
           entry: string
+          expiry_time?: string | null
           id?: string
           is_favorite?: boolean | null
           is_premium?: boolean | null
@@ -352,10 +481,13 @@ export type Database = {
         }
         Update: {
           analysis_reason?: string | null
+          auto_closed?: boolean | null
           category?: string
           chart_image_url?: string | null
           created_at?: string
+          current_price?: string | null
           entry?: string
+          expiry_time?: string | null
           id?: string
           is_favorite?: boolean | null
           is_premium?: boolean | null
@@ -453,6 +585,89 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      trade_history: {
+        Row: {
+          category: string | null
+          close_price: string | null
+          closed_at: string
+          created_at: string
+          entry: string
+          id: string
+          notes: string | null
+          pair: string
+          pips_gained: number | null
+          result: string
+          risk_level: string | null
+          signal_id: string | null
+          signal_type: string | null
+          sl: string
+          sl_hit: boolean | null
+          tp_hit_level: number | null
+          tp1: string | null
+          tp2: string | null
+          tp3: string | null
+          tp4: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          close_price?: string | null
+          closed_at?: string
+          created_at?: string
+          entry: string
+          id?: string
+          notes?: string | null
+          pair: string
+          pips_gained?: number | null
+          result: string
+          risk_level?: string | null
+          signal_id?: string | null
+          signal_type?: string | null
+          sl: string
+          sl_hit?: boolean | null
+          tp_hit_level?: number | null
+          tp1?: string | null
+          tp2?: string | null
+          tp3?: string | null
+          tp4?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          close_price?: string | null
+          closed_at?: string
+          created_at?: string
+          entry?: string
+          id?: string
+          notes?: string | null
+          pair?: string
+          pips_gained?: number | null
+          result?: string
+          risk_level?: string | null
+          signal_id?: string | null
+          signal_type?: string | null
+          sl?: string
+          sl_hit?: boolean | null
+          tp_hit_level?: number | null
+          tp1?: string | null
+          tp2?: string | null
+          tp3?: string | null
+          tp4?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_history_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "signals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_favorite_pairs: {
         Row: {
@@ -589,6 +804,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_signal_stats: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          top_symbols: Json
+          total_breakeven: number
+          total_losses: number
+          total_pips: number
+          total_signals: number
+          total_wins: number
+          win_rate: number
+        }[]
+      }
       get_signals_filtered:
         | {
             Args: never
@@ -680,7 +907,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "signal_manager" | "finance_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -808,7 +1035,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "signal_manager", "finance_manager"],
     },
   },
 } as const
