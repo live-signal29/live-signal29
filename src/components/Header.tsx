@@ -6,6 +6,7 @@ import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
 import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
+import { RiskCalculatorModal } from "./RiskCalculatorModal";
 import exnessLogo from "@/assets/exness-logo-real.png";
 
 const Header = () => {
@@ -37,7 +38,8 @@ const Header = () => {
           </div>
 
           {/* Theme Toggle, Exness CTA, Notification Bell & Top Menu Dropdown */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <RiskCalculatorModal />
             <ThemeToggle />
             <a
               href="https://one.exnessonelink.com/a/vtkbbmje"
