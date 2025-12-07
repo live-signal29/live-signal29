@@ -109,10 +109,24 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
   };
 
   return (
-    <Card className={`overflow-hidden border-border transition-all duration-300 shadow-sm relative bg-card ${
-      !isLocked && 'hover:border-primary/50 hover:shadow-md'
-    }`}>
-      <CardContent className="p-0">
+    <Card className={`overflow-hidden transition-all duration-300 shadow-sm relative bg-card ${
+      signal.is_premium 
+        ? 'border-2 border-yellow-500/40 animate-premium-glow shadow-lg shadow-yellow-500/10' 
+        : 'border-border'
+    } ${!isLocked && 'hover:border-primary/50 hover:shadow-md'}`}>
+      {/* Premium shimmer overlay */}
+      {signal.is_premium && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg z-0">
+          <div 
+            className="absolute inset-0 animate-premium-shimmer opacity-30"
+            style={{
+              background: 'linear-gradient(90deg, transparent, hsl(45 100% 50% / 0.15), transparent)',
+              backgroundSize: '200% 100%',
+            }}
+          />
+        </div>
+      )}
+      <CardContent className="p-0 relative z-10">
         {/* NEW Badge - only on unlocked */}
         {isNewSignal && !isLocked && (
           <div className="absolute top-2 right-2 z-10">
@@ -129,7 +143,12 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
               {signal.type.toUpperCase()}
             </Badge>
             {signal.is_premium && (
-              <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-1" />
+              <div className="relative">
+                <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-1 animate-crown-bounce drop-shadow-[0_0_6px_hsl(45_100%_50%/0.6)]" />
+                <div className="absolute inset-0 animate-ping opacity-30">
+                  <Crown className="h-4 w-4 text-yellow-400 mt-1" />
+                </div>
+              </div>
             )}
             <div className="flex flex-col gap-0.5">
               <span className="text-sm sm:text-base font-bold text-primary">
