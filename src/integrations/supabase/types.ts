@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_management_applications: {
+        Row: {
+          account_size: string
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          preferred_broker: string
+          status: string | null
+          updated_at: string | null
+          whatsapp: string
+        }
+        Insert: {
+          account_size: string
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+          preferred_broker: string
+          status?: string | null
+          updated_at?: string | null
+          whatsapp: string
+        }
+        Update: {
+          account_size?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          preferred_broker?: string
+          status?: string | null
+          updated_at?: string | null
+          whatsapp?: string
+        }
+        Relationships: []
+      }
+      account_performance: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          is_published: boolean | null
+          notes: string | null
+          period: string
+          profit_percentage: number | null
+          total_trades: number | null
+          updated_at: string | null
+          winning_trades: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          is_published?: boolean | null
+          notes?: string | null
+          period: string
+          profit_percentage?: number | null
+          total_trades?: number | null
+          updated_at?: string | null
+          winning_trades?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          is_published?: boolean | null
+          notes?: string | null
+          period?: string
+          profit_percentage?: number | null
+          total_trades?: number | null
+          updated_at?: string | null
+          winning_trades?: number | null
+        }
+        Relationships: []
+      }
       admin_activity_log: {
         Row: {
           action_type: string
