@@ -15,6 +15,8 @@ import ActivityLog from "@/components/admin/ActivityLog";
 import CouponManagement from "@/components/admin/CouponManagement";
 import SpecialOfferManagement from "@/components/admin/SpecialOfferManagement";
 import UserActivityDashboard from "@/components/admin/UserActivityDashboard";
+import AccountApplications from "@/components/admin/AccountApplications";
+import PerformanceManagement from "@/components/admin/PerformanceManagement";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -82,10 +84,12 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 h-auto">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="charts" className="text-xs sm:text-sm py-2">Charts</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
+            <TabsTrigger value="accounts" className="text-xs sm:text-sm py-2">Accounts</TabsTrigger>
+            <TabsTrigger value="performance" className="text-xs sm:text-sm py-2">Performance</TabsTrigger>
             <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2">Coupons</TabsTrigger>
             <TabsTrigger value="offers" className="text-xs sm:text-sm py-2">Offers</TabsTrigger>
             <TabsTrigger value="user-activity" className="text-xs sm:text-sm py-2">Analytics</TabsTrigger>
@@ -134,6 +138,14 @@ const AdminDashboard = () => {
 
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="accounts" className="space-y-4">
+            <AccountApplications />
+          </TabsContent>
+
+          <TabsContent value="performance" className="space-y-4">
+            <PerformanceManagement />
           </TabsContent>
 
           <TabsContent value="coupons" className="space-y-4">
