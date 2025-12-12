@@ -1,0 +1,147 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+
+const AccountApplications = () => {
+  const queryClient = useQueryClient();
+
+  const { data: applications, isLoading } = useQuery({
+    queryKey: ['account-applications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('account_management_applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from('account_management_applications')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['account-applications'] });
+      toast.success("Status updated");
+    },
+    onError: () => {
+      toast.error("Failed to update status");
+    }
+  });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-500"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      case 'approved':
+        return <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="secondary" className="bg-destructive/10 text-destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+      case 'contacted':
+        return <Badge variant="secondary" className="bg-blue-500/10 text-blue-500"><Phone className="h-3 w-3 mr-1" />Contacted</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-8 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Wallet className="h-5 w-5" />
+          Account Management Applications
+          {applications && applications.length > 0 && (
+            <Badge variant="secondary" className="ml-2">{applications.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!applications || applications.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No applications yet</p>
+        ) : (
+          <div className="space-y-4">
+            {applications.map((app) => (
+              <Card key={app.id} className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-lg">{app.name}</span>
+                        {getStatusBadge(app.status || 'pending')}
+                        <Badge variant="outline">{app.account_size}</Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          <a href={`mailto:${app.email}`} className="hover:text-primary">{app.email}</a>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          <a href={`https://wa.me/${app.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                            {app.whatsapp}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Building2 className="h-4 w-4" />
+                          {app.preferred_broker}
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground">
+                        Applied: {format(new Date(app.created_at), 'PPp')}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={app.status || 'pending'}
+                        onValueChange={(value) => updateStatusMutation.mutate({ id: app.id, status: value })}
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="contacted">Contacted</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default AccountApplications;
