@@ -10,7 +10,8 @@ import {
   Bell, 
   Settings, 
   Smartphone, 
-  LogOut 
+  LogOut,
+  Briefcase
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -40,6 +41,7 @@ export const SideDrawer = () => {
     { label: "Live Signals", path: "/signals", icon: LineChart, color: "text-emerald-500", bg: "bg-emerald-500/10", activeBg: "bg-emerald-500/20" },
     { label: "Free Trial", path: "/free-trial", icon: Play, color: "text-blue-500", bg: "bg-blue-500/10", activeBg: "bg-blue-500/20" },
     { label: "Premium", path: "/premium", icon: Crown, color: "text-amber-500", bg: "bg-amber-500/10", activeBg: "bg-amber-500/20" },
+    { label: "Account Management", path: "/account-management", icon: Briefcase, color: "text-teal-500", bg: "bg-teal-500/10", activeBg: "bg-teal-500/20" },
     { label: "My Profile", path: "/profile", icon: User, color: "text-purple-500", bg: "bg-purple-500/10", activeBg: "bg-purple-500/20" },
     { label: "Notifications", path: "/settings", icon: Bell, color: "text-rose-500", bg: "bg-rose-500/10", activeBg: "bg-rose-500/20" },
     { label: "Settings", path: "/settings", icon: Settings, color: "text-slate-500", bg: "bg-slate-500/10", activeBg: "bg-slate-500/20" },
