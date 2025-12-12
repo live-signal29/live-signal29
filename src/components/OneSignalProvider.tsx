@@ -9,10 +9,10 @@ export const OneSignalProvider = ({ children }: { children: React.ReactNode }) =
   useEffect(() => {
     if (!initialized || !permissionGranted) return;
 
-    console.log('OneSignal ready, setting up signal listeners...');
+    console.log('OneSignal ready, setting up signal and chart listeners...');
 
     // Subscribe to signal changes for push notifications
-    const channel = supabase
+    const signalChannel = supabase
       .channel('onesignal-signals')
       .on(
         'postgres_changes',
@@ -127,8 +127,41 @@ export const OneSignalProvider = ({ children }: { children: React.ReactNode }) =
       )
       .subscribe();
 
+    // Subscribe to chart analysis for notifications
+    const chartChannel = supabase
+      .channel('onesignal-charts')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chart_analysis',
+          filter: 'published=eq.true'
+        },
+        (payload) => {
+          const chart = payload.new;
+          
+          // Show browser notification for new chart
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('📊 New Chart Analysis!', {
+              body: chart.title,
+              icon: '/icon-192.png',
+              badge: '/icon-192.png',
+              tag: `chart-${chart.id}`,
+              data: { chartId: chart.id }
+            });
+          }
+
+          toast.success('New Chart Analysis', {
+            description: chart.title
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(signalChannel);
+      supabase.removeChannel(chartChannel);
     };
   }, [initialized, permissionGranted]);
 
