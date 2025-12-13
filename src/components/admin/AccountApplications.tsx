@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle } from "lucide-react";
+import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle, Server, Key } from "lucide-react";
 
 const AccountApplications = () => {
   const queryClient = useQueryClient();
@@ -102,15 +102,30 @@ const AccountApplications = () => {
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Phone className="h-4 w-4" />
-                          <a href={`https://wa.me/${app.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
-                            {app.whatsapp}
-                          </a>
+                          <span>{app.whatsapp}</span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Building2 className="h-4 w-4" />
-                          {app.preferred_broker}
+                          {app.preferred_broker} {app.platform_type && `(${app.platform_type})`}
                         </div>
                       </div>
+                      
+                      {(app.broker_server || app.trading_login) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mt-2">
+                          {app.broker_server && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Server className="h-4 w-4" />
+                              <span className="font-mono text-xs">{app.broker_server}</span>
+                            </div>
+                          )}
+                          {app.trading_login && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Key className="h-4 w-4" />
+                              <span className="font-mono text-xs">Login: {app.trading_login}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
                       <p className="text-xs text-muted-foreground">
                         Applied: {format(new Date(app.created_at), 'PPp')}
