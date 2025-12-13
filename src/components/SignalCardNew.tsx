@@ -205,9 +205,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
             {/* Footer showing status left, LIVE SIGNAL centered */}
             <div className="px-3 py-2 border-t border-border flex items-center">
               <span className={`text-[10px] font-medium ${
-                getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+                getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
               }`}>
-                {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                {getStatusText() === 'CLOSE' ? '🔴 Close' : '🔵 Open'}
               </span>
               {/* LIVE SIGNAL centered - only when OPEN */}
               {getStatusText() !== 'CLOSE' && (
@@ -296,9 +296,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
                   {/* Small Open/Close text on left corner */}
                   <span className={`text-[10px] font-medium ${
-                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
                   }`}>
-                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                    {getStatusText() === 'CLOSE' ? '🔴 Close' : '🔵 Open'}
                   </span>
                   {/* Profit note centered */}
                   <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
@@ -309,9 +309,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 // If no profit note, just show small status on the left corner
                 <div className="mt-2 pt-2 border-t border-border flex justify-start">
                   <span className={`text-[10px] font-medium ${
-                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
                   }`}>
-                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                    {getStatusText() === 'CLOSE' ? '🔴 Close' : '🔵 Open'}
                   </span>
                 </div>
               )}
