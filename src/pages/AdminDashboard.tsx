@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, Plus } from "lucide-react";
 import { toast } from "sonner";
 import SignalForm from "@/components/admin/SignalForm";
-import SignalsList from "@/components/admin/SignalsList";
+import SignalsListNew from "@/components/admin/SignalsListNew";
 import ChartAnalysisForm from "@/components/admin/ChartAnalysisForm";
 import ChartAnalysisList from "@/components/admin/ChartAnalysisList";
 import UserManagement from "@/components/admin/UserManagement";
@@ -103,7 +103,7 @@ const AdminDashboard = () => {
                   <CardTitle className="text-base sm:text-lg">Manage Signals</CardTitle>
                   <Button onClick={() => setShowSignalForm(!showSignalForm)} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    {showSignalForm ? "Hide" : "Add"}
+                    {showSignalForm ? "Hide Form" : "New Signal"}
                   </Button>
                 </div>
               </CardHeader>
@@ -113,7 +113,7 @@ const AdminDashboard = () => {
                 </CardContent>
               )}
             </Card>
-            <SignalsList />
+            <SignalsListNew />
           </TabsContent>
 
           <TabsContent value="charts" className="space-y-4">
