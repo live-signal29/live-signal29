@@ -17,34 +17,46 @@ export type Database = {
       account_management_applications: {
         Row: {
           account_size: string
+          broker_server: string | null
           created_at: string | null
           email: string
           id: string
           name: string
+          platform_type: string | null
           preferred_broker: string
           status: string | null
+          trading_login: string | null
+          trading_password: string | null
           updated_at: string | null
           whatsapp: string
         }
         Insert: {
           account_size: string
+          broker_server?: string | null
           created_at?: string | null
           email: string
           id?: string
           name: string
+          platform_type?: string | null
           preferred_broker: string
           status?: string | null
+          trading_login?: string | null
+          trading_password?: string | null
           updated_at?: string | null
           whatsapp: string
         }
         Update: {
           account_size?: string
+          broker_server?: string | null
           created_at?: string | null
           email?: string
           id?: string
           name?: string
+          platform_type?: string | null
           preferred_broker?: string
           status?: string | null
+          trading_login?: string | null
+          trading_password?: string | null
           updated_at?: string | null
           whatsapp?: string
         }

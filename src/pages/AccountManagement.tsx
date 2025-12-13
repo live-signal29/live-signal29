@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -32,9 +33,13 @@ import { z } from "zod";
 
 const applicationSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
-  whatsapp: z.string().min(10, "Enter valid WhatsApp number").max(20),
+  whatsapp: z.string().regex(/^\+\d{1,4}\d{6,14}$/, "Enter valid WhatsApp with country code (e.g., +92300...)"),
   email: z.string().email("Enter valid email address"),
   preferred_broker: z.string().min(2, "Enter your preferred broker"),
+  platform_type: z.string().min(1, "Select platform type"),
+  broker_server: z.string().min(2, "Enter broker server"),
+  trading_login: z.string().regex(/^\d+$/, "Login must contain only numbers"),
+  trading_password: z.string().min(4, "Password must be at least 4 characters"),
   account_size: z.string().min(1, "Select an account size"),
 });
 
@@ -126,6 +131,10 @@ const AccountManagement = () => {
     whatsapp: "",
     email: "",
     preferred_broker: "",
+    platform_type: "",
+    broker_server: "",
+    trading_login: "",
+    trading_password: "",
     account_size: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,6 +170,10 @@ const AccountManagement = () => {
           whatsapp: validated.whatsapp,
           email: validated.email,
           preferred_broker: validated.preferred_broker,
+          platform_type: validated.platform_type,
+          broker_server: validated.broker_server,
+          trading_login: validated.trading_login,
+          trading_password: validated.trading_password,
           account_size: validated.account_size
         }]);
 
@@ -175,6 +188,10 @@ const AccountManagement = () => {
         whatsapp: "",
         email: "",
         preferred_broker: "",
+        platform_type: "",
+        broker_server: "",
+        trading_login: "",
+        trading_password: "",
         account_size: ""
       });
     } catch (err) {
@@ -364,7 +381,7 @@ const AccountManagement = () => {
                     <Label htmlFor="whatsapp">WhatsApp Number</Label>
                     <Input
                       id="whatsapp"
-                      placeholder="+1234567890"
+                      placeholder="+92300..."
                       value={formData.whatsapp}
                       onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                       className={errors.whatsapp ? "border-destructive" : ""}
@@ -400,24 +417,82 @@ const AccountManagement = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="account_size">Account Size</Label>
-                    <select
-                      id="account_size"
-                      value={formData.account_size}
-                      onChange={(e) => setFormData({ ...formData, account_size: e.target.value })}
-                      className={cn(
-                        "w-full h-10 px-3 rounded-md border border-input bg-background text-sm",
-                        errors.account_size ? "border-destructive" : ""
-                      )}
+                    <Label htmlFor="platform_type">Platform Type</Label>
+                    <Select
+                      value={formData.platform_type}
+                      onValueChange={(value) => setFormData({ ...formData, platform_type: value })}
                     >
-                      <option value="">Select account size</option>
-                      <option value="$100">$100</option>
-                      <option value="$1,000">$1,000</option>
-                      <option value="$10,000">$10,000</option>
-                      <option value="$50,000">$50,000</option>
-                    </select>
-                    {errors.account_size && <p className="text-xs text-destructive">{errors.account_size}</p>}
+                      <SelectTrigger className={errors.platform_type ? "border-destructive" : ""}>
+                        <SelectValue placeholder="Select platform" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border border-border z-50">
+                        <SelectItem value="MT4">MT4</SelectItem>
+                        <SelectItem value="MT5">MT5</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.platform_type && <p className="text-xs text-destructive">{errors.platform_type}</p>}
                   </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="broker_server">Broker Server</Label>
+                  <Input
+                    id="broker_server"
+                    placeholder="e.g., server3-mt5@broker"
+                    value={formData.broker_server}
+                    onChange={(e) => setFormData({ ...formData, broker_server: e.target.value })}
+                    className={errors.broker_server ? "border-destructive" : ""}
+                  />
+                  {errors.broker_server && <p className="text-xs text-destructive">{errors.broker_server}</p>}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="trading_login">Trading Account Login</Label>
+                    <Input
+                      id="trading_login"
+                      placeholder="e.g., 8373738"
+                      value={formData.trading_login}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        setFormData({ ...formData, trading_login: value });
+                      }}
+                      className={errors.trading_login ? "border-destructive" : ""}
+                    />
+                    {errors.trading_login && <p className="text-xs text-destructive">{errors.trading_login}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="trading_password">Trading Account Password</Label>
+                    <Input
+                      id="trading_password"
+                      type="password"
+                      placeholder="Your trading password"
+                      value={formData.trading_password}
+                      onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
+                      className={errors.trading_password ? "border-destructive" : ""}
+                    />
+                    {errors.trading_password && <p className="text-xs text-destructive">{errors.trading_password}</p>}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="account_size">Account Size</Label>
+                  <Select
+                    value={formData.account_size}
+                    onValueChange={(value) => setFormData({ ...formData, account_size: value })}
+                  >
+                    <SelectTrigger className={errors.account_size ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Select account size" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border z-50">
+                      <SelectItem value="$100">$100</SelectItem>
+                      <SelectItem value="$1,000">$1,000</SelectItem>
+                      <SelectItem value="$10,000">$10,000</SelectItem>
+                      <SelectItem value="$50,000">$50,000</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.account_size && <p className="text-xs text-destructive">{errors.account_size}</p>}
                 </div>
                 
                 <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
