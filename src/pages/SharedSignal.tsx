@@ -85,7 +85,7 @@ const SharedSignal = () => {
           </div>
         </div>
 
-        <SignalCardNew signal={signal} hasAccess={hasAccess} subscriptionStatus={subscriptionStatus} showFavoriteButton={true} />
+        <SignalCardNew signal={signal} hasAccess={hasAccess} subscriptionStatus={subscriptionStatus} />
 
         <Button
           onClick={() => navigate("/")}
