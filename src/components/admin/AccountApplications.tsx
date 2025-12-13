@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle } from "lucide-react";
 
 const AccountApplications = () => {
   const queryClient = useQueryClient();
@@ -118,6 +118,15 @@ const AccountApplications = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-emerald-500/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
+                        onClick={() => window.open(`https://wa.me/${app.whatsapp.replace(/\D/g, '')}?text=Hi ${encodeURIComponent(app.name)}, regarding your Account Management application for ${encodeURIComponent(app.account_size)} account...`, '_blank')}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        WhatsApp
+                      </Button>
                       <Select
                         value={app.status || 'pending'}
                         onValueChange={(value) => updateStatusMutation.mutate({ id: app.id, status: value })}
