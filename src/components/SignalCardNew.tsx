@@ -201,20 +201,20 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
               <span className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
                 🔒 BUY premium to see signal
               </span>
-              {/* LIVE SIGNAL - only show when signal is OPEN (not CLOSE) */}
-              {getStatusText() !== 'CLOSE' && (
-                <span className="text-base font-bold text-success mt-2 animate-pulse">
-                  LIVE SIGNAL
-                </span>
-              )}
             </div>
-            {/* Footer showing status on the right corner */}
-            <div className="px-3 py-2 border-t border-border flex justify-end">
+            {/* Footer showing status left, LIVE SIGNAL centered */}
+            <div className="px-3 py-2 border-t border-border flex items-center">
               <span className={`text-[10px] font-medium ${
                 getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
               }`}>
                 {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
               </span>
+              {/* LIVE SIGNAL centered - only when OPEN */}
+              {getStatusText() !== 'CLOSE' && (
+                <span className="flex-1 text-center text-base font-bold text-success animate-pulse">
+                  LIVE SIGNAL
+                </span>
+              )}
             </div>
           </>
         ) : (
@@ -294,20 +294,20 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
               {/* Profit Note + Status together */}
               {signal.profit_note ? (
                 <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
-                  {/* Profit note centered */}
-                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
-                    {signal.profit_note}
-                  </p>
-                  {/* Small Open/Close text on right corner */}
-                  <span className={`text-[10px] font-medium ml-2 ${
+                  {/* Small Open/Close text on left corner */}
+                  <span className={`text-[10px] font-medium ${
                     getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
                   }`}>
                     {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
                   </span>
+                  {/* Profit note centered */}
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
+                    {signal.profit_note}
+                  </p>
                 </div>
               ) : (
-                // If no profit note, just show small status on the right corner
-                <div className="mt-2 pt-2 border-t border-border flex justify-end">
+                // If no profit note, just show small status on the left corner
+                <div className="mt-2 pt-2 border-t border-border flex justify-start">
                   <span className={`text-[10px] font-medium ${
                     getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
                   }`}>
