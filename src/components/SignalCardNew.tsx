@@ -291,23 +291,30 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 </div>
               )}
 
-              {/* Profit Note - Centered */}
-              {signal.profit_note && (
-                <div className="mt-2 pt-2 border-t border-success/20 text-center">
-                  <p className="text-xs sm:text-sm font-semibold text-success">
+              {/* Profit Note + Status together */}
+              {signal.profit_note ? (
+                <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
+                  {/* Small Open/Close text on analysis side (left) */}
+                  <span className={`text-[10px] font-medium mr-2 ${
+                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                  </span>
+                  {/* Profit note centered */}
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
                     {signal.profit_note}
                   </p>
                 </div>
+              ) : (
+                // If no profit note, just show small status on the analysis side
+                <div className="mt-2 pt-2 border-t border-border flex justify-start">
+                  <span className={`text-[10px] font-medium ${
+                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                  </span>
+                </div>
               )}
-              
-              {/* Status - Small on the side */}
-              <div className="mt-2 pt-2 border-t border-border flex justify-end">
-                <span className={`text-[10px] font-medium ${
-                  getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
-                }`}>
-                  {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
-                </span>
-              </div>
             </div>
           </>
         )}
