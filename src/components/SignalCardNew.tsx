@@ -218,8 +218,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
         ) : (
           /* Unlocked State - Show all details */
           <>
-            {/* Badges Row - Centered */}
-            <div className="flex flex-wrap justify-center gap-1.5 p-2 sm:p-3 bg-background border-b border-border">
+            {/* Badges Row - Side aligned */}
+            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-background border-b border-border">
               {signal.risk_level && (
                 <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
                   {signal.risk_level} Risk
@@ -240,49 +240,68 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
             {/* TP/SL Table */}
             <div className="p-3 sm:p-4">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                  <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 1</span>
+                <div className="flex justify-center items-center py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground text-xs sm:text-sm text-center">TAKE PROFIT 1</span>
+                </div>
+                <div className="flex justify-center items-center py-1.5 border-b border-border/50">
                   <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
                     {signal.tp1} {signal.tp1_hit && '✓'}
                   </span>
                 </div>
                 
                 {signal.tp2 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 2</span>
-                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
-                      {signal.tp2} {signal.tp2_hit && '✓'}
-                    </span>
-                  </div>
+                  <>
+                    <div className="flex justify-center items-center py-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center">TAKE PROFIT 2</span>
+                    </div>
+                    <div className="flex justify-center items-center py-1.5 border-b border-border/50">
+                      <span className={`font-semibold text-xs sm:text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
+                        {signal.tp2} {signal.tp2_hit && '✓'}
+                      </span>
+                    </div>
+                  </>
                 )}
                 
                 {signal.tp3 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 3</span>
-                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
-                      {signal.tp3} {signal.tp3_hit && '✓'}
-                    </span>
-                  </div>
+                  <>
+                    <div className="flex justify-center items-center py-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center">TAKE PROFIT 3</span>
+                    </div>
+                    <div className="flex justify-center items-center py-1.5 border-b border-border/50">
+                      <span className={`font-semibold text-xs sm:text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
+                        {signal.tp3} {signal.tp3_hit && '✓'}
+                      </span>
+                    </div>
+                  </>
                 )}
                 
-                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                  <span className="text-muted-foreground text-xs sm:text-sm">SL-BELOW</span>
+                <div className="flex justify-center items-center py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground text-xs sm:text-sm text-center">SL-BELOW</span>
+                </div>
+                <div className="flex justify-center items-center py-1.5 border-b border-border/50">
                   <span className={`font-semibold text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
                     {signal.sl} {signal.sl_hit && '✗'}
                   </span>
                 </div>
               </div>
 
-              {/* Analysis Reason with Status */}
-              <div className="mt-3 pt-3 border-t border-border text-center">
-                {signal.analysis_reason && (
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">
+              {/* Analysis Reason */}
+              {signal.analysis_reason && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
                     <span className="font-semibold">Analysis:</span> {signal.analysis_reason}
                   </p>
-                )}
-                <Badge className={`${getStatusColor()} border text-xs font-semibold`}>
+                </div>
+              )}
+              
+              {/* Status below analysis - small text */}
+              <div className="mt-2 pt-2 border-t border-border flex justify-center">
+                <span className={`text-[10px] font-medium ${
+                  getStatusText() === 'CLOSE' ? 'text-destructive' : 
+                  getStatusText() === 'LIVE' ? 'text-success' : 'text-primary'
+                }`}>
                   {getStatusText()}
-                </Badge>
+                </span>
               </div>
 
               {/* Note */}
