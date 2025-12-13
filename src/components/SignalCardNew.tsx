@@ -2,10 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
-import { Lock, Crown, Star, Share2 } from "lucide-react";
+import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useFavorites } from "@/hooks/useFavorites";
-import AdBanner from "@/components/AdBanner";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -44,12 +42,10 @@ interface SignalCardProps {
   };
   hasAccess?: boolean;
   subscriptionStatus?: string | null;
-  showFavoriteButton?: boolean;
 }
 
-const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavoriteButton = true }: SignalCardProps) => {
+const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalCardProps) => {
   const navigate = useNavigate();
-  const { isFavoritePair, toggleFavoritePair } = useFavorites();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
   
   // For premium signals: ONLY premium subscribers can see them (not free trial users)
@@ -163,25 +159,6 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {showFavoriteButton && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 hover:bg-accent"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFavoritePair(signal.pair);
-                }}
-              >
-                <Star 
-                  className={`h-4 w-4 transition-all ${
-                    isFavoritePair(signal.pair) 
-                      ? 'fill-yellow-400 text-yellow-400' 
-                      : 'text-muted-foreground hover:text-yellow-400'
-                  }`}
-                />
-              </Button>
-            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -315,11 +292,6 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, showFavor
                   <p className="text-xs sm:text-sm font-semibold text-success">{signal.profit_note}</p>
                 </div>
               )}
-            </div>
-
-            {/* Ad Banner inside Signal Card */}
-            <div className="px-3 sm:px-4 py-3 border-t border-border">
-              <AdBanner className="scale-90" />
             </div>
           </>
         )}

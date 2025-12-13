@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { useSignalNotifications } from "@/hooks/useSignalNotifications";
-import { useFavorites } from "@/hooks/useFavorites";
+
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
@@ -27,10 +27,8 @@ const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading, subscriptionStatus } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
   const [subCategory, setSubCategory] = useState<string>("all");
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
-  const { favoritePairs } = useFavorites();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Initialize notification system
@@ -179,10 +177,12 @@ const SignalsDashboard = () => {
             <TrialExpiredLockScreen />
           ) : (
             <>
-          {/* Top Ad Banner */}
-          <div className="mb-4">
-            <AdBanner />
-          </div>
+          {/* Top Ad Banner - Only for non-premium users */}
+          {subscriptionStatus !== 'premium' && (
+            <div className="mb-4">
+              <AdBanner />
+            </div>
+          )}
 
           {/* Main Category Tabs - Horizontal Scrollable with Icons */}
           <div className="mb-4 sm:mb-6 overflow-x-auto scrollbar-hide">
@@ -212,19 +212,6 @@ const SignalsDashboard = () => {
           </div>
 
           {/* Favorites Filter Button */}
-          {mainCategory !== "CHART ANALYSIS" && (
-            <div className="mb-4 flex justify-end">
-              <Button
-                variant={showFavoritesOnly ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                className="gap-2"
-              >
-                <Star className={`h-4 w-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
-                {showFavoritesOnly ? 'Show All Signals' : 'My Favorites'}
-              </Button>
-            </div>
-          )}
 
           {/* Chart Analysis View */}
           {mainCategory === "CHART ANALYSIS" && (
@@ -300,20 +287,12 @@ const SignalsDashboard = () => {
               ) : (
                 <div className="space-y-6">
                   {signals && signals.length > 0 && (() => {
-                    // Filter by favorite pairs if enabled
-                    const filteredSignals = showFavoritesOnly 
-                      ? signals.filter(signal => favoritePairs.has(signal.pair))
-                      : signals;
+                    const filteredSignals = signals;
 
                     if (filteredSignals.length === 0) {
                       return (
                         <div className="text-center py-20">
-                          <Star className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                          <p className="text-muted-foreground text-lg">
-                            {showFavoritesOnly 
-                              ? 'No favorite signals yet. Star your favorite signals to see them here!' 
-                              : 'No signals found'}
-                          </p>
+                          <p className="text-muted-foreground text-lg">No signals found</p>
                         </div>
                       );
                     }
@@ -378,10 +357,12 @@ const SignalsDashboard = () => {
             </>
           )}
 
-          {/* Bottom Ad Banner */}
-          <div className="mt-6">
-            <AdBanner />
-          </div>
+          {/* Bottom Ad Banner - Only for non-premium users */}
+          {subscriptionStatus !== 'premium' && (
+            <div className="mt-6">
+              <AdBanner />
+            </div>
+          )}
         </>
         )}
         </div>
