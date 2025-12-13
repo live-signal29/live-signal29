@@ -170,7 +170,6 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-              <SelectItem value="LIVE">🔵 LIVE</SelectItem>
               <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
             </SelectContent>
           </Select>
