@@ -7,11 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle, Server, Key } from "lucide-react";
+import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle, Server, Key, Lock, Eye, EyeOff } from "lucide-react";
 
 const AccountApplications = () => {
   const queryClient = useQueryClient();
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
+  const togglePasswordVisibility = (id: string) => {
+    setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
   const { data: applications, isLoading } = useQuery({
     queryKey: ['account-applications'],
     queryFn: async () => {
@@ -110,18 +114,37 @@ const AccountApplications = () => {
                         </div>
                       </div>
                       
-                      {(app.broker_server || app.trading_login) && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mt-2">
+                      {(app.broker_server || app.trading_login || app.trading_password) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm mt-2 p-2 rounded-lg bg-muted/30 border border-border/30">
                           {app.broker_server && (
                             <div className="flex items-center gap-2 text-muted-foreground">
-                              <Server className="h-4 w-4" />
+                              <Server className="h-4 w-4 text-primary" />
                               <span className="font-mono text-xs">{app.broker_server}</span>
                             </div>
                           )}
                           {app.trading_login && (
                             <div className="flex items-center gap-2 text-muted-foreground">
-                              <Key className="h-4 w-4" />
-                              <span className="font-mono text-xs">Login: {app.trading_login}</span>
+                              <Key className="h-4 w-4 text-emerald-500" />
+                              <span className="font-mono text-xs">Login: <span className="font-bold text-foreground">{app.trading_login}</span></span>
+                            </div>
+                          )}
+                          {app.trading_password && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Lock className="h-4 w-4 text-amber-500" />
+                              <span className="font-mono text-xs">
+                                Pass: <span className="font-bold text-foreground">{visiblePasswords[app.id] ? app.trading_password : '••••••••'}</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(app.id)}
+                                className="p-1 hover:bg-muted rounded transition-colors"
+                              >
+                                {visiblePasswords[app.id] ? (
+                                  <EyeOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                ) : (
+                                  <Eye className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                )}
+                              </button>
                             </div>
                           )}
                         </div>
