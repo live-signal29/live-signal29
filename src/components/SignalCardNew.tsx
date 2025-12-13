@@ -192,7 +192,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
           /* Locked State - Clean minimal design */
           <>
             <div 
-              className="flex items-center justify-center gap-2 py-6 px-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              className="flex flex-col items-center justify-center gap-2 py-6 px-4 cursor-pointer hover:bg-muted/50 transition-colors text-center"
               onClick={() => navigate("/premium")}
             >
               <div className="bg-muted p-2 rounded-full">
@@ -201,6 +201,12 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
               <span className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
                 BUY premium to see signal
               </span>
+              {/* Show Live Signal text only if signal is OPEN */}
+              {(signal.signal_status === 'OPEN' || (!signal.signal_status && signal.status === 'Active')) && (
+                <Badge className="bg-success/10 text-success border-success border text-xs font-semibold mt-1">
+                  🔴 LIVE SIGNAL
+                </Badge>
+              )}
             </div>
             {/* Footer showing status */}
             <div className="px-3 py-2 border-t border-border text-center">
@@ -212,11 +218,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
         ) : (
           /* Unlocked State - Show all details */
           <>
-            {/* Badges Row */}
-            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-background border-b border-border">
-              <Badge className={`${getStatusColor()} border text-[10px] sm:text-xs font-semibold`}>
-                {getStatusText()}
-              </Badge>
+            {/* Badges Row - Centered */}
+            <div className="flex flex-wrap justify-center gap-1.5 p-2 sm:p-3 bg-background border-b border-border">
               {signal.risk_level && (
                 <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
                   {signal.risk_level} Risk
@@ -270,14 +273,17 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 </div>
               </div>
 
-              {/* Analysis Reason */}
-              {signal.analysis_reason && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+              {/* Analysis Reason with Status */}
+              <div className="mt-3 pt-3 border-t border-border text-center">
+                {signal.analysis_reason && (
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">
                     <span className="font-semibold">Analysis:</span> {signal.analysis_reason}
                   </p>
-                </div>
-              )}
+                )}
+                <Badge className={`${getStatusColor()} border text-xs font-semibold`}>
+                  {getStatusText()}
+                </Badge>
+              </div>
 
               {/* Note */}
               {signal.note && (
