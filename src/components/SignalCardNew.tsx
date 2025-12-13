@@ -243,34 +243,53 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
             <div className="p-3 sm:p-4">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                  <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 1</span>
+                  <span className={`text-xs sm:text-sm ${signal.tp1_hit ? 'text-success font-semibold' : 'text-muted-foreground'}`}>
+                    TAKE PROFIT 1 {signal.tp1_hit && '✓'}
+                  </span>
                   <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
-                    {signal.tp1} {signal.tp1_hit && '✓'}
+                    {signal.tp1}
                   </span>
                 </div>
                 
                 {signal.tp2 && (
                   <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 2</span>
+                    <span className={`text-xs sm:text-sm ${signal.tp2_hit ? 'text-success font-semibold' : 'text-muted-foreground'}`}>
+                      TAKE PROFIT 2 {signal.tp2_hit && '✓'}
+                    </span>
                     <span className={`font-semibold text-xs sm:text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
-                      {signal.tp2} {signal.tp2_hit && '✓'}
+                      {signal.tp2}
                     </span>
                   </div>
                 )}
                 
                 {signal.tp3 && (
                   <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground text-xs sm:text-sm">TAKE PROFIT 3</span>
+                    <span className={`text-xs sm:text-sm ${signal.tp3_hit ? 'text-success font-semibold' : 'text-muted-foreground'}`}>
+                      TAKE PROFIT 3 {signal.tp3_hit && '✓'}
+                    </span>
                     <span className={`font-semibold text-xs sm:text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
-                      {signal.tp3} {signal.tp3_hit && '✓'}
+                      {signal.tp3}
+                    </span>
+                  </div>
+                )}
+
+                {signal.tp4 && (
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                    <span className={`text-xs sm:text-sm ${signal.tp4_hit ? 'text-success font-semibold' : 'text-muted-foreground'}`}>
+                      TAKE PROFIT 4 {signal.tp4_hit && '✓'}
+                    </span>
+                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp4_hit ? 'text-success' : 'text-foreground'}`}>
+                      {signal.tp4}
                     </span>
                   </div>
                 )}
                 
                 <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                  <span className="text-muted-foreground text-xs sm:text-sm">SL-BELOW</span>
+                  <span className={`text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive font-semibold' : 'text-muted-foreground'}`}>
+                    SL-BELOW {signal.sl_hit && '✗'}
+                  </span>
                   <span className={`font-semibold text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
-                    {signal.sl} {signal.sl_hit && '✗'}
+                    {signal.sl}
                   </span>
                 </div>
               </div>
