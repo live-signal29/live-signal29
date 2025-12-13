@@ -189,7 +189,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
         </div>
 
         {isLocked ? (
-          /* Locked State - Clean minimal design */
+          /* Locked State - Free user viewing premium signal */
           <>
             <div 
               className="flex flex-col items-center justify-center gap-2 py-6 px-4 cursor-pointer hover:bg-muted/50 transition-colors text-center"
@@ -199,19 +199,21 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 <Lock className="h-5 w-5 text-muted-foreground" />
               </div>
               <span className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
-                BUY premium to see signal
+                🔒 BUY premium to see signal
               </span>
-              {/* Show Live Signal text only if signal is OPEN */}
-              {(signal.signal_status === 'OPEN' || (!signal.signal_status && signal.status === 'Active')) && (
-                <Badge className="bg-success/10 text-success border-success border text-xs font-semibold mt-1">
+              {/* LIVE SIGNAL - only show when signal is OPEN (not CLOSE) */}
+              {getStatusText() !== 'CLOSE' && (
+                <Badge className="bg-success/10 text-success border-success border text-sm font-semibold mt-2 px-3 py-1">
                   🔴 LIVE SIGNAL
                 </Badge>
               )}
             </div>
-            {/* Footer showing status */}
-            <div className="px-3 py-2 border-t border-border text-center">
-              <span className="text-xs text-muted-foreground">
-                {getStatusText()}
+            {/* Footer showing status on the side */}
+            <div className="px-3 py-2 border-t border-border flex justify-end">
+              <span className={`text-[10px] font-medium ${
+                getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+              }`}>
+                {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
               </span>
             </div>
           </>
@@ -289,32 +291,23 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 </div>
               )}
 
-              {/* Profit Note with Status - Centered */}
+              {/* Profit Note - Centered */}
               {signal.profit_note && (
                 <div className="mt-2 pt-2 border-t border-success/20 text-center">
                   <p className="text-xs sm:text-sm font-semibold text-success">
                     {signal.profit_note}
-                    <span className={`ml-2 text-[10px] font-medium ${
-                      getStatusText() === 'CLOSE' ? 'text-destructive' : 
-                      getStatusText() === 'LIVE' ? 'text-success' : 'text-primary'
-                    }`}>
-                      • {getStatusText()}
-                    </span>
                   </p>
                 </div>
               )}
               
-              {/* Status only if no profit note - Centered */}
-              {!signal.profit_note && (
-                <div className="mt-2 pt-2 border-t border-border text-center">
-                  <span className={`text-[10px] font-medium ${
-                    getStatusText() === 'CLOSE' ? 'text-destructive' : 
-                    getStatusText() === 'LIVE' ? 'text-success' : 'text-primary'
-                  }`}>
-                    {getStatusText()}
-                  </span>
-                </div>
-              )}
+              {/* Status - Small on the side */}
+              <div className="mt-2 pt-2 border-t border-border flex justify-end">
+                <span className={`text-[10px] font-medium ${
+                  getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+                }`}>
+                  {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                </span>
+              </div>
             </div>
           </>
         )}
