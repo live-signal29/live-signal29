@@ -8,6 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import {
   TrendingUp, 
   Shield, 
   Clock, 
@@ -29,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import Autoplay from "embla-carousel-autoplay";
 import { z } from "zod";
 
 const applicationSchema = z.object({
@@ -256,95 +264,111 @@ const AccountManagement = () => {
             <p className="text-muted-foreground">Select the account size that fits your investment goals</p>
           </div>
           
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {plans.map((plan, index) => {
-              const Icon = plan.icon;
-              return (
-                <Card 
-                  key={index}
-                  className={cn(
-                    "relative overflow-hidden border-border/40 transition-all duration-500 group cursor-pointer",
-                    "hover:scale-[1.03] hover:shadow-2xl hover:shadow-primary/20",
-                    "bg-gradient-to-br from-background via-background to-muted/20",
-                    "animate-fade-in",
-                    plan.popular && "ring-2 ring-primary shadow-lg shadow-primary/10"
-                  )}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, account_size: plan.amount }));
-                    document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                >
-                  {/* Shimmer effect on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  
-                  {/* Glow effect */}
-                  <div className={cn(
-                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
-                    `bg-gradient-to-br ${plan.color}`
-                  )} style={{ opacity: 0.1 }} />
-                  
-                  {plan.popular && (
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
-                      <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-[10px] px-2 py-0.5 shadow-lg animate-pulse">
-                        ⭐ Popular
-                      </Badge>
-                    </div>
-                  )}
-                  
-                  <CardHeader className="pb-2 pt-4 px-3">
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300 shadow-lg",
-                      plan.color
-                    )}>
-                      <Icon className="h-5 w-5 text-white" />
-                    </div>
-                    <CardTitle className="text-sm font-bold group-hover:text-primary transition-colors">{plan.title}</CardTitle>
-                    <div className="relative inline-block">
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-xl opacity-0 group-hover:opacity-30 transition-opacity" />
-                      <span className="relative text-2xl font-black bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-primary group-hover:to-primary/70 bg-clip-text text-transparent transition-all">
-                        {plan.amount}
-                      </span>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-2 px-3 pb-3">
-                    <div className="space-y-1 p-2 rounded-lg bg-muted/30 border border-border/30">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Profit</span>
-                        <span className="font-bold text-primary">{plan.profitSharing}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Daily</span>
-                        <span className="font-bold text-emerald-500">{plan.dailyReturn}</span>
-                      </div>
-                    </div>
-                    
-                    <ul className="space-y-1">
-                      {plan.features.slice(0, 3).map((feature, i) => (
-                        <li key={i} className="flex items-start gap-1.5 text-[10px] md:text-xs">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground line-clamp-1">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    
-                    <Button 
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            plugins={[
+              Autoplay({
+                delay: 4000,
+              }),
+            ]}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {plans.map((plan, index) => {
+                const Icon = plan.icon;
+                return (
+                  <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 lg:basis-1/4">
+                    <Card 
                       className={cn(
-                        "w-full h-8 text-xs font-bold relative overflow-hidden",
-                        "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
-                        "shadow-md hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
+                        "relative overflow-hidden border-border/40 transition-all duration-500 group cursor-pointer h-full",
+                        "hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20",
+                        "bg-gradient-to-br from-background via-background to-muted/20",
+                        "animate-fade-in",
+                        plan.popular && "ring-2 ring-primary shadow-lg shadow-primary/10"
                       )}
-                      variant={plan.popular ? "default" : "outline"}
+                      style={{ animationDelay: `${index * 100}ms` }}
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, account_size: plan.amount }));
+                        document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
                     >
-                      <span className="relative z-10">Select</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      {/* Shimmer effect on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                      
+                      {/* Glow effect */}
+                      <div className={cn(
+                        "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
+                        `bg-gradient-to-br ${plan.color}`
+                      )} style={{ opacity: 0.1 }} />
+                      
+                      {plan.popular && (
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
+                          <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs px-3 py-0.5 shadow-lg animate-pulse">
+                            ⭐ Popular
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      <CardHeader className="pb-3 pt-5 px-4">
+                        <div className={cn(
+                          "w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg",
+                          plan.color
+                        )}>
+                          <Icon className="h-6 w-6 text-white" />
+                        </div>
+                        <CardTitle className="text-base font-bold group-hover:text-primary transition-colors">{plan.title}</CardTitle>
+                        <div className="relative inline-block">
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-xl opacity-0 group-hover:opacity-30 transition-opacity" />
+                          <span className="relative text-3xl font-black bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-primary group-hover:to-primary/70 bg-clip-text text-transparent transition-all">
+                            {plan.amount}
+                          </span>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-3 px-4 pb-4">
+                        <div className="space-y-2 p-3 rounded-xl bg-muted/30 border border-border/30">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Profit</span>
+                            <span className="font-bold text-primary">{plan.profitSharing}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Daily</span>
+                            <span className="font-bold text-emerald-500">{plan.dailyReturn}</span>
+                          </div>
+                        </div>
+                        
+                        <ul className="space-y-1.5">
+                          {plan.features.slice(0, 3).map((feature, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground line-clamp-1">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        
+                        <Button 
+                          className={cn(
+                            "w-full h-10 text-sm font-bold relative overflow-hidden",
+                            "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
+                            "shadow-md hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
+                          )}
+                          variant={plan.popular ? "default" : "outline"}
+                        >
+                          <span className="relative z-10">Select Plan</span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </CarouselItem>
+                );
+              })}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex -left-4" />
+            <CarouselNext className="hidden md:flex -right-4" />
+          </Carousel>
         </section>
 
         {/* How It Works */}
