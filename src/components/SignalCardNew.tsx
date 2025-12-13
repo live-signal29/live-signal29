@@ -203,12 +203,12 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
               </span>
               {/* LIVE SIGNAL - only show when signal is OPEN (not CLOSE) */}
               {getStatusText() !== 'CLOSE' && (
-                <Badge className="bg-success/10 text-success border-success border text-sm font-semibold mt-2 px-3 py-1">
-                  🔴 LIVE SIGNAL
-                </Badge>
+                <span className="text-base font-bold text-success mt-2 animate-pulse">
+                  LIVE SIGNAL
+                </span>
               )}
             </div>
-            {/* Footer showing status on the side */}
+            {/* Footer showing status on the right corner */}
             <div className="px-3 py-2 border-t border-border flex justify-end">
               <span className={`text-[10px] font-medium ${
                 getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
@@ -294,20 +294,20 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
               {/* Profit Note + Status together */}
               {signal.profit_note ? (
                 <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
-                  {/* Small Open/Close text on analysis side (left) */}
-                  <span className={`text-[10px] font-medium mr-2 ${
-                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
-                  }`}>
-                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
-                  </span>
                   {/* Profit note centered */}
                   <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
                     {signal.profit_note}
                   </p>
+                  {/* Small Open/Close text on right corner */}
+                  <span className={`text-[10px] font-medium ml-2 ${
+                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                  </span>
                 </div>
               ) : (
-                // If no profit note, just show small status on the analysis side
-                <div className="mt-2 pt-2 border-t border-border flex justify-start">
+                // If no profit note, just show small status on the right corner
+                <div className="mt-2 pt-2 border-t border-border flex justify-end">
                   <span className={`text-[10px] font-medium ${
                     getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-muted-foreground'
                   }`}>
