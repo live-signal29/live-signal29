@@ -281,16 +281,6 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                   </p>
                 </div>
               )}
-              
-              {/* Status below analysis - small text */}
-              <div className="mt-2 pt-2 border-t border-border">
-                <span className={`text-[10px] font-medium ${
-                  getStatusText() === 'CLOSE' ? 'text-destructive' : 
-                  getStatusText() === 'LIVE' ? 'text-success' : 'text-primary'
-                }`}>
-                  {getStatusText()}
-                </span>
-              </div>
 
               {/* Note */}
               {signal.note && (
@@ -299,10 +289,30 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 </div>
               )}
 
-              {/* Profit Note */}
+              {/* Profit Note with Status - Centered */}
               {signal.profit_note && (
-                <div className="mt-2 pt-2 border-t border-success/20">
-                  <p className="text-xs sm:text-sm font-semibold text-success">{signal.profit_note}</p>
+                <div className="mt-2 pt-2 border-t border-success/20 text-center">
+                  <p className="text-xs sm:text-sm font-semibold text-success">
+                    {signal.profit_note}
+                    <span className={`ml-2 text-[10px] font-medium ${
+                      getStatusText() === 'CLOSE' ? 'text-destructive' : 
+                      getStatusText() === 'LIVE' ? 'text-success' : 'text-primary'
+                    }`}>
+                      • {getStatusText()}
+                    </span>
+                  </p>
+                </div>
+              )}
+              
+              {/* Status only if no profit note - Centered */}
+              {!signal.profit_note && (
+                <div className="mt-2 pt-2 border-t border-border text-center">
+                  <span className={`text-[10px] font-medium ${
+                    getStatusText() === 'CLOSE' ? 'text-destructive' : 
+                    getStatusText() === 'LIVE' ? 'text-success' : 'text-primary'
+                  }`}>
+                    {getStatusText()}
+                  </span>
                 </div>
               )}
             </div>
