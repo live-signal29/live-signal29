@@ -518,13 +518,13 @@ const Premium = () => {
                 return (
                   <CarouselItem 
                     key={plan.name} 
-                    className="pl-2 md:pl-3 basis-1/2 lg:basis-1/4"
+                    className="pl-2 md:pl-4 basis-1/2 lg:basis-1/4"
                   >
                     <Card 
                       className={`
                         relative h-full overflow-hidden group cursor-pointer
                         transition-all duration-500 ease-out
-                        hover:scale-[1.03] hover:shadow-2xl hover:shadow-primary/20
+                        hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20
                         animate-fade-in
                         ${plan.popular 
                           ? 'border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl shadow-primary/10 ring-1 ring-primary/30' 
@@ -543,7 +543,7 @@ const Premium = () => {
                       {/* Popular badge */}
                       {plan.popular && (
                         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
-                          <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-[10px] px-2 py-0.5 shadow-lg animate-pulse">
+                          <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs px-3 py-0.5 shadow-lg animate-pulse">
                             ⭐ Popular
                           </Badge>
                         </div>
@@ -552,33 +552,33 @@ const Premium = () => {
                       {/* Discount badge */}
                       {plan.discount && (
                         <div className="absolute top-2 right-2 z-10">
-                          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg animate-pulse">
+                          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse">
                             {plan.discount}
                           </div>
                         </div>
                       )}
                       
-                      <CardHeader className="text-center pb-2 pt-4 px-3 relative z-10">
-                        <CardTitle className="text-sm font-bold mb-1 group-hover:text-primary transition-colors">
+                      <CardHeader className="text-center pb-3 pt-5 px-4 relative z-10">
+                        <CardTitle className="text-base font-bold mb-2 group-hover:text-primary transition-colors">
                           {plan.name}
                         </CardTitle>
                         
                         {/* Price display */}
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                           <div className="relative inline-block">
                             <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-xl opacity-0 group-hover:opacity-30 transition-opacity" />
-                            <p className="relative text-2xl md:text-3xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                            <p className="relative text-3xl md:text-4xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                               ${plan.pricePerMonth}
                             </p>
                           </div>
-                          <p className="text-[10px] text-muted-foreground">/month • {plan.duration}</p>
+                          <p className="text-xs text-muted-foreground">/month • {plan.duration}</p>
                         </div>
                       </CardHeader>
 
-                      <CardContent className="space-y-2 px-3 pb-3 relative z-10">
+                      <CardContent className="space-y-3 px-4 pb-4 relative z-10">
                         {/* Pricing breakdown */}
-                        <div className="space-y-1.5 p-2 rounded-lg bg-muted/30 border border-border/30">
-                          <div className="flex justify-between items-center text-[10px]">
+                        <div className="space-y-2 p-3 rounded-xl bg-muted/30 border border-border/30">
+                          <div className="flex justify-between items-center text-xs">
                             <span className="text-muted-foreground">Original</span>
                             <span className="line-through text-muted-foreground">${plan.totalPrice}</span>
                           </div>
@@ -587,13 +587,13 @@ const Premium = () => {
                             <>
                               <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                               <div className="flex justify-between items-center">
-                                <span className="font-bold text-xs">Final</span>
-                                <span className="text-lg font-black bg-gradient-to-r from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
+                                <span className="font-bold text-sm">Final</span>
+                                <span className="text-xl font-black bg-gradient-to-r from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
                                   ${finalPrice.toFixed(0)}
                                 </span>
                               </div>
-                              <div className="bg-emerald-500/10 rounded px-1.5 py-0.5 border border-emerald-500/20">
-                                <p className="text-emerald-500 text-center font-bold text-[10px]">
+                              <div className="bg-emerald-500/10 rounded-lg px-2 py-1 border border-emerald-500/20">
+                                <p className="text-emerald-500 text-center font-bold text-xs">
                                   💰 Save ${savings.toFixed(0)}
                                 </p>
                               </div>
@@ -602,8 +602,8 @@ const Premium = () => {
                             <>
                               <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                               <div className="flex justify-between items-center">
-                                <span className="font-bold text-xs">Pay</span>
-                                <span className="text-lg font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                                <span className="font-bold text-sm">Pay</span>
+                                <span className="text-xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                                   ${originalPrice}
                                 </span>
                               </div>
@@ -611,9 +611,9 @@ const Premium = () => {
                           )}
 
                           {appliedCoupon && !isPlanApplicable && (
-                            <div className="bg-amber-500/10 rounded px-1.5 py-0.5 border border-amber-500/20">
-                              <p className="text-amber-500 text-center text-[9px] flex items-center justify-center gap-1">
-                                <AlertCircle className="h-2.5 w-2.5" />
+                            <div className="bg-amber-500/10 rounded-lg px-2 py-1 border border-amber-500/20">
+                              <p className="text-amber-500 text-center text-xs flex items-center justify-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
                                 Not applicable
                               </p>
                             </div>
@@ -621,13 +621,13 @@ const Premium = () => {
                         </div>
 
                         {/* Features list */}
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           {features.slice(0, 3).map((feature, idx) => (
-                            <div key={idx} className="flex items-start gap-1.5">
-                              <div className="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                <Check className="h-2 w-2 text-emerald-500" />
+                            <div key={idx} className="flex items-start gap-2">
+                              <div className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                <Check className="h-2.5 w-2.5 text-emerald-500" />
                               </div>
-                              <span className="text-[10px] text-muted-foreground line-clamp-1">{feature}</span>
+                              <span className="text-xs text-muted-foreground line-clamp-1">{feature}</span>
                             </div>
                           ))}
                         </div>
@@ -635,7 +635,7 @@ const Premium = () => {
                         {/* CTA Button */}
                         <Button 
                           className="
-                            w-full h-8 font-bold text-xs
+                            w-full h-10 font-bold text-sm
                             bg-gradient-to-r from-primary to-primary/80
                             hover:from-primary/90 hover:to-primary/70
                             shadow-md hover:shadow-lg hover:shadow-primary/30
@@ -647,7 +647,7 @@ const Premium = () => {
                             handleSelectPlan(plan);
                           }}
                         >
-                          <span className="relative z-10">SELECT</span>
+                          <span className="relative z-10">SELECT PLAN</span>
                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         </Button>
                       </CardContent>
