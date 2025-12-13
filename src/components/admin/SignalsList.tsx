@@ -229,7 +229,6 @@ const SignalsList = () => {
                     {bulkAction === "signal_status" && (
                       <>
                         <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-                        <SelectItem value="LIVE">🔵 LIVE</SelectItem>
                         <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
                       </>
                     )}
@@ -296,7 +295,6 @@ const SignalsList = () => {
                 <SelectContent className="bg-background z-50">
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-                  <SelectItem value="LIVE">🔵 LIVE</SelectItem>
                   <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
                 </SelectContent>
               </Select>
@@ -379,7 +377,6 @@ const SignalsList = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
                         <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-                        <SelectItem value="LIVE">🔵 LIVE</SelectItem>
                         <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
                       </SelectContent>
                     </Select>
