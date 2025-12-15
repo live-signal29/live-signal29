@@ -50,12 +50,9 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate entry price is numeric
+    // Entry, TP, SL can be text or numbers - no numeric validation required
     const entryPrice = parseFloat(formData.entry);
-    if (isNaN(entryPrice) || entryPrice <= 0) {
-      toast.error("Entry price must be a valid number");
-      return;
-    }
+    const hasNumericEntry = !isNaN(entryPrice) && entryPrice > 0;
 
     // Validate input
     const validation = signalSchema.safeParse(formData);
@@ -77,9 +74,9 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         category: validation.data.category,
         main_category: validation.data.main_category,
         sub_category: validation.data.sub_category || null,
-        entry: formData.entry, // Single numeric entry price
+        entry: formData.entry, // Can be text or number
         entry_mode: formData.entry_mode,
-        limit_entry_price: isLimitOrder ? entryPrice : null, // Use same entry for limit trigger
+        limit_entry_price: isLimitOrder && hasNumericEntry ? entryPrice : null, // Only set if numeric
         is_activated: isLimitOrder ? false : true, // Market = active, Limit = pending
         activated_at: isLimitOrder ? null : new Date().toISOString(),
         tp1: validation.data.tp1,
@@ -269,9 +266,8 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           <div>
             <Label className="text-xs text-muted-foreground">Entry Price</Label>
             <Input
-              type="number"
-              step="0.00001"
-              placeholder="e.g., 2650.00"
+              type="text"
+              placeholder="e.g., 2650.00 or Gold Buy Zone"
               value={formData.entry}
               onChange={(e) => setFormData({ ...formData, entry: e.target.value })}
               className="mt-1 font-mono text-lg"
@@ -284,15 +280,14 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           <div>
             <Label className="text-xs text-destructive">Stop Loss (SL)</Label>
             <Input
-              type="number"
-              step="0.00001"
-              placeholder="e.g., 2640.00"
+              type="text"
+              placeholder="e.g., 2640.00 or SL OPEN"
               value={formData.sl}
               onChange={(e) => setFormData({ ...formData, sl: e.target.value })}
               className="mt-1 font-mono text-lg border-destructive/30"
               required
             />
-            <p className="text-xs text-destructive/70 mt-1">Auto-closes signal if hit</p>
+            <p className="text-xs text-destructive/70 mt-1">Auto-closes signal if hit (numeric only)</p>
           </div>
         </div>
 
@@ -300,9 +295,8 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           <div>
             <Label className="text-xs text-success">Take Profit 1 (TP1)</Label>
             <Input
-              type="number"
-              step="0.00001"
-              placeholder="e.g., 2660.00"
+              type="text"
+              placeholder="e.g., 2660.00 or TP OPEN"
               value={formData.tp1}
               onChange={(e) => setFormData({ ...formData, tp1: e.target.value })}
               className="mt-1 font-mono border-success/30"
@@ -312,8 +306,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           <div>
             <Label className="text-xs text-success/70">Take Profit 2 (TP2)</Label>
             <Input
-              type="number"
-              step="0.00001"
+              type="text"
               placeholder="Optional"
               value={formData.tp2}
               onChange={(e) => setFormData({ ...formData, tp2: e.target.value })}
@@ -323,8 +316,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           <div>
             <Label className="text-xs text-success/50">Take Profit 3 (TP3)</Label>
             <Input
-              type="number"
-              step="0.00001"
+              type="text"
               placeholder="Optional"
               value={formData.tp3}
               onChange={(e) => setFormData({ ...formData, tp3: e.target.value })}
