@@ -63,35 +63,45 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
 
     setLoading(true);
 
-    try {
-      const isLimitOrder = formData.entry_mode === 'limit';
+      try {
+        const isLimitOrder = formData.entry_mode === "limit";
 
-      // Auto status control based on entry mode
-      // Market = Active immediately, Limit = Pending until price hits
-      const cleanedData = {
-        pair: validation.data.pair,
-        type: validation.data.type,
-        category: validation.data.category,
-        main_category: validation.data.main_category,
-        sub_category: validation.data.sub_category || null,
-        entry: formData.entry, // Can be text or number
-        entry_mode: formData.entry_mode,
-        limit_entry_price: isLimitOrder && hasNumericEntry ? entryPrice : null, // Only set if numeric
-        is_activated: isLimitOrder ? false : true, // Market = active, Limit = pending
-        activated_at: isLimitOrder ? null : new Date().toISOString(),
-        tp1: validation.data.tp1,
-        tp2: validation.data.tp2 || null,
-        tp3: validation.data.tp3 || null,
-        sl: validation.data.sl,
-        note: validation.data.note || null,
-        profit_note: validation.data.profit_note || null,
-        status: "Active", // Always Active - status controlled by TP/SL
-        signal_status: "OPEN", // Always starts OPEN - auto-closes on TP/SL hit
-        signal_type: validation.data.signal_type || null,
-        risk_level: validation.data.risk_level || null,
-        analysis_reason: validation.data.analysis_reason || null,
-        is_premium: formData.is_premium,
-      };
+        // SYSTEM STANDARD:
+        // status + signal_status are the only lifecycle states and must be:
+        // pending | open | close
+        const initialLifecycle = isLimitOrder ? "pending" : "open";
+
+        const cleanedData = {
+          pair: validation.data.pair,
+          type: validation.data.type,
+          category: validation.data.category,
+          main_category: validation.data.main_category,
+          sub_category: validation.data.sub_category || null,
+          entry: formData.entry,
+          entry_mode: formData.entry_mode,
+          limit_entry_price: isLimitOrder && hasNumericEntry ? entryPrice : null,
+
+          // For LIMIT orders, start PENDING and not activated.
+          // For MARKET orders, start OPEN and activated.
+          is_activated: isLimitOrder ? false : true,
+          activated_at: isLimitOrder ? null : new Date().toISOString(),
+
+          tp1: validation.data.tp1,
+          tp2: validation.data.tp2 || null,
+          tp3: validation.data.tp3 || null,
+          sl: validation.data.sl,
+          note: validation.data.note || null,
+          profit_note: validation.data.profit_note || null,
+
+          // IMPORTANT: remove any "Active" backend status.
+          status: initialLifecycle,
+          signal_status: initialLifecycle,
+
+          signal_type: validation.data.signal_type || null,
+          risk_level: validation.data.risk_level || null,
+          analysis_reason: validation.data.analysis_reason || null,
+          is_premium: formData.is_premium,
+        };
 
       if (editSignal) {
         const { error } = await supabase

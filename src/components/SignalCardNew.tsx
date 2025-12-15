@@ -55,30 +55,23 @@ interface SignalCardProps {
 
 const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice }: SignalCardProps) => {
   const navigate = useNavigate();
-  const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
-  const isOpen = signal.signal_status !== 'CLOSE';
+  const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'close';
+  const lifecycle = (signal.signal_status || signal.status || 'open').toLowerCase();
+  const isPending = lifecycle === 'pending';
+  const isOpen = lifecycle === 'open';
+  const isClosed = lifecycle === 'close';
   
   // Entry mode logic
   const isLimitOrder = signal.entry_mode === "limit";
   const isBuy = signal.type?.toLowerCase() === "buy";
 
-  // For limit orders, entry MUST be numeric to enable activation logic.
-  // If not numeric, keep it Pending and never show Running P/L.
   const limitPrice = signal.limit_entry_price ?? 0;
 
   // Current price from live feed or stored value
   const currentPrice = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
 
-  // STRICT broker-level status:
-  // - Market orders are Active immediately.
-  // - Limit orders are Pending until DB marks them activated.
-  // - Activation decision is centralized (backend), UI NEVER self-activates.
-  const isDbActivated = Boolean(signal.is_activated);
-  const isActive = isOpen && (!isLimitOrder || isDbActivated);
-  const isPending = isOpen && isLimitOrder && !isDbActivated;
-
-  // Entry price for P/L: only available once Active.
-  const entryPrice = isActive
+  // Entry price for P/L: only available once OPEN (Active trade)
+  const entryPrice = isOpen
     ? (isLimitOrder ? (limitPrice > 0 ? limitPrice : parseEntryPrice(signal.entry)) : parseEntryPrice(signal.entry))
     : null;
 
@@ -109,15 +102,15 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   // IMPORTANT: UI must NOT auto-activate limit orders.
   // Activation happens in backend price listener only.
 
-  // Running P/L MUST be calculated ONLY when status == ACTIVE
-  const runningPL = isActive && currentPrice > 0 && entryPrice && entryPrice > 0
+  // Running P/L MUST be calculated ONLY when status == OPEN (Active in UI)
+  const runningPL = isOpen && currentPrice > 0 && entryPrice && entryPrice > 0
     ? calculateRunningPL(currentPrice, entryPrice, signal.type)
     : null;
 
   // Auto-update TP/SL hits
   useEffect(() => {
-    // STRICT: do not evaluate TP/SL until signal is ACTIVE
-    if (!isActive || !currentPrice || signal.sl_hit) return;
+    // STRICT: do not evaluate TP/SL until signal is OPEN
+    if (!isOpen || !currentPrice || signal.sl_hit) return;
 
     const checkAndUpdate = async () => {
       const updates: Record<string, boolean | string> = {};
@@ -169,7 +162,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     };
 
     checkAndUpdate();
-  }, [isActive, currentPrice, signal.id, signal.type, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl,
+  }, [isOpen, currentPrice, signal.id, signal.type, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl,
       signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit, signal.sl_hit, isOpen]);
   
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
@@ -264,8 +257,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 }`}>
                   {isLimitOrder
                     ? (isPending
-                        ? `Pending ${signal.type} @ ${limitPrice}`
-                        : `Active ${signal.type} @ ${limitPrice}`)
+                        ? `${signal.type === 'Buy' ? 'Limit Buy' : 'Limit Sell'} @ ${limitPrice}`
+                        : `${signal.type}`)
                     : signal.entry
                   }
                 </span>
@@ -286,7 +279,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                     {currentPrice.toFixed(2)}
                   </span>
                   {isPending && (
-                    <span className="ml-2 text-orange-500 font-medium animate-pulse">⏳ Pending</span>
+                    <span className="ml-2 text-orange-500 font-medium">Waiting for trade</span>
                   )}
                 </span>
               )}
@@ -367,13 +360,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </Badge>
               )}
               {isPending && (
-                <Badge className="bg-orange-500/20 text-orange-500 border-orange-500 border text-[10px] sm:text-xs animate-pulse">
-                  ⏳ Pending
-                </Badge>
-              )}
-              {isLimitOrder && !isPending && isDbActivated && (
-                <Badge className="bg-success/20 text-success border-success border text-[10px] sm:text-xs">
-                  ✓ Activated
+                <Badge className="bg-orange-500/20 text-orange-500 border-orange-500 border text-[10px] sm:text-xs">
+                  Pending
                 </Badge>
               )}
               {signal.pips_result && (
@@ -467,8 +455,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                     {signal.profit_note}
                   </p>
                 </div>
-              ) : isActive && runningPL ? (
-                // Show running P/L ONLY for ACTIVE signals
+              ) : isOpen && runningPL ? (
+                // Show running P/L ONLY for OPEN signals (Active in UI)
                 <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
                   <span className="text-[10px] font-medium text-blue-500">Active</span>
                   <p className="flex-1 text-center text-xs sm:text-sm font-bold">
