@@ -90,8 +90,8 @@ export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => 
     // Initial fetch
     fetchPrices();
     
-    // Poll every 5 seconds (to avoid rate limits)
-    intervalRef.current = setInterval(fetchPrices, 5000);
+    // Poll every 2 seconds for real-time updates
+    intervalRef.current = setInterval(fetchPrices, 2000);
     
     return () => {
       if (intervalRef.current) {

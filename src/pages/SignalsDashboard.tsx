@@ -14,60 +14,14 @@ import { Button } from "@/components/ui/button";
 import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { useSignalNotifications } from "@/hooks/useSignalNotifications";
-
 import SignalsSkeleton from "@/components/SignalsSkeleton";
+import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 
 const SIGNALS_PER_PAGE = 20;
-
-// Live price fetching for XAU/USD
-const useLivePricesFetch = (pairs: string[]) => {
-  const [prices, setPrices] = useState<Record<string, number>>({});
-  
-  useEffect(() => {
-    if (pairs.length === 0) return;
-    
-    const fetchPrices = async () => {
-      const newPrices: Record<string, number> = {};
-      
-      for (const pair of pairs) {
-        const cleanPair = pair.replace('/', '').toUpperCase();
-        
-        // XAU/USD (Gold) handling
-        if (cleanPair.includes('XAU') || cleanPair.includes('GOLD')) {
-          try {
-            const response = await fetch('https://api.metals.live/v1/spot/gold', {
-              signal: AbortSignal.timeout(5000)
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              if (Array.isArray(data) && data.length > 0 && data[0].price) {
-                newPrices[pair] = parseFloat(data[0].price);
-              }
-            }
-          } catch {
-            // Silent fail for price fetch
-          }
-        }
-      }
-      
-      if (Object.keys(newPrices).length > 0) {
-        setPrices(prev => ({ ...prev, ...newPrices }));
-      }
-    };
-    
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 2000); // Update every 2 seconds
-    
-    return () => clearInterval(interval);
-  }, [pairs.join(',')]);
-  
-  return prices;
-};
 
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading, subscriptionStatus } = useSubscriptionAccess();
@@ -141,7 +95,7 @@ const SignalsDashboard = () => {
     .filter((pair, index, arr) => arr.indexOf(pair) === index);
   
   // Fetch live prices for open signals
-  const livePrices = useLivePricesFetch(openSignalPairs);
+  const { prices: livePrices } = useLivePricesFetch(openSignalPairs, openSignalPairs.length > 0);
 
   // Setup realtime subscription for instant updates (deferred)
   useEffect(() => {
@@ -373,7 +327,7 @@ const SignalsDashboard = () => {
                                 signal={signal as any}
                                 hasAccess={hasAccess}
                                 subscriptionStatus={subscriptionStatus}
-                                livePrice={livePrices[signal.pair]}
+                                livePrice={livePrices[signal.pair] ? parseFloat(livePrices[signal.pair]) : undefined}
                               />
                             ))}
                           </div>
