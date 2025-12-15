@@ -339,7 +339,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
           /* Unlocked State - Show all details */
           <>
             {/* Badges Row - Side aligned */}
-            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-card border-b border-border/30">
+            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-card border-b border-border/50">
               {signal.risk_level && (
                 <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
                   {signal.risk_level} Risk
@@ -370,7 +370,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
             {/* TP/SL Table */}
             <div className="p-3 sm:p-4">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div className="flex justify-between items-center py-1.5 border-b border-border/20">
+                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
                   <span className="text-muted-foreground text-xs sm:text-sm">
                     TAKE PROFIT 1 {signal.tp1_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                   </span>
@@ -380,7 +380,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </div>
                 
                 {signal.tp2 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/20">
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
                     <span className="text-muted-foreground text-xs sm:text-sm">
                       TAKE PROFIT 2 {signal.tp2_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
@@ -391,7 +391,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 )}
                 
                 {signal.tp3 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/20">
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
                     <span className="text-muted-foreground text-xs sm:text-sm">
                       TAKE PROFIT 3 {signal.tp3_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
@@ -402,7 +402,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 )}
 
                 {signal.tp4 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/20">
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
                     <span className="text-muted-foreground text-xs sm:text-sm">
                       TAKE PROFIT 4 {signal.tp4_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
@@ -412,7 +412,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center py-1.5 border-b border-border/20">
+                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
                   <span className="text-muted-foreground text-xs sm:text-sm">
                     SL-BELOW {signal.sl_hit && <span className="text-destructive">✗</span>}
                   </span>
