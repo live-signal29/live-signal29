@@ -109,6 +109,12 @@ export default {
           "25%": { transform: "translateY(-2px) rotate(-5deg)" },
           "75%": { transform: "translateY(-2px) rotate(5deg)" },
         },
+        "tp-tick": {
+          "0%": { transform: "scale(0)", opacity: "0" },
+          "50%": { transform: "scale(1.3)", opacity: "1" },
+          "75%": { transform: "scale(0.9)" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
         "border-glow": {
           "0%, 100%": { 
             borderColor: "hsl(45 100% 50% / 0.4)",
@@ -129,6 +135,7 @@ export default {
         "premium-shimmer": "premium-shimmer 3s linear infinite",
         "crown-bounce": "crown-bounce 2s ease-in-out infinite",
         "border-glow": "border-glow 2s ease-in-out infinite",
+        "tp-tick": "tp-tick 0.5s ease-out forwards",
       },
     },
   },
