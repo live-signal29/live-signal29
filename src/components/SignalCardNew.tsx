@@ -235,7 +235,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         )}
 
         {/* Header - Always Visible */}
-        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border/30">
+        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border">
           <div className="flex items-start gap-2">
             <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs mt-0.5`}>
               {signal.type.toUpperCase()}
@@ -255,13 +255,13 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
               <span className="text-xs sm:text-sm font-medium">
                 <span className="text-muted-foreground">Entry:</span>
                 <span className={`font-semibold ml-1 ${
-                  isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : signal.is_activated && isLimitOrder ? 'text-success' : 'text-blue-500'
+                  isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : (signal.is_activated && isLimitOrder) ? 'text-success' : 'text-blue-500'
                 }`}>
-                  {isPending 
-                    ? `Limit ${signal.type} ${limitPrice}` 
-                    : signal.is_activated && isLimitOrder 
-                      ? `Active ${signal.type} @ ${limitPrice}`
-                      : signal.entry
+                  {isLimitOrder 
+                    ? (isPending 
+                        ? `Limit ${signal.type} ${limitPrice}` 
+                        : `Active ${signal.type} @ ${limitPrice}`)
+                    : signal.entry
                   }
                 </span>
               </span>
