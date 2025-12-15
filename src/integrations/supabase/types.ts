@@ -325,6 +325,77 @@ export type Database = {
         }
         Relationships: []
       }
+      mt5_demo_trades: {
+        Row: {
+          close_price: number | null
+          close_time: string | null
+          created_at: string
+          entry_price: number | null
+          error_message: string | null
+          id: string
+          lot_size: number | null
+          mt5_ticket: string | null
+          open_time: string | null
+          profit_loss: number | null
+          result: string | null
+          signal_id: string | null
+          sl_price: number | null
+          status: string | null
+          symbol: string
+          tp_price: number | null
+          trade_type: string
+          updated_at: string
+        }
+        Insert: {
+          close_price?: number | null
+          close_time?: string | null
+          created_at?: string
+          entry_price?: number | null
+          error_message?: string | null
+          id?: string
+          lot_size?: number | null
+          mt5_ticket?: string | null
+          open_time?: string | null
+          profit_loss?: number | null
+          result?: string | null
+          signal_id?: string | null
+          sl_price?: number | null
+          status?: string | null
+          symbol: string
+          tp_price?: number | null
+          trade_type: string
+          updated_at?: string
+        }
+        Update: {
+          close_price?: number | null
+          close_time?: string | null
+          created_at?: string
+          entry_price?: number | null
+          error_message?: string | null
+          id?: string
+          lot_size?: number | null
+          mt5_ticket?: string | null
+          open_time?: string | null
+          profit_loss?: number | null
+          result?: string | null
+          signal_id?: string | null
+          sl_price?: number | null
+          status?: string | null
+          symbol?: string
+          tp_price?: number | null
+          trade_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mt5_demo_trades_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -899,6 +970,18 @@ export type Database = {
           total_losses: number
           total_pips: number
           total_signals: number
+          total_wins: number
+          win_rate: number
+        }[]
+      }
+      get_mt5_demo_stats: {
+        Args: { p_days?: number }
+        Returns: {
+          accuracy_percent: number
+          total_breakeven: number
+          total_losses: number
+          total_profit: number
+          total_trades: number
           total_wins: number
           win_rate: number
         }[]
