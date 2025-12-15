@@ -125,6 +125,14 @@ export default {
             boxShadow: "inset 0 0 20px hsl(45 100% 50% / 0.2)"
           },
         },
+        "price-up": {
+          "0%": { backgroundColor: "hsl(142 76% 36% / 0.3)", transform: "scale(1.05)" },
+          "100%": { backgroundColor: "transparent", transform: "scale(1)" },
+        },
+        "price-down": {
+          "0%": { backgroundColor: "hsl(0 84% 60% / 0.3)", transform: "scale(1.05)" },
+          "100%": { backgroundColor: "transparent", transform: "scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -136,6 +144,8 @@ export default {
         "crown-bounce": "crown-bounce 2s ease-in-out infinite",
         "border-glow": "border-glow 2s ease-in-out infinite",
         "tp-tick": "tp-tick 0.5s ease-out forwards",
+        "price-up": "price-up 0.4s ease-out",
+        "price-down": "price-down 0.4s ease-out",
       },
     },
   },

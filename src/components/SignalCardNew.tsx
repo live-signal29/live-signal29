@@ -5,7 +5,7 @@ import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { parseEntryPrice, calculateRunningPL, checkTPSLHit } from "@/hooks/useLivePrices";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -75,6 +75,25 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   
   // Current price from live feed or stored value
   const currentPrice = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
+  
+  // Track price direction for MT5-style color animation
+  const prevPriceRef = useRef<number>(currentPrice);
+  const [priceDirection, setPriceDirection] = useState<'up' | 'down' | null>(null);
+  
+  useEffect(() => {
+    if (currentPrice > 0 && prevPriceRef.current > 0 && currentPrice !== prevPriceRef.current) {
+      if (currentPrice > prevPriceRef.current) {
+        setPriceDirection('up');
+      } else if (currentPrice < prevPriceRef.current) {
+        setPriceDirection('down');
+      }
+      prevPriceRef.current = currentPrice;
+      
+      // Reset animation after it plays
+      const timer = setTimeout(() => setPriceDirection(null), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [currentPrice]);
   
   // Auto-activate limit orders when price hits
   useEffect(() => {
@@ -265,10 +284,21 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   }
                 </span>
               </span>
-              {/* Show current price for OPEN signals */}
+              {/* Show current price for OPEN signals with MT5-style animation */}
               {isOpen && currentPrice > 0 && !isLocked && (
                 <span className="text-[10px] text-muted-foreground">
-                  Current: <span className="font-semibold text-foreground">{currentPrice.toFixed(2)}</span>
+                  Current: <span 
+                    key={currentPrice}
+                    className={`font-semibold px-1 py-0.5 rounded transition-colors ${
+                      priceDirection === 'up' 
+                        ? 'text-success animate-price-up' 
+                        : priceDirection === 'down' 
+                          ? 'text-destructive animate-price-down' 
+                          : 'text-foreground'
+                    }`}
+                  >
+                    {currentPrice.toFixed(2)}
+                  </span>
                   {isPending && (
                     <span className="ml-2 text-orange-500 font-medium animate-pulse">⏳ Pending</span>
                   )}
