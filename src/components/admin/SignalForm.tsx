@@ -26,6 +26,8 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     main_category: editSignal?.main_category || "FOREX",
     sub_category: editSignal?.sub_category || "",
     entry: editSignal?.entry || "",
+    entry_mode: editSignal?.entry_mode || "market",
+    limit_entry_price: editSignal?.limit_entry_price || "",
     tp1: editSignal?.tp1 || "",
     tp2: editSignal?.tp2 || "",
     tp3: editSignal?.tp3 || "",
@@ -61,6 +63,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     setLoading(true);
 
     try {
+      const isLimitOrder = formData.entry_mode === 'limit';
+      const limitPrice = isLimitOrder && formData.limit_entry_price 
+        ? parseFloat(formData.limit_entry_price) 
+        : null;
+
       const cleanedData = {
         pair: validation.data.pair,
         type: validation.data.type,
@@ -68,6 +75,10 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         main_category: validation.data.main_category,
         sub_category: validation.data.sub_category || null,
         entry: validation.data.entry,
+        entry_mode: formData.entry_mode,
+        limit_entry_price: limitPrice,
+        is_activated: isLimitOrder ? false : true, // Limit orders start as pending
+        activated_at: isLimitOrder ? null : new Date().toISOString(),
         tp1: validation.data.tp1,
         tp2: validation.data.tp2 || null,
         tp3: validation.data.tp3 || null,
@@ -163,6 +174,18 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           </Select>
         </div>
         <div>
+          <Label>Entry Mode</Label>
+          <Select value={formData.entry_mode} onValueChange={(value) => setFormData({ ...formData, entry_mode: value })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="market">📈 Market (Immediate)</SelectItem>
+              <SelectItem value="limit">⏳ Limit (Pending)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
           <Label>Signal Status</Label>
           <Select value={formData.signal_status} onValueChange={(value) => setFormData({ ...formData, signal_status: value })}>
             <SelectTrigger>
@@ -179,7 +202,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label>Entry Price</Label>
+            <Label>Entry Price {formData.entry_mode === 'limit' ? '(Display Text)' : ''}</Label>
             <Input
               placeholder="e.g., 2650.00 or Gold Buy Zone"
               value={formData.entry}
@@ -187,6 +210,20 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
               required
             />
           </div>
+          {formData.entry_mode === 'limit' && (
+            <div>
+              <Label>Limit Entry Price (Numeric)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="e.g., 4347.00"
+                value={formData.limit_entry_price}
+                onChange={(e) => setFormData({ ...formData, limit_entry_price: e.target.value })}
+                required
+              />
+              <p className="text-xs text-muted-foreground mt-1">Signal activates when price hits this level</p>
+            </div>
+          )}
           <div>
             <Label>Stop Loss (SL)</Label>
             <Input
