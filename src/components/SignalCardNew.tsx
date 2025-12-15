@@ -54,9 +54,10 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
   const isOpen = signal.signal_status !== 'CLOSE';
   
-  // For premium signals: ONLY premium subscribers can see them (not free trial users)
+  // For premium signals: ONLY premium subscribers can see OPEN premium signals
+  // CLOSED premium signals are visible to everyone (including free trial users)
   const isPremiumUser = subscriptionStatus === 'premium';
-  const isLocked = signal.is_premium && !isPremiumUser;
+  const isLocked = signal.is_premium && !isPremiumUser && isOpen;
   
   // Parse entry price for calculations
   const entryPrice = parseEntryPrice(signal.entry);
