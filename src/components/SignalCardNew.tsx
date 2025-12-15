@@ -360,11 +360,6 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   {signal.signal_type}
                 </Badge>
               )}
-              {isPending && (
-                <Badge className="bg-orange-500/20 text-orange-500 border-orange-500 border text-[10px] sm:text-xs">
-                  Pending
-                </Badge>
-              )}
               {signal.pips_result && (
                 <Badge className="bg-success/10 text-success border-success border text-[10px] sm:text-xs font-semibold">
                   {signal.pips_result}
@@ -469,10 +464,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </div>
               ) : isPending ? (
                 // Pending must not show Open/Active or Running P/L
-                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
-                  <span className="text-[10px] font-medium text-orange-500">Pending</span>
-                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
-                    ⏳ Waiting for price to hit {limitPrice}
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-center">
+                  <p className="text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
+                    ⏳ Wait for entry level
                   </p>
                 </div>
               ) : (
