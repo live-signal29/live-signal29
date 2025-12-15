@@ -70,19 +70,21 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   // LIMIT SELL: Pending when current_price < entry_price, Active when current_price >= entry_price
   const computePendingStatus = (): boolean => {
     if (!isLimitOrder || !isOpen) return false;
-    if (limitPrice <= 0 || livePriceValue <= 0) return !signal.is_activated; // Fallback to DB value
-    
+
+    // Once activated in DB, it must stay ACTIVE (never revert back to Pending)
+    if (signal.is_activated) return false;
+
+    // If we don't have reliable numbers yet, keep it pending (because it's a limit order)
+    if (limitPrice <= 0 || livePriceValue <= 0) return true;
+
     const isBuy = signal.type?.toLowerCase() === 'buy';
-    
-    if (isBuy) {
-      // BUY Limit: Pending if currentPrice > limitPrice
-      return livePriceValue > limitPrice;
-    } else {
-      // SELL Limit: Pending if currentPrice < limitPrice  
-      return livePriceValue < limitPrice;
-    }
+
+    // MT5/TradingView strict logic
+    // LIMIT BUY: pending while current_price > entry_price
+    // LIMIT SELL: pending while current_price < entry_price
+    return isBuy ? livePriceValue > limitPrice : livePriceValue < limitPrice;
   };
-  
+
   const isPending = computePendingStatus();
   
   // For premium signals: ONLY premium subscribers can see OPEN premium signals
