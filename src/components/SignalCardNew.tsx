@@ -21,6 +21,10 @@ interface SignalCardProps {
     pair: string;
     type: "Buy" | "Sell";
     entry: string;
+    entry_mode?: string;
+    limit_entry_price?: number | null;
+    is_activated?: boolean;
+    activated_at?: string | null;
     tp1: string;
     tp2?: string;
     tp3?: string;
@@ -54,19 +58,55 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
   const isOpen = signal.signal_status !== 'CLOSE';
   
+  // Entry mode logic
+  const isLimitOrder = signal.entry_mode === 'limit';
+  const isPending = isLimitOrder && !signal.is_activated && isOpen;
+  const limitPrice = signal.limit_entry_price || 0;
+  
   // For premium signals: ONLY premium subscribers can see OPEN premium signals
   // CLOSED premium signals are visible to everyone (including free trial users)
   const isPremiumUser = subscriptionStatus === 'premium';
   const isLocked = signal.is_premium && !isPremiumUser && isOpen;
   
-  // Parse entry price for calculations
-  const entryPrice = parseEntryPrice(signal.entry);
+  // Parse entry price for calculations (use limit_entry_price for limit orders after activation)
+  const entryPrice = isLimitOrder && signal.is_activated && limitPrice > 0 
+    ? limitPrice 
+    : parseEntryPrice(signal.entry);
   
   // Current price from live feed or stored value
   const currentPrice = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
   
-  // Calculate running P/L only for OPEN signals
-  const runningPL = isOpen && currentPrice > 0 && entryPrice > 0
+  // Auto-activate limit orders when price hits
+  useEffect(() => {
+    if (!isPending || !currentPrice || !limitPrice || signal.sl_hit) return;
+    
+    const isBuy = signal.type?.toLowerCase() === 'buy';
+    let shouldActivate = false;
+    
+    // BUY Limit: Activate when CurrentPrice <= Entry Price
+    // SELL Limit: Activate when CurrentPrice >= Entry Price
+    if (isBuy && currentPrice <= limitPrice) {
+      shouldActivate = true;
+    } else if (!isBuy && currentPrice >= limitPrice) {
+      shouldActivate = true;
+    }
+    
+    if (shouldActivate) {
+      supabase
+        .from('signals')
+        .update({ 
+          is_activated: true, 
+          activated_at: new Date().toISOString() 
+        })
+        .eq('id', signal.id)
+        .then(({ error }) => {
+          if (error) console.error('Error activating limit order:', error);
+        });
+    }
+  }, [currentPrice, isPending, limitPrice, signal.id, signal.type, signal.sl_hit]);
+  
+  // Calculate running P/L only for ACTIVATED OPEN signals
+  const runningPL = isOpen && !isPending && currentPrice > 0 && entryPrice > 0
     ? calculateRunningPL(currentPrice, entryPrice, signal.type)
     : null;
 
@@ -166,9 +206,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   };
 
   const getRiskLevelColor = () => {
-    if (signal.risk_level === "High") return "bg-destructive/10 text-destructive border-destructive";
-    if (signal.risk_level === "Medium") return "bg-warning/10 text-warning border-warning";
-    return "bg-success/10 text-success border-success";
+    if (signal.risk_level === "High") return "bg-card text-destructive border-destructive";
+    if (signal.risk_level === "Medium") return "bg-card text-warning border-warning";
+    return "bg-card text-success border-success";
   };
 
   const formatDate = (dateString: string) => {
@@ -215,13 +255,23 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
               <span className="text-xs sm:text-sm font-medium">
                 <span className="text-muted-foreground">Entry:</span>
                 <span className={`font-semibold ml-1 ${
-                  isLocked ? 'text-yellow-500' : 'text-blue-500'
-                }`}>{signal.entry}</span>
+                  isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : signal.is_activated && isLimitOrder ? 'text-success' : 'text-blue-500'
+                }`}>
+                  {isPending 
+                    ? `Limit ${signal.type} ${limitPrice}` 
+                    : signal.is_activated && isLimitOrder 
+                      ? `Active ${signal.type} @ ${limitPrice}`
+                      : signal.entry
+                  }
+                </span>
               </span>
-              {/* Show current price only for OPEN signals */}
+              {/* Show current price for OPEN signals */}
               {isOpen && currentPrice > 0 && !isLocked && (
                 <span className="text-[10px] text-muted-foreground">
                   Current: <span className="font-semibold text-foreground">{currentPrice.toFixed(2)}</span>
+                  {isPending && (
+                    <span className="ml-2 text-orange-500 font-medium animate-pulse">⏳ Pending</span>
+                  )}
                 </span>
               )}
             </div>
@@ -289,15 +339,25 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
           /* Unlocked State - Show all details */
           <>
             {/* Badges Row - Side aligned */}
-            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-background border-b border-border">
+            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-card border-b border-border">
               {signal.risk_level && (
                 <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
                   {signal.risk_level} Risk
                 </Badge>
               )}
               {signal.signal_type && (
-                <Badge variant="outline" className="text-[10px] sm:text-xs">
+                <Badge variant="outline" className="bg-card text-[10px] sm:text-xs">
                   {signal.signal_type}
+                </Badge>
+              )}
+              {isPending && (
+                <Badge className="bg-orange-500/20 text-orange-500 border-orange-500 border text-[10px] sm:text-xs animate-pulse">
+                  ⏳ Pending
+                </Badge>
+              )}
+              {signal.is_activated && isLimitOrder && !isPending && (
+                <Badge className="bg-success/20 text-success border-success border text-[10px] sm:text-xs">
+                  ✓ Activated
                 </Badge>
               )}
               {signal.pips_result && (
@@ -391,14 +451,22 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                     {signal.profit_note}
                   </p>
                 </div>
-              ) : isOpen && runningPL ? (
-                // Show running P/L for OPEN signals
+              ) : isOpen && !isPending && runningPL ? (
+                // Show running P/L for ACTIVATED OPEN signals
                 <div className="mt-2 pt-2 border-t border-border flex items-center">
                   <span className="text-[10px] font-medium text-blue-500">Open</span>
                   <p className={`flex-1 text-center text-xs sm:text-sm font-bold ${
                     runningPL.isProfit ? 'text-success' : 'text-destructive'
                   }`}>
-                    {runningPL.formatted}
+                    Running P/L: {runningPL.formatted}
+                  </p>
+                </div>
+              ) : isPending ? (
+                // Show pending status for limit orders
+                <div className="mt-2 pt-2 border-t border-border flex items-center">
+                  <span className="text-[10px] font-medium text-orange-500">Pending</span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
+                    ⏳ Waiting for price to hit {limitPrice}
                   </p>
                 </div>
               ) : (

@@ -566,6 +566,7 @@ export type Database = {
       }
       signals: {
         Row: {
+          activated_at: string | null
           analysis_reason: string | null
           auto_closed: boolean | null
           category: string
@@ -573,10 +574,13 @@ export type Database = {
           created_at: string
           current_price: string | null
           entry: string
+          entry_mode: string | null
           expiry_time: string | null
           id: string
+          is_activated: boolean | null
           is_favorite: boolean | null
           is_premium: boolean | null
+          limit_entry_price: number | null
           main_category: string | null
           note: string | null
           pair: string
@@ -602,6 +606,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activated_at?: string | null
           analysis_reason?: string | null
           auto_closed?: boolean | null
           category: string
@@ -609,10 +614,13 @@ export type Database = {
           created_at?: string
           current_price?: string | null
           entry: string
+          entry_mode?: string | null
           expiry_time?: string | null
           id?: string
+          is_activated?: boolean | null
           is_favorite?: boolean | null
           is_premium?: boolean | null
+          limit_entry_price?: number | null
           main_category?: string | null
           note?: string | null
           pair: string
@@ -638,6 +646,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activated_at?: string | null
           analysis_reason?: string | null
           auto_closed?: boolean | null
           category?: string
@@ -645,10 +654,13 @@ export type Database = {
           created_at?: string
           current_price?: string | null
           entry?: string
+          entry_mode?: string | null
           expiry_time?: string | null
           id?: string
+          is_activated?: boolean | null
           is_favorite?: boolean | null
           is_premium?: boolean | null
+          limit_entry_price?: number | null
           main_category?: string | null
           note?: string | null
           pair?: string
