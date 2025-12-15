@@ -173,22 +173,17 @@ serve(async (req) => {
         
         const isBuy = signal.type?.toLowerCase() === 'buy';
         
-        // Check for limit order activation
+        // Check for limit order activation (STRICT)
+        // Only activate when order is pending (is_activated = false) AND entry_mode = 'limit' AND limit_entry_price is valid.
         const isLimitOrder = signal.entry_mode === 'limit';
-        const isPending = isLimitOrder && !signal.is_activated;
-        const limitPrice = signal.limit_entry_price || 0;
-        
+        const isPending = isLimitOrder && signal.is_activated === false;
+        const limitPrice = typeof signal.limit_entry_price === 'number' ? signal.limit_entry_price : 0;
+
         if (isPending && limitPrice > 0) {
-          // BUY Limit: Activate when CurrentPrice <= Entry Price
-          // SELL Limit: Activate when CurrentPrice >= Entry Price
-          let shouldActivate = false;
-          
-          if (isBuy && priceNum <= limitPrice) {
-            shouldActivate = true;
-          } else if (!isBuy && priceNum >= limitPrice) {
-            shouldActivate = true;
-          }
-          
+          // LIMIT BUY: Activate ONLY when CurrentPrice <= Entry Price
+          // LIMIT SELL: Activate ONLY when CurrentPrice >= Entry Price
+          const shouldActivate = isBuy ? (priceNum <= limitPrice) : (priceNum >= limitPrice);
+
           if (shouldActivate) {
             updates.is_activated = true;
             updates.activated_at = new Date().toISOString();
@@ -196,9 +191,9 @@ serve(async (req) => {
             console.log(`Limit order activated for signal ${signal.id} at price ${priceNum}`);
           }
         }
-        
+
         // Only check TP/SL for activated signals (market orders are always activated)
-        const isActivated = !isLimitOrder || signal.is_activated || updates.is_activated;
+        const isActivated = !isLimitOrder || signal.is_activated === true || updates.is_activated === true;
         
         if (isActivated) {
           // TP1 - only if TP1 has a valid numeric price
