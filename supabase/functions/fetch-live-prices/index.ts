@@ -125,12 +125,12 @@ serve(async (req) => {
       );
     }
     
-    // Full update mode - get all active signals and update
+    // Full update mode - get all non-closed signals and update
     const { data: signals, error } = await supabase
       .from("signals")
       .select("id, pair, type, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, signal_status, entry_mode, limit_entry_price, is_activated")
       .eq("published", true)
-      .eq("signal_status", "OPEN");
+      .neq("signal_status", "close");
     
     if (error) {
       throw error;
@@ -172,19 +172,21 @@ serve(async (req) => {
         };
         
         const isBuy = signal.type?.toLowerCase() === 'buy';
-        
-        // Check for limit order activation (STRICT)
-        // Only activate when order is pending (is_activated = false) AND entry_mode = 'limit' AND limit_entry_price is valid.
+
+        // LIMIT ORDER ACTIVATION (system standard)
+        // Only check orders that are PENDING.
         const isLimitOrder = signal.entry_mode === 'limit';
-        const isPending = isLimitOrder && signal.is_activated === false;
+        const isPending = signal.signal_status === 'pending';
         const limitPrice = typeof signal.limit_entry_price === 'number' ? signal.limit_entry_price : 0;
 
-        if (isPending && limitPrice > 0) {
+        if (isLimitOrder && isPending && limitPrice > 0) {
           // LIMIT BUY: Activate ONLY when CurrentPrice <= Entry Price
           // LIMIT SELL: Activate ONLY when CurrentPrice >= Entry Price
           const shouldActivate = isBuy ? (priceNum <= limitPrice) : (priceNum >= limitPrice);
 
           if (shouldActivate) {
+            updates.signal_status = 'open';
+            updates.status = 'open';
             updates.is_activated = true;
             updates.activated_at = new Date().toISOString();
             activatedCount++;
@@ -192,10 +194,10 @@ serve(async (req) => {
           }
         }
 
-        // Only check TP/SL for activated signals (market orders are always activated)
-        const isActivated = !isLimitOrder || signal.is_activated === true || updates.is_activated === true;
-        
-        if (isActivated) {
+        // Only check TP/SL for OPEN signals (active trades)
+        const isOpen = signal.signal_status === 'open' || updates.signal_status === 'open';
+
+        if (isOpen) {
           // TP1 - only if TP1 has a valid numeric price
           if (!signal.tp1_hit && signal.tp1) {
             const tp1Price = parsePrice(signal.tp1);
@@ -204,7 +206,7 @@ serve(async (req) => {
               console.log(`TP1 hit for signal ${signal.id}`);
             }
           }
-          
+
           // TP2 - only if TP2 has a valid numeric price
           if (!signal.tp2_hit && signal.tp2) {
             const tp2Price = parsePrice(signal.tp2);
@@ -213,7 +215,7 @@ serve(async (req) => {
               console.log(`TP2 hit for signal ${signal.id}`);
             }
           }
-          
+
           // TP3 - only if TP3 has a valid numeric price
           if (!signal.tp3_hit && signal.tp3) {
             const tp3Price = parsePrice(signal.tp3);
@@ -222,7 +224,7 @@ serve(async (req) => {
               console.log(`TP3 hit for signal ${signal.id}`);
             }
           }
-          
+
           // TP4 - only if TP4 has a valid numeric price
           if (!signal.tp4_hit && signal.tp4) {
             const tp4Price = parsePrice(signal.tp4);
@@ -231,13 +233,14 @@ serve(async (req) => {
               console.log(`TP4 hit for signal ${signal.id}`);
             }
           }
-          
+
           // SL - if hit, close signal (only when SL has a valid numeric price)
           if (!signal.sl_hit && signal.sl) {
             const slPrice = parsePrice(signal.sl);
             if (slPrice > 0 && (isBuy ? priceNum <= slPrice : priceNum >= slPrice)) {
               updates.sl_hit = true;
-              updates.signal_status = 'CLOSE';
+              updates.signal_status = 'close';
+              updates.status = 'close';
               console.log(`SL hit for signal ${signal.id} - closing signal`);
             }
           }
