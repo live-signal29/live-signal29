@@ -109,8 +109,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
 
   // Auto-update TP/SL hits
   useEffect(() => {
-    // STRICT: do not evaluate TP/SL until signal is OPEN
-    if (!isOpen || !currentPrice || signal.sl_hit) return;
+    // STRICT: do not evaluate TP/SL until signal is OPEN (not pending, not closed)
+    // isPending or isClosed signals should NEVER trigger TP/SL checks
+    if (!isOpen || isPending || isClosed || !currentPrice || signal.sl_hit) return;
 
     const checkAndUpdate = async () => {
       const updates: Record<string, boolean | string> = {};
@@ -152,7 +153,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         const slPrice = parseEntryPrice(signal.sl);
         if (checkTPSLHit(currentPrice, slPrice, signal.type, true)) {
           updates.sl_hit = true;
-          updates.signal_status = 'CLOSE';
+          updates.signal_status = 'close';
         }
       }
 
@@ -162,8 +163,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     };
 
     checkAndUpdate();
-  }, [isOpen, currentPrice, signal.id, signal.type, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl,
-      signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit, signal.sl_hit, isOpen]);
+  }, [isOpen, isPending, isClosed, currentPrice, signal.id, signal.type, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl,
+      signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit, signal.sl_hit]);
   
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
     const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;
