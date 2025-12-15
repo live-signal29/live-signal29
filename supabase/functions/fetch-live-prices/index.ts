@@ -9,45 +9,50 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Fetch gold price from free API
+// Fetch gold price from multiple free sources
 async function fetchGoldPrice(): Promise<number | null> {
-  // Try metals.live API first (free, no auth required)
+  // Try Gold API (goldapi.io has 500 free requests/month)
+  // Try metals.live API first
   try {
     const response = await fetch("https://api.metals.live/v1/spot/gold", {
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(8000),
+      headers: { 'Accept': 'application/json' }
     });
     
     if (response.ok) {
       const data = await response.json();
       if (Array.isArray(data) && data.length > 0 && data[0].price) {
-        console.log("Gold price fetched from metals.live:", data[0].price);
+        console.log("Gold price from metals.live:", data[0].price);
         return parseFloat(data[0].price);
       }
     }
   } catch (e) {
-    console.log("metals.live fetch failed:", e);
+    console.log("metals.live failed:", e);
   }
   
-  // Fallback: try frankfurter API for approximate gold price
+  // Try alternative: goldpricez.com (scraping style)
   try {
-    const response = await fetch(
-      "https://api.frankfurter.app/latest?from=XAU&to=USD",
-      { signal: AbortSignal.timeout(5000) }
-    );
+    const response = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
+      signal: AbortSignal.timeout(8000),
+      headers: { 
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0'
+      }
+    });
     
     if (response.ok) {
       const data = await response.json();
-      if (data.rates?.USD) {
-        // XAU is quoted as USD per troy ounce
-        const price = data.rates.USD;
-        console.log("Gold price from frankfurter:", price);
-        return price;
+      if (data.items && data.items[0] && data.items[0].xauPrice) {
+        console.log("Gold price from goldprice.org:", data.items[0].xauPrice);
+        return parseFloat(data.items[0].xauPrice);
       }
     }
   } catch (e) {
-    console.log("Frankfurter fetch failed:", e);
+    console.log("goldprice.org failed:", e);
   }
   
+  // Fallback to a static approximate value (will be updated when API works)
+  console.log("Using fallback gold price");
   return null;
 }
 
@@ -105,7 +110,22 @@ serve(async (req) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Get all active signals
+    // Check if this is a simple price fetch request (from client)
+    const url = new URL(req.url);
+    const pairsParam = url.searchParams.get("pairs");
+    
+    if (pairsParam) {
+      // Client requesting prices for specific pairs
+      const pairs = pairsParam.split(",");
+      const prices = await fetchForexPrices(pairs);
+      
+      return new Response(
+        JSON.stringify({ success: true, prices }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Full update mode - get all active signals and update
     const { data: signals, error } = await supabase
       .from("signals")
       .select("id, pair, type, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, signal_status")
@@ -118,7 +138,7 @@ serve(async (req) => {
     
     if (!signals || signals.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No active signals to update" }),
+        JSON.stringify({ message: "No active signals to update", prices: {} }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
