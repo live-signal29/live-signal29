@@ -55,8 +55,8 @@ interface SignalCardProps {
 
 const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice }: SignalCardProps) => {
   const navigate = useNavigate();
-  const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'close';
   const lifecycle = (signal.signal_status || signal.status || 'open').toLowerCase();
+  const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && lifecycle !== 'close';
   const isPending = lifecycle === 'pending';
   const isOpen = lifecycle === 'open';
   const isClosed = lifecycle === 'close';
@@ -198,9 +198,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   };
 
   const getStatusColor = () => {
-    const status = signal.signal_status || "OPEN";
-    if (status === "CLOSE") return "bg-destructive/10 text-destructive border-destructive";
-    if (status === "LIVE") return "bg-success/10 text-success border-success";
+    const status = (signal.signal_status || signal.status || "open").toLowerCase();
+    if (status === "close") return "bg-destructive/10 text-destructive border-destructive";
+    if (status === "pending") return "bg-warning/10 text-warning border-warning";
     return "bg-primary/10 text-primary border-primary";
   };
 
@@ -440,19 +440,19 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
 
               {/* Profit Note / Running P/L + Status together */}
               {signal.profit_note ? (
-                // Show static profit note for CLOSED signals
+                // Show static profit note (typically for CLOSED signals)
                 <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
                   <span className={`text-[10px] font-medium ${
-                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
+                    isClosed ? 'text-destructive' : isPending ? 'text-orange-500' : 'text-blue-500'
                   }`}>
-                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                    {isClosed ? 'Close' : isPending ? 'Pending' : 'Open'}
                   </span>
                   <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
                     {signal.profit_note}
                   </p>
                 </div>
               ) : isOpen && runningPL ? (
-                // Show running P/L ONLY for OPEN signals (Active in UI)
+                // Show running P/L ONLY for OPEN signals
                 <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
                   <span className="text-[10px] font-medium text-blue-500">Active</span>
                   <p className="flex-1 text-center text-xs sm:text-sm font-bold">
@@ -463,19 +463,18 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   </p>
                 </div>
               ) : isPending ? (
-                // Pending must not show Open/Active or Running P/L
-                <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-center">
-                  <p className="text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
+                // Pending: show Pending status on left + center helper text
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
+                  <span className="text-[10px] font-medium text-orange-500">Pending</span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
                     ⏳ Wait for entry level
                   </p>
                 </div>
               ) : (
                 // Default: just show status
                 <div className="mt-2 pt-2 border-t border-border/30 flex justify-start">
-                  <span className={`text-[10px] font-medium ${
-                    getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
-                  }`}>
-                    {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+                  <span className={`text-[10px] font-medium ${isClosed ? 'text-destructive' : 'text-blue-500'}`}>
+                    {isClosed ? 'Close' : 'Open'}
                   </span>
                 </div>
               )}
