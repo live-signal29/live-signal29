@@ -235,7 +235,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         )}
 
         {/* Header - Always Visible */}
-        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border">
+        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border/30">
           <div className="flex items-start gap-2">
             <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs mt-0.5`}>
               {signal.type.toUpperCase()}
@@ -339,7 +339,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
           /* Unlocked State - Show all details */
           <>
             {/* Badges Row - Side aligned */}
-            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-card border-b border-border">
+            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-card border-b border-border/30">
               {signal.risk_level && (
                 <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
                   {signal.risk_level} Risk
@@ -370,7 +370,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
             {/* TP/SL Table */}
             <div className="p-3 sm:p-4">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                <div className="flex justify-between items-center py-1.5 border-b border-border/20">
                   <span className="text-muted-foreground text-xs sm:text-sm">
                     TAKE PROFIT 1 {signal.tp1_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                   </span>
@@ -380,7 +380,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </div>
                 
                 {signal.tp2 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/20">
                     <span className="text-muted-foreground text-xs sm:text-sm">
                       TAKE PROFIT 2 {signal.tp2_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
@@ -391,7 +391,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 )}
                 
                 {signal.tp3 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/20">
                     <span className="text-muted-foreground text-xs sm:text-sm">
                       TAKE PROFIT 3 {signal.tp3_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
@@ -402,7 +402,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 )}
 
                 {signal.tp4 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/20">
                     <span className="text-muted-foreground text-xs sm:text-sm">
                       TAKE PROFIT 4 {signal.tp4_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
@@ -412,7 +412,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                <div className="flex justify-between items-center py-1.5 border-b border-border/20">
                   <span className="text-muted-foreground text-xs sm:text-sm">
                     SL-BELOW {signal.sl_hit && <span className="text-destructive">✗</span>}
                   </span>
@@ -453,17 +453,18 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </div>
               ) : isOpen && !isPending && runningPL ? (
                 // Show running P/L for ACTIVATED OPEN signals
-                <div className="mt-2 pt-2 border-t border-border flex items-center">
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
                   <span className="text-[10px] font-medium text-blue-500">Open</span>
-                  <p className={`flex-1 text-center text-xs sm:text-sm font-bold ${
-                    runningPL.isProfit ? 'text-success' : 'text-destructive'
-                  }`}>
-                    Running P/L: {runningPL.formatted}
+                  <p className="flex-1 text-center text-xs sm:text-sm font-bold">
+                    <span className="text-foreground">Running P/L:</span>{' '}
+                    <span className={runningPL.isProfit ? 'text-success' : 'text-destructive'}>
+                      {runningPL.formatted}
+                    </span>
                   </p>
                 </div>
               ) : isPending ? (
                 // Show pending status for limit orders
-                <div className="mt-2 pt-2 border-t border-border flex items-center">
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
                   <span className="text-[10px] font-medium text-orange-500">Pending</span>
                   <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
                     ⏳ Waiting for price to hit {limitPrice}
@@ -471,7 +472,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </div>
               ) : (
                 // Default: just show status
-                <div className="mt-2 pt-2 border-t border-border flex justify-start">
+                <div className="mt-2 pt-2 border-t border-border/30 flex justify-start">
                   <span className={`text-[10px] font-medium ${
                     getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
                   }`}>
