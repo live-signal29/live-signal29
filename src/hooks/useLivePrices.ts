@@ -33,19 +33,33 @@ export const calculateRunningPL = (
 };
 
 // Check if TP/SL is hit
+// BUY: TP hit when price >= TP, SL hit when price <= SL
+// SELL: TP hit when price <= TP, SL hit when price >= SL
 export const checkTPSLHit = (
   currentPrice: number,
   targetPrice: number,
   signalType: string,
   isSL: boolean = false
 ): boolean => {
-  if (!currentPrice || !targetPrice) return false;
+  if (!currentPrice || !targetPrice || currentPrice <= 0 || targetPrice <= 0) return false;
+  
   const isBuy = signalType?.toLowerCase() === 'buy';
   
   if (isSL) {
-    return isBuy ? currentPrice <= targetPrice : currentPrice >= targetPrice;
+    // SL hit: BUY when price drops to/below SL, SELL when price rises to/above SL
+    if (isBuy) {
+      return currentPrice <= targetPrice;
+    } else {
+      return currentPrice >= targetPrice;
+    }
   }
-  return isBuy ? currentPrice >= targetPrice : currentPrice <= targetPrice;
+  
+  // TP hit: BUY when price rises to/above TP, SELL when price drops to/below TP
+  if (isBuy) {
+    return currentPrice >= targetPrice;
+  } else {
+    return currentPrice <= targetPrice;
+  }
 };
 
 // Hook to fetch live prices via edge function (avoids CORS issues)
