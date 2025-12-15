@@ -172,46 +172,46 @@ serve(async (req) => {
         // Check TP/SL hits based on signal type
         const isBuy = signal.type?.toLowerCase() === 'buy';
         
-        // TP1
+        // TP1 - only if TP1 has a valid numeric price
         if (!signal.tp1_hit && signal.tp1) {
           const tp1Price = parsePrice(signal.tp1);
-          if (isBuy ? priceNum >= tp1Price : priceNum <= tp1Price) {
+          if (tp1Price > 0 && (isBuy ? priceNum >= tp1Price : priceNum <= tp1Price)) {
             updates.tp1_hit = true;
             console.log(`TP1 hit for signal ${signal.id}`);
           }
         }
         
-        // TP2
+        // TP2 - only if TP2 has a valid numeric price
         if (!signal.tp2_hit && signal.tp2) {
           const tp2Price = parsePrice(signal.tp2);
-          if (isBuy ? priceNum >= tp2Price : priceNum <= tp2Price) {
+          if (tp2Price > 0 && (isBuy ? priceNum >= tp2Price : priceNum <= tp2Price)) {
             updates.tp2_hit = true;
             console.log(`TP2 hit for signal ${signal.id}`);
           }
         }
         
-        // TP3
+        // TP3 - only if TP3 has a valid numeric price
         if (!signal.tp3_hit && signal.tp3) {
           const tp3Price = parsePrice(signal.tp3);
-          if (isBuy ? priceNum >= tp3Price : priceNum <= tp3Price) {
+          if (tp3Price > 0 && (isBuy ? priceNum >= tp3Price : priceNum <= tp3Price)) {
             updates.tp3_hit = true;
             console.log(`TP3 hit for signal ${signal.id}`);
           }
         }
         
-        // TP4
+        // TP4 - only if TP4 has a valid numeric price
         if (!signal.tp4_hit && signal.tp4) {
           const tp4Price = parsePrice(signal.tp4);
-          if (isBuy ? priceNum >= tp4Price : priceNum <= tp4Price) {
+          if (tp4Price > 0 && (isBuy ? priceNum >= tp4Price : priceNum <= tp4Price)) {
             updates.tp4_hit = true;
             console.log(`TP4 hit for signal ${signal.id}`);
           }
         }
         
-        // SL - if hit, close signal
+        // SL - if hit, close signal (only when SL has a valid numeric price)
         if (!signal.sl_hit && signal.sl) {
           const slPrice = parsePrice(signal.sl);
-          if (isBuy ? priceNum <= slPrice : priceNum >= slPrice) {
+          if (slPrice > 0 && (isBuy ? priceNum <= slPrice : priceNum >= slPrice)) {
             updates.sl_hit = true;
             updates.signal_status = 'CLOSE';
             console.log(`SL hit for signal ${signal.id} - closing signal`);
