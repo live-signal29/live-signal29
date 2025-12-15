@@ -264,8 +264,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   }
                 </span>
               </span>
-              {/* Show current price for OPEN signals with MT5-style animation */}
-              {isOpen && currentPrice > 0 && !isLocked && (
+              {/* Show current price for OPEN and PENDING signals with MT5-style animation */}
+              {(isOpen || isPending) && currentPrice > 0 && !isLocked && (
                 <span className="text-[10px] text-muted-foreground">
                   Current: <span
                     key={currentPrice}
@@ -279,9 +279,6 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   >
                     {currentPrice.toFixed(2)}
                   </span>
-                  {isPending && (
-                    <span className="ml-2 text-orange-500 font-medium">Waiting for trade</span>
-                  )}
                 </span>
               )}
             </div>
