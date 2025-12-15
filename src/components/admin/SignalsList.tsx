@@ -145,9 +145,10 @@ const SignalsList = () => {
 
   const updateSignalStatus = async (id: string, newStatus: string) => {
     try {
+      // Update both signal_status and status columns to keep them in sync
       const { error } = await supabase
         .from("signals")
-        .update({ signal_status: newStatus })
+        .update({ signal_status: newStatus, status: newStatus })
         .eq("id", id);
       
       if (error) throw error;
@@ -228,8 +229,9 @@ const SignalsList = () => {
                     )}
                     {bulkAction === "signal_status" && (
                       <>
-                        <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-                        <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
+                        <SelectItem value="pending">🟡 Pending</SelectItem>
+                        <SelectItem value="open">🟢 Open</SelectItem>
+                        <SelectItem value="close">🔴 Close</SelectItem>
                       </>
                     )}
                     {bulkAction === "signal_type" && (
@@ -294,8 +296,9 @@ const SignalsList = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-background z-50">
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-                  <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
+                  <SelectItem value="pending">🟡 Pending</SelectItem>
+                  <SelectItem value="open">🟢 Open</SelectItem>
+                  <SelectItem value="close">🔴 Close</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -371,13 +374,14 @@ const SignalsList = () => {
                     )}
                   </CardTitle>
                   <div className="flex items-center gap-3 mt-2">
-                    <Select value={signal.signal_status || "OPEN"} onValueChange={(value) => updateSignalStatus(signal.id, value)}>
+                    <Select value={signal.signal_status || "open"} onValueChange={(value) => updateSignalStatus(signal.id, value)}>
                       <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-                        <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
+                        <SelectItem value="pending">🟡 Pending</SelectItem>
+                        <SelectItem value="open">🟢 Open</SelectItem>
+                        <SelectItem value="close">🔴 Close</SelectItem>
                       </SelectContent>
                     </Select>
                     <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md">
