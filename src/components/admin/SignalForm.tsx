@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { signalSchema } from "@/lib/validations";
-import { Crown } from "lucide-react";
+import { Crown, TrendingUp, TrendingDown, Clock, Zap } from "lucide-react";
 
 interface SignalFormProps {
   onSuccess: () => void;
@@ -27,15 +27,12 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     sub_category: editSignal?.sub_category || "",
     entry: editSignal?.entry || "",
     entry_mode: editSignal?.entry_mode || "market",
-    limit_entry_price: editSignal?.limit_entry_price || "",
     tp1: editSignal?.tp1 || "",
     tp2: editSignal?.tp2 || "",
     tp3: editSignal?.tp3 || "",
     sl: editSignal?.sl || "",
     note: editSignal?.note || "",
     profit_note: editSignal?.profit_note || "",
-    status: editSignal?.status || "Active",
-    signal_status: editSignal?.signal_status || "OPEN",
     signal_type: editSignal?.signal_type || "",
     risk_level: editSignal?.risk_level || "",
     analysis_reason: editSignal?.analysis_reason || "",
@@ -53,6 +50,13 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate entry price is numeric
+    const entryPrice = parseFloat(formData.entry);
+    if (isNaN(entryPrice) || entryPrice <= 0) {
+      toast.error("Entry price must be a valid number");
+      return;
+    }
+
     // Validate input
     const validation = signalSchema.safeParse(formData);
     if (!validation.success) {
@@ -64,20 +68,19 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
 
     try {
       const isLimitOrder = formData.entry_mode === 'limit';
-      const limitPrice = isLimitOrder && formData.limit_entry_price 
-        ? parseFloat(formData.limit_entry_price) 
-        : null;
 
+      // Auto status control based on entry mode
+      // Market = Active immediately, Limit = Pending until price hits
       const cleanedData = {
         pair: validation.data.pair,
         type: validation.data.type,
         category: validation.data.category,
         main_category: validation.data.main_category,
         sub_category: validation.data.sub_category || null,
-        entry: validation.data.entry,
+        entry: formData.entry, // Single numeric entry price
         entry_mode: formData.entry_mode,
-        limit_entry_price: limitPrice,
-        is_activated: isLimitOrder ? false : true, // Limit orders start as pending
+        limit_entry_price: isLimitOrder ? entryPrice : null, // Use same entry for limit trigger
+        is_activated: isLimitOrder ? false : true, // Market = active, Limit = pending
         activated_at: isLimitOrder ? null : new Date().toISOString(),
         tp1: validation.data.tp1,
         tp2: validation.data.tp2 || null,
@@ -85,8 +88,8 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         sl: validation.data.sl,
         note: validation.data.note || null,
         profit_note: validation.data.profit_note || null,
-        status: formData.status,
-        signal_status: formData.signal_status,
+        status: "Active", // Always Active - status controlled by TP/SL
+        signal_status: "OPEN", // Always starts OPEN - auto-closes on TP/SL hit
         signal_type: validation.data.signal_type || null,
         risk_level: validation.data.risk_level || null,
         analysis_reason: validation.data.analysis_reason || null,
@@ -122,211 +125,284 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     }
   };
 
+  const isMarket = formData.entry_mode === 'market';
+  const isBuy = formData.type === 'Buy';
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Main Category</Label>
-          <Select 
-            value={formData.main_category} 
-            onValueChange={(value) => setFormData({ ...formData, main_category: value, category: value, sub_category: "" })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="FOREX">FOREX</SelectItem>
-              <SelectItem value="COMMODITIES">COMMODITIES</SelectItem>
-              <SelectItem value="INDICES">INDICES</SelectItem>
-              <SelectItem value="CRYPTO">CRYPTO</SelectItem>
-              <SelectItem value="DERIV/BINARY">DERIV / BINARY</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Sub-Category / Asset</Label>
-          <Select 
-            value={formData.sub_category} 
-            onValueChange={(value) => setFormData({ ...formData, sub_category: value, pair: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select asset" />
-            </SelectTrigger>
-            <SelectContent>
-              {subCategoryOptions[formData.main_category]?.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Type</Label>
-          <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Buy">Buy</SelectItem>
-              <SelectItem value="Sell">Sell</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Entry Mode</Label>
-          <Select value={formData.entry_mode} onValueChange={(value) => setFormData({ ...formData, entry_mode: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="market">📈 Market (Immediate)</SelectItem>
-              <SelectItem value="limit">⏳ Limit (Pending)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Signal Status</Label>
-          <Select value={formData.signal_status} onValueChange={(value) => setFormData({ ...formData, signal_status: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="OPEN">🟢 OPEN</SelectItem>
-              <SelectItem value="CLOSE">🔴 CLOSE</SelectItem>
-            </SelectContent>
-          </Select>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Trade Setup Section */}
+      <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+        <h3 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2">
+          <Zap className="h-4 w-4" />
+          Trade Setup
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs text-muted-foreground">Market</Label>
+            <Select 
+              value={formData.main_category} 
+              onValueChange={(value) => setFormData({ ...formData, main_category: value, category: value, sub_category: "" })}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FOREX">FOREX</SelectItem>
+                <SelectItem value="COMMODITIES">COMMODITIES</SelectItem>
+                <SelectItem value="INDICES">INDICES</SelectItem>
+                <SelectItem value="CRYPTO">CRYPTO</SelectItem>
+                <SelectItem value="DERIV/BINARY">DERIV / BINARY</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Symbol</Label>
+            <Select 
+              value={formData.sub_category} 
+              onValueChange={(value) => setFormData({ ...formData, sub_category: value, pair: value })}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select symbol" />
+              </SelectTrigger>
+              <SelectContent>
+                {subCategoryOptions[formData.main_category]?.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-4">
+      {/* Order Type Section - Professional MT5 Style */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Trade Type: Buy/Sell */}
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Trade Type</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, type: "Buy" })}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+                isBuy 
+                  ? 'bg-success/20 border-success text-success' 
+                  : 'border-border hover:border-success/50 text-muted-foreground hover:text-success'
+              }`}
+            >
+              <TrendingUp className="h-4 w-4" />
+              BUY
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, type: "Sell" })}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+                !isBuy 
+                  ? 'bg-destructive/20 border-destructive text-destructive' 
+                  : 'border-border hover:border-destructive/50 text-muted-foreground hover:text-destructive'
+              }`}
+            >
+              <TrendingDown className="h-4 w-4" />
+              SELL
+            </button>
+          </div>
+        </div>
+
+        {/* Entry Type: Market/Limit */}
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Entry Type</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, entry_mode: "market" })}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+                isMarket 
+                  ? 'bg-blue-500/20 border-blue-500 text-blue-500' 
+                  : 'border-border hover:border-blue-500/50 text-muted-foreground hover:text-blue-500'
+              }`}
+            >
+              <Zap className="h-4 w-4" />
+              MARKET
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, entry_mode: "limit" })}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+                !isMarket 
+                  ? 'bg-orange-500/20 border-orange-500 text-orange-500' 
+                  : 'border-border hover:border-orange-500/50 text-muted-foreground hover:text-orange-500'
+              }`}
+            >
+              <Clock className="h-4 w-4" />
+              LIMIT
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Auto Status Info */}
+      <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+        isMarket 
+          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+          : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+      }`}>
+        {isMarket ? (
+          <>
+            <Zap className="h-4 w-4" />
+            <span><strong>Market Order:</strong> Signal activates immediately at current price</span>
+          </>
+        ) : (
+          <>
+            <Clock className="h-4 w-4" />
+            <span><strong>Limit Order:</strong> Signal stays pending until price hits entry ({isBuy ? '≤' : '≥'} entry)</span>
+          </>
+        )}
+      </div>
+
+      {/* Price Levels Section */}
+      <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">Price Levels</h3>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label>Entry Price {formData.entry_mode === 'limit' ? '(Display Text)' : ''}</Label>
+            <Label className="text-xs text-muted-foreground">Entry Price</Label>
             <Input
-              placeholder="e.g., 2650.00 or Gold Buy Zone"
+              type="number"
+              step="0.00001"
+              placeholder="e.g., 2650.00"
               value={formData.entry}
               onChange={(e) => setFormData({ ...formData, entry: e.target.value })}
+              className="mt-1 font-mono text-lg"
               required
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {isMarket ? 'Entry at current market price' : `Triggers when price ${isBuy ? 'drops to' : 'rises to'} this level`}
+            </p>
           </div>
-          {formData.entry_mode === 'limit' && (
-            <div>
-              <Label>Limit Entry Price (Numeric)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="e.g., 4347.00"
-                value={formData.limit_entry_price}
-                onChange={(e) => setFormData({ ...formData, limit_entry_price: e.target.value })}
-                required
-              />
-              <p className="text-xs text-muted-foreground mt-1">Signal activates when price hits this level</p>
-            </div>
-          )}
           <div>
-            <Label>Stop Loss (SL)</Label>
+            <Label className="text-xs text-destructive">Stop Loss (SL)</Label>
             <Input
-              placeholder="e.g., 2640.00 or Below Support"
+              type="number"
+              step="0.00001"
+              placeholder="e.g., 2640.00"
               value={formData.sl}
               onChange={(e) => setFormData({ ...formData, sl: e.target.value })}
+              className="mt-1 font-mono text-lg border-destructive/30"
               required
             />
+            <p className="text-xs text-destructive/70 mt-1">Auto-closes signal if hit</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <Label>Take Profit 1 (TP1)</Label>
+            <Label className="text-xs text-success">Take Profit 1 (TP1)</Label>
             <Input
-              placeholder="e.g., 2660.00 or First Target"
+              type="number"
+              step="0.00001"
+              placeholder="e.g., 2660.00"
               value={formData.tp1}
               onChange={(e) => setFormData({ ...formData, tp1: e.target.value })}
+              className="mt-1 font-mono border-success/30"
               required
             />
           </div>
           <div>
-            <Label>Take Profit 2 (TP2)</Label>
+            <Label className="text-xs text-success/70">Take Profit 2 (TP2)</Label>
             <Input
+              type="number"
+              step="0.00001"
               placeholder="Optional"
               value={formData.tp2}
               onChange={(e) => setFormData({ ...formData, tp2: e.target.value })}
+              className="mt-1 font-mono border-success/20"
             />
           </div>
           <div>
-            <Label>Take Profit 3 (TP3)</Label>
+            <Label className="text-xs text-success/50">Take Profit 3 (TP3)</Label>
             <Input
+              type="number"
+              step="0.00001"
               placeholder="Optional"
               value={formData.tp3}
               onChange={(e) => setFormData({ ...formData, tp3: e.target.value })}
+              className="mt-1 font-mono border-success/10"
             />
           </div>
         </div>
       </div>
 
+      {/* Signal Details Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Signal Type</Label>
+          <Label className="text-xs text-muted-foreground">Signal Type</Label>
           <Select value={formData.signal_type} onValueChange={(value) => setFormData({ ...formData, signal_type: value })}>
-            <SelectTrigger>
+            <SelectTrigger className="mt-1">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Scalping">Scalping</SelectItem>
-              <SelectItem value="Intraday">Intraday</SelectItem>
-              <SelectItem value="Swing">Swing</SelectItem>
-              <SelectItem value="Long Term">Long Term</SelectItem>
+              <SelectItem value="Scalping">⚡ Scalping</SelectItem>
+              <SelectItem value="Intraday">📊 Intraday</SelectItem>
+              <SelectItem value="Swing">📈 Swing</SelectItem>
+              <SelectItem value="Long Term">🎯 Long Term</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label>Risk Level</Label>
+          <Label className="text-xs text-muted-foreground">Risk Level</Label>
           <Select value={formData.risk_level} onValueChange={(value) => setFormData({ ...formData, risk_level: value })}>
-            <SelectTrigger>
+            <SelectTrigger className="mt-1">
               <SelectValue placeholder="Select risk" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Low">Low</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Low">🟢 Low Risk</SelectItem>
+              <SelectItem value="Medium">🟡 Medium Risk</SelectItem>
+              <SelectItem value="High">🔴 High Risk</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <div>
-        <Label>Analysis / Reason (Optional)</Label>
+        <Label className="text-xs text-muted-foreground">Analysis / Reason (Optional)</Label>
         <Textarea
           placeholder="e.g., Trendline breakout, Support/Resistance, News impact..."
           value={formData.analysis_reason}
           onChange={(e) => setFormData({ ...formData, analysis_reason: e.target.value })}
+          className="mt-1"
         />
       </div>
 
-      <div>
-        <Label>Profit Note (Optional)</Label>
-        <Input
-          placeholder="e.g., +100 pips running profit"
-          value={formData.profit_note}
-          onChange={(e) => setFormData({ ...formData, profit_note: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label>Note (Optional)</Label>
-        <Textarea
-          placeholder="Additional notes..."
-          value={formData.note}
-          onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label className="text-xs text-muted-foreground">Profit Note (Optional)</Label>
+          <Input
+            placeholder="e.g., +100 pips running profit"
+            value={formData.profit_note}
+            onChange={(e) => setFormData({ ...formData, profit_note: e.target.value })}
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Additional Note (Optional)</Label>
+          <Input
+            placeholder="Any extra notes..."
+            value={formData.note}
+            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+            className="mt-1"
+          />
+        </div>
       </div>
 
       {/* Premium Access Toggle */}
-      <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/20">
+      <div className="flex items-center justify-between p-4 border border-yellow-500/30 rounded-xl bg-gradient-to-r from-yellow-500/5 to-yellow-500/10">
         <div className="flex items-center gap-3">
           <Crown className="h-5 w-5 text-yellow-500" />
           <div>
-            <Label className="text-base font-semibold">Premium Access</Label>
-            <p className="text-xs text-muted-foreground">Lock this signal for premium users only</p>
+            <Label className="text-base font-semibold">Premium Signal</Label>
+            <p className="text-xs text-muted-foreground">Lock for premium users only</p>
           </div>
         </div>
         <Switch
@@ -335,8 +411,26 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         />
       </div>
 
-      <Button type="submit" className="w-full btn-glow" disabled={loading}>
-        {loading ? "Saving..." : editSignal ? "Update Signal" : "Create Signal"}
+      {/* Preview Card */}
+      <div className="p-4 rounded-xl border border-dashed border-border bg-muted/10">
+        <p className="text-xs text-muted-foreground mb-2">Signal Preview:</p>
+        <div className="flex items-center gap-2 text-sm font-mono">
+          <span className={`px-2 py-1 rounded text-xs font-bold ${isBuy ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'}`}>
+            {formData.type.toUpperCase()}
+          </span>
+          <span className="font-semibold">{formData.pair || 'Symbol'}</span>
+          <span className="text-muted-foreground">@</span>
+          <span className={isMarket ? 'text-blue-400' : 'text-orange-400'}>
+            {isMarket ? 'Active' : 'Limit'} {formData.entry || '0.00'}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Status: {isMarket ? '🟢 Active (Market Order)' : '🟡 Pending (Limit Order)'} → Auto-closes on TP/SL hit
+        </p>
+      </div>
+
+      <Button type="submit" className="w-full btn-glow text-base py-6" disabled={loading}>
+        {loading ? "Processing..." : editSignal ? "Update Signal" : "Create Signal"}
       </Button>
     </form>
   );
