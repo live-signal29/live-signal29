@@ -60,21 +60,43 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   
   // Entry mode logic
   const isLimitOrder = signal.entry_mode === 'limit';
-  const isPending = isLimitOrder && !signal.is_activated && isOpen;
-  const limitPrice = signal.limit_entry_price || 0;
+  const limitPrice = signal.limit_entry_price || parseEntryPrice(signal.entry) || 0;
+  
+  // Current price from live feed or stored value (declare early for pending logic)
+  const livePriceValue = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
+  
+  // Determine pending status based on REAL-TIME price comparison (MT5/TradingView logic)
+  // LIMIT BUY: Pending when current_price > entry_price, Active when current_price <= entry_price
+  // LIMIT SELL: Pending when current_price < entry_price, Active when current_price >= entry_price
+  const computePendingStatus = (): boolean => {
+    if (!isLimitOrder || !isOpen) return false;
+    if (limitPrice <= 0 || livePriceValue <= 0) return !signal.is_activated; // Fallback to DB value
+    
+    const isBuy = signal.type?.toLowerCase() === 'buy';
+    
+    if (isBuy) {
+      // BUY Limit: Pending if currentPrice > limitPrice
+      return livePriceValue > limitPrice;
+    } else {
+      // SELL Limit: Pending if currentPrice < limitPrice  
+      return livePriceValue < limitPrice;
+    }
+  };
+  
+  const isPending = computePendingStatus();
   
   // For premium signals: ONLY premium subscribers can see OPEN premium signals
   // CLOSED premium signals are visible to everyone (including free trial users)
   const isPremiumUser = subscriptionStatus === 'premium';
   const isLocked = signal.is_premium && !isPremiumUser && isOpen;
   
-  // Parse entry price for calculations (use limit_entry_price for limit orders after activation)
-  const entryPrice = isLimitOrder && signal.is_activated && limitPrice > 0 
+  // Use the already calculated livePriceValue
+  const currentPrice = livePriceValue;
+  
+  // Entry price for P/L calculations (use limit price for limit orders once active)
+  const entryPrice = isLimitOrder && !isPending && limitPrice > 0 
     ? limitPrice 
     : parseEntryPrice(signal.entry);
-  
-  // Current price from live feed or stored value
-  const currentPrice = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
   
   // Track price direction for MT5-style color animation
   const prevPriceRef = useRef<number>(currentPrice);
@@ -95,9 +117,11 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     }
   }, [currentPrice]);
   
-  // Auto-activate limit orders when price hits
+  // Auto-activate limit orders in database when price hits (sync with server)
   useEffect(() => {
-    if (!isPending || !currentPrice || !limitPrice || signal.sl_hit) return;
+    // Only update DB if signal shows as pending in DB but should be active
+    if (!isLimitOrder || signal.is_activated || !isOpen || signal.sl_hit) return;
+    if (limitPrice <= 0 || currentPrice <= 0) return;
     
     const isBuy = signal.type?.toLowerCase() === 'buy';
     let shouldActivate = false;
@@ -122,7 +146,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
           if (error) console.error('Error activating limit order:', error);
         });
     }
-  }, [currentPrice, isPending, limitPrice, signal.id, signal.type, signal.sl_hit]);
+  }, [currentPrice, isLimitOrder, signal.is_activated, isOpen, limitPrice, signal.id, signal.type, signal.sl_hit]);
   
   // Calculate running P/L only for ACTIVATED OPEN signals
   const runningPL = isOpen && !isPending && currentPrice > 0 && entryPrice > 0
