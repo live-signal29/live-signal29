@@ -9,40 +9,74 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Free forex API - exchangerate.host or alternative
+// Fetch gold price from free API
+async function fetchGoldPrice(): Promise<number | null> {
+  // Try metals.live API first (free, no auth required)
+  try {
+    const response = await fetch("https://api.metals.live/v1/spot/gold", {
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0 && data[0].price) {
+        console.log("Gold price fetched from metals.live:", data[0].price);
+        return parseFloat(data[0].price);
+      }
+    }
+  } catch (e) {
+    console.log("metals.live fetch failed:", e);
+  }
+  
+  // Fallback: try frankfurter API for approximate gold price
+  try {
+    const response = await fetch(
+      "https://api.frankfurter.app/latest?from=XAU&to=USD",
+      { signal: AbortSignal.timeout(5000) }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.rates?.USD) {
+        // XAU is quoted as USD per troy ounce
+        const price = data.rates.USD;
+        console.log("Gold price from frankfurter:", price);
+        return price;
+      }
+    }
+  } catch (e) {
+    console.log("Frankfurter fetch failed:", e);
+  }
+  
+  return null;
+}
+
+// Fetch forex prices
 async function fetchForexPrices(pairs: string[]): Promise<Record<string, string>> {
   const prices: Record<string, string> = {};
   
   try {
-    // Using exchangerate-api.com free tier for major forex pairs
     for (const pair of pairs) {
-      // Parse pair format (e.g., "EURUSD" -> EUR and USD)
       const cleanPair = pair.replace("/", "").toUpperCase();
       
-      // Handle different asset types
+      // Handle gold/XAU pairs
       if (cleanPair.includes("XAU") || cleanPair.includes("GOLD")) {
-        // Gold price - use a simple fetch
-        try {
-          const goldResponse = await fetch("https://api.exchangerate.host/latest?base=XAU&symbols=USD");
-          if (goldResponse.ok) {
-            const goldData = await goldResponse.json();
-            if (goldData.rates?.USD) {
-              prices[pair] = (1 / goldData.rates.USD).toFixed(2);
-            }
-          }
-        } catch (e) {
-          console.log("Gold price fetch failed:", e);
+        const goldPrice = await fetchGoldPrice();
+        if (goldPrice) {
+          prices[pair] = goldPrice.toFixed(2);
         }
         continue;
       }
       
+      // Regular forex pairs using frankfurter (free, no auth)
       if (cleanPair.length >= 6) {
         const base = cleanPair.substring(0, 3);
         const quote = cleanPair.substring(3, 6);
         
         try {
           const response = await fetch(
-            `https://api.exchangerate.host/latest?base=${base}&symbols=${quote}`
+            `https://api.frankfurter.app/latest?from=${base}&to=${quote}`,
+            { signal: AbortSignal.timeout(5000) }
           );
           
           if (response.ok) {
@@ -74,9 +108,9 @@ serve(async (req) => {
     // Get all active signals
     const { data: signals, error } = await supabase
       .from("signals")
-      .select("id, pair")
+      .select("id, pair, type, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, signal_status")
       .eq("published", true)
-      .in("signal_status", ["OPEN", "LIVE"]);
+      .eq("signal_status", "OPEN");
     
     if (error) {
       throw error;
@@ -94,15 +128,79 @@ serve(async (req) => {
     
     // Fetch prices for all pairs
     const prices = await fetchForexPrices(uniquePairs);
+    console.log("Fetched prices:", prices);
     
-    // Update signals with current prices
+    // Update signals with current prices and check TP/SL hits
     let updatedCount = 0;
     for (const signal of signals) {
       const currentPrice = prices[signal.pair];
       if (currentPrice) {
+        const priceNum = parseFloat(currentPrice);
+        const updates: Record<string, any> = { current_price: currentPrice };
+        
+        // Parse entry price helper
+        const parsePrice = (priceStr: string): number => {
+          if (!priceStr) return 0;
+          const cleaned = priceStr.replace(/[^\d.\-–]/g, '');
+          const parts = cleaned.split(/[-–]/);
+          if (parts.length >= 2) {
+            return (parseFloat(parts[0]) + parseFloat(parts[1])) / 2;
+          }
+          return parseFloat(cleaned) || 0;
+        };
+        
+        // Check TP/SL hits based on signal type
+        const isBuy = signal.type?.toLowerCase() === 'buy';
+        
+        // TP1
+        if (!signal.tp1_hit && signal.tp1) {
+          const tp1Price = parsePrice(signal.tp1);
+          if (isBuy ? priceNum >= tp1Price : priceNum <= tp1Price) {
+            updates.tp1_hit = true;
+            console.log(`TP1 hit for signal ${signal.id}`);
+          }
+        }
+        
+        // TP2
+        if (!signal.tp2_hit && signal.tp2) {
+          const tp2Price = parsePrice(signal.tp2);
+          if (isBuy ? priceNum >= tp2Price : priceNum <= tp2Price) {
+            updates.tp2_hit = true;
+            console.log(`TP2 hit for signal ${signal.id}`);
+          }
+        }
+        
+        // TP3
+        if (!signal.tp3_hit && signal.tp3) {
+          const tp3Price = parsePrice(signal.tp3);
+          if (isBuy ? priceNum >= tp3Price : priceNum <= tp3Price) {
+            updates.tp3_hit = true;
+            console.log(`TP3 hit for signal ${signal.id}`);
+          }
+        }
+        
+        // TP4
+        if (!signal.tp4_hit && signal.tp4) {
+          const tp4Price = parsePrice(signal.tp4);
+          if (isBuy ? priceNum >= tp4Price : priceNum <= tp4Price) {
+            updates.tp4_hit = true;
+            console.log(`TP4 hit for signal ${signal.id}`);
+          }
+        }
+        
+        // SL - if hit, close signal
+        if (!signal.sl_hit && signal.sl) {
+          const slPrice = parsePrice(signal.sl);
+          if (isBuy ? priceNum <= slPrice : priceNum >= slPrice) {
+            updates.sl_hit = true;
+            updates.signal_status = 'CLOSE';
+            console.log(`SL hit for signal ${signal.id} - closing signal`);
+          }
+        }
+        
         await supabase
           .from("signals")
-          .update({ current_price: currentPrice })
+          .update(updates)
           .eq("id", signal.id);
         updatedCount++;
       }
@@ -112,7 +210,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         pricesUpdated: updatedCount,
-        pairs: Object.keys(prices)
+        pairs: Object.keys(prices),
+        prices
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

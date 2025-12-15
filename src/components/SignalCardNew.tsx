@@ -5,6 +5,9 @@ import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { parseEntryPrice, calculateRunningPL, checkTPSLHit } from "@/hooks/useLivePrices";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,19 +42,89 @@ interface SignalCardProps {
     created_at: string;
     category: string;
     is_premium?: boolean;
+    current_price?: string;
   };
   hasAccess?: boolean;
   subscriptionStatus?: string | null;
+  livePrice?: number;
 }
 
-const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalCardProps) => {
+const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice }: SignalCardProps) => {
   const navigate = useNavigate();
   const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && signal.signal_status !== 'CLOSE';
+  const isOpen = signal.signal_status !== 'CLOSE';
   
   // For premium signals: ONLY premium subscribers can see them (not free trial users)
-  // For regular signals: both premium and free trial users can see them
   const isPremiumUser = subscriptionStatus === 'premium';
   const isLocked = signal.is_premium && !isPremiumUser;
+  
+  // Parse entry price for calculations
+  const entryPrice = parseEntryPrice(signal.entry);
+  
+  // Current price from live feed or stored value
+  const currentPrice = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
+  
+  // Calculate running P/L only for OPEN signals
+  const runningPL = isOpen && currentPrice > 0 && entryPrice > 0
+    ? calculateRunningPL(currentPrice, entryPrice, signal.type)
+    : null;
+
+  // Auto-update TP/SL hits
+  useEffect(() => {
+    if (!isOpen || !currentPrice || signal.sl_hit) return;
+    
+    const checkAndUpdate = async () => {
+      const updates: Record<string, boolean | string> = {};
+      
+      // Check TP1
+      if (!signal.tp1_hit && signal.tp1) {
+        const tp1Price = parseEntryPrice(signal.tp1);
+        if (checkTPSLHit(currentPrice, tp1Price, signal.type)) {
+          updates.tp1_hit = true;
+        }
+      }
+      
+      // Check TP2
+      if (!signal.tp2_hit && signal.tp2) {
+        const tp2Price = parseEntryPrice(signal.tp2);
+        if (checkTPSLHit(currentPrice, tp2Price, signal.type)) {
+          updates.tp2_hit = true;
+        }
+      }
+      
+      // Check TP3
+      if (!signal.tp3_hit && signal.tp3) {
+        const tp3Price = parseEntryPrice(signal.tp3);
+        if (checkTPSLHit(currentPrice, tp3Price, signal.type)) {
+          updates.tp3_hit = true;
+        }
+      }
+      
+      // Check TP4
+      if (!signal.tp4_hit && signal.tp4) {
+        const tp4Price = parseEntryPrice(signal.tp4);
+        if (checkTPSLHit(currentPrice, tp4Price, signal.type)) {
+          updates.tp4_hit = true;
+        }
+      }
+      
+      // Check SL
+      if (!signal.sl_hit && signal.sl) {
+        const slPrice = parseEntryPrice(signal.sl);
+        if (checkTPSLHit(currentPrice, slPrice, signal.type, true)) {
+          updates.sl_hit = true;
+          updates.signal_status = 'CLOSE';
+        }
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('signals').update(updates).eq('id', signal.id);
+      }
+    };
+    
+    checkAndUpdate();
+  }, [currentPrice, signal.id, signal.type, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl, 
+      signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit, signal.sl_hit, isOpen]);
   
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
     const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;
@@ -156,6 +229,12 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                   isLocked ? 'text-yellow-500' : 'text-blue-500'
                 }`}>{signal.entry}</span>
               </span>
+              {/* Show current price only for OPEN signals */}
+              {isOpen && currentPrice > 0 && !isLocked && (
+                <span className="text-[10px] text-muted-foreground">
+                  Current: <span className="font-semibold text-foreground">{currentPrice.toFixed(2)}</span>
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -310,22 +389,31 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus }: SignalC
                 </div>
               )}
 
-              {/* Profit Note + Status together */}
+              {/* Profit Note / Running P/L + Status together */}
               {signal.profit_note ? (
+                // Show static profit note for CLOSED signals
                 <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
-                  {/* Small Open/Close text on left corner */}
                   <span className={`text-[10px] font-medium ${
                     getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
                   }`}>
                     {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
                   </span>
-                  {/* Profit note centered */}
                   <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
                     {signal.profit_note}
                   </p>
                 </div>
+              ) : isOpen && runningPL ? (
+                // Show running P/L for OPEN signals
+                <div className="mt-2 pt-2 border-t border-border flex items-center">
+                  <span className="text-[10px] font-medium text-blue-500">Open</span>
+                  <p className={`flex-1 text-center text-xs sm:text-sm font-bold ${
+                    runningPL.isProfit ? 'text-success' : 'text-destructive'
+                  }`}>
+                    {runningPL.formatted}
+                  </p>
+                </div>
               ) : (
-                // If no profit note, just show small status on the left corner
+                // Default: just show status
                 <div className="mt-2 pt-2 border-t border-border flex justify-start">
                   <span className={`text-[10px] font-medium ${
                     getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
