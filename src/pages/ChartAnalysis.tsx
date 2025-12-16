@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Maximize2 } from "lucide-react";
-import { format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import ChartLightbox from "@/components/ChartLightbox";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ChartReactions } from "@/components/ChartReactions";
@@ -87,7 +87,7 @@ const ChartAnalysis = () => {
                         </CardTitle>
                       )}
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(analysis.created_at), "MMM dd, yyyy")}
+                        {formatDistanceToNow(new Date(analysis.created_at), { addSuffix: true })}
                       </p>
                     </CardHeader>
                     {analysis.description && (
