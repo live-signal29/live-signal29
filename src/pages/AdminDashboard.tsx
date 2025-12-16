@@ -87,7 +87,7 @@ const AdminDashboard = () => {
         <Tabs defaultValue="signals" className="w-full">
           <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
-            <TabsTrigger value="charts" className="text-xs sm:text-sm py-2">Charts</TabsTrigger>
+            <TabsTrigger value="ideas" className="text-xs sm:text-sm py-2">Ideas</TabsTrigger>
             <TabsTrigger value="headlines" className="text-xs sm:text-sm py-2">Headlines</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
             <TabsTrigger value="accounts" className="text-xs sm:text-sm py-2">Accounts</TabsTrigger>
@@ -118,11 +118,11 @@ const AdminDashboard = () => {
             <SignalsList />
           </TabsContent>
 
-          <TabsContent value="charts" className="space-y-4">
+          <TabsContent value="ideas" className="space-y-4">
             <Card>
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                  <CardTitle className="text-base sm:text-lg">Chart Analysis</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">Ideas</CardTitle>
                   <Button onClick={() => setShowChartForm(!showChartForm)} className="text-xs sm:text-sm h-8 sm:h-9">
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     {showChartForm ? "Hide" : "Add"}

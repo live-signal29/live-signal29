@@ -81,11 +81,11 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
 
       const { error } = await supabase.from("chart_analysis").insert([cleanedData]);
       if (error) {
-        toast.error("Failed to create chart post. Please try again.");
+        toast.error("Failed to create idea. Please try again.");
         return;
       }
 
-      toast.success("Chart post created");
+      toast.success("Idea created");
       queryClient.invalidateQueries({ queryKey: ["chart-analysis"] });
       queryClient.invalidateQueries({ queryKey: ["admin-chart-analysis"] });
       setFormData({ title: "", description: "", image_url: "" });
@@ -117,7 +117,7 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
         />
       </div>
       <div>
-        <Label>Chart Image (Optional)</Label>
+        <Label>Image (Optional)</Label>
         <div className="flex items-center gap-2">
           <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
           {uploading && <span className="text-sm text-muted-foreground">Uploading...</span>}
@@ -127,7 +127,7 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
         )}
       </div>
       <Button type="submit" className="w-full btn-glow" disabled={loading || uploading}>
-        {loading ? "Creating..." : "Create Post"}
+        {loading ? "Creating..." : "Create Idea"}
       </Button>
     </form>
   );
