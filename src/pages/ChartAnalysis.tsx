@@ -59,7 +59,7 @@ const ChartAnalysis = () => {
                     key={analysis.id} 
                     className="group overflow-hidden hover:shadow-xl transition-all duration-300"
                   >
-                    {analysis.image_url && (
+                    {analysis.image_url && analysis.image_url.trim() !== '' && (
                       <div 
                         className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
                         onClick={() => openLightbox(index)}
