@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 export interface AccuracyStats {
   free_total: number;
   free_wins: number;
-  free_accuracy: number;
+  free_accuracy: number | null;
   premium_total: number;
   premium_wins: number;
-  premium_accuracy: number;
+  premium_accuracy: number | null;
 }
 
 export const useAccuracyStats = () => {
@@ -22,10 +22,10 @@ export const useAccuracyStats = () => {
       const stats = data?.[0] || {
         free_total: 0,
         free_wins: 0,
-        free_accuracy: 0,
+        free_accuracy: null,
         premium_total: 0,
         premium_wins: 0,
-        premium_accuracy: 0,
+        premium_accuracy: null,
       };
 
       return stats as AccuracyStats;
