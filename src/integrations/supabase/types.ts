@@ -139,30 +139,62 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          image_url: string
+          image_url: string | null
           published: boolean | null
-          title: string
+          title: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
-          image_url: string
+          image_url?: string | null
           published?: boolean | null
-          title: string
+          title?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
-          image_url?: string
+          image_url?: string | null
           published?: boolean | null
-          title?: string
+          title?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      chart_reactions: {
+        Row: {
+          chart_id: string
+          created_at: string
+          id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          chart_id: string
+          created_at?: string
+          id?: string
+          reaction_type: string
+          user_id: string
+        }
+        Update: {
+          chart_id?: string
+          created_at?: string
+          id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_reactions_chart_id_fkey"
+            columns: ["chart_id"]
+            isOneToOne: false
+            referencedRelation: "chart_analysis"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coupon_usage: {
         Row: {

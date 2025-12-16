@@ -41,9 +41,9 @@ export const signalSchema = z.object({
   signal_status: z.string().optional(),
 });
 
-// Chart analysis schema
+// Chart analysis schema - all fields optional
 export const chartAnalysisSchema = z.object({
-  title: z.string().trim().min(1, { message: "Title is required" }).max(200, { message: "Title too long" }),
-  description: z.string().trim().max(2000, { message: "Description must be less than 2000 characters" }).optional(),
-  image_url: z.string().trim().url({ message: "Invalid image URL" }),
+  title: z.string().trim().max(200, { message: "Title too long" }).optional().or(z.literal("")),
+  description: z.string().trim().max(2000, { message: "Description must be less than 2000 characters" }).optional().or(z.literal("")),
+  image_url: z.string().trim().optional().or(z.literal("")),
 });

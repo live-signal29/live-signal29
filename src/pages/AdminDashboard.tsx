@@ -17,7 +17,6 @@ import SpecialOfferManagement from "@/components/admin/SpecialOfferManagement";
 import UserActivityDashboard from "@/components/admin/UserActivityDashboard";
 import AccountApplications from "@/components/admin/AccountApplications";
 import PerformanceManagement from "@/components/admin/PerformanceManagement";
-import MarketIdeasManagement from "@/components/admin/MarketIdeasManagement";
 import HeadlinesManagement from "@/components/admin/HeadlinesManagement";
 
 const AdminDashboard = () => {
@@ -86,10 +85,9 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-11 h-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="charts" className="text-xs sm:text-sm py-2">Charts</TabsTrigger>
-            <TabsTrigger value="ideas" className="text-xs sm:text-sm py-2">Ideas</TabsTrigger>
             <TabsTrigger value="headlines" className="text-xs sm:text-sm py-2">Headlines</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
             <TabsTrigger value="accounts" className="text-xs sm:text-sm py-2">Accounts</TabsTrigger>
@@ -138,10 +136,6 @@ const AdminDashboard = () => {
               )}
             </Card>
             <ChartAnalysisList />
-          </TabsContent>
-
-          <TabsContent value="ideas" className="space-y-4">
-            <MarketIdeasManagement />
           </TabsContent>
 
           <TabsContent value="headlines" className="space-y-4">

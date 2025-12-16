@@ -9,6 +9,7 @@ import { Loader2, Maximize2 } from "lucide-react";
 import { format } from "date-fns";
 import ChartLightbox from "@/components/ChartLightbox";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
+import { ChartReactions } from "@/components/ChartReactions";
 
 const ChartAnalysis = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -56,14 +57,16 @@ const ChartAnalysis = () => {
                 <>
                   <Card 
                     key={analysis.id} 
-                    className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
-                    onClick={() => openLightbox(index)}
+                    className="group overflow-hidden hover:shadow-xl transition-all duration-300"
                   >
                     {analysis.image_url && (
-                      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                      <div 
+                        className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
+                        onClick={() => openLightbox(index)}
+                      >
                         <img
                           src={analysis.image_url}
-                          alt={analysis.title}
+                          alt={analysis.title || "Chart"}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
@@ -77,21 +80,26 @@ const ChartAnalysis = () => {
                         </div>
                       </div>
                     )}
-                    <CardHeader>
-                      <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                        {analysis.title}
-                      </CardTitle>
+                    <CardHeader className="pb-2">
+                      {analysis.title && (
+                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                          {analysis.title}
+                        </CardTitle>
+                      )}
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(analysis.created_at), "MMM dd, yyyy")}
                       </p>
                     </CardHeader>
                     {analysis.description && (
-                      <CardContent>
+                      <CardContent className="pt-0 pb-2">
                         <p className="text-muted-foreground line-clamp-2">
                           {analysis.description}
                         </p>
                       </CardContent>
                     )}
+                    <CardContent className="pt-2 border-t border-border/50">
+                      <ChartReactions chartId={analysis.id} />
+                    </CardContent>
                   </Card>
                   
                   {/* Add affiliate banner after first chart */}
