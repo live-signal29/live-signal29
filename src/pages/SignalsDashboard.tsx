@@ -7,7 +7,7 @@ import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, Coins, Activity, Bitcoin, BarChart3, LineChart, Star, Maximize2 } from "lucide-react";
+import { Loader2, TrendingUp, Coins, Bitcoin, BarChart3, LineChart, Maximize2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,18 +44,16 @@ const SignalsDashboard = () => {
     switch (category) {
       case "FOREX": return <TrendingUp className="h-4 w-4" />;
       case "COMMODITIES": return <Coins className="h-4 w-4" />;
-      case "INDICES": return <Activity className="h-4 w-4" />;
       case "CRYPTO": return <Bitcoin className="h-4 w-4" />;
       case "DERIV/BINARY": return <BarChart3 className="h-4 w-4" />;
-      case "CHART ANALYSIS": return <LineChart className="h-4 w-4" />;
+      case "MARKET IDEAS": return <LineChart className="h-4 w-4" />;
       default: return null;
     }
   };
 
   const subCategoryOptions: Record<string, string[]> = {
     FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
-    COMMODITIES: ["XAU/USD (Gold)", "XAG/USD (Silver)", "Oil - Crude", "Oil - Brent", "Natural Gas"],
-    INDICES: ["US30", "NASDAQ", "S&P500", "DAX", "FTSE100", "Nikkei"],
+    COMMODITIES: ["XAU/USD (Gold)", "XAG/USD (Silver)", "Oil - Crude", "Oil - Brent", "Natural Gas", "US30", "NASDAQ", "S&P500", "DAX", "FTSE100", "Nikkei"],
     CRYPTO: ["BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD", "ADA/USD", "SOL/USD"],
     "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
   };
@@ -83,8 +81,8 @@ const SignalsDashboard = () => {
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
-    enabled: mainCategory !== "CHART ANALYSIS",
-    staleTime: 30000,
+    enabled: mainCategory !== "MARKET IDEAS",
+    staleTime: 60000,
   });
 
   const signals = signalsData?.pages.flatMap(page => page.data) || [];
@@ -98,7 +96,7 @@ const SignalsDashboard = () => {
   // Fetch live prices for open signals
   const { prices: livePrices } = useLivePricesFetch(openSignalPairs, openSignalPairs.length > 0);
 
-  // Setup realtime subscription for instant updates (deferred)
+  // Setup realtime subscription for instant updates (deferred for performance)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const channel = supabase
@@ -119,7 +117,7 @@ const SignalsDashboard = () => {
       return () => {
         supabase.removeChannel(channel);
       };
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timeoutId);
   }, [refetch]);
@@ -150,12 +148,12 @@ const SignalsDashboard = () => {
         .select("*")
         .eq("published", true)
         .order("created_at", { ascending: false })
-        .limit(30); // Limit charts to 30
+        .limit(30);
       if (error) throw error;
       return data;
     },
-    enabled: mainCategory === "CHART ANALYSIS",
-    staleTime: 60000, // Cache for 60 seconds
+    enabled: mainCategory === "MARKET IDEAS",
+    staleTime: 120000,
   });
 
   const openLightbox = (index: number) => {
@@ -203,10 +201,9 @@ const SignalsDashboard = () => {
               {[
                 { key: "COMMODITIES", label: "COMM" },
                 { key: "FOREX", label: "FOREX" },
-                { key: "INDICES", label: "INDEX" },
                 { key: "CRYPTO", label: "CRYPTO" },
                 { key: "DERIV/BINARY", label: "DERIV" },
-                { key: "CHART ANALYSIS", label: "CHARTS" },
+                { key: "MARKET IDEAS", label: "💡 IDEAS" },
               ].map((category) => (
                 <button
                   key={category.key}
@@ -226,8 +223,8 @@ const SignalsDashboard = () => {
 
           {/* Favorites Filter Button */}
 
-          {/* Chart Analysis View */}
-          {mainCategory === "CHART ANALYSIS" && (
+          {/* Market Ideas View */}
+          {mainCategory === "MARKET IDEAS" && (
             <>
               {isLoadingCharts ? (
                 <div className="flex justify-center items-center py-20">
@@ -293,7 +290,7 @@ const SignalsDashboard = () => {
           )}
 
           {/* Signals View with Day Separators */}
-          {mainCategory !== "CHART ANALYSIS" && (
+          {mainCategory !== "MARKET IDEAS" && (
             <>
               {isLoading ? (
                 <SignalsSkeleton />
