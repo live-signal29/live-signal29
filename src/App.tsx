@@ -12,9 +12,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const SignalsDashboard = lazy(() => import("./pages/SignalsDashboard"));
 const XAUUSDSignals = lazy(() => import("./pages/XAUUSDSignals"));
 const ForexSignals = lazy(() => import("./pages/ForexSignals"));
-const IndexSignals = lazy(() => import("./pages/IndexSignals"));
 const CommoditiesSignals = lazy(() => import("./pages/CommoditiesSignals"));
-const IndicesSignals = lazy(() => import("./pages/IndicesSignals"));
 const CryptoSignals = lazy(() => import("./pages/CryptoSignals"));
 const DerivSignals = lazy(() => import("./pages/DerivSignals"));
 const ChartAnalysis = lazy(() => import("./pages/ChartAnalysis"));
@@ -108,8 +106,6 @@ const App = () => (
             <Route path="/commodities-signals" element={<ProtectedRoute><CommoditiesSignals /></ProtectedRoute>} />
             <Route path="/xauusd-signals" element={<ProtectedRoute><XAUUSDSignals /></ProtectedRoute>} />
             <Route path="/forex-signals" element={<ProtectedRoute><ForexSignals /></ProtectedRoute>} />
-            <Route path="/indices-signals" element={<ProtectedRoute><IndicesSignals /></ProtectedRoute>} />
-            <Route path="/index-signals" element={<ProtectedRoute><IndexSignals /></ProtectedRoute>} />
             <Route path="/crypto-signals" element={<ProtectedRoute><CryptoSignals /></ProtectedRoute>} />
             <Route path="/deriv-signals" element={<ProtectedRoute><DerivSignals /></ProtectedRoute>} />
             <Route path="/chart-analysis" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
