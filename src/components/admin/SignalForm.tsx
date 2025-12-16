@@ -41,8 +41,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
 
   const subCategoryOptions: Record<string, string[]> = {
     FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
-    COMMODITIES: ["XAU/USD (Gold)", "XAG/USD (Silver)", "Oil - Crude", "Oil - Brent", "Natural Gas"],
-    INDICES: ["US30", "NASDAQ", "S&P500", "DAX", "FTSE100", "Nikkei"],
+    COMMODITIES: ["XAU/USD (Gold)", "XAG/USD (Silver)", "Oil - Crude", "Oil - Brent", "Natural Gas", "US30", "NASDAQ", "S&P500", "DAX", "FTSE100", "Nikkei"],
     CRYPTO: ["BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD", "ADA/USD", "SOL/USD"],
     "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
   };
@@ -157,7 +156,6 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
               <SelectContent>
                 <SelectItem value="FOREX">FOREX</SelectItem>
                 <SelectItem value="COMMODITIES">COMMODITIES</SelectItem>
-                <SelectItem value="INDICES">INDICES</SelectItem>
                 <SelectItem value="CRYPTO">CRYPTO</SelectItem>
                 <SelectItem value="DERIV/BINARY">DERIV / BINARY</SelectItem>
               </SelectContent>

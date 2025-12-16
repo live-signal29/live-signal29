@@ -150,13 +150,15 @@ const ChartAnalysisList = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="relative group">
-              <img 
-                src={analysis.image_url} 
-                alt={analysis.title} 
-                className="w-full max-h-60 object-cover rounded mb-4 cursor-pointer hover:opacity-90 transition-opacity" 
-              />
-            </div>
+            {analysis.image_url && (
+              <div className="relative group">
+                <img 
+                  src={analysis.image_url} 
+                  alt={analysis.title || "Chart"} 
+                  className="w-full max-h-60 object-cover rounded mb-4 cursor-pointer hover:opacity-90 transition-opacity" 
+                />
+              </div>
+            )}
             {!editingId && analysis.description && (
               <p className="text-muted-foreground">{analysis.description}</p>
             )}

@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
-import { chartAnalysisSchema } from "@/lib/validations";
 
 interface ChartAnalysisFormProps {
   onSuccess: () => void;
@@ -27,13 +26,11 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
       return;
     }
 
-    // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image must be less than 5MB");
       return;
@@ -68,30 +65,30 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate input
-    const validation = chartAnalysisSchema.safeParse(formData);
-    if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+    // At least one field should have content
+    if (!formData.title && !formData.description && !formData.image_url) {
+      toast.error("Please add at least a title, description, or image");
       return;
     }
 
     setLoading(true);
     try {
       const cleanedData = {
-        title: validation.data.title,
-        image_url: validation.data.image_url,
-        description: validation.data.description || null,
+        title: formData.title || null,
+        image_url: formData.image_url || null,
+        description: formData.description || null,
       };
 
       const { error } = await supabase.from("chart_analysis").insert([cleanedData]);
       if (error) {
-        toast.error("Failed to create chart analysis. Please try again.");
+        toast.error("Failed to create chart post. Please try again.");
         return;
       }
 
-      toast.success("Chart analysis created");
+      toast.success("Chart post created");
       queryClient.invalidateQueries({ queryKey: ["chart-analysis"] });
       queryClient.invalidateQueries({ queryKey: ["admin-chart-analysis"] });
+      setFormData({ title: "", description: "", image_url: "" });
       onSuccess();
     } catch (error: any) {
       toast.error("An unexpected error occurred. Please try again.");
@@ -103,16 +100,15 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label>Title</Label>
+        <Label>Title (Optional)</Label>
         <Input
           placeholder="Market Analysis - Gold Breakout"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          required
         />
       </div>
       <div>
-        <Label>Description</Label>
+        <Label>Description (Optional)</Label>
         <Textarea
           placeholder="Detailed chart analysis..."
           value={formData.description}
@@ -121,7 +117,7 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
         />
       </div>
       <div>
-        <Label>Chart Image</Label>
+        <Label>Chart Image (Optional)</Label>
         <div className="flex items-center gap-2">
           <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
           {uploading && <span className="text-sm text-muted-foreground">Uploading...</span>}
@@ -131,7 +127,7 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
         )}
       </div>
       <Button type="submit" className="w-full btn-glow" disabled={loading || uploading}>
-        {loading ? "Creating..." : "Create Analysis"}
+        {loading ? "Creating..." : "Create Post"}
       </Button>
     </form>
   );
