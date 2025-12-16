@@ -143,11 +143,13 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         }
       }
 
-      // Check TP3
+      // Check TP3 - AUTO CLOSE when TP3 hits
       if (!signal.tp3_hit && signal.tp3) {
         const tp3Price = parseEntryPrice(signal.tp3);
         if (checkTPSLHit(currentPrice, tp3Price, signal.type)) {
           updates.tp3_hit = true;
+          updates.signal_status = 'close';
+          updates.profit_note = '3rd TP done enjoy profit 🎉';
         }
       }
 
