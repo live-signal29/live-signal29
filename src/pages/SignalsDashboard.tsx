@@ -20,6 +20,8 @@ import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
+import AccuracyStats from "@/components/AccuracyStats";
+import MarketIdeas from "@/components/MarketIdeas";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -186,6 +188,12 @@ const SignalsDashboard = () => {
             <TrialExpiredLockScreen />
           ) : (
             <>
+          {/* Accuracy Stats */}
+          <AccuracyStats />
+
+          {/* Market Ideas Section */}
+          <MarketIdeas />
+
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
             <div className="mb-4">

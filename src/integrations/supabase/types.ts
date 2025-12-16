@@ -325,6 +325,68 @@ export type Database = {
         }
         Relationships: []
       }
+      market_idea_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          market_idea_id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          market_idea_id: string
+          reaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          market_idea_id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_idea_reactions_market_idea_id_fkey"
+            columns: ["market_idea_id"]
+            isOneToOne: false
+            referencedRelation: "market_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_ideas: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          published: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          published?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          published?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mt5_demo_trades: {
         Row: {
           close_price: number | null
@@ -764,6 +826,7 @@ export type Database = {
           created_at: string
           entry: string
           id: string
+          is_premium: boolean | null
           notes: string | null
           pair: string
           pips_gained: number | null
@@ -788,6 +851,7 @@ export type Database = {
           created_at?: string
           entry: string
           id?: string
+          is_premium?: boolean | null
           notes?: string | null
           pair: string
           pips_gained?: number | null
@@ -812,6 +876,7 @@ export type Database = {
           created_at?: string
           entry?: string
           id?: string
+          is_premium?: boolean | null
           notes?: string | null
           pair?: string
           pips_gained?: number | null
@@ -984,6 +1049,17 @@ export type Database = {
           total_signals: number
           total_wins: number
           win_rate: number
+        }[]
+      }
+      get_accuracy_stats: {
+        Args: never
+        Returns: {
+          free_accuracy: number
+          free_total: number
+          free_wins: number
+          premium_accuracy: number
+          premium_total: number
+          premium_wins: number
         }[]
       }
       get_mt5_demo_stats: {
