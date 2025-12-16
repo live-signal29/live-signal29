@@ -17,10 +17,11 @@ import { useSignalNotifications } from "@/hooks/useSignalNotifications";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
-import { differenceInDays, startOfDay } from "date-fns";
+import { differenceInDays, startOfDay, formatDistanceToNow } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
+import { ChartReactions } from "@/components/ChartReactions";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -232,42 +233,61 @@ const SignalsDashboard = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {chartAnalysis?.map((analysis, index) => (
-                    <Card 
-                      key={analysis.id} 
-                      className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
-                      onClick={() => openLightbox(index)}
-                    >
-                      <div className="relative aspect-video w-full overflow-hidden bg-muted">
-                        <img
-                          src={analysis.image_url}
-                          alt={analysis.title}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
-                          <Button
-                            size="icon"
-                            variant="secondary"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 hover:bg-white"
+                  {chartAnalysis?.map((analysis, index) => {
+                    const hasImage = !!analysis.image_url && String(analysis.image_url).trim() !== "";
+                    const timeAgo = formatDistanceToNow(new Date(analysis.created_at), { addSuffix: true });
+
+                    return (
+                      <Card
+                        key={analysis.id}
+                        className="group overflow-hidden hover:shadow-xl transition-all duration-300"
+                      >
+                        {hasImage && (
+                          <div
+                            className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
+                            onClick={() => openLightbox(index)}
                           >
-                            <Maximize2 className="h-5 w-5 text-black" />
-                          </Button>
-                        </div>
-                      </div>
-                      <CardHeader>
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                          {analysis.title}
-                        </CardTitle>
-                      </CardHeader>
-                      {analysis.description && (
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {analysis.description}
-                          </p>
+                            <img
+                              src={analysis.image_url}
+                              alt={analysis.title || "Trading idea chart"}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/15 transition-colors duration-300 flex items-center justify-center">
+                              <Button
+                                size="icon"
+                                variant="secondary"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/90 hover:bg-background"
+                              >
+                                <Maximize2 className="h-5 w-5 text-foreground" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        <CardHeader className="pb-2">
+                          {analysis.title && (
+                            <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                              {analysis.title}
+                            </CardTitle>
+                          )}
+                          <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                        </CardHeader>
+
+                        {analysis.description && (
+                          <CardContent className="pt-0 pb-2">
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {analysis.description}
+                            </p>
+                          </CardContent>
+                        )}
+
+                        <CardContent className="pt-2 border-t border-border/50">
+                          <ChartReactions chartId={analysis.id} />
                         </CardContent>
-                      )}
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
 
