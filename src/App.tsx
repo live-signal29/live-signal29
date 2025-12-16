@@ -36,6 +36,7 @@ const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const CryptoDeposit = lazy(() => import("./pages/CryptoDeposit"));
 const SharedSignal = lazy(() => import("./pages/SharedSignal"));
 const AccountManagement = lazy(() => import("./pages/AccountManagement"));
+const Results = lazy(() => import("./pages/Results"));
 
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
             <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
             <Route path="/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
+            <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
