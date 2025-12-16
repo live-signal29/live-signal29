@@ -1,5 +1,4 @@
 import { useChartReactions, ReactionType } from "@/hooks/useChartReactions";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ChartReactionsProps {
@@ -17,12 +16,10 @@ export const ChartReactions = ({ chartId }: ChartReactionsProps) => {
   const { reactionCounts, userReaction, toggleReaction, isAuthenticated } = useChartReactions(chartId);
 
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap">
       {reactions.map(({ type, emoji }) => (
-        <Button
+        <button
           key={type}
-          variant="ghost"
-          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             if (isAuthenticated) {
@@ -30,16 +27,16 @@ export const ChartReactions = ({ chartId }: ChartReactionsProps) => {
             }
           }}
           className={cn(
-            "h-8 px-2 gap-1 text-sm transition-all",
-            userReaction === type && "bg-primary/20 border border-primary/40"
+            "flex items-center gap-1 px-3 py-1.5 rounded-full text-sm transition-all hover:scale-105",
+            userReaction === type
+              ? "bg-primary/20 text-primary ring-1 ring-primary/30"
+              : "bg-muted/50 text-muted-foreground hover:bg-muted"
           )}
           disabled={!isAuthenticated}
         >
-          <span className="text-base">{emoji}</span>
-          {reactionCounts[type] > 0 && (
-            <span className="text-xs text-muted-foreground">{reactionCounts[type]}</span>
-          )}
-        </Button>
+          <span className="text-lg">{emoji}</span>
+          <span className="font-medium">{reactionCounts[type]}</span>
+        </button>
       ))}
     </div>
   );
