@@ -216,12 +216,15 @@ serve(async (req) => {
             }
           }
 
-          // TP3 - only if TP3 has a valid numeric price
+          // TP3 - only if TP3 has a valid numeric price - AUTO CLOSE when TP3 hits
           if (!signal.tp3_hit && signal.tp3) {
             const tp3Price = parsePrice(signal.tp3);
             if (tp3Price > 0 && (isBuy ? priceNum >= tp3Price : priceNum <= tp3Price)) {
               updates.tp3_hit = true;
-              console.log(`TP3 hit for signal ${signal.id}`);
+              updates.signal_status = 'close';
+              updates.status = 'close';
+              updates.profit_note = '3rd TP done enjoy profit 🎉';
+              console.log(`TP3 hit for signal ${signal.id} - closing signal with profit note`);
             }
           }
 
