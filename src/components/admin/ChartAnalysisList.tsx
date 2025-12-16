@@ -53,7 +53,7 @@ const ChartAnalysisList = () => {
       
       queryClient.invalidateQueries({ queryKey: ["admin-chart-analysis"] });
       queryClient.invalidateQueries({ queryKey: ["chart-analysis"] });
-      toast.success("Chart analysis updated");
+      toast.success("Idea updated");
       cancelEdit();
     } catch (error: any) {
       toast.error(error.message);
@@ -70,21 +70,21 @@ const ChartAnalysisList = () => {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["admin-chart-analysis"] });
       queryClient.invalidateQueries({ queryKey: ["chart-analysis"] });
-      toast.success(currentValue ? "Analysis unpublished" : "Analysis published");
+      toast.success(currentValue ? "Idea unpublished" : "Idea published");
     } catch (error: any) {
       toast.error(error.message);
     }
   };
 
   const deleteAnalysis = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this analysis?")) return;
+    if (!confirm("Are you sure you want to delete this idea?")) return;
 
     try {
       const { error } = await supabase.from("chart_analysis").delete().eq("id", id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["admin-chart-analysis"] });
       queryClient.invalidateQueries({ queryKey: ["chart-analysis"] });
-      toast.success("Analysis deleted");
+      toast.success("Idea deleted");
     } catch (error: any) {
       toast.error(error.message);
     }

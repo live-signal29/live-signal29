@@ -42,9 +42,9 @@ const ChartAnalysis = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2">
-              <span className="gradient-text">Chart Analysis Setup</span>
+              <span className="gradient-text">💡 Ideas</span>
             </h1>
-            <p className="text-muted-foreground">Expert chart analysis and trading setups</p>
+            <p className="text-muted-foreground">Expert trading ideas and market insights</p>
           </div>
 
           {isLoading ? (
@@ -132,7 +132,7 @@ const ChartAnalysis = () => {
 
           {!isLoading && analyses?.length === 0 && (
             <div className="text-center py-20">
-              <p className="text-muted-foreground text-lg">No chart analysis found</p>
+              <p className="text-muted-foreground text-lg">No ideas found</p>
             </div>
           )}
         </div>
