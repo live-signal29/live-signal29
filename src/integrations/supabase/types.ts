@@ -325,6 +325,33 @@ export type Database = {
         }
         Relationships: []
       }
+      headlines: {
+        Row: {
+          created_at: string
+          headline_type: string
+          id: string
+          is_active: boolean
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          headline_type?: string
+          id?: string
+          is_active?: boolean
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          headline_type?: string
+          id?: string
+          is_active?: boolean
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       market_idea_reactions: {
         Row: {
           created_at: string

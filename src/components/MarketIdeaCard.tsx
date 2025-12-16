@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { MarketIdea, useMarketIdeaReactions, useAddReaction } from "@/hooks/useMarketIdeas";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { ThumbsUp, Flame, Heart } from "lucide-react";
 import { toast } from "sonner";
 
 interface MarketIdeaCardProps {
@@ -16,13 +15,13 @@ const MarketIdeaCard = ({ idea }: MarketIdeaCardProps) => {
   const addReaction = useAddReaction();
 
   // Get current user
-  useState(() => {
+  useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id);
     });
-  });
+  }, []);
 
-  const handleReaction = (type: "helpful" | "accurate" | "loved") => {
+  const handleReaction = (type: "helpful" | "accurate" | "loved" | "rocket") => {
     if (!userId) {
       toast.error("Please login to react");
       return;
@@ -38,9 +37,10 @@ const MarketIdeaCard = ({ idea }: MarketIdeaCardProps) => {
   const timeAgo = formatDistanceToNow(new Date(idea.created_at), { addSuffix: true });
 
   const reactionButtons = [
-    { type: "helpful" as const, icon: ThumbsUp, label: "Helpful", count: reactions?.helpful || 0 },
-    { type: "accurate" as const, icon: Flame, label: "Accurate", count: reactions?.accurate || 0 },
-    { type: "loved" as const, icon: Heart, label: "Loved", count: reactions?.loved || 0 },
+    { type: "helpful" as const, emoji: "👍", count: reactions?.helpful || 0 },
+    { type: "loved" as const, emoji: "❤️", count: reactions?.loved || 0 },
+    { type: "accurate" as const, emoji: "🔥", count: reactions?.accurate || 0 },
+    { type: "rocket" as const, emoji: "🚀", count: reactions?.rocket || 0 },
   ];
 
   return (
@@ -53,9 +53,14 @@ const MarketIdeaCard = ({ idea }: MarketIdeaCardProps) => {
         </span>
       </div>
 
-      {/* Optional Image */}
+      {/* Description - always shown */}
+      <p className="text-xs text-muted-foreground mb-3">
+        {idea.description}
+      </p>
+
+      {/* Optional Image - shown below text if exists */}
       {idea.image_url && (
-        <div className="mb-2 rounded-md overflow-hidden">
+        <div className="mb-3 rounded-md overflow-hidden">
           <img
             src={idea.image_url}
             alt={idea.title}
@@ -65,26 +70,21 @@ const MarketIdeaCard = ({ idea }: MarketIdeaCardProps) => {
         </div>
       )}
 
-      {/* Description */}
-      <p className="text-xs text-muted-foreground mb-3 line-clamp-3">
-        {idea.description}
-      </p>
-
       {/* Reactions */}
       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-        {reactionButtons.map(({ type, icon: Icon, label, count }) => (
+        {reactionButtons.map(({ type, emoji, count }) => (
           <button
             key={type}
             onClick={() => handleReaction(type)}
             className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] transition-all",
+              "flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all hover:scale-105",
               reactions?.userReaction === type
-                ? "bg-primary/20 text-primary"
+                ? "bg-primary/20 text-primary ring-1 ring-primary/30"
                 : "bg-muted/50 text-muted-foreground hover:bg-muted"
             )}
           >
-            <Icon className="h-3 w-3" />
-            <span>{count}</span>
+            <span>{emoji}</span>
+            <span className="font-medium">{count}</span>
           </button>
         ))}
       </div>
