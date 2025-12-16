@@ -70,10 +70,10 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   // Current price from live feed or stored value
   const currentPrice = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
 
-  // Entry price for P/L: only available once OPEN (Active trade)
-  const entryPrice = isOpen
-    ? (isLimitOrder ? (limitPrice > 0 ? limitPrice : parseEntryPrice(signal.entry)) : parseEntryPrice(signal.entry))
-    : null;
+  // Parse entry price for calculations
+  const parsedEntryPrice = isLimitOrder && limitPrice > 0 
+    ? limitPrice 
+    : parseEntryPrice(signal.entry);
 
   // For premium signals: ONLY premium subscribers can see OPEN premium signals
   // CLOSED premium signals are visible to everyone (including free trial users)
@@ -83,6 +83,14 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   // Track price direction for MT5-style color animation
   const prevPriceRef = useRef<number>(currentPrice);
   const [priceDirection, setPriceDirection] = useState<"up" | "down" | null>(null);
+
+  // Check if signal is too new to show P/L (< 60 seconds since creation)
+  const signalAgeMs = Date.now() - new Date(signal.created_at).getTime();
+  const isVeryNewSignal = signalAgeMs < 60000; // 60 seconds
+
+  // Check if entry has been "touched" - for MARKET orders, we assume entry touched immediately
+  // For P/L to start, signal must be OPEN and not brand new
+  const entryTouched = isOpen && !isVeryNewSignal;
 
   useEffect(() => {
     if (currentPrice > 0 && prevPriceRef.current > 0 && currentPrice !== prevPriceRef.current) {
@@ -102,9 +110,12 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   // IMPORTANT: UI must NOT auto-activate limit orders.
   // Activation happens in backend price listener only.
 
-  // Running P/L MUST be calculated ONLY when status == OPEN (Active in UI)
-  const runningPL = isOpen && currentPrice > 0 && entryPrice && entryPrice > 0
-    ? calculateRunningPL(currentPrice, entryPrice, signal.type)
+  // Running P/L MUST be calculated ONLY when:
+  // 1. Signal status == OPEN
+  // 2. Entry has been touched (signal is not brand new)
+  // 3. We have valid current price and entry price
+  const runningPL = isOpen && entryTouched && currentPrice > 0 && parsedEntryPrice > 0
+    ? calculateRunningPL(currentPrice, parsedEntryPrice, signal.type)
     : null;
 
   // Auto-update TP/SL hits

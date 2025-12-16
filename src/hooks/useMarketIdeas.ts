@@ -15,7 +15,7 @@ export interface MarketIdeaReaction {
   id: string;
   market_idea_id: string;
   user_id: string;
-  reaction_type: "helpful" | "accurate" | "loved";
+  reaction_type: "helpful" | "accurate" | "loved" | "rocket";
   created_at: string;
 }
 
@@ -23,6 +23,7 @@ export interface ReactionCounts {
   helpful: number;
   accurate: number;
   loved: number;
+  rocket: number;
   userReaction: string | null;
 }
 
@@ -58,6 +59,7 @@ export const useMarketIdeaReactions = (ideaId: string, userId: string | undefine
         helpful: reactions.filter((r) => r.reaction_type === "helpful").length,
         accurate: reactions.filter((r) => r.reaction_type === "accurate").length,
         loved: reactions.filter((r) => r.reaction_type === "loved").length,
+        rocket: reactions.filter((r) => r.reaction_type === "rocket").length,
         userReaction: userId
           ? reactions.find((r) => r.user_id === userId)?.reaction_type || null
           : null,
@@ -79,7 +81,7 @@ export const useAddReaction = () => {
     }: {
       ideaId: string;
       userId: string;
-      reactionType: "helpful" | "accurate" | "loved";
+      reactionType: "helpful" | "accurate" | "loved" | "rocket";
     }) => {
       // First check if user already has a reaction
       const { data: existing } = await supabase

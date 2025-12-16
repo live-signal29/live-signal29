@@ -188,6 +188,22 @@ All colors MUST be HSL.
     animation: float 3s ease-in-out infinite;
   }
 
+  /* Ticker animation for headlines */
+  @keyframes ticker {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-33.333%);
+    }
+  }
+
+  .animate-ticker {
+    animation: ticker 20s linear infinite;
+    display: flex;
+    width: max-content;
+  }
+
   /* Animation delays for staggered effects */
   .animation-delay-200 {
     animation-delay: 0.2s;

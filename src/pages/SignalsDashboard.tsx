@@ -20,7 +20,7 @@ import ChartLightbox from "@/components/ChartLightbox";
 import { differenceInDays, startOfDay } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
-import MarketIdeas from "@/components/MarketIdeas";
+import HeadlineTicker from "@/components/HeadlineTicker";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -179,15 +179,15 @@ const SignalsDashboard = () => {
       />
       <Header />
       
+      {/* Headline Ticker - below header */}
+      <HeadlineTicker />
+      
       <main className="flex-1">
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
           {!hasAccess ? (
             <TrialExpiredLockScreen />
           ) : (
             <>
-          {/* Market Ideas Section */}
-          <MarketIdeas />
-
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
             <div className="mb-4">
