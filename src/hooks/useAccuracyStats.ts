@@ -14,20 +14,22 @@ export interface AccuracyStats {
 export const useAccuracyStats = () => {
   const queryClient = useQueryClient();
 
-  // Subscribe to trade_history changes for auto-refresh
+  // Auto-refresh accuracy when any signal is CLOSED (free or premium)
   useEffect(() => {
     const channel = supabase
-      .channel("trade-history-accuracy")
+      .channel("signals-accuracy")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "UPDATE",
           schema: "public",
-          table: "trade_history",
+          table: "signals",
         },
-        () => {
-          // Auto-refresh accuracy when trade history changes
-          queryClient.invalidateQueries({ queryKey: ["accuracy-stats"] });
+        (payload: any) => {
+          const next = payload?.new;
+          if (next?.signal_status === "CLOSE") {
+            queryClient.invalidateQueries({ queryKey: ["accuracy-stats"] });
+          }
         }
       )
       .subscribe();
