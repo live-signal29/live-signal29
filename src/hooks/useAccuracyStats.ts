@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export interface AccuracyStats {
   free_total: number;
@@ -11,6 +12,31 @@ export interface AccuracyStats {
 }
 
 export const useAccuracyStats = () => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to trade_history changes for auto-refresh
+  useEffect(() => {
+    const channel = supabase
+      .channel("trade-history-accuracy")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "trade_history",
+        },
+        () => {
+          // Auto-refresh accuracy when trade history changes
+          queryClient.invalidateQueries({ queryKey: ["accuracy-stats"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ["accuracy-stats"],
     queryFn: async () => {
@@ -30,5 +56,6 @@ export const useAccuracyStats = () => {
 
       return stats as AccuracyStats;
     },
+    staleTime: 30000, // 30 seconds
   });
 };
