@@ -128,7 +128,9 @@ serve(async (req) => {
     // Full update mode - get all non-closed signals and update
     const { data: signals, error } = await supabase
       .from("signals")
-      .select("id, pair, type, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, signal_status, entry_mode, limit_entry_price, is_activated")
+      .select(
+        "id, pair, type, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, status, signal_status, entry_mode, limit_entry_price, is_activated"
+      )
       .eq("published", true)
       .neq("signal_status", "close");
     
@@ -173,11 +175,24 @@ serve(async (req) => {
         
         const isBuy = signal.type?.toLowerCase() === 'buy';
 
+        // Normalize lifecycle casing (handles "OPEN"/"Close" etc.)
+        const lifecycle = String(signal.signal_status || signal.status || '').toLowerCase();
+
         // LIMIT ORDER ACTIVATION (system standard)
         // Only check orders that are PENDING.
         const isLimitOrder = signal.entry_mode === 'limit';
-        const isPending = signal.signal_status === 'pending';
+        const isPending = lifecycle === 'pending';
         const limitPrice = typeof signal.limit_entry_price === 'number' ? signal.limit_entry_price : 0;
+
+        // Skip TP/SL logic for already-closed signals (even if casing differs)
+        if (lifecycle === 'close') {
+          await supabase
+            .from("signals")
+            .update(updates)
+            .eq("id", signal.id);
+          updatedCount++;
+          continue;
+        }
 
         if (isLimitOrder && isPending && limitPrice > 0) {
           // LIMIT BUY: Activate ONLY when CurrentPrice <= Entry Price
@@ -195,7 +210,7 @@ serve(async (req) => {
         }
 
         // Only check TP/SL for OPEN signals (active trades)
-        const isOpen = signal.signal_status === 'open' || updates.signal_status === 'open';
+        const isOpen = lifecycle === 'open' || updates.signal_status === 'open';
 
         if (isOpen) {
           // TP1 - only if TP1 has a valid numeric price
