@@ -86,6 +86,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   const [priceDirection, setPriceDirection] = useState<"up" | "down" | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const confettiFiredRef = useRef<boolean>(false);
+  const initialTP3StateRef = useRef<boolean>(signal.tp3_hit); // Track initial TP3 state on mount
 
   // Check if signal is too new to show P/L (< 60 seconds since creation)
   const signalAgeMs = Date.now() - new Date(signal.created_at).getTime();
@@ -113,12 +114,18 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     }
   }, []);
 
-  // Trigger confetti when TP3 is hit - only when tab is visible
+  // Trigger confetti ONLY when TP3 changes from false to true during session
+  // Not when opening dashboard with already closed signals
   useEffect(() => {
-    if (signal.tp3_hit && isClosed && !confettiFiredRef.current && document.visibilityState === 'visible') {
+    if (
+      signal.tp3_hit && 
+      !initialTP3StateRef.current && // Was false on mount
+      !confettiFiredRef.current && 
+      document.visibilityState === 'visible'
+    ) {
       triggerConfetti();
     }
-  }, [signal.tp3_hit, isClosed, triggerConfetti]);
+  }, [signal.tp3_hit, triggerConfetti]);
 
   useEffect(() => {
     if (currentPrice > 0 && prevPriceRef.current > 0 && currentPrice !== prevPriceRef.current) {
