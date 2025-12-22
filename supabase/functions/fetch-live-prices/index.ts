@@ -218,6 +218,7 @@ serve(async (req) => {
             const tp1Price = parsePrice(signal.tp1);
             if (tp1Price > 0 && (isBuy ? priceNum >= tp1Price : priceNum <= tp1Price)) {
               updates.tp1_hit = true;
+              updates.profit_note = '1st TP done ✅ Move SL to BE 🫴';
               console.log(`TP1 hit for signal ${signal.id}`);
             }
           }
@@ -227,6 +228,7 @@ serve(async (req) => {
             const tp2Price = parsePrice(signal.tp2);
             if (tp2Price > 0 && (isBuy ? priceNum >= tp2Price : priceNum <= tp2Price)) {
               updates.tp2_hit = true;
+              updates.profit_note = '2nd TP done ✅ Secure Profit or Hold Half for More 📈';
               console.log(`TP2 hit for signal ${signal.id}`);
             }
           }
@@ -238,7 +240,7 @@ serve(async (req) => {
               updates.tp3_hit = true;
               updates.signal_status = 'close';
               updates.status = 'close';
-              updates.profit_note = '3rd TP done enjoy profit 🎉';
+              updates.profit_note = '3rd TP done 🎉 Enjoy Profit 🥳';
               console.log(`TP3 hit for signal ${signal.id} - closing signal with profit note`);
             }
           }
