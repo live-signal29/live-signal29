@@ -280,10 +280,10 @@ const AccountManagement = () => {
               {plans.map((plan, index) => {
                 const Icon = plan.icon;
                 return (
-                  <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 lg:basis-1/4">
+                  <CarouselItem key={index} className="pl-3 md:pl-4 basis-[92%] sm:basis-1/2 lg:basis-1/4 flex justify-center">
                     <Card 
                       className={cn(
-                        "relative overflow-hidden border-border/40 transition-all duration-500 group cursor-pointer h-full",
+                        "relative overflow-hidden border-border/40 transition-all duration-500 group cursor-pointer h-full max-w-[340px] min-h-[420px]",
                         "hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20",
                         "bg-gradient-to-br from-background via-background to-muted/20",
                         "animate-fade-in",
@@ -312,24 +312,24 @@ const AccountManagement = () => {
                         </div>
                       )}
                       
-                      <CardHeader className="pb-3 pt-5 px-4">
+                      <CardHeader className="pb-4 pt-6 px-5">
                         <div className={cn(
-                          "w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg",
+                          "w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg",
                           plan.color
                         )}>
-                          <Icon className="h-6 w-6 text-white" />
+                          <Icon className="h-7 w-7 text-white" />
                         </div>
-                        <CardTitle className="text-base font-bold group-hover:text-primary transition-colors">{plan.title}</CardTitle>
+                        <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{plan.title}</CardTitle>
                         <div className="relative inline-block">
                           <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-xl opacity-0 group-hover:opacity-30 transition-opacity" />
-                          <span className="relative text-3xl font-black bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-primary group-hover:to-primary/70 bg-clip-text text-transparent transition-all">
+                          <span className="relative text-4xl font-black bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-primary group-hover:to-primary/70 bg-clip-text text-transparent transition-all">
                             {plan.amount}
                           </span>
                         </div>
                       </CardHeader>
                       
-                      <CardContent className="space-y-3 px-4 pb-4">
-                        <div className="space-y-2 p-3 rounded-xl bg-muted/30 border border-border/30">
+                      <CardContent className="space-y-4 px-5 pb-5">
+                        <div className="space-y-2.5 p-4 rounded-xl bg-muted/30 border border-border/30">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Profit</span>
                             <span className="font-bold text-primary">{plan.profitSharing}</span>
@@ -340,9 +340,9 @@ const AccountManagement = () => {
                           </div>
                         </div>
                         
-                        <ul className="space-y-1.5">
-                          {plan.features.slice(0, 3).map((feature, i) => (
-                            <li key={i} className="flex items-start gap-2 text-xs">
+                        <ul className="space-y-2">
+                          {plan.features.slice(0, 4).map((feature, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm">
                               <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                               <span className="text-muted-foreground line-clamp-1">{feature}</span>
                             </li>
@@ -351,7 +351,7 @@ const AccountManagement = () => {
                         
                         <Button 
                           className={cn(
-                            "w-full h-10 text-sm font-bold relative overflow-hidden",
+                            "w-full h-12 text-sm font-bold relative overflow-hidden",
                             "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
                             "shadow-md hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
                           )}
