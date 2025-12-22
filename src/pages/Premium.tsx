@@ -42,6 +42,14 @@ const Premium = () => {
     planCarouselApi.on("select", onSelect);
     onSelect();
 
+    // Auto-scroll to popular plan (Quarterly - index 1) on mobile
+    const isMobile = window.innerWidth < 640;
+    if (isMobile) {
+      setTimeout(() => {
+        planCarouselApi.scrollTo(1, false);
+      }, 100);
+    }
+
     return () => {
       planCarouselApi.off("select", onSelect);
     };
@@ -537,7 +545,7 @@ const Premium = () => {
                 return (
                   <CarouselItem 
                     key={plan.name} 
-                    className="pl-2 md:pl-4 basis-[85%] sm:basis-1/2 lg:basis-1/4 flex justify-center"
+                    className="pl-2 md:pl-4 basis-[90%] sm:basis-1/2 lg:basis-1/4 flex justify-center"
                   >
                     <Card 
                       className={`
@@ -545,7 +553,7 @@ const Premium = () => {
                         transition-all duration-500 ease-out
                         hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20
                         animate-fade-in
-                        w-full max-w-[280px] sm:max-w-none
+                        w-full max-w-[320px] sm:max-w-none min-h-[380px]
                         ${plan.popular 
                           ? 'border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl shadow-primary/10 ring-1 ring-primary/30' 
                           : 'border-border/40 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20'
