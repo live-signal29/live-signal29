@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -8,7 +8,7 @@ import { getProductStructuredData, getBreadcrumbStructuredData } from "@/compone
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { Check, Tag, Copy, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,24 @@ const Premium = () => {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [selectedCrypto, setSelectedCrypto] = useState("USDT_TRC20");
+  const [planCarouselApi, setPlanCarouselApi] = useState<CarouselApi>();
+  const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
+
+  // Track carousel slide changes
+  useEffect(() => {
+    if (!planCarouselApi) return;
+
+    const onSelect = () => {
+      setCurrentPlanIndex(planCarouselApi.selectedScrollSnap());
+    };
+
+    planCarouselApi.on("select", onSelect);
+    onSelect();
+
+    return () => {
+      planCarouselApi.off("select", onSelect);
+    };
+  }, [planCarouselApi]);
 
   const autoplayPlugin = Autoplay({ delay: 3000, stopOnInteraction: true });
 
@@ -504,6 +522,7 @@ const Premium = () => {
               align: "center",
               loop: true,
             }}
+            setApi={setPlanCarouselApi}
           >
             <CarouselContent className="-ml-2 md:-ml-4">
               {plans.map((plan, index) => {
@@ -661,8 +680,24 @@ const Premium = () => {
             <CarouselNext className="hidden sm:flex" />
           </Carousel>
           
+          {/* Dot indicators for mobile */}
+          <div className="flex justify-center gap-2 mt-4 sm:hidden">
+            {plans.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => planCarouselApi?.scrollTo(index)}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  currentPlanIndex === index 
+                    ? 'bg-primary scale-125' 
+                    : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                }`}
+                aria-label={`Go to plan ${index + 1}`}
+              />
+            ))}
+          </div>
+          
           {/* Swipe hint for mobile */}
-          <p className="text-center text-xs text-muted-foreground mt-4 sm:hidden">
+          <p className="text-center text-xs text-muted-foreground mt-2 sm:hidden">
             ← Swipe to see more plans →
           </p>
         </div>
