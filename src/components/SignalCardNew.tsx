@@ -132,6 +132,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         const tp1Price = parseEntryPrice(signal.tp1);
         if (checkTPSLHit(currentPrice, tp1Price, signal.type)) {
           updates.tp1_hit = true;
+          updates.profit_note = '1st TP done ✅ Move SL to BE 🫴';
         }
       }
 
@@ -140,6 +141,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         const tp2Price = parseEntryPrice(signal.tp2);
         if (checkTPSLHit(currentPrice, tp2Price, signal.type)) {
           updates.tp2_hit = true;
+          updates.profit_note = '2nd TP done ✅ Secure Profit or Hold Half for More 📈';
         }
       }
 
@@ -149,7 +151,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         if (checkTPSLHit(currentPrice, tp3Price, signal.type)) {
           updates.tp3_hit = true;
           updates.signal_status = 'close';
-          updates.profit_note = '3rd TP done enjoy profit 🎉';
+          updates.profit_note = '3rd TP done 🎉 Enjoy Profit 🥳';
         }
       }
 
