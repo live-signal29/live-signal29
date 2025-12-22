@@ -501,7 +501,7 @@ const Premium = () => {
           <Carousel 
             className="w-full"
             opts={{
-              align: "start",
+              align: "center",
               loop: true,
             }}
           >
@@ -518,14 +518,15 @@ const Premium = () => {
                 return (
                   <CarouselItem 
                     key={plan.name} 
-                    className="pl-2 md:pl-4 basis-1/2 lg:basis-1/4"
+                    className="pl-2 md:pl-4 basis-[85%] sm:basis-1/2 lg:basis-1/4 flex justify-center"
                   >
                     <Card 
                       className={`
-                        relative h-full overflow-hidden group cursor-pointer
+                        relative overflow-hidden group cursor-pointer
                         transition-all duration-500 ease-out
                         hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20
                         animate-fade-in
+                        w-full max-w-[280px] sm:max-w-none
                         ${plan.popular 
                           ? 'border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl shadow-primary/10 ring-1 ring-primary/30' 
                           : 'border-border/40 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20'
@@ -656,9 +657,14 @@ const Premium = () => {
                 );
               })}
             </CarouselContent>
-            <CarouselPrevious className="hidden md:flex" />
-            <CarouselNext className="hidden md:flex" />
+            <CarouselPrevious className="hidden sm:flex" />
+            <CarouselNext className="hidden sm:flex" />
           </Carousel>
+          
+          {/* Swipe hint for mobile */}
+          <p className="text-center text-xs text-muted-foreground mt-4 sm:hidden">
+            ← Swipe to see more plans →
+          </p>
         </div>
 
         {/* Affiliate Banner Carousel */}
