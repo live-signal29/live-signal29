@@ -5,9 +5,10 @@ import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { parseEntryPrice, calculateRunningPL, checkTPSLHit } from "@/hooks/useLivePrices";
 import { supabase } from "@/integrations/supabase/client";
+import confetti from "canvas-confetti";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +84,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   // Track price direction for MT5-style color animation
   const prevPriceRef = useRef<number>(currentPrice);
   const [priceDirection, setPriceDirection] = useState<"up" | "down" | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const confettiFiredRef = useRef<boolean>(false);
 
   // Check if signal is too new to show P/L (< 60 seconds since creation)
   const signalAgeMs = Date.now() - new Date(signal.created_at).getTime();
@@ -91,6 +94,31 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   // Check if entry has been "touched" - for MARKET orders, we assume entry touched immediately
   // For P/L to start, signal must be OPEN and not brand new
   const entryTouched = isOpen && !isVeryNewSignal;
+
+  // Confetti celebration for TP3 hit
+  const triggerConfetti = useCallback(() => {
+    if (cardRef.current && !confettiFiredRef.current) {
+      confettiFiredRef.current = true;
+      const rect = cardRef.current.getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { x, y },
+        colors: ['#10b981', '#22c55e', '#4ade80', '#fbbf24', '#f59e0b'],
+        zIndex: 9999,
+      });
+    }
+  }, []);
+
+  // Trigger confetti when TP3 is hit
+  useEffect(() => {
+    if (signal.tp3_hit && isClosed && !confettiFiredRef.current) {
+      triggerConfetti();
+    }
+  }, [signal.tp3_hit, isClosed, triggerConfetti]);
 
   useEffect(() => {
     if (currentPrice > 0 && prevPriceRef.current > 0 && currentPrice !== prevPriceRef.current) {
@@ -233,11 +261,14 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   };
 
   return (
-    <Card className={`overflow-hidden transition-all duration-300 shadow-sm relative bg-card ${
-      signal.is_premium 
-        ? 'border-2 border-primary/40' 
-        : 'border-border'
-    } ${!isLocked && 'hover:border-primary/50 hover:shadow-md'}`}>
+    <Card 
+      ref={cardRef}
+      className={`overflow-hidden transition-all duration-300 shadow-sm relative bg-card ${
+        signal.is_premium 
+          ? 'border-2 border-primary/40' 
+          : 'border-border'
+      } ${!isLocked && 'hover:border-primary/50 hover:shadow-md'}`}
+    >
       <CardContent className="p-0 relative z-10">
         {/* NEW Badge - only on unlocked */}
         {isNewSignal && !isLocked && (
