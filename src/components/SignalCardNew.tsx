@@ -113,9 +113,9 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     }
   }, []);
 
-  // Trigger confetti when TP3 is hit
+  // Trigger confetti when TP3 is hit - only when tab is visible
   useEffect(() => {
-    if (signal.tp3_hit && isClosed && !confettiFiredRef.current) {
+    if (signal.tp3_hit && isClosed && !confettiFiredRef.current && document.visibilityState === 'visible') {
       triggerConfetti();
     }
   }, [signal.tp3_hit, isClosed, triggerConfetti]);
