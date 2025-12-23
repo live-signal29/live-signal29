@@ -1,7 +1,8 @@
 import { useDetailedAccuracyStats } from "@/hooks/useDetailedAccuracyStats";
 import { Card, CardContent } from "@/components/ui/card";
-import { Target, TrendingUp, TrendingDown, Calendar, Sun, CalendarDays } from "lucide-react";
+import { Target, TrendingUp, TrendingDown, Calendar, CalendarDays, Crown, Unlock, Sun } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 const DetailedAccuracyStats = () => {
   const { data: stats, isLoading } = useDetailedAccuracyStats();
@@ -35,6 +36,12 @@ const DetailedAccuracyStats = () => {
       wins: stats?.today_wins || 0,
       losses: stats?.today_losses || 0,
       accuracy: stats?.today_accuracy,
+      freeTotal: stats?.today_free_total || 0,
+      freeWins: stats?.today_free_wins || 0,
+      freeAccuracy: stats?.today_free_accuracy,
+      premiumTotal: stats?.today_premium_total || 0,
+      premiumWins: stats?.today_premium_wins || 0,
+      premiumAccuracy: stats?.today_premium_accuracy,
       gradient: "from-emerald-500/10 to-emerald-600/5",
       border: "border-emerald-500/20",
       color: "text-emerald-500",
@@ -46,6 +53,12 @@ const DetailedAccuracyStats = () => {
       wins: stats?.yesterday_wins || 0,
       losses: stats?.yesterday_losses || 0,
       accuracy: stats?.yesterday_accuracy,
+      freeTotal: stats?.yesterday_free_total || 0,
+      freeWins: stats?.yesterday_free_wins || 0,
+      freeAccuracy: stats?.yesterday_free_accuracy,
+      premiumTotal: stats?.yesterday_premium_total || 0,
+      premiumWins: stats?.yesterday_premium_wins || 0,
+      premiumAccuracy: stats?.yesterday_premium_accuracy,
       gradient: "from-blue-500/10 to-blue-600/5",
       border: "border-blue-500/20",
       color: "text-blue-500",
@@ -57,6 +70,12 @@ const DetailedAccuracyStats = () => {
       wins: stats?.week_wins || 0,
       losses: stats?.week_losses || 0,
       accuracy: stats?.week_accuracy,
+      freeTotal: stats?.week_free_total || 0,
+      freeWins: stats?.week_free_wins || 0,
+      freeAccuracy: stats?.week_free_accuracy,
+      premiumTotal: stats?.week_premium_total || 0,
+      premiumWins: stats?.week_premium_wins || 0,
+      premiumAccuracy: stats?.week_premium_accuracy,
       gradient: "from-amber-500/10 to-amber-600/5",
       border: "border-amber-500/20",
       color: "text-amber-500",
@@ -68,6 +87,12 @@ const DetailedAccuracyStats = () => {
       wins: stats?.weekend_wins || 0,
       losses: stats?.weekend_losses || 0,
       accuracy: stats?.weekend_accuracy,
+      freeTotal: stats?.weekend_free_total || 0,
+      freeWins: stats?.weekend_free_wins || 0,
+      freeAccuracy: stats?.weekend_free_accuracy,
+      premiumTotal: stats?.weekend_premium_total || 0,
+      premiumWins: stats?.weekend_premium_wins || 0,
+      premiumAccuracy: stats?.weekend_premium_accuracy,
       gradient: "from-purple-500/10 to-purple-600/5",
       border: "border-purple-500/20",
       color: "text-purple-500",
@@ -97,6 +122,7 @@ const DetailedAccuracyStats = () => {
               
               {stat.total > 0 ? (
                 <>
+                  {/* Overall Accuracy */}
                   <p className={`text-xl sm:text-2xl font-bold ${stat.color}`}>
                     {stat.accuracy !== null ? `${stat.accuracy}%` : '—'}
                   </p>
@@ -110,6 +136,32 @@ const DetailedAccuracyStats = () => {
                       <TrendingDown className="h-2.5 w-2.5" />
                       {stat.losses}
                     </span>
+                  </div>
+                  
+                  {/* Free & Premium breakdown */}
+                  <div className="mt-2 pt-2 border-t border-border/30 space-y-1">
+                    {stat.freeTotal > 0 && (
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Unlock className="h-2.5 w-2.5" />
+                          <span>Free</span>
+                        </div>
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
+                          {stat.freeAccuracy !== null ? `${stat.freeAccuracy}%` : '—'} ({stat.freeWins}/{stat.freeTotal})
+                        </Badge>
+                      </div>
+                    )}
+                    {stat.premiumTotal > 0 && (
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                        <div className="flex items-center gap-1 text-amber-500">
+                          <Crown className="h-2.5 w-2.5" />
+                          <span>Premium</span>
+                        </div>
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-600">
+                          {stat.premiumAccuracy !== null ? `${stat.premiumAccuracy}%` : '—'} ({stat.premiumWins}/{stat.premiumTotal})
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (

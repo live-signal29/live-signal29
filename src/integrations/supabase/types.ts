@@ -1125,19 +1125,43 @@ export type Database = {
         Args: never
         Returns: {
           today_accuracy: number
+          today_free_accuracy: number
+          today_free_total: number
+          today_free_wins: number
           today_losses: number
+          today_premium_accuracy: number
+          today_premium_total: number
+          today_premium_wins: number
           today_total: number
           today_wins: number
           week_accuracy: number
+          week_free_accuracy: number
+          week_free_total: number
+          week_free_wins: number
           week_losses: number
+          week_premium_accuracy: number
+          week_premium_total: number
+          week_premium_wins: number
           week_total: number
           week_wins: number
           weekend_accuracy: number
+          weekend_free_accuracy: number
+          weekend_free_total: number
+          weekend_free_wins: number
           weekend_losses: number
+          weekend_premium_accuracy: number
+          weekend_premium_total: number
+          weekend_premium_wins: number
           weekend_total: number
           weekend_wins: number
           yesterday_accuracy: number
+          yesterday_free_accuracy: number
+          yesterday_free_total: number
+          yesterday_free_wins: number
           yesterday_losses: number
+          yesterday_premium_accuracy: number
+          yesterday_premium_total: number
+          yesterday_premium_wins: number
           yesterday_total: number
           yesterday_wins: number
         }[]
