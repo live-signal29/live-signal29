@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, Crown, TrendingUp, TrendingDown, BarChart3, Calendar } from "lucide-react";
 import SEO from "@/components/SEO";
+import DetailedAccuracyStats from "@/components/DetailedAccuracyStats";
 
 const Results = () => {
   const { data: stats, isLoading } = useAccuracyStats();
@@ -29,6 +30,9 @@ const Results = () => {
               <span className="text-sm">Last 7 Days Performance</span>
             </div>
           </div>
+
+          {/* Detailed Accuracy Stats - Daily, Yesterday, Weekly, Weekend */}
+          <DetailedAccuracyStats />
 
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
