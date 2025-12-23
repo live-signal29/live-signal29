@@ -1121,6 +1121,27 @@ export type Database = {
           premium_wins: number
         }[]
       }
+      get_detailed_accuracy_stats: {
+        Args: never
+        Returns: {
+          today_accuracy: number
+          today_losses: number
+          today_total: number
+          today_wins: number
+          week_accuracy: number
+          week_losses: number
+          week_total: number
+          week_wins: number
+          weekend_accuracy: number
+          weekend_losses: number
+          weekend_total: number
+          weekend_wins: number
+          yesterday_accuracy: number
+          yesterday_losses: number
+          yesterday_total: number
+          yesterday_wins: number
+        }[]
+      }
       get_mt5_demo_stats: {
         Args: { p_days?: number }
         Returns: {
