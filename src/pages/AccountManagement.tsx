@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { type CarouselApi } from "@/components/ui/carousel";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,20 @@ const AccountManagement = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+
+    setCount(carouselApi.scrollSnapList().length);
+    setCurrent(carouselApi.selectedScrollSnap());
+
+    carouselApi.on("select", () => {
+      setCurrent(carouselApi.selectedScrollSnap());
+    });
+  }, [carouselApi]);
 
   const { data: performanceData } = useQuery({
     queryKey: ['account-performance'],
@@ -271,19 +286,21 @@ const AccountManagement = () => {
             }}
             plugins={[
               Autoplay({
-                delay: 4000,
+                delay: 3500,
+                stopOnInteraction: false,
               }),
             ]}
+            setApi={setCarouselApi}
             className="w-full"
           >
-            <CarouselContent className="-ml-2 md:-ml-4">
+            <CarouselContent className="-ml-3 md:-ml-4">
               {plans.map((plan, index) => {
                 const Icon = plan.icon;
                 return (
-                  <CarouselItem key={index} className="pl-3 md:pl-4 basis-[92%] sm:basis-1/2 lg:basis-1/4 flex justify-center">
+                  <CarouselItem key={index} className="pl-3 md:pl-4 basis-[95%] sm:basis-[55%] lg:basis-1/3 flex justify-center">
                     <Card 
                       className={cn(
-                        "relative overflow-hidden border-border/40 transition-all duration-500 group cursor-pointer h-full max-w-[340px] min-h-[420px]",
+                        "relative overflow-hidden border-border/40 transition-all duration-500 group cursor-pointer h-full w-full max-w-[380px] min-h-[440px]",
                         "hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20",
                         "bg-gradient-to-br from-background via-background to-muted/20",
                         "animate-fade-in",
@@ -369,6 +386,22 @@ const AccountManagement = () => {
             <CarouselPrevious className="hidden md:flex -left-4" />
             <CarouselNext className="hidden md:flex -right-4" />
           </Carousel>
+          
+          {/* Dot indicators */}
+          <div className="flex justify-center gap-2 mt-6">
+            {Array.from({ length: count }).map((_, index) => (
+              <button
+                key={index}
+                className={cn(
+                  "w-2.5 h-2.5 rounded-full transition-all duration-300",
+                  current === index 
+                    ? "bg-primary w-6" 
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                )}
+                onClick={() => carouselApi?.scrollTo(index)}
+              />
+            ))}
+          </div>
         </section>
 
         {/* How It Works */}
