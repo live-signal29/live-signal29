@@ -22,7 +22,7 @@ import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
-import DetailedAccuracyStats from "@/components/DetailedAccuracyStats";
+
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -223,8 +223,6 @@ const SignalsDashboard = () => {
             </div>
           </div>
 
-          {/* Detailed Accuracy Stats */}
-          <DetailedAccuracyStats />
 
           {/* Favorites Filter Button */}
 
