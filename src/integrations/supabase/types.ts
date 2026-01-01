@@ -1259,6 +1259,19 @@ export type Database = {
               updated_at: string
             }[]
           }
+      get_xauusd_accuracy_stats: {
+        Args: never
+        Returns: {
+          avg_loss_pips: number
+          avg_win_pips: number
+          last_7_days: Json
+          total_losses: number
+          total_pips: number
+          total_signals: number
+          total_wins: number
+          win_rate: number
+        }[]
+      }
       has_premium_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
