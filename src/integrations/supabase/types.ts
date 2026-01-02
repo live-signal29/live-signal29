@@ -1265,11 +1265,27 @@ export type Database = {
           avg_loss_pips: number
           avg_win_pips: number
           last_7_days: Json
+          today_accuracy: number
+          today_losses: number
+          today_total: number
+          today_wins: number
           total_losses: number
           total_pips: number
           total_signals: number
           total_wins: number
+          week_accuracy: number
+          week_losses: number
+          week_total: number
+          week_wins: number
+          weekend_accuracy: number
+          weekend_losses: number
+          weekend_total: number
+          weekend_wins: number
           win_rate: number
+          yesterday_accuracy: number
+          yesterday_losses: number
+          yesterday_total: number
+          yesterday_wins: number
         }[]
       }
       has_premium_access: { Args: { _user_id: string }; Returns: boolean }
