@@ -31,10 +31,10 @@ export interface XAUUSDAccuracyStats {
   week_wins: number;
   week_losses: number;
   week_accuracy: number | null;
-  weekend_total: number;
-  weekend_wins: number;
-  weekend_losses: number;
-  weekend_accuracy: number | null;
+  monthly_total: number;
+  monthly_wins: number;
+  monthly_losses: number;
+  monthly_accuracy: number | null;
 }
 
 const defaultStats: XAUUSDAccuracyStats = {
@@ -58,10 +58,10 @@ const defaultStats: XAUUSDAccuracyStats = {
   week_wins: 0,
   week_losses: 0,
   week_accuracy: null,
-  weekend_total: 0,
-  weekend_wins: 0,
-  weekend_losses: 0,
-  weekend_accuracy: null,
+  monthly_total: 0,
+  monthly_wins: 0,
+  monthly_losses: 0,
+  monthly_accuracy: null,
 };
 
 export const useXAUUSDAccuracyStats = () => {
@@ -125,10 +125,10 @@ export const useXAUUSDAccuracyStats = () => {
         week_wins: Number(stats.week_wins) || 0,
         week_losses: Number(stats.week_losses) || 0,
         week_accuracy: stats.week_accuracy !== null ? Number(stats.week_accuracy) : null,
-        weekend_total: Number(stats.weekend_total) || 0,
-        weekend_wins: Number(stats.weekend_wins) || 0,
-        weekend_losses: Number(stats.weekend_losses) || 0,
-        weekend_accuracy: stats.weekend_accuracy !== null ? Number(stats.weekend_accuracy) : null,
+        monthly_total: Number(stats.monthly_total) || 0,
+        monthly_wins: Number(stats.monthly_wins) || 0,
+        monthly_losses: Number(stats.monthly_losses) || 0,
+        monthly_accuracy: stats.monthly_accuracy !== null ? Number(stats.monthly_accuracy) : null,
       } as XAUUSDAccuracyStats;
     },
     staleTime: 30000,
