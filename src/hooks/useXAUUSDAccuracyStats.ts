@@ -19,6 +19,22 @@ export interface XAUUSDAccuracyStats {
   avg_win_pips: number;
   avg_loss_pips: number;
   last_7_days: XAUUSDDayData[];
+  today_total: number;
+  today_wins: number;
+  today_losses: number;
+  today_accuracy: number | null;
+  yesterday_total: number;
+  yesterday_wins: number;
+  yesterday_losses: number;
+  yesterday_accuracy: number | null;
+  week_total: number;
+  week_wins: number;
+  week_losses: number;
+  week_accuracy: number | null;
+  weekend_total: number;
+  weekend_wins: number;
+  weekend_losses: number;
+  weekend_accuracy: number | null;
 }
 
 const defaultStats: XAUUSDAccuracyStats = {
@@ -30,6 +46,22 @@ const defaultStats: XAUUSDAccuracyStats = {
   avg_win_pips: 0,
   avg_loss_pips: 0,
   last_7_days: [],
+  today_total: 0,
+  today_wins: 0,
+  today_losses: 0,
+  today_accuracy: null,
+  yesterday_total: 0,
+  yesterday_wins: 0,
+  yesterday_losses: 0,
+  yesterday_accuracy: null,
+  week_total: 0,
+  week_wins: 0,
+  week_losses: 0,
+  week_accuracy: null,
+  weekend_total: 0,
+  weekend_wins: 0,
+  weekend_losses: 0,
+  weekend_accuracy: null,
 };
 
 export const useXAUUSDAccuracyStats = () => {
@@ -81,6 +113,22 @@ export const useXAUUSDAccuracyStats = () => {
         avg_win_pips: Number(stats.avg_win_pips) || 0,
         avg_loss_pips: Number(stats.avg_loss_pips) || 0,
         last_7_days: (stats.last_7_days || []) as XAUUSDDayData[],
+        today_total: Number(stats.today_total) || 0,
+        today_wins: Number(stats.today_wins) || 0,
+        today_losses: Number(stats.today_losses) || 0,
+        today_accuracy: stats.today_accuracy !== null ? Number(stats.today_accuracy) : null,
+        yesterday_total: Number(stats.yesterday_total) || 0,
+        yesterday_wins: Number(stats.yesterday_wins) || 0,
+        yesterday_losses: Number(stats.yesterday_losses) || 0,
+        yesterday_accuracy: stats.yesterday_accuracy !== null ? Number(stats.yesterday_accuracy) : null,
+        week_total: Number(stats.week_total) || 0,
+        week_wins: Number(stats.week_wins) || 0,
+        week_losses: Number(stats.week_losses) || 0,
+        week_accuracy: stats.week_accuracy !== null ? Number(stats.week_accuracy) : null,
+        weekend_total: Number(stats.weekend_total) || 0,
+        weekend_wins: Number(stats.weekend_wins) || 0,
+        weekend_losses: Number(stats.weekend_losses) || 0,
+        weekend_accuracy: stats.weekend_accuracy !== null ? Number(stats.weekend_accuracy) : null,
       } as XAUUSDAccuracyStats;
     },
     staleTime: 30000,

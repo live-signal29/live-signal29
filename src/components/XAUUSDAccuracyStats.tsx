@@ -1,6 +1,6 @@
 import { useXAUUSDAccuracyStats, XAUUSDDayData } from "@/hooks/useXAUUSDAccuracyStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Target, TrendingUp, TrendingDown, BarChart3, Activity, Zap } from "lucide-react";
+import { Target, TrendingUp, TrendingDown, BarChart3, Activity, Zap, Calendar, Clock, CalendarDays, Sun } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { format, parseISO } from "date-fns";
@@ -11,6 +11,16 @@ const XAUUSDAccuracyStats = () => {
   if (isLoading) {
     return (
       <div className="space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <Skeleton className="h-6 w-24 mb-2" />
+                <Skeleton className="h-10 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
         <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
           <CardContent className="p-6">
             <Skeleton className="h-8 w-48 mb-4" />
@@ -19,11 +29,6 @@ const XAUUSDAccuracyStats = () => {
                 <Skeleton key={i} className="h-20 w-full" />
               ))}
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-48 w-full" />
           </CardContent>
         </Card>
       </div>
@@ -41,8 +46,98 @@ const XAUUSDAccuracyStats = () => {
 
   const hasData = (stats?.total_signals || 0) > 0;
 
+  // Date-wise performance cards
+  const dateCards = [
+    {
+      label: "Today",
+      icon: Calendar,
+      total: stats?.today_total || 0,
+      wins: stats?.today_wins || 0,
+      losses: stats?.today_losses || 0,
+      accuracy: stats?.today_accuracy,
+      color: "from-blue-500/20 to-blue-600/10",
+      borderColor: "border-blue-500/30",
+      iconColor: "text-blue-500",
+    },
+    {
+      label: "Yesterday",
+      icon: Clock,
+      total: stats?.yesterday_total || 0,
+      wins: stats?.yesterday_wins || 0,
+      losses: stats?.yesterday_losses || 0,
+      accuracy: stats?.yesterday_accuracy,
+      color: "from-purple-500/20 to-purple-600/10",
+      borderColor: "border-purple-500/30",
+      iconColor: "text-purple-500",
+    },
+    {
+      label: "This Week",
+      icon: CalendarDays,
+      total: stats?.week_total || 0,
+      wins: stats?.week_wins || 0,
+      losses: stats?.week_losses || 0,
+      accuracy: stats?.week_accuracy,
+      color: "from-emerald-500/20 to-emerald-600/10",
+      borderColor: "border-emerald-500/30",
+      iconColor: "text-emerald-500",
+    },
+    {
+      label: "Weekend",
+      icon: Sun,
+      total: stats?.weekend_total || 0,
+      wins: stats?.weekend_wins || 0,
+      losses: stats?.weekend_losses || 0,
+      accuracy: stats?.weekend_accuracy,
+      color: "from-orange-500/20 to-orange-600/10",
+      borderColor: "border-orange-500/30",
+      iconColor: "text-orange-500",
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Date-wise Performance Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {dateCards.map((card) => {
+          const hasCardData = card.total > 0;
+          const Icon = card.icon;
+          
+          return (
+            <Card 
+              key={card.label} 
+              className={`bg-gradient-to-br ${card.color} ${card.borderColor} overflow-hidden`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className={`h-4 w-4 ${card.iconColor}`} />
+                  <span className="text-sm font-medium text-foreground">{card.label}</span>
+                </div>
+                
+                {hasCardData ? (
+                  <>
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span className={`text-2xl font-bold ${card.iconColor}`}>
+                        {card.accuracy !== null ? `${card.accuracy}%` : '-'}
+                      </span>
+                      <span className="text-xs text-muted-foreground">accuracy</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-muted-foreground">{card.total} trades</span>
+                      <span className="text-emerald-500">{card.wins}W</span>
+                      <span className="text-red-500">{card.losses}L</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-2">
+                    <span className="text-muted-foreground text-sm">No Data</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
       {/* Main XAUUSD Stats Card */}
       <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20 overflow-hidden">
         <CardHeader className="pb-2">
