@@ -1,6 +1,6 @@
 import { useXAUUSDAccuracyStats, XAUUSDDayData } from "@/hooks/useXAUUSDAccuracyStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Target, TrendingUp, TrendingDown, BarChart3, Activity, Zap, Calendar, Clock, CalendarDays, Sun } from "lucide-react";
+import { Target, TrendingUp, TrendingDown, BarChart3, Activity, Zap, Calendar, Clock, CalendarDays } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { format, parseISO } from "date-fns";
@@ -82,12 +82,12 @@ const XAUUSDAccuracyStats = () => {
       iconColor: "text-emerald-500",
     },
     {
-      label: "Weekend",
-      icon: Sun,
-      total: stats?.weekend_total || 0,
-      wins: stats?.weekend_wins || 0,
-      losses: stats?.weekend_losses || 0,
-      accuracy: stats?.weekend_accuracy,
+      label: "Monthly",
+      icon: CalendarDays,
+      total: stats?.monthly_total || 0,
+      wins: stats?.monthly_wins || 0,
+      losses: stats?.monthly_losses || 0,
+      accuracy: stats?.monthly_accuracy,
       color: "from-orange-500/20 to-orange-600/10",
       borderColor: "border-orange-500/30",
       iconColor: "text-orange-500",

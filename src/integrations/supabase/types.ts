@@ -1265,6 +1265,10 @@ export type Database = {
           avg_loss_pips: number
           avg_win_pips: number
           last_7_days: Json
+          monthly_accuracy: number
+          monthly_losses: number
+          monthly_total: number
+          monthly_wins: number
           today_accuracy: number
           today_losses: number
           today_total: number
@@ -1277,10 +1281,6 @@ export type Database = {
           week_losses: number
           week_total: number
           week_wins: number
-          weekend_accuracy: number
-          weekend_losses: number
-          weekend_total: number
-          weekend_wins: number
           win_rate: number
           yesterday_accuracy: number
           yesterday_losses: number
