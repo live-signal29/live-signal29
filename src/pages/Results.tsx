@@ -2,15 +2,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Calendar } from "lucide-react";
 import SEO from "@/components/SEO";
-import DetailedAccuracyStats from "@/components/DetailedAccuracyStats";
 import XAUUSDAccuracyStats from "@/components/XAUUSDAccuracyStats";
 
 const Results = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="Trading Results - Signal Accuracy"
-        description="View trading signal accuracy and performance results"
+        title="Trading Results - XAUUSD Gold Signal Accuracy"
+        description="View XAUUSD Gold commodity trading signal accuracy and performance results"
       />
       <Header />
       
@@ -21,14 +20,11 @@ const Results = () => {
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">Signal Results</h1>
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              <span className="text-sm">Real-Time Performance</span>
+              <span className="text-sm">XAUUSD Gold Performance</span>
             </div>
           </div>
 
-          {/* Detailed Accuracy Stats - Daily, Yesterday, Weekly, Weekend */}
-          <DetailedAccuracyStats />
-
-          {/* XAUUSD Accuracy Stats */}
+          {/* XAUUSD Accuracy Stats - Only working section */}
           <XAUUSDAccuracyStats />
         </div>
       </main>
