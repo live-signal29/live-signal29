@@ -7,6 +7,7 @@ import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
+import CountdownTimer from "@/components/CountdownTimer";
 import { Loader2, TrendingUp, Coins, Bitcoin, BarChart3, LineChart, Maximize2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,29 @@ const SignalsDashboard = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
+
+  // Fetch trial end date for trial users
+  useEffect(() => {
+    const fetchTrialEndDate = async () => {
+      if (subscriptionStatus !== 'free_trial') return;
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('trial_end_date')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.trial_end_date) {
+        setTrialEndDate(new Date(profile.trial_end_date));
+      }
+    };
+
+    fetchTrialEndDate();
+  }, [subscriptionStatus]);
 
   // Initialize notification system
   useSignalNotifications();
@@ -190,6 +214,15 @@ const SignalsDashboard = () => {
             <TrialExpiredLockScreen />
           ) : (
             <>
+          {/* Trial Countdown Timer - Only for free_trial users */}
+          {subscriptionStatus === 'free_trial' && trialEndDate && (
+            <CountdownTimer 
+              endDate={trialEndDate}
+              title="🎉 Your Free Trial Ends In"
+              description="Upgrade to Premium before your trial expires to keep access to all signals!"
+            />
+          )}
+
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
             <div className="mb-4">
