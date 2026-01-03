@@ -38,7 +38,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <SEO
         title="TREND IS FRIEND - Live Trading Signals | Forex, Crypto, Commodities & Indices"
-        description="Get real-time trading signals for Forex, Crypto, Commodities, and Indices. Professional analysis, high accuracy, instant notifications. Start your 8-day free trial today!"
+        description="Get real-time trading signals for Forex, Crypto, Commodities, and Indices. Professional analysis, high accuracy, instant notifications. Start your 5-day free trial today!"
         keywords="trading signals, forex signals, crypto signals, commodities trading, indices signals, live trading, buy sell signals, trading analysis, technical analysis, trading alerts"
         url="https://yourdomain.com"
         structuredData={structuredData}
