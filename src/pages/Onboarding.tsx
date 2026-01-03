@@ -128,7 +128,7 @@ const Onboarding = () => {
               
               <div className="space-y-2">
                 <p className="text-lg font-semibold">
-                  You got <span className="text-success">8 days FREE TRIAL</span>
+                  You got <span className="text-success">5 days FREE TRIAL</span>
                 </p>
                 <p className="text-muted-foreground">
                   of our premium trading signals service!

@@ -33,13 +33,13 @@ serve(async (req) => {
       const trialEndDate = new Date(profile.trial_end_date);
       const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Send notification on Day 5 (3 days remaining)
-      if (daysRemaining === 3) {
+      // Send notification on Day 3 (2 days remaining)
+      if (daysRemaining === 2) {
         notifications.push({
           user_id: profile.id,
           email: profile.email,
           name: profile.full_name,
-          message: "⏰ 3 days left in your free trial.",
+          message: "⏰ 2 days left in your free trial.",
           type: 'trial_reminder'
         });
       }
