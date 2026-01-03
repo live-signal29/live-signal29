@@ -12,7 +12,7 @@ import { Loader2, TrendingUp, Coins, Bitcoin, BarChart3, LineChart, Maximize2 } 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import TrialExpiredLockScreen from "@/components/TrialExpiredLockScreen";
+import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { useSignalNotifications } from "@/hooks/useSignalNotifications";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
@@ -28,35 +28,20 @@ import { ChartReactions } from "@/components/ChartReactions";
 const SIGNALS_PER_PAGE = 20;
 
 const SignalsDashboard = () => {
-  const { hasAccess, loading: accessLoading, subscriptionStatus } = useSubscriptionAccess();
+  const { hasAccess, loading: accessLoading, subscriptionStatus, trialExpired, trialEndDate } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
   const [subCategory, setSubCategory] = useState<string>("all");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
+  const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
 
-  // Fetch trial end date for trial users
+  // Show trial expired popup every time dashboard opens for expired trial users
   useEffect(() => {
-    const fetchTrialEndDate = async () => {
-      if (subscriptionStatus !== 'free_trial') return;
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('trial_end_date')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.trial_end_date) {
-        setTrialEndDate(new Date(profile.trial_end_date));
-      }
-    };
-
-    fetchTrialEndDate();
-  }, [subscriptionStatus]);
+    if (trialExpired && subscriptionStatus === 'free_trial') {
+      setShowTrialExpiredPopup(true);
+    }
+  }, [trialExpired, subscriptionStatus]);
 
   // Initialize notification system
   useSignalNotifications();
@@ -111,7 +96,11 @@ const SignalsDashboard = () => {
     staleTime: 60000,
   });
 
-  const signals = signalsData?.pages.flatMap(page => page.data) || [];
+  // Filter signals for expired trial users - only show signals created during trial period
+  const allSignals = signalsData?.pages.flatMap(page => page.data) || [];
+  const signals = trialExpired && trialEndDate 
+    ? allSignals.filter(signal => new Date(signal.created_at) <= trialEndDate)
+    : allSignals;
   
   // Extract unique pairs for OPEN signals to fetch live prices
   const openSignalPairs = signals
@@ -210,17 +199,29 @@ const SignalsDashboard = () => {
       
       <main className="flex-1">
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
-          {!hasAccess ? (
-            <TrialExpiredLockScreen />
-          ) : (
-            <>
-          {/* Trial Countdown Timer - Only for free_trial users */}
-          {subscriptionStatus === 'free_trial' && trialEndDate && (
+          {/* Trial Expired Popup - shows every time for expired trial users */}
+          <TrialExpiredPopup 
+            open={showTrialExpiredPopup} 
+            onClose={() => setShowTrialExpiredPopup(false)} 
+          />
+          
+          {/* Trial Countdown Timer - Only for active free_trial users */}
+          {subscriptionStatus === 'free_trial' && trialEndDate && !trialExpired && (
             <CountdownTimer 
               endDate={trialEndDate}
               title="🎉 Your Free Trial Ends In"
               description="Upgrade to Premium before your trial expires to keep access to all signals!"
             />
+          )}
+          
+          {/* Expired Trial Notice Banner */}
+          {trialExpired && (
+            <div className="mb-4 p-4 bg-warning/10 border border-warning/50 rounded-lg">
+              <p className="text-warning font-medium text-center">
+                🔒 Your trial has expired. You can only view signals from your trial period. 
+                <a href="/premium" className="underline ml-1 hover:text-warning/80">Upgrade to Premium</a> for new signals.
+              </p>
+            </div>
           )}
 
           {/* Top Ad Banner - Only for non-premium users */}
@@ -229,6 +230,9 @@ const SignalsDashboard = () => {
               <AdBanner />
             </div>
           )}
+
+          {/* Main Dashboard Content - always accessible */}
+          <>
 
           {/* Main Category Tabs - Horizontal Scrollable with Icons */}
           <div className="mb-4 sm:mb-6 overflow-x-auto scrollbar-hide">
@@ -429,8 +433,8 @@ const SignalsDashboard = () => {
               <AdBanner />
             </div>
           )}
-        </>
-        )}
+          </>
+        
         </div>
       </main>
 
