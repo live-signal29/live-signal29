@@ -215,15 +215,15 @@ const SignalsDashboard = () => {
           {/* Main Dashboard Content - always accessible */}
           <>
 
-          {/* Main Category Tabs - Modern Mobile-First Design */}
+          {/* Main Category Tabs - Modern Mobile App Design */}
           <div className="mb-4 sm:mb-6">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 px-0.5 snap-x snap-mandatory">
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2 snap-x snap-mandatory">
               {[
-                { key: "COMMODITIES", label: "Gold", shortLabel: "GOLD" },
-                { key: "FOREX", label: "Forex", shortLabel: "FX" },
-                { key: "CRYPTO", label: "Crypto", shortLabel: "₿" },
-                { key: "DERIV/BINARY", label: "Deriv", shortLabel: "DRV" },
-                { key: "MARKET IDEAS", label: "Ideas", shortLabel: "💡" },
+                { key: "COMMODITIES", label: "COMM" },
+                { key: "FOREX", label: "FOREX" },
+                { key: "CRYPTO", label: "CRYPTO" },
+                { key: "DERIV/BINARY", label: "DERIV" },
+                { key: "MARKET IDEAS", label: "💡 IDEAS" },
               ].map((category) => {
                 const isActive = mainCategory === category.key;
                 return (
@@ -232,20 +232,17 @@ const SignalsDashboard = () => {
                     onClick={() => handleCategoryChange(category.key)}
                     className={`
                       snap-start flex-shrink-0 flex items-center gap-1.5 
-                      px-3 py-2 sm:px-4 sm:py-2.5 rounded-full
-                      text-xs sm:text-sm font-semibold
-                      transition-all duration-300 ease-out
+                      px-3 py-2.5 rounded-xl
+                      text-xs font-bold whitespace-nowrap
+                      transition-all duration-200
                       ${isActive 
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105" 
-                        : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95"
+                        ? "bg-primary text-primary-foreground shadow-md" 
+                        : "bg-muted text-muted-foreground active:bg-muted/80"
                       }
                     `}
                   >
-                    <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
-                      {getCategoryIcon(category.key)}
-                    </span>
-                    <span className="hidden sm:inline">{category.label}</span>
-                    <span className="sm:hidden">{category.shortLabel}</span>
+                    {getCategoryIcon(category.key)}
+                    <span>{category.label}</span>
                   </button>
                 );
               })}
