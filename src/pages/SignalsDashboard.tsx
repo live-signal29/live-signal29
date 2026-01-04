@@ -7,7 +7,6 @@ import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
-import CountdownTimer from "@/components/CountdownTimer";
 import { Loader2, TrendingUp, Coins, Bitcoin, BarChart3, LineChart, Maximize2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,24 +204,6 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
           
-          {/* Trial Countdown Timer - Only for active free_trial users */}
-          {subscriptionStatus === 'free_trial' && trialEndDate && !trialExpired && (
-            <CountdownTimer 
-              endDate={trialEndDate}
-              title="🎉 Your Free Trial Ends In"
-              description="Upgrade to Premium before your trial expires to keep access to all signals!"
-            />
-          )}
-          
-          {/* Expired Trial Notice Banner */}
-          {trialExpired && (
-            <div className="mb-4 p-4 bg-warning/10 border border-warning/50 rounded-lg">
-              <p className="text-warning font-medium text-center">
-                🔒 Your trial has expired. You can only view signals from your trial period. 
-                <a href="/premium" className="underline ml-1 hover:text-warning/80">Upgrade to Premium</a> for new signals.
-              </p>
-            </div>
-          )}
 
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
