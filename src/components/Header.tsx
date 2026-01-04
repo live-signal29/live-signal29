@@ -6,9 +6,12 @@ import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
 import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
+import HeaderTrialIndicator from "./HeaderTrialIndicator";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import exnessLogo from "@/assets/exness-logo-real.png";
 
 const Header = () => {
+  const { subscriptionStatus, trialExpired, trialEndDate } = useSubscriptionAccess();
 
   return (
     <>
@@ -36,8 +39,13 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Theme Toggle, Exness CTA, Notification Bell & Top Menu Dropdown */}
+          {/* Trial Indicator, Theme Toggle, Exness CTA, Notification Bell & Top Menu Dropdown */}
           <div className="flex items-center gap-2">
+            <HeaderTrialIndicator 
+              trialEndDate={trialEndDate}
+              trialExpired={trialExpired}
+              subscriptionStatus={subscriptionStatus}
+            />
             <ThemeToggle />
             <a
               href="https://one.exnessonelink.com/a/vtkbbmje"
