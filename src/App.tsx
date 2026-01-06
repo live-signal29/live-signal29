@@ -7,6 +7,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { BottomNavigation } from "@/components/BottomNavigation";
 // Lazy load all pages for better performance
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SignalsDashboard = lazy(() => import("./pages/SignalsDashboard"));
@@ -37,8 +38,12 @@ const AccountManagement = lazy(() => import("./pages/AccountManagement"));
 const Results = lazy(() => import("./pages/Results"));
 
 const LoadingSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+  <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+    <div className="relative">
+      <div className="w-12 h-12 border-4 border-primary/20 rounded-full"></div>
+      <div className="absolute top-0 left-0 w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+    </div>
+    <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
   </div>
 );
 
@@ -92,45 +97,48 @@ const App = () => (
         <Sonner />
         <OfflineIndicator />
         <BrowserRouter>
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-            {/* Public routes first */}
-            <Route path="/signal/:id" element={<SharedSignal />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            
-            {/* Protected routes */}
-            <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
-            <Route path="/signals" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/commodities-signals" element={<ProtectedRoute><CommoditiesSignals /></ProtectedRoute>} />
-            <Route path="/xauusd-signals" element={<ProtectedRoute><XAUUSDSignals /></ProtectedRoute>} />
-            <Route path="/forex-signals" element={<ProtectedRoute><ForexSignals /></ProtectedRoute>} />
-            <Route path="/crypto-signals" element={<ProtectedRoute><CryptoSignals /></ProtectedRoute>} />
-            <Route path="/deriv-signals" element={<ProtectedRoute><DerivSignals /></ProtectedRoute>} />
-            <Route path="/chart-analysis" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
-            <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
-            <Route path="/about" element={<About />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
-            <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
-            <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
-            <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
-            <Route path="/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
-            <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider>
+          <div className="has-bottom-nav">
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                {/* Public routes first */}
+                <Route path="/signal/:id" element={<SharedSignal />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                
+                {/* Protected routes */}
+                <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
+                <Route path="/signals" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/commodities-signals" element={<ProtectedRoute><CommoditiesSignals /></ProtectedRoute>} />
+                <Route path="/xauusd-signals" element={<ProtectedRoute><XAUUSDSignals /></ProtectedRoute>} />
+                <Route path="/forex-signals" element={<ProtectedRoute><ForexSignals /></ProtectedRoute>} />
+                <Route path="/crypto-signals" element={<ProtectedRoute><CryptoSignals /></ProtectedRoute>} />
+                <Route path="/deriv-signals" element={<ProtectedRoute><DerivSignals /></ProtectedRoute>} />
+                <Route path="/chart-analysis" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
+                <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
+                <Route path="/about" element={<About />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+                <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
+                <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+                <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
+                <Route path="/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
+                <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            <BottomNavigation />
+          </div>
+        </BrowserRouter>
+      </TooltipProvider>
     </OneSignalProvider>
   </QueryClientProvider>
 );

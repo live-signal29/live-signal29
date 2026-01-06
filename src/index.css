@@ -2,110 +2,120 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Modern Fintech Mobile App Design System
+   Glassmorphism + Premium Feel + High Readability
+   All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Light theme - Professional trading platform */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 10%;
+    /* Light theme - Modern fintech premium */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Cyan accent for asset names */
-    --primary: 180 100% 35%;
-    --primary-foreground: 0 0% 98%;
+    /* Primary - Vibrant teal/cyan */
+    --primary: 174 72% 40%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 100% 50%;
-    --secondary-foreground: 0 0% 98%;
+    /* Secondary - Deep blue */
+    --secondary: 220 70% 50%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 92%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 180 100% 35%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 174 72% 40%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 88%;
-    --input: 0 0% 92%;
-    --ring: 180 100% 35%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 174 72% 40%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
-    /* Trading colors */
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
+    /* Trading colors - Vibrant for visibility */
+    --success: 152 69% 40%;
+    --success-foreground: 0 0% 100%;
     
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
+    --warning-foreground: 0 0% 100%;
 
-    --buy: 142 76% 36%;
-    --sell: 0 84% 60%;
+    --buy: 152 69% 40%;
+    --sell: 0 72% 51%;
     
-    /* Affiliate CTA */
-    --affiliate: 45 93% 47%;
-    --affiliate-foreground: 0 0% 7%;
+    /* Premium gold accent */
+    --affiliate: 43 96% 56%;
+    --affiliate-foreground: 0 0% 10%;
 
-    /* Pastel gradient stops - ultra soft colors matching reference */
-    --gradient-cream: 30 50% 97%;
-    --gradient-pink: 330 40% 95%;
-    --gradient-blue: 200 45% 94%;
-    --gradient-mint: 150 35% 95%;
+    /* Soft gradient for glassmorphism */
+    --gradient-start: 220 20% 97%;
+    --gradient-mid: 200 30% 96%;
+    --gradient-end: 174 30% 95%;
+
+    /* Glass effect variables */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.5;
+    --glass-blur: 20px;
   }
 
   .dark {
-    /* Modern professional dark theme - slate/blue tint */
-    --background: 222 47% 11%;
+    /* Dark theme - Premium fintech dark mode */
+    --background: 222 47% 7%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 14%;
+    --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 14%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 180 100% 45%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 174 72% 50%;
+    --primary-foreground: 222 47% 7%;
 
     --secondary: 217 91% 60%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary-foreground: 222 47% 7%;
 
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 180 100% 45%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 174 72% 50%;
+    --accent-foreground: 222 47% 7%;
 
-    --destructive: 0 100% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 21%;
+    --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 180 100% 45%;
+    --ring: 174 72% 50%;
 
-    --success: 142 76% 45%;
-    --success-foreground: 222 47% 11%;
+    --success: 152 69% 45%;
+    --success-foreground: 222 47% 7%;
     
     --warning: 38 92% 55%;
-    --warning-foreground: 222 47% 11%;
+    --warning-foreground: 222 47% 7%;
 
-    --buy: 142 76% 45%;
-    --sell: 0 100% 63%;
+    --buy: 152 69% 45%;
+    --sell: 0 72% 55%;
     
-    /* Affiliate CTA */
-    --affiliate: 45 93% 50%;
-    --affiliate-foreground: 222 47% 11%;
+    --affiliate: 43 96% 56%;
+    --affiliate-foreground: 222 47% 7%;
 
-    --gradient-start: 222 47% 11%;
-    --gradient-end: 222 47% 14%;
+    --gradient-start: 222 47% 5%;
+    --gradient-mid: 222 47% 8%;
+    --gradient-end: 220 50% 10%;
+
+    --glass-bg: 222 47% 11% / 0.8;
+    --glass-border: 217 33% 25% / 0.5;
+    --glass-blur: 20px;
   }
 }
 
@@ -115,61 +125,182 @@ All colors MUST be HSL.
   }
 
   html {
-    background: linear-gradient(135deg, 
-      hsl(var(--gradient-cream)) 0%, 
-      hsl(var(--gradient-pink)) 30%, 
-      hsl(var(--gradient-blue)) 65%, 
-      hsl(var(--gradient-mint)) 100%);
+    background: linear-gradient(160deg, 
+      hsl(var(--gradient-start)) 0%, 
+      hsl(var(--gradient-mid)) 50%, 
+      hsl(var(--gradient-end)) 100%);
     background-attachment: fixed;
     min-height: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .dark html {
-    background: linear-gradient(to bottom right, 
-      hsl(var(--gradient-start)), 
-      hsl(var(--gradient-end)));
+    background: linear-gradient(160deg, 
+      hsl(var(--gradient-start)) 0%, 
+      hsl(var(--gradient-mid)) 50%, 
+      hsl(var(--gradient-end)) 100%);
     background-attachment: fixed;
   }
 
   body {
     @apply text-foreground min-h-screen transition-colors duration-300;
     background: transparent;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Safe area for bottom navigation */
+  .pb-safe {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
 @layer components {
+  /* Glassmorphism Card - Core mobile UI element */
+  .glass-card {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 
+      0 4px 24px -1px hsl(222 47% 11% / 0.05),
+      0 2px 8px -1px hsl(222 47% 11% / 0.04),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.1);
+  }
+
+  .dark .glass-card {
+    box-shadow: 
+      0 4px 24px -1px hsl(222 47% 0% / 0.3),
+      0 2px 8px -1px hsl(222 47% 0% / 0.2),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.05);
+  }
+
+  /* Premium signal card styling */
+  .signal-card {
+    @apply glass-card rounded-2xl p-4 transition-all duration-300;
+  }
+
+  .signal-card:active {
+    @apply scale-[0.98];
+  }
+
   /* Trading signal status badges */
   .badge-buy {
-    @apply bg-success/20 text-success border-success/30;
+    @apply bg-success/15 text-success border border-success/20 font-semibold;
   }
   
   .badge-sell {
-    @apply bg-destructive/20 text-destructive border-destructive/30;
+    @apply bg-destructive/15 text-destructive border border-destructive/20 font-semibold;
   }
 
   .badge-active {
-    @apply bg-primary/20 text-primary border-primary/30;
+    @apply bg-primary/15 text-primary border border-primary/20 font-semibold;
   }
 
   .badge-hit {
-    @apply bg-success/20 text-success border-success/30;
+    @apply bg-success/15 text-success border border-success/20 font-semibold;
+  }
+
+  /* Risk level badges */
+  .risk-low {
+    @apply bg-success/10 text-success border-success/20;
+  }
+
+  .risk-medium {
+    @apply bg-warning/10 text-warning border-warning/20;
+  }
+
+  .risk-high {
+    @apply bg-destructive/10 text-destructive border-destructive/20;
+  }
+
+  /* TP/SL display styling */
+  .tp-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold;
+  }
+
+  .tp-hit {
+    @apply bg-success/15 text-success;
+  }
+
+  .tp-pending {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .sl-badge {
+    @apply bg-destructive/10 text-destructive inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold;
   }
 
   /* Animated gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent;
     background-size: 200% auto;
     animation: shimmer 3s linear infinite;
   }
 
+  /* Premium glow effect */
+  .premium-glow {
+    box-shadow: 
+      0 0 20px hsl(var(--affiliate) / 0.3),
+      0 0 40px hsl(var(--affiliate) / 0.1);
+  }
+
   /* Card hover effect */
   .card-hover {
-    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10;
+    @apply transition-all duration-300;
+  }
+
+  .card-hover:hover {
+    @apply scale-[1.02];
+    box-shadow: 0 8px 32px -4px hsl(var(--primary) / 0.15);
   }
 
   /* Button glow effect */
   .btn-glow {
-    @apply shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300;
+    @apply shadow-lg transition-all duration-300;
+    box-shadow: 0 4px 20px hsl(var(--primary) / 0.25);
+  }
+
+  .btn-glow:hover {
+    box-shadow: 0 6px 28px hsl(var(--primary) / 0.35);
+  }
+
+  /* Mobile header styling */
+  .mobile-header {
+    @apply glass-card rounded-b-3xl;
+  }
+
+  /* Stats card for dashboard */
+  .stats-card {
+    @apply glass-card rounded-2xl p-4 flex flex-col gap-1;
+  }
+
+  /* Live indicator pulse */
+  .live-pulse {
+    @apply relative;
+  }
+
+  .live-pulse::before {
+    content: '';
+    @apply absolute -inset-1 bg-success/20 rounded-full animate-ping;
+  }
+
+  /* Price change animations */
+  .price-up {
+    animation: priceUp 0.4s ease-out;
+  }
+
+  .price-down {
+    animation: priceDown 0.4s ease-out;
+  }
+
+  /* Bottom navigation safe area */
+  .has-bottom-nav {
+    @apply pb-safe;
   }
 }
 
@@ -189,8 +320,45 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes priceUp {
+    0% {
+      background-color: hsl(var(--success) / 0.3);
+      transform: scale(1.02);
+    }
+    100% {
+      background-color: transparent;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes priceDown {
+    0% {
+      background-color: hsl(var(--destructive) / 0.3);
+      transform: scale(1.02);
+    }
+    100% {
+      background-color: transparent;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.8);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1.4);
+      opacity: 0;
+    }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
   /* Ticker animation for headlines */
@@ -230,5 +398,33 @@ All colors MUST be HSL.
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Touch feedback for mobile */
+  .touch-feedback {
+    @apply active:scale-[0.97] transition-transform duration-150;
+  }
+
+  /* Typography utilities for mobile */
+  .text-display {
+    @apply text-2xl sm:text-3xl font-bold tracking-tight;
+  }
+
+  .text-title {
+    @apply text-lg sm:text-xl font-semibold tracking-tight;
+  }
+
+  .text-body {
+    @apply text-sm sm:text-base text-foreground;
+  }
+
+  .text-caption {
+    @apply text-xs sm:text-sm text-muted-foreground;
+  }
+
+  /* Numeric display for prices/values */
+  .font-mono-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 }
