@@ -1,6 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Retry helper for VPN/proxy compatibility
+const fetchWithRetry = async <T>(
+  fn: () => Promise<T>,
+  retries: number = 3,
+  delay: number = 1000
+): Promise<T> => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === retries) throw error;
+      await new Promise(r => setTimeout(r, delay * (i + 1)));
+    }
+  }
+  throw new Error('Max retries reached');
+};
+
 // Parse entry price (handles ranges like "4280-4282" or single values)
 export const parseEntryPrice = (entry: string): number => {
   if (!entry) return 0;
@@ -68,30 +85,48 @@ export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const failedAttemptsRef = useRef(0);
+  const maxFailedAttempts = 5;
   
   const fetchPrices = useCallback(async () => {
     if (!enabled || pairs.length === 0) return;
+    
+    // Don't spam requests if we've had too many failures
+    if (failedAttemptsRef.current >= maxFailedAttempts) {
+      // Reset after 30 seconds
+      setTimeout(() => {
+        failedAttemptsRef.current = 0;
+      }, 30000);
+      return;
+    }
     
     setLoading(true);
     setError(null);
     
     try {
-      // Call edge function to fetch prices (server-side, no CORS)
-      const { data, error: fnError } = await supabase.functions.invoke('fetch-live-prices', {
-        body: null,
-      });
+      // Call edge function with retry logic for VPN/proxy compatibility
+      const result = await fetchWithRetry(async () => {
+        const { data, error: fnError } = await supabase.functions.invoke('fetch-live-prices', {
+          body: null,
+        });
+        
+        if (fnError) {
+          throw fnError;
+        }
+        
+        return data;
+      }, 2, 1500);
       
-      if (fnError) {
-        console.error('Edge function error:', fnError);
-        setError('Failed to fetch prices');
-        return;
-      }
-      
-      if (data?.prices) {
-        setPrices(data.prices);
+      if (result?.prices) {
+        setPrices(result.prices);
+        failedAttemptsRef.current = 0; // Reset on success
       }
     } catch (err) {
-      console.error('Error fetching live prices:', err);
+      failedAttemptsRef.current++;
+      // Only log on first few failures to avoid spam
+      if (failedAttemptsRef.current <= 2) {
+        console.error('Error fetching live prices:', err);
+      }
       setError('Network error');
     } finally {
       setLoading(false);
@@ -101,13 +136,14 @@ export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => 
   useEffect(() => {
     if (!enabled) return;
     
-    // Initial fetch
-    fetchPrices();
+    // Initial fetch with small delay to let app stabilize
+    const initTimeout = setTimeout(fetchPrices, 500);
     
-    // Poll every 2 seconds for real-time updates
-    intervalRef.current = setInterval(fetchPrices, 2000);
+    // Poll every 3 seconds (slightly slower for stability)
+    intervalRef.current = setInterval(fetchPrices, 3000);
     
     return () => {
+      clearTimeout(initTimeout);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
