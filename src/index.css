@@ -114,21 +114,26 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
-    @apply text-foreground min-h-screen transition-colors duration-300;
+  html {
     background: linear-gradient(135deg, 
       hsl(var(--gradient-cream)) 0%, 
       hsl(var(--gradient-pink)) 30%, 
       hsl(var(--gradient-blue)) 65%, 
       hsl(var(--gradient-mint)) 100%);
     background-attachment: fixed;
+    min-height: 100%;
   }
-  
-  .dark body {
+
+  .dark html {
     background: linear-gradient(to bottom right, 
       hsl(var(--gradient-start)), 
       hsl(var(--gradient-end)));
     background-attachment: fixed;
+  }
+
+  body {
+    @apply text-foreground min-h-screen transition-colors duration-300;
+    background: transparent;
   }
 }
 

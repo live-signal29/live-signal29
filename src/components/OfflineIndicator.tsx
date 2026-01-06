@@ -1,19 +1,28 @@
-import { useState, useEffect } from 'react';
-import { WifiOff, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { WifiOff, RefreshCw, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const OfflineIndicator = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showBackOnline, setShowBackOnline] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const wasOffline = useRef(false);
 
   useEffect(() => {
     const handleOnline = () => {
+      // Show "Back Online" notification if we were previously offline
+      if (wasOffline.current) {
+        setShowBackOnline(true);
+        setTimeout(() => setShowBackOnline(false), 3000);
+      }
       setIsOnline(true);
       setRetryCount(0);
+      wasOffline.current = false;
     };
 
     const handleOffline = () => {
+      wasOffline.current = true;
       setIsOnline(false);
       startAutoRetry();
     };
@@ -63,6 +72,23 @@ export const OfflineIndicator = () => {
     setRetryCount(0);
     startAutoRetry();
   };
+
+  // Show "Back Online" notification
+  if (showBackOnline) {
+    return (
+      <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="bg-success/95 backdrop-blur-sm text-success-foreground rounded-lg shadow-lg p-4 flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <Wifi className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">Back Online! ✓</p>
+            <p className="text-xs opacity-80">Connection restored</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isOnline) return null;
 
