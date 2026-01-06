@@ -55,8 +55,6 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
-        buy: "hsl(var(--buy))",
-        sell: "hsl(var(--sell))",
         affiliate: {
           DEFAULT: "hsl(var(--affiliate))",
           foreground: "hsl(var(--affiliate-foreground))",
