@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
-
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 // Lazy load all pages for better performance
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SignalsDashboard = lazy(() => import("./pages/SignalsDashboard"));
@@ -90,6 +90,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <OfflineIndicator />
         <BrowserRouter>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
