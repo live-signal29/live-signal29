@@ -353,12 +353,70 @@
     }
   }
 
+  /* Modern bounce animation for nav icons */
+  @keyframes bounce-once {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    25% {
+      transform: translateY(-4px);
+    }
+    50% {
+      transform: translateY(0);
+    }
+    75% {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* Scale in animation */
+  @keyframes scale-in {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Category pill entrance animation */
+  @keyframes pill-enter {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
 
   .animate-pulse-ring {
     animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-bounce-once {
+    animation: bounce-once 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  /* Category pill styling */
+  .category-pill {
+    animation: pill-enter 0.4s ease-out forwards;
+    opacity: 0;
+  }
+
+  .category-pill-active {
+    animation: pill-enter 0.4s ease-out forwards, pulse 2s ease-in-out infinite;
   }
 
   /* Ticker animation for headlines */
