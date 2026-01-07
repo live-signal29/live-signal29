@@ -217,32 +217,40 @@ const SignalsDashboard = () => {
 
           {/* Main Category Tabs - Modern Mobile App Design */}
           <div className="mb-4 sm:mb-6">
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2 snap-x snap-mandatory">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2 snap-x snap-mandatory">
               {[
-                { key: "COMMODITIES", label: "COMM" },
-                { key: "FOREX", label: "FOREX" },
-                { key: "CRYPTO", label: "CRYPTO" },
-                { key: "DERIV/BINARY", label: "DERIV" },
-                { key: "MARKET IDEAS", label: "💡 IDEAS" },
-              ].map((category) => {
+                { key: "COMMODITIES", label: "Commodities", emoji: "🪙" },
+                { key: "FOREX", label: "Forex", emoji: "💱" },
+                { key: "CRYPTO", label: "Crypto", emoji: "₿" },
+                { key: "DERIV/BINARY", label: "Deriv", emoji: "📊" },
+                { key: "MARKET IDEAS", label: "Ideas", emoji: "💡" },
+              ].map((category, index) => {
                 const isActive = mainCategory === category.key;
                 return (
                   <button
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
                     className={`
-                      snap-start flex-shrink-0 flex items-center gap-1.5 
-                      px-3 py-2.5 rounded-xl
-                      text-xs font-bold whitespace-nowrap
-                      transition-all duration-200
+                      category-pill
+                      snap-start flex-shrink-0 flex items-center gap-2 
+                      px-4 py-3 rounded-2xl
+                      text-sm font-semibold whitespace-nowrap
+                      transition-all duration-300 ease-out
+                      active:scale-95
                       ${isActive 
-                        ? "bg-primary text-primary-foreground shadow-md" 
-                        : "bg-muted text-muted-foreground active:bg-muted/80"
+                        ? "category-pill-active bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25" 
+                        : "bg-card/80 backdrop-blur-sm text-muted-foreground border border-border/50 hover:border-primary/30 hover:text-foreground"
                       }
                     `}
+                    style={{
+                      animationDelay: `${index * 50}ms`
+                    }}
                   >
-                    {getCategoryIcon(category.key)}
+                    <span className="text-base">{category.emoji}</span>
                     <span>{category.label}</span>
+                    {isActive && (
+                      <div className="w-1.5 h-1.5 bg-primary-foreground rounded-full animate-pulse" />
+                    )}
                   </button>
                 );
               })}
