@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Globe } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import TrialBanner from "./TrialBanner";
 import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
@@ -13,42 +13,52 @@ const Header = () => {
     <>
       <AppInstallBanner />
       <TrialBanner />
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background backdrop-blur supports-[backdrop-filter]:bg-background/95">
-        <div className="flex h-14 sm:h-16 items-center justify-between px-2 sm:px-4">
-          {/* Side Drawer Menu */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <SideDrawer />
+      <header className="sticky top-0 z-40 w-full">
+        <div className="glass-card rounded-b-2xl mx-2 mt-0 border-t-0">
+          <div className="flex h-14 items-center justify-between px-3">
+            {/* Left: Menu + Logo */}
+            <div className="flex items-center gap-2">
+              <SideDrawer />
 
-            <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group">
-              <div className="relative">
-                <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse group-hover:scale-110 transition-transform duration-300" />
-                <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300"></div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm sm:text-base md:text-lg font-bold text-foreground group-hover:scale-105 transition-transform duration-300">
-                  Live Signals
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  welcome 🤗
-                </span>
-              </div>
-            </Link>
-          </div>
+              <Link to="/" className="flex items-center gap-2 group">
+                {/* Logo Icon */}
+                <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary shadow-lg">
+                  <TrendingUp className="h-5 w-5 text-primary-foreground" />
+                  <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-background">
+                    <span className="absolute inset-0 bg-success rounded-full animate-ping opacity-75"></span>
+                  </div>
+                </div>
+                
+                {/* Brand Text */}
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-foreground tracking-tight leading-tight">
+                    Live Signals
+                  </span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">
+                    Trading Pro
+                  </span>
+                </div>
+              </Link>
+            </div>
 
-          {/* Theme Toggle, Exness CTA, Notification Bell & Top Menu Dropdown */}
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <a
-              href="https://one.exnessonelink.com/a/vtkbbmje"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-affiliate hover:bg-affiliate/90 text-affiliate-foreground font-semibold text-xs rounded-md transition-colors shadow-sm"
-            >
-              <img src={exnessLogo} alt="Exness" className="w-4 h-4 rounded-full" />
-              <span>Join Exness</span>
-            </a>
-            <NotificationBell />
-            <TopMenuDropdown />
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5">
+              <ThemeToggle />
+              
+              {/* Exness CTA - Desktop only */}
+              <a
+                href="https://one.exnessonelink.com/a/vtkbbmje"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-affiliate hover:bg-affiliate/90 text-affiliate-foreground font-semibold text-xs rounded-xl transition-all shadow-sm hover:shadow-md"
+              >
+                <img src={exnessLogo} alt="Exness" className="w-4 h-4 rounded-full" />
+                <span>Join Exness</span>
+              </a>
+              
+              <NotificationBell />
+              <TopMenuDropdown />
+            </div>
           </div>
         </div>
       </header>
