@@ -32,10 +32,10 @@ const Header = () => {
                 {/* Brand Text */}
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-foreground tracking-tight leading-tight">
-                    Live Signals
+                    TREND IS
                   </span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">
-                    Trading Pro
+                  <span className="text-[10px] text-muted-foreground leading-tight font-medium">
+                    FRIEND
                   </span>
                 </div>
               </Link>

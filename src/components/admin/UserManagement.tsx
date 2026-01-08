@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Edit, CheckSquare } from "lucide-react";
+import { Loader2, Edit, CheckSquare, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface UserProfile {
   id: string;
@@ -240,6 +241,32 @@ const UserManagement = () => {
     } catch (error) {
       console.error("Error performing bulk action:", error);
       toast.error("Failed to perform bulk action");
+    }
+  };
+
+  const handleDeleteUser = async (user: UserProfile) => {
+    try {
+      // Delete from profiles table (this will cascade to related data)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Log the action
+      await logAdminAction(
+        'user_delete',
+        user.id,
+        user.email,
+        { deleted_user: user.email, deleted_at: new Date().toISOString() }
+      );
+
+      toast.success(`User ${user.email} deleted successfully`);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
     }
   };
 
@@ -505,6 +532,36 @@ const UserManagement = () => {
                               </DialogContent>
                             </Dialog>
                           )}
+
+                          {/* Delete User Button */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete <strong>{user.email}</strong>? 
+                                  This action cannot be undone and will remove all associated data.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteUser(user)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete User
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
