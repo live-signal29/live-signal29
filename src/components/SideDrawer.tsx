@@ -12,8 +12,7 @@ import {
   Smartphone, 
   LogOut,
   Briefcase,
-  BarChart3,
-  TrendingUp
+  BarChart3
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -22,6 +21,7 @@ import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
+import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
 const APP_VERSION = "1.0.0";
 
@@ -62,8 +62,12 @@ export const SideDrawer = () => {
         <div className="flex flex-col h-full bg-gradient-to-b from-background to-muted/30">
           {/* Logo & App Name */}
           <div className="flex items-center gap-3 p-5 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-            <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/30 ring-2 ring-primary/20">
-              <TrendingUp className="h-7 w-7 text-primary-foreground" />
+            <div className="relative">
+              <img 
+                src={trendFriendLogo} 
+                alt="Trend is Friend Logo" 
+                className="w-14 h-14 rounded-2xl shadow-lg shadow-primary/30 ring-2 ring-primary/20"
+              />
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background animate-pulse" />
             </div>
             <div className="flex-1">
