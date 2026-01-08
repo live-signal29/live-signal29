@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { TrendingUp } from "lucide-react";
 import TrialBanner from "./TrialBanner";
 import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
@@ -7,6 +6,7 @@ import { TopMenuDropdown } from "./TopMenuDropdown";
 import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
 import exnessLogo from "@/assets/exness-logo-real.png";
+import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
 const Header = () => {
   return (
@@ -21,9 +21,13 @@ const Header = () => {
               <SideDrawer />
 
               <Link to="/" className="flex items-center gap-2 group">
-                {/* Logo Icon */}
-                <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary shadow-lg">
-                  <TrendingUp className="h-5 w-5 text-primary-foreground" />
+                {/* Logo Image */}
+                <div className="relative">
+                  <img 
+                    src={trendFriendLogo} 
+                    alt="Trend is Friend Logo" 
+                    className="w-10 h-10 rounded-xl shadow-lg shadow-primary/20 ring-2 ring-primary/20"
+                  />
                   <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-background">
                     <span className="absolute inset-0 bg-success rounded-full animate-ping opacity-75"></span>
                   </div>
@@ -32,10 +36,10 @@ const Header = () => {
                 {/* Brand Text */}
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-foreground tracking-tight leading-tight">
-                    TREND IS
+                    Live Signals
                   </span>
                   <span className="text-[10px] text-muted-foreground leading-tight font-medium">
-                    FRIEND
+                    Trend is Friend
                   </span>
                 </div>
               </Link>
