@@ -22,23 +22,8 @@ export const OneSignalProvider = ({ children }: { children: React.ReactNode }) =
           table: 'signals',
           filter: 'published=eq.true'
         },
-        (payload) => {
-          const signal = payload.new;
-          
-          // Show browser notification for new signal
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('🆕 New Trading Signal!', {
-              body: `${signal.type} ${signal.pair} - Entry: ${signal.entry}`,
-              icon: '/icon-192.png',
-              badge: '/icon-192.png',
-              tag: `signal-${signal.id}`,
-              data: { signalId: signal.id }
-            });
-          }
-
-          toast.success('New Signal', {
-            description: `${signal.type} ${signal.pair} - Entry: ${signal.entry}`
-          });
+        () => {
+          // New signal notifications disabled - only TP/SL/Chart notifications
         }
       )
       .on(
