@@ -167,16 +167,8 @@ export const useSignalNotifications = () => {
             table: "signals",
             filter: "published=eq.true",
           },
-          (payload) => {
-            if (settings.newSignal) {
-              const signal = payload.new;
-              showNotification(
-                "🆕 New Signal Available!",
-                `${signal.type} ${signal.pair} @ ${signal.entry}`,
-                "info"
-              );
-              toast.success(`New ${signal.type} signal: ${signal.pair}`);
-            }
+          () => {
+            // New signal notifications disabled - only TP/SL/Chart notifications
           }
         )
         .on(

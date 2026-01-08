@@ -212,8 +212,12 @@ export const useAutoTPSLUpdate = (
       }
     }
     
-    // Check SL
-    if (!slHit && sl) {
+    // Check SL - ONLY if no TP has been hit
+    // If any TP is hit, SL should NOT trigger (price moved in our favor once)
+    const anyTPHit = tp1Hit || tp2Hit || tp3Hit || tp4Hit || 
+                     updates.tp1_hit || updates.tp2_hit || updates.tp3_hit || updates.tp4_hit;
+    
+    if (!slHit && sl && !anyTPHit) {
       const slPrice = parseEntryPrice(sl);
       if (checkTPSLHit(priceNum, slPrice, signalType, true)) {
         updates.sl_hit = true;
