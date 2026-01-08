@@ -393,6 +393,30 @@
     }
   }
 
+  /* Slide in menu animation */
+  @keyframes slide-in-menu {
+    0% {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Pulse glow for active indicators */
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 8px currentColor;
+    }
+    50% {
+      opacity: 0.7;
+      box-shadow: 0 0 16px currentColor;
+    }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
@@ -417,6 +441,16 @@
 
   .category-pill-active {
     animation: pill-enter 0.4s ease-out forwards, pulse 2s ease-in-out infinite;
+  }
+
+  /* Menu item slide animation */
+  .animate-slide-in-menu {
+    animation: slide-in-menu 0.4s ease-out forwards;
+  }
+
+  /* Pulse glow animation */
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
 
   /* Ticker animation for headlines */

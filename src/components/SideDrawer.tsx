@@ -12,7 +12,8 @@ import {
   Smartphone, 
   LogOut,
   Briefcase,
-  BarChart3
+  BarChart3,
+  TrendingUp
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -20,7 +21,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "./ThemeToggle";
-import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 import { cn } from "@/lib/utils";
 
 const APP_VERSION = "1.0.0";
@@ -62,12 +62,8 @@ export const SideDrawer = () => {
         <div className="flex flex-col h-full bg-gradient-to-b from-background to-muted/30">
           {/* Logo & App Name */}
           <div className="flex items-center gap-3 p-5 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-            <div className="relative">
-              <img 
-                src={trendFriendLogo} 
-                alt="TREND IS FRIEND Logo" 
-                className="w-14 h-14 rounded-full shadow-lg shadow-primary/30 ring-2 ring-primary/20"
-              />
+            <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/30 ring-2 ring-primary/20">
+              <TrendingUp className="h-7 w-7 text-primary-foreground" />
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background animate-pulse" />
             </div>
             <div className="flex-1">
@@ -89,43 +85,50 @@ export const SideDrawer = () => {
                   key={item.path + item.label}
                   to={item.path}
                   onClick={() => setOpen(false)}
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  style={{ 
+                    animationDelay: `${index * 60}ms`,
+                    animationFillMode: 'backwards'
+                  }}
                   className={cn(
                     "group relative px-4 py-3.5 rounded-xl font-medium flex items-center gap-3",
                     "transition-all duration-300 ease-out",
-                    "hover:translate-x-1 active:scale-[0.98]",
-                    "animate-fade-in",
+                    "hover:translate-x-2 active:scale-[0.98]",
+                    "animate-slide-in-menu",
                     active 
-                      ? `${item.activeBg} ${item.color} shadow-sm` 
+                      ? `${item.activeBg} ${item.color} shadow-md` 
                       : "text-foreground/80 hover:bg-accent/80"
                   )}
                 >
-                  {/* Active indicator */}
+                  {/* Active indicator with pulse */}
                   {active && (
                     <div className={cn(
-                      "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full",
-                      item.color.replace('text-', 'bg-')
+                      "absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 rounded-r-full",
+                      item.color.replace('text-', 'bg-'),
+                      "animate-pulse-glow"
                     )} />
                   )}
                   
-                  {/* Icon container */}
+                  {/* Icon container with enhanced animations */}
                   <div className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300",
+                    "flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-300",
                     active ? item.bg : "bg-muted/50 group-hover:bg-accent",
-                    "group-hover:scale-110 group-hover:rotate-3"
+                    "group-hover:scale-110 group-hover:rotate-6",
+                    active && "shadow-lg"
                   )}>
                     <Icon className={cn(
-                      "h-5 w-5 transition-colors duration-300",
-                      active ? item.color : "text-muted-foreground group-hover:text-foreground"
+                      "h-5 w-5 transition-all duration-300",
+                      active ? item.color : "text-muted-foreground group-hover:text-foreground",
+                      "group-hover:scale-110"
                     )} />
                   </div>
                   
-                  <span className="transition-colors duration-300">{item.label}</span>
+                  <span className="transition-all duration-300 group-hover:translate-x-1 font-medium">{item.label}</span>
                   
-                  {/* Hover glow effect */}
+                  {/* Hover shimmer effect */}
                   <div className={cn(
-                    "absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10",
-                    "bg-gradient-to-r from-transparent via-primary/5 to-transparent"
+                    "absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 overflow-hidden",
+                    "before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent",
+                    "before:translate-x-[-100%] group-hover:before:translate-x-[100%] before:transition-transform before:duration-700"
                   )} />
                 </Link>
               );
