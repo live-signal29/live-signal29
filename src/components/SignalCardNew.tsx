@@ -163,12 +163,13 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     const checkAndUpdate = async () => {
       const updates: Record<string, boolean | string> = {};
 
-      // Check TP1
+      // Check TP1 - Auto move SL to breakeven when TP1 hits
       if (!signal.tp1_hit && signal.tp1) {
         const tp1Price = parseEntryPrice(signal.tp1);
         if (checkTPSLHit(currentPrice, tp1Price, signal.type)) {
           updates.tp1_hit = true;
-          updates.profit_note = '1st TP done ✅ Move SL to BE 🫴';
+          updates.profit_note = '1st TP done ✅ SL moved to BE 🔒';
+          updates.sl = signal.entry; // Auto move SL to breakeven (entry price)
         }
       }
 
