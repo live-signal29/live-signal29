@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format, isToday, isYesterday, differenceInHours, formatDistanceToNow } from "date-fns";
+import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -54,28 +54,6 @@ interface SignalCardProps {
   livePrice?: number;
 }
 
-// Currency flag emojis mapping
-const getCurrencyFlag = (pair: string): string => {
-  const pairUpper = pair.toUpperCase();
-  if (pairUpper.includes("EUR")) return "🇪🇺";
-  if (pairUpper.includes("GBP")) return "🇬🇧";
-  if (pairUpper.includes("USD")) return "🇺🇸";
-  if (pairUpper.includes("JPY")) return "🇯🇵";
-  if (pairUpper.includes("AUD")) return "🇦🇺";
-  if (pairUpper.includes("CAD")) return "🇨🇦";
-  if (pairUpper.includes("CHF")) return "🇨🇭";
-  if (pairUpper.includes("NZD")) return "🇳🇿";
-  if (pairUpper.includes("XAU") || pairUpper.includes("GOLD")) return "🥇";
-  if (pairUpper.includes("XAG") || pairUpper.includes("SILVER")) return "🥈";
-  if (pairUpper.includes("BTC")) return "₿";
-  if (pairUpper.includes("ETH")) return "⟠";
-  if (pairUpper.includes("OIL") || pairUpper.includes("CRUDE") || pairUpper.includes("BRENT")) return "🛢️";
-  if (pairUpper.includes("US30") || pairUpper.includes("DOW")) return "📈";
-  if (pairUpper.includes("NAS") || pairUpper.includes("NASDAQ")) return "💹";
-  if (pairUpper.includes("SPX") || pairUpper.includes("S&P")) return "📊";
-  return "💱";
-};
-
 const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice }: SignalCardProps) => {
   const navigate = useNavigate();
   const lifecycle = (signal.signal_status || signal.status || 'open').toLowerCase();
@@ -108,27 +86,15 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   const [priceDirection, setPriceDirection] = useState<"up" | "down" | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const confettiFiredRef = useRef<boolean>(false);
-  const initialTP3StateRef = useRef<boolean>(signal.tp3_hit);
+  const initialTP3StateRef = useRef<boolean>(signal.tp3_hit); // Track initial TP3 state on mount
 
   // Check if signal is too new to show P/L (< 60 seconds since creation)
   const signalAgeMs = Date.now() - new Date(signal.created_at).getTime();
-  const isVeryNewSignal = signalAgeMs < 60000;
+  const isVeryNewSignal = signalAgeMs < 60000; // 60 seconds
 
   // Check if entry has been "touched" - for MARKET orders, we assume entry touched immediately
+  // For P/L to start, signal must be OPEN and not brand new
   const entryTouched = isOpen && !isVeryNewSignal;
-
-  // Calculate progress for circular indicator
-  const calculateProgress = () => {
-    const tpLevels = [signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit].filter(Boolean).length;
-    const totalTPs = [signal.tp1, signal.tp2, signal.tp3, signal.tp4].filter(Boolean).length;
-    if (signal.sl_hit) return 0;
-    if (totalTPs === 0) return 0;
-    return (tpLevels / totalTPs) * 100;
-  };
-
-  const progress = calculateProgress();
-  const isProfit = signal.tp1_hit || signal.tp2_hit || signal.tp3_hit || signal.tp4_hit;
-  const isLoss = signal.sl_hit;
 
   // Confetti celebration for TP3 hit
   const triggerConfetti = useCallback(() => {
@@ -149,10 +115,11 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   }, []);
 
   // Trigger confetti ONLY when TP3 changes from false to true during session
+  // Not when opening dashboard with already closed signals
   useEffect(() => {
     if (
       signal.tp3_hit && 
-      !initialTP3StateRef.current && 
+      !initialTP3StateRef.current && // Was false on mount
       !confettiFiredRef.current && 
       document.visibilityState === 'visible'
     ) {
@@ -169,18 +136,27 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
       }
       prevPriceRef.current = currentPrice;
 
+      // Reset animation after it plays
       const timer = setTimeout(() => setPriceDirection(null), 400);
       return () => clearTimeout(timer);
     }
   }, [currentPrice]);
 
-  // Running P/L calculation
+  // IMPORTANT: UI must NOT auto-activate limit orders.
+  // Activation happens in backend price listener only.
+
+  // Running P/L MUST be calculated ONLY when:
+  // 1. Signal status == OPEN
+  // 2. Entry has been touched (signal is not brand new)
+  // 3. We have valid current price and entry price
   const runningPL = isOpen && entryTouched && currentPrice > 0 && parsedEntryPrice > 0
     ? calculateRunningPL(currentPrice, parsedEntryPrice, signal.type)
     : null;
 
   // Auto-update TP/SL hits
   useEffect(() => {
+    // STRICT: do not evaluate TP/SL until signal is OPEN (not pending, not closed)
+    // isPending or isClosed signals should NEVER trigger TP/SL checks
     if (!isOpen || isPending || isClosed || !currentPrice || signal.sl_hit) return;
 
     const checkAndUpdate = async () => {
@@ -192,7 +168,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         if (checkTPSLHit(currentPrice, tp1Price, signal.type)) {
           updates.tp1_hit = true;
           updates.profit_note = '1st TP done ✅ SL moved to BE 🔒';
-          updates.sl = signal.entry;
+          updates.sl = signal.entry; // Auto move SL to breakeven (entry price)
         }
       }
 
@@ -244,6 +220,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
     const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;
     
+    // Different share text for premium vs free signals
     const shareText = isLocked || signal.is_premium
       ? `🔔 Premium ${signal.type.toUpperCase()} Signal Alert!\n\n` +
         `📊 Pair: ${signal.pair}\n` +
@@ -266,113 +243,112 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
       toast.success("Signal link copied to clipboard!");
     }
   };
+  
+  const getStatusText = () => {
+    return signal.signal_status || "OPEN";
+  };
 
-  const timeAgo = formatDistanceToNow(new Date(signal.created_at), { addSuffix: false });
+  const getStatusColor = () => {
+    const status = (signal.signal_status || signal.status || "open").toLowerCase();
+    if (status === "close") return "bg-destructive/10 text-destructive border-destructive";
+    if (status === "pending") return "bg-warning/10 text-warning border-warning";
+    return "bg-primary/10 text-primary border-primary";
+  };
+
+  const getRiskLevelColor = () => {
+    if (signal.risk_level === "High") return "bg-card text-destructive border-destructive";
+    if (signal.risk_level === "Medium") return "bg-card text-warning border-warning";
+    return "bg-card text-success border-success";
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isToday(date)) return `Today, ${format(date, "hh:mm a")}`;
+    if (isYesterday(date)) return `Yesterday, ${format(date, "hh:mm a")}`;
+    return format(date, "dd MMM yyyy, hh:mm a");
+  };
 
   return (
     <Card 
       ref={cardRef}
-      className={`overflow-hidden transition-all duration-200 bg-card border-border/40 rounded-xl ${
-        signal.is_premium ? 'ring-1 ring-primary/20' : ''
-      }`}
+      className={`overflow-hidden transition-all duration-300 relative bg-card rounded-2xl ${
+        signal.is_premium 
+          ? 'ring-2 ring-primary/30 shadow-lg shadow-primary/10' 
+          : 'shadow-md hover:shadow-lg'
+      } ${!isLocked && 'hover:ring-2 hover:ring-primary/20'}`}
     >
-      <CardContent className="p-0">
-        {/* Main Content Row */}
-        <div className="p-4 flex items-start gap-3">
-          {/* Currency Icon Circle */}
-          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-2xl flex-shrink-0">
-            {getCurrencyFlag(signal.pair)}
+      <CardContent className="p-0 relative z-10">
+        {/* NEW Badge - Premium floating style */}
+        {isNewSignal && !isLocked && (
+          <div className="absolute top-3 right-3 z-10">
+            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-[10px] px-2.5 py-1 rounded-full font-bold shadow-lg animate-pulse">
+              NEW
+            </Badge>
           </div>
+        )}
 
-          {/* Signal Info */}
-          <div className="flex-1 min-w-0">
-            {/* Pair Name & Badges Row */}
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-bold text-foreground text-base truncate">{signal.pair}</span>
-              {signal.is_premium && (
-                <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-              )}
-            </div>
-
-            {/* Buy/Sell + Status Badges */}
-            <div className="flex items-center gap-2 mb-2">
-              <Badge className={`${
-                signal.type === "Buy" 
-                  ? "bg-success text-success-foreground" 
-                  : "bg-destructive text-destructive-foreground"
-              } text-[10px] font-bold px-2 py-0.5 rounded`}>
-                {signal.type.toUpperCase()}
-              </Badge>
-              
-              {isProfit && !isLoss && (
-                <Badge className="bg-success/20 text-success text-[10px] font-semibold px-2 py-0.5 rounded border-0">
-                  Profit
-                </Badge>
-              )}
-              
-              {isLoss && (
-                <Badge className="bg-destructive/20 text-destructive text-[10px] font-semibold px-2 py-0.5 rounded border-0">
-                  Loss
-                </Badge>
-              )}
-              
-              {!isClosed && !isLoss && !isProfit && (
-                <Badge className="bg-primary/20 text-primary text-[10px] font-semibold px-2 py-0.5 rounded border-0">
-                  Active
-                </Badge>
-              )}
-            </div>
-
-            {/* Entry Price */}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Entry:</span>
-              <span className="text-foreground font-semibold">{signal.entry}</span>
-            </div>
-          </div>
-
-          {/* Right Side - Progress Circle & Actions */}
-          <div className="flex flex-col items-end gap-2">
-            {/* Circular Progress Indicator */}
-            <div className="relative w-11 h-11">
-              <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
-                <circle
-                  cx="22"
-                  cy="22"
-                  r="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  className="text-muted/30"
-                />
-                <circle
-                  cx="22"
-                  cy="22"
-                  r="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(progress / 100) * 113} 113`}
-                  className={isLoss ? "text-destructive" : "text-success"}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-[10px] font-bold ${isLoss ? "text-destructive" : isProfit ? "text-success" : "text-muted-foreground"}`}>
-                  {Math.round(progress)}%
+        {/* Header - Modern Premium Design */}
+        <div className="flex justify-between items-start p-4 bg-gradient-to-r from-card via-card to-muted/20">
+          <div className="flex items-center gap-3">
+            {/* Buy/Sell Badge - Pill Style */}
+            <Badge className={`${signal.type === "Buy" 
+              ? "bg-success text-success-foreground" 
+              : "bg-destructive text-destructive-foreground"} 
+              font-bold text-xs px-3 py-1 rounded-full shadow-sm`}>
+              {signal.type.toUpperCase()}
+            </Badge>
+            
+            {signal.is_premium && (
+              <div className="relative">
+                <Crown className="h-5 w-5 text-yellow-500 animate-crown-bounce drop-shadow-[0_0_8px_hsl(45_100%_50%/0.6)]" />
+              </div>
+            )}
+            
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-bold text-foreground">
+                {signal.pair}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Entry:</span>
+                <span className={`font-bold text-sm ${
+                  isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : 'text-primary'
+                }`}>
+                  {isLimitOrder
+                    ? (isPending ? `Limit @ ${limitPrice}` : signal.entry)
+                    : signal.entry
+                  }
                 </span>
               </div>
+              {/* Current Price - Compact MT5 Style */}
+              {(isOpen || isPending) && currentPrice > 0 && !isLocked && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[10px] text-muted-foreground">Now:</span>
+                  <span
+                    key={currentPrice}
+                    className={`font-bold text-xs px-1.5 py-0.5 rounded ${
+                      priceDirection === 'up'
+                        ? 'bg-success/20 text-success'
+                        : priceDirection === 'down'
+                          ? 'bg-destructive/20 text-destructive'
+                          : 'bg-muted text-foreground'
+                    }`}
+                  >
+                    {currentPrice.toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
-
-            {/* Share Button */}
+          </div>
+          <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 hover:bg-muted"
+                  className="h-7 w-7 hover:bg-accent"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Share2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Share2 className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -387,113 +363,188 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">
+              {formatDate(signal.created_at)}
+            </span>
           </div>
         </div>
 
         {isLocked ? (
           /* Locked State - Free user viewing premium signal */
-          <div 
-            className="px-4 pb-4 pt-0"
-            onClick={() => navigate("/premium")}
-          >
-            <div className="flex items-center justify-center gap-2 py-3 px-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">
-                Unlock Premium Signal
+          <>
+            <div 
+              className="flex flex-col items-center justify-center gap-2 py-6 px-4 cursor-pointer hover:bg-muted/50 transition-colors text-center"
+              onClick={() => navigate("/premium")}
+            >
+              <div className="bg-muted p-2 rounded-full">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <span className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
+                🔒 BUY premium to see signal
               </span>
             </div>
-          </div>
-        ) : (
-          /* Unlocked State - Show TP/SL details */
-          <div className="px-4 pb-4 pt-0 space-y-2">
-            {/* TP Row */}
-            <div className="flex items-center justify-between py-2 border-t border-border/30">
-              <span className="text-muted-foreground text-xs">TP</span>
-              <div className="flex items-center gap-3 text-xs">
-                <span className={`font-semibold ${signal.tp1_hit ? "text-success" : "text-success/70"}`}>
-                  {signal.tp1} {signal.tp1_hit && "✓"}
-                </span>
-                {signal.tp2 && (
-                  <span className={`font-semibold ${signal.tp2_hit ? "text-success" : "text-success/70"}`}>
-                    {signal.tp2} {signal.tp2_hit && "✓"}
-                  </span>
-                )}
-                {signal.tp3 && (
-                  <span className={`font-semibold ${signal.tp3_hit ? "text-success" : "text-success/70"}`}>
-                    {signal.tp3} {signal.tp3_hit && "✓"}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* SL Row */}
-            <div className="flex items-center justify-between py-2 border-t border-border/30">
-              <span className="text-muted-foreground text-xs">SL</span>
-              <span className={`text-xs font-semibold ${signal.sl_hit ? "text-destructive" : "text-destructive/70"}`}>
-                {signal.sl} {signal.sl_hit && "✗"}
-              </span>
-            </div>
-
-            {/* Live Price Row (only for open signals) */}
-            {(isOpen || isPending) && currentPrice > 0 && (
-              <div className="flex items-center justify-between py-2 border-t border-border/30">
-                <span className="text-muted-foreground text-xs">Now</span>
-                <span
-                  className={`text-xs font-bold px-2 py-0.5 rounded ${
-                    priceDirection === 'up'
-                      ? 'bg-success/20 text-success'
-                      : priceDirection === 'down'
-                        ? 'bg-destructive/20 text-destructive'
-                        : 'text-foreground'
-                  }`}
-                >
-                  {currentPrice.toFixed(signal.pair.includes("JPY") ? 3 : 5)}
-                </span>
-              </div>
-            )}
-
-            {/* Profit Note or Running P/L */}
-            {signal.profit_note && (
-              <div className="py-2 border-t border-border/30">
-                <p className="text-xs text-center text-success font-medium">{signal.profit_note}</p>
-              </div>
-            )}
-
-            {!signal.profit_note && isOpen && runningPL && (
-              <div className="flex items-center justify-between py-2 border-t border-border/30">
-                <span className="text-muted-foreground text-xs">P/L</span>
-                <span className={`text-xs font-bold ${runningPL.isProfit ? 'text-success' : 'text-destructive'}`}>
-                  {runningPL.formatted}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Footer - Time & NEW badge */}
-        <div className="px-4 py-2 border-t border-border/30 flex items-center justify-between bg-muted/20">
-          <span className="text-[10px] text-muted-foreground">{timeAgo}</span>
-          
-          <div className="flex items-center gap-2">
-            {signal.risk_level && (
+            {/* Footer showing status left, LIVE SIGNAL centered */}
+            <div className="px-3 py-2 border-t border-border flex items-center">
               <span className={`text-[10px] font-medium ${
-                signal.risk_level === "High" 
-                  ? "text-destructive" 
-                  : signal.risk_level === "Medium"
-                    ? "text-warning"
-                    : "text-success"
+                getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
               }`}>
-                {signal.risk_level}
+                {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
               </span>
-            )}
-            
-            {isNewSignal && !isLocked && (
-              <Badge className="bg-primary text-primary-foreground text-[9px] px-1.5 py-0 rounded font-bold">
-                NEW
-              </Badge>
-            )}
-          </div>
-        </div>
+              {/* LIVE SIGNAL centered - only when OPEN */}
+              {getStatusText() !== 'CLOSE' && (
+                <span className="flex-1 text-center text-base font-bold text-success animate-pulse">
+                  LIVE SIGNAL
+                </span>
+              )}
+            </div>
+          </>
+        ) : (
+          /* Unlocked State - Show all details */
+          <>
+            {/* Badges Row - Modern Pill Style */}
+            <div className="flex flex-wrap gap-2 px-4 py-3 bg-muted/30">
+              {signal.risk_level && (
+                <Badge className={`${
+                  signal.risk_level === "High" 
+                    ? "bg-destructive/10 text-destructive border-destructive/30" 
+                    : signal.risk_level === "Medium"
+                      ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30"
+                      : "bg-success/10 text-success border-success/30"
+                } border rounded-full px-3 py-1 text-[11px] font-semibold`}>
+                  {signal.risk_level} Risk
+                </Badge>
+              )}
+              {signal.signal_type && (
+                <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] font-medium bg-card">
+                  {signal.signal_type}
+                </Badge>
+              )}
+              {signal.pips_result && (
+                <Badge className="bg-success/15 text-success border-success/30 border rounded-full px-3 py-1 text-[11px] font-bold">
+                  {signal.pips_result}
+                </Badge>
+              )}
+            </div>
+
+            {/* TP/SL Grid - Modern 2-Column Layout */}
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-3">
+                {/* TP1 */}
+                <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp1_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                  <span className="text-muted-foreground text-xs font-medium">
+                    TAKE PROFIT 1 {signal.tp1_hit && <span className="text-success ml-1">✓</span>}
+                  </span>
+                  <span className={`font-bold text-sm ${signal.tp1_hit ? 'text-success' : 'text-primary'}`}>
+                    {signal.tp1}
+                  </span>
+                </div>
+                
+                {/* TP2 */}
+                {signal.tp2 && (
+                  <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp2_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                    <span className="text-muted-foreground text-xs font-medium">
+                      TAKE PROFIT 2 {signal.tp2_hit && <span className="text-success ml-1">✓</span>}
+                    </span>
+                    <span className={`font-bold text-sm ${signal.tp2_hit ? 'text-success' : 'text-primary'}`}>
+                      {signal.tp2}
+                    </span>
+                  </div>
+                )}
+                
+                {/* TP3 */}
+                {signal.tp3 && (
+                  <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp3_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                    <span className="text-muted-foreground text-xs font-medium">
+                      TAKE PROFIT 3 {signal.tp3_hit && <span className="text-success ml-1">✓</span>}
+                    </span>
+                    <span className={`font-bold text-sm ${signal.tp3_hit ? 'text-success' : 'text-primary'}`}>
+                      {signal.tp3}
+                    </span>
+                  </div>
+                )}
+
+                {/* TP4 */}
+                {signal.tp4 && (
+                  <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp4_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                    <span className="text-muted-foreground text-xs font-medium">
+                      TAKE PROFIT 4 {signal.tp4_hit && <span className="text-success ml-1">✓</span>}
+                    </span>
+                    <span className={`font-bold text-sm ${signal.tp4_hit ? 'text-success' : 'text-primary'}`}>
+                      {signal.tp4}
+                    </span>
+                  </div>
+                )}
+                
+                {/* SL */}
+                <div className={`flex justify-between items-center p-2.5 rounded-xl col-span-2 ${signal.sl_hit ? 'bg-destructive/10' : 'bg-muted/50'}`}>
+                  <span className="text-muted-foreground text-xs font-medium">
+                    SL-BELOW {signal.sl_hit && <span className="text-destructive ml-1">✗</span>}
+                  </span>
+                  <span className={`font-bold text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
+                    {signal.sl}
+                  </span>
+                </div>
+              </div>
+
+              {/* Analysis Reason */}
+              {signal.analysis_reason && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    <span className="font-semibold">Analysis:</span> {signal.analysis_reason}
+                  </p>
+                </div>
+              )}
+
+              {/* Note */}
+              {signal.note && (
+                <div className="mt-2 pt-2 border-t border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{signal.note}</p>
+                </div>
+              )}
+
+              {/* Profit Note / Running P/L + Status together */}
+              {signal.profit_note ? (
+                // Show static profit note (typically for CLOSED signals)
+                <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
+                  <span className={`text-[10px] font-medium ${
+                    isClosed ? 'text-destructive' : isPending ? 'text-orange-500' : 'text-blue-500'
+                  }`}>
+                    {isClosed ? 'Close' : isPending ? 'Pending' : 'Open'}
+                  </span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
+                    {signal.profit_note}
+                  </p>
+                </div>
+              ) : isOpen && runningPL ? (
+                // Show running P/L ONLY for OPEN signals
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
+                  <span className="text-[10px] font-medium text-blue-500">Active</span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-bold">
+                    <span className="text-foreground">Running P/L:</span>{' '}
+                    <span className={runningPL.isProfit ? 'text-success' : 'text-destructive'}>
+                      {runningPL.formatted}
+                    </span>
+                  </p>
+                </div>
+              ) : isPending ? (
+                // Pending: show Pending status on left + center helper text
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
+                  <span className="text-[10px] font-medium text-orange-500">Pending</span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
+                    ⏳ Wait for entry level
+                  </p>
+                </div>
+              ) : (
+                // Default: just show status
+                <div className="mt-2 pt-2 border-t border-border/30 flex justify-start">
+                  <span className={`text-[10px] font-medium ${isClosed ? 'text-destructive' : 'text-blue-500'}`}>
+                    {isClosed ? 'Close' : 'Open'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
