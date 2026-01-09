@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
+import { ShieldCheck } from "lucide-react";
 import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -470,6 +471,33 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                     {signal.sl}
                   </span>
                 </div>
+
+                {/* Move SL to Breakeven Button - Shows when TP1 is hit and SL != Entry */}
+                {signal.tp1_hit && !signal.sl_hit && isOpen && signal.sl !== signal.entry && (
+                  <div className="col-span-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full bg-success/10 border-success/50 text-success hover:bg-success/20 hover:text-success text-xs font-semibold"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const { error } = await supabase
+                          .from('signals')
+                          .update({ sl: signal.entry })
+                          .eq('id', signal.id);
+                        
+                        if (error) {
+                          toast.error("Failed to move SL to breakeven");
+                        } else {
+                          toast.success("SL moved to breakeven (entry price)");
+                        }
+                      }}
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
+                      Move SL to Breakeven
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Analysis Reason */}
