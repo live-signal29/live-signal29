@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
-import { ShieldCheck } from "lucide-react";
 import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -272,69 +271,71 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   return (
     <Card 
       ref={cardRef}
-      className={`overflow-hidden transition-all duration-300 shadow-sm relative bg-card ${
+      className={`overflow-hidden transition-all duration-300 relative bg-card rounded-2xl ${
         signal.is_premium 
-          ? 'border-2 border-primary/40' 
-          : 'border-border'
-      } ${!isLocked && 'hover:border-primary/50 hover:shadow-md'}`}
+          ? 'ring-2 ring-primary/30 shadow-lg shadow-primary/10' 
+          : 'shadow-md hover:shadow-lg'
+      } ${!isLocked && 'hover:ring-2 hover:ring-primary/20'}`}
     >
       <CardContent className="p-0 relative z-10">
-        {/* NEW Badge - only on unlocked */}
+        {/* NEW Badge - Premium floating style */}
         {isNewSignal && !isLocked && (
-          <div className="absolute top-2 right-2 z-10">
-            <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 animate-pulse">
+          <div className="absolute top-3 right-3 z-10">
+            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-[10px] px-2.5 py-1 rounded-full font-bold shadow-lg animate-pulse">
               NEW
             </Badge>
           </div>
         )}
 
-        {/* Header - Always Visible */}
-        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border">
-          <div className="flex items-start gap-2">
-            <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs mt-0.5`}>
+        {/* Header - Modern Premium Design */}
+        <div className="flex justify-between items-start p-4 bg-gradient-to-r from-card via-card to-muted/20">
+          <div className="flex items-center gap-3">
+            {/* Buy/Sell Badge - Pill Style */}
+            <Badge className={`${signal.type === "Buy" 
+              ? "bg-success text-success-foreground" 
+              : "bg-destructive text-destructive-foreground"} 
+              font-bold text-xs px-3 py-1 rounded-full shadow-sm`}>
               {signal.type.toUpperCase()}
             </Badge>
+            
             {signal.is_premium && (
               <div className="relative">
-                <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-1 animate-crown-bounce drop-shadow-[0_0_6px_hsl(45_100%_50%/0.6)]" />
-                <div className="absolute inset-0 animate-ping opacity-30">
-                  <Crown className="h-4 w-4 text-yellow-400 mt-1" />
-                </div>
+                <Crown className="h-5 w-5 text-yellow-500 animate-crown-bounce drop-shadow-[0_0_8px_hsl(45_100%_50%/0.6)]" />
               </div>
             )}
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm sm:text-base font-bold text-primary">
+            
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-bold text-foreground">
                 {signal.pair}
               </span>
-              <span className="text-xs sm:text-sm font-medium">
-                <span className="text-muted-foreground">Entry:</span>
-                <span className={`font-semibold ml-1 ${
-                  isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : (isLimitOrder ? 'text-success' : 'text-blue-500')
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Entry:</span>
+                <span className={`font-bold text-sm ${
+                  isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : 'text-primary'
                 }`}>
                   {isLimitOrder
-                    ? (isPending
-                        ? `${signal.type === 'Buy' ? 'Limit Buy' : 'Limit Sell'} @ ${limitPrice}`
-                        : `${signal.type}`)
+                    ? (isPending ? `Limit @ ${limitPrice}` : signal.entry)
                     : signal.entry
                   }
                 </span>
-              </span>
-              {/* Show current price for OPEN and PENDING signals with MT5-style animation */}
+              </div>
+              {/* Current Price - Compact MT5 Style */}
               {(isOpen || isPending) && currentPrice > 0 && !isLocked && (
-                <span className="text-[10px] text-muted-foreground">
-                  Current: <span
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[10px] text-muted-foreground">Now:</span>
+                  <span
                     key={currentPrice}
-                    className={`font-semibold px-1 py-0.5 rounded transition-colors ${
+                    className={`font-bold text-xs px-1.5 py-0.5 rounded ${
                       priceDirection === 'up'
-                        ? 'text-success animate-price-up'
+                        ? 'bg-success/20 text-success'
                         : priceDirection === 'down'
-                          ? 'text-destructive animate-price-down'
-                          : 'text-foreground'
+                          ? 'bg-destructive/20 text-destructive'
+                          : 'bg-muted text-foreground'
                     }`}
                   >
                     {currentPrice.toFixed(2)}
                   </span>
-                </span>
+                </div>
               )}
             </div>
           </div>
@@ -400,105 +401,89 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         ) : (
           /* Unlocked State - Show all details */
           <>
-            {/* Badges Row - Side aligned */}
-            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-card border-b border-border/50">
+            {/* Badges Row - Modern Pill Style */}
+            <div className="flex flex-wrap gap-2 px-4 py-3 bg-muted/30">
               {signal.risk_level && (
-                <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
+                <Badge className={`${
+                  signal.risk_level === "High" 
+                    ? "bg-destructive/10 text-destructive border-destructive/30" 
+                    : signal.risk_level === "Medium"
+                      ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30"
+                      : "bg-success/10 text-success border-success/30"
+                } border rounded-full px-3 py-1 text-[11px] font-semibold`}>
                   {signal.risk_level} Risk
                 </Badge>
               )}
               {signal.signal_type && (
-                <Badge variant="outline" className="bg-card text-[10px] sm:text-xs">
+                <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] font-medium bg-card">
                   {signal.signal_type}
                 </Badge>
               )}
               {signal.pips_result && (
-                <Badge className="bg-success/10 text-success border-success border text-[10px] sm:text-xs font-semibold">
+                <Badge className="bg-success/15 text-success border-success/30 border rounded-full px-3 py-1 text-[11px] font-bold">
                   {signal.pips_result}
                 </Badge>
               )}
             </div>
 
-            {/* TP/SL Table */}
-            <div className="p-3 sm:p-4">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                  <span className="text-muted-foreground text-xs sm:text-sm">
-                    TAKE PROFIT 1 {signal.tp1_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
+            {/* TP/SL Grid - Modern 2-Column Layout */}
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-3">
+                {/* TP1 */}
+                <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp1_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                  <span className="text-muted-foreground text-xs font-medium">
+                    TAKE PROFIT 1 {signal.tp1_hit && <span className="text-success ml-1">✓</span>}
                   </span>
-                  <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
+                  <span className={`font-bold text-sm ${signal.tp1_hit ? 'text-success' : 'text-primary'}`}>
                     {signal.tp1}
                   </span>
                 </div>
                 
+                {/* TP2 */}
                 {signal.tp2 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground text-xs sm:text-sm">
-                      TAKE PROFIT 2 {signal.tp2_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
+                  <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp2_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                    <span className="text-muted-foreground text-xs font-medium">
+                      TAKE PROFIT 2 {signal.tp2_hit && <span className="text-success ml-1">✓</span>}
                     </span>
-                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
+                    <span className={`font-bold text-sm ${signal.tp2_hit ? 'text-success' : 'text-primary'}`}>
                       {signal.tp2}
                     </span>
                   </div>
                 )}
                 
+                {/* TP3 */}
                 {signal.tp3 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground text-xs sm:text-sm">
-                      TAKE PROFIT 3 {signal.tp3_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
+                  <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp3_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                    <span className="text-muted-foreground text-xs font-medium">
+                      TAKE PROFIT 3 {signal.tp3_hit && <span className="text-success ml-1">✓</span>}
                     </span>
-                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
+                    <span className={`font-bold text-sm ${signal.tp3_hit ? 'text-success' : 'text-primary'}`}>
                       {signal.tp3}
                     </span>
                   </div>
                 )}
 
+                {/* TP4 */}
                 {signal.tp4 && (
-                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground text-xs sm:text-sm">
-                      TAKE PROFIT 4 {signal.tp4_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
+                  <div className={`flex justify-between items-center p-2.5 rounded-xl ${signal.tp4_hit ? 'bg-success/10' : 'bg-muted/50'}`}>
+                    <span className="text-muted-foreground text-xs font-medium">
+                      TAKE PROFIT 4 {signal.tp4_hit && <span className="text-success ml-1">✓</span>}
                     </span>
-                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp4_hit ? 'text-success' : 'text-foreground'}`}>
+                    <span className={`font-bold text-sm ${signal.tp4_hit ? 'text-success' : 'text-primary'}`}>
                       {signal.tp4}
                     </span>
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                  <span className="text-muted-foreground text-xs sm:text-sm">
-                    SL-BELOW {signal.sl_hit && <span className="text-destructive">✗</span>}
+                {/* SL */}
+                <div className={`flex justify-between items-center p-2.5 rounded-xl col-span-2 ${signal.sl_hit ? 'bg-destructive/10' : 'bg-muted/50'}`}>
+                  <span className="text-muted-foreground text-xs font-medium">
+                    SL-BELOW {signal.sl_hit && <span className="text-destructive ml-1">✗</span>}
                   </span>
-                  <span className={`font-semibold text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
+                  <span className={`font-bold text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
                     {signal.sl}
                   </span>
                 </div>
-
-                {/* Move SL to Breakeven Button - Shows when TP1 is hit and SL != Entry */}
-                {signal.tp1_hit && !signal.sl_hit && isOpen && signal.sl !== signal.entry && (
-                  <div className="col-span-2 mt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full bg-success/10 border-success/50 text-success hover:bg-success/20 hover:text-success text-xs font-semibold"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const { error } = await supabase
-                          .from('signals')
-                          .update({ sl: signal.entry })
-                          .eq('id', signal.id);
-                        
-                        if (error) {
-                          toast.error("Failed to move SL to breakeven");
-                        } else {
-                          toast.success("SL moved to breakeven (entry price)");
-                        }
-                      }}
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-                      Move SL to Breakeven
-                    </Button>
-                  </div>
-                )}
               </div>
 
               {/* Analysis Reason */}
