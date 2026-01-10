@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
 const navItems = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: TrendingUp, label: "Signals", path: "/signals" },
-  { icon: BarChart3, label: "Results", path: "/results" },
-  { icon: Wallet, label: "Premium", path: "/premium" },
-  { icon: User, label: "Profile", path: "/profile" },
+  { icon: Home, label: "Home", path: "/", gradient: "from-blue-500 to-cyan-400" },
+  { icon: TrendingUp, label: "Signals", path: "/signals", gradient: "from-emerald-500 to-teal-400" },
+  { icon: BarChart3, label: "Results", path: "/results", gradient: "from-violet-500 to-purple-400" },
+  { icon: Wallet, label: "Premium", path: "/premium", gradient: "from-amber-500 to-orange-400" },
+  { icon: User, label: "Profile", path: "/profile", gradient: "from-rose-500 to-pink-400" },
 ];
 
 // Routes where bottom navigation should be hidden
@@ -23,7 +23,6 @@ const hiddenRoutes = [
 export const BottomNavigation = () => {
   const location = useLocation();
   const [mounted, setMounted] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
 
   // Check if current route should hide the navigation
   const shouldHide = hiddenRoutes.some(route => 
@@ -34,16 +33,6 @@ export const BottomNavigation = () => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    const currentIndex = navItems.findIndex(
-      item => location.pathname === item.path || 
-      (item.path === "/signals" && location.pathname.includes("signals"))
-    );
-    if (currentIndex !== -1) {
-      setActiveIndex(currentIndex);
-    }
-  }, [location.pathname]);
-
   if (shouldHide) return null;
 
   return (
@@ -52,61 +41,70 @@ export const BottomNavigation = () => {
       "transition-all duration-500 ease-out",
       mounted ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
     )}>
-      {/* Glassmorphism background with modern blur */}
-      <div className="mx-2 mb-2 rounded-3xl overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/80 to-background/60 backdrop-blur-xl" />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
-        
-        <div className="relative flex items-center justify-around py-2 px-1">
-          {navItems.map((item, index) => {
-            const isActive = location.pathname === item.path || 
-              (item.path === "/signals" && location.pathname.includes("signals"));
-            
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-2xl",
-                  "transition-all duration-300 ease-out",
-                  "active:scale-95",
-                  isActive 
-                    ? "text-primary" 
-                    : "text-muted-foreground"
-                )}
-              >
-                {/* Active background glow */}
-                {isActive && (
-                  <div className="absolute inset-0 bg-primary/15 rounded-2xl animate-scale-in" />
-                )}
-                
-                {/* Icon with bounce animation */}
-                <div className={cn(
-                  "relative z-10 transition-all duration-300",
-                  isActive && "animate-bounce-once"
-                )}>
-                  <item.icon className={cn(
-                    "h-5 w-5 transition-all duration-300",
-                    isActive ? "stroke-[2.5]" : "stroke-[1.5]"
-                  )} />
-                </div>
-                
-                {/* Label */}
-                <span className={cn(
-                  "relative z-10 text-[10px] transition-all duration-300",
-                  isActive ? "font-bold" : "font-medium opacity-70"
-                )}>
-                  {item.label}
-                </span>
-                
-                {/* Active indicator dot */}
-                {isActive && (
-                  <div className="absolute -bottom-0.5 w-1.5 h-1.5 bg-primary rounded-full animate-scale-in shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
-                )}
-              </Link>
-            );
-          })}
+      {/* Modern floating bar with gradient border */}
+      <div className="mx-3 mb-3">
+        <div className="relative rounded-[28px] overflow-hidden">
+          {/* Animated gradient border */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 animate-[shimmer_3s_ease-in-out_infinite]" />
+          
+          {/* Inner background */}
+          <div className="absolute inset-[1px] rounded-[27px] bg-background/95 backdrop-blur-2xl" />
+          
+          {/* Content */}
+          <div className="relative flex items-center justify-around py-2 px-2">
+            {navItems.map((item, index) => {
+              const isActive = location.pathname === item.path || 
+                (item.path === "/signals" && location.pathname.includes("signals"));
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl",
+                    "transition-all duration-300 ease-out",
+                    "active:scale-90",
+                    isActive ? "scale-105" : "hover:scale-105"
+                  )}
+                >
+                  {/* Active background with gradient */}
+                  {isActive && (
+                    <div className={cn(
+                      "absolute inset-0 rounded-2xl bg-gradient-to-br opacity-20",
+                      item.gradient,
+                      "animate-scale-in"
+                    )} />
+                  )}
+                  
+                  {/* Icon container */}
+                  <div className={cn(
+                    "relative z-10 flex items-center justify-center w-10 h-10 rounded-xl",
+                    "transition-all duration-300",
+                    isActive 
+                      ? cn("bg-gradient-to-br shadow-lg", item.gradient)
+                      : "bg-muted/50"
+                  )}>
+                    <item.icon className={cn(
+                      "h-5 w-5 transition-all duration-300",
+                      isActive 
+                        ? "text-white stroke-[2.5] drop-shadow-sm" 
+                        : "text-muted-foreground stroke-[1.5]"
+                    )} />
+                  </div>
+                  
+                  {/* Label */}
+                  <span className={cn(
+                    "relative z-10 text-[10px] transition-all duration-300",
+                    isActive 
+                      ? "font-bold text-foreground" 
+                      : "font-medium text-muted-foreground"
+                  )}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
     </nav>
