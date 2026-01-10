@@ -51,7 +51,7 @@ export const BottomNavigation = () => {
           <div className="absolute inset-[1px] rounded-[27px] bg-background/95 backdrop-blur-2xl" />
           
           {/* Content */}
-          <div className="relative flex items-center justify-around py-2 px-2">
+          <div className="relative flex items-center justify-around py-1 px-1">
             {navItems.map((item, index) => {
               const isActive = location.pathname === item.path || 
                 (item.path === "/signals" && location.pathname.includes("signals"));
@@ -61,7 +61,7 @@ export const BottomNavigation = () => {
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    "relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl",
+                    "relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl",
                     "transition-all duration-300 ease-out",
                     "active:scale-90",
                     isActive ? "scale-105" : "hover:scale-105"
@@ -70,7 +70,7 @@ export const BottomNavigation = () => {
                   {/* Active background with gradient */}
                   {isActive && (
                     <div className={cn(
-                      "absolute inset-0 rounded-2xl bg-gradient-to-br opacity-20",
+                      "absolute inset-0 rounded-xl bg-gradient-to-br opacity-20",
                       item.gradient,
                       "animate-scale-in"
                     )} />
@@ -78,14 +78,14 @@ export const BottomNavigation = () => {
                   
                   {/* Icon container */}
                   <div className={cn(
-                    "relative z-10 flex items-center justify-center w-10 h-10 rounded-xl",
+                    "relative z-10 flex items-center justify-center w-8 h-8 rounded-lg",
                     "transition-all duration-300",
                     isActive 
-                      ? cn("bg-gradient-to-br shadow-lg", item.gradient)
+                      ? cn("bg-gradient-to-br shadow-md", item.gradient)
                       : "bg-muted/50"
                   )}>
                     <item.icon className={cn(
-                      "h-5 w-5 transition-all duration-300",
+                      "h-4 w-4 transition-all duration-300",
                       isActive 
                         ? "text-white stroke-[2.5] drop-shadow-sm" 
                         : "text-muted-foreground stroke-[1.5]"
@@ -94,7 +94,7 @@ export const BottomNavigation = () => {
                   
                   {/* Label */}
                   <span className={cn(
-                    "relative z-10 text-[10px] transition-all duration-300",
+                    "relative z-10 text-[9px] transition-all duration-300",
                     isActive 
                       ? "font-bold text-foreground" 
                       : "font-medium text-muted-foreground"

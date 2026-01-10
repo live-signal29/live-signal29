@@ -49,6 +49,8 @@ interface SignalCardProps {
     category: string;
     is_premium?: boolean;
     current_price?: string;
+    tag?: string;
+    signal_raw_text?: string;
   };
   hasAccess?: boolean;
   subscriptionStatus?: string | null;
@@ -306,19 +308,26 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
               <span className="text-sm sm:text-base font-bold text-primary">
                 {signal.pair}
               </span>
-              <span className="text-xs sm:text-sm font-medium">
-                <span className="text-muted-foreground">Entry:</span>
-                <span className={`font-semibold ml-1 ${
-                  isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : (isLimitOrder ? 'text-success' : 'text-blue-500')
-                }`}>
-                  {isLimitOrder
-                    ? (isPending
-                        ? `${signal.type === 'Buy' ? 'Limit Buy' : 'Limit Sell'} @ ${limitPrice}`
-                        : `${signal.type}`)
-                    : signal.entry
-                  }
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs sm:text-sm font-medium">
+                  <span className="text-muted-foreground">Entry:</span>
+                  <span className={`font-semibold ml-1 ${
+                    isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : (isLimitOrder ? 'text-success' : 'text-blue-500')
+                  }`}>
+                    {isLimitOrder
+                      ? (isPending
+                          ? `${signal.type === 'Buy' ? 'Limit Buy' : 'Limit Sell'} @ ${limitPrice}`
+                          : `${signal.type}`)
+                      : signal.entry
+                    }
+                  </span>
                 </span>
-              </span>
+                {signal.tag && (
+                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 border text-[9px] px-1.5 py-0">
+                    {signal.tag}
+                  </Badge>
+                )}
+              </div>
               {/* Show current price for OPEN and PENDING signals with MT5-style animation */}
               {(isOpen || isPending) && currentPrice > 0 && !isLocked && (
                 <span className="text-[10px] text-muted-foreground">
@@ -507,6 +516,16 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
                     <span className="font-semibold">Analysis:</span> {signal.analysis_reason}
                   </p>
+                </div>
+              )}
+
+              {/* Raw Signal Text Display */}
+              {signal.signal_raw_text && (
+                <div className="mt-3 pt-3 border-t border-cyan-500/30 bg-cyan-500/5 rounded-lg p-2">
+                  <p className="text-[10px] text-cyan-400 font-semibold mb-1">📋 Signal Details:</p>
+                  <pre className="text-[10px] sm:text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                    {signal.signal_raw_text}
+                  </pre>
                 </div>
               )}
 
