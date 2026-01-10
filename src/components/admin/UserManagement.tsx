@@ -246,7 +246,44 @@ const UserManagement = () => {
 
   const handleDeleteUser = async (user: UserProfile) => {
     try {
-      // Delete from profiles table (this will cascade to related data)
+      // First delete all related data from dependent tables
+      // Delete user favorites
+      await supabase.from('user_favorites').delete().eq('user_id', user.id);
+      
+      // Delete user favorite pairs
+      await supabase.from('user_favorite_pairs').delete().eq('user_id', user.id);
+      
+      // Delete user signal views
+      await supabase.from('user_signal_views').delete().eq('user_id', user.id);
+      
+      // Delete user login history
+      await supabase.from('user_login_history').delete().eq('user_id', user.id);
+      
+      // Delete notifications
+      await supabase.from('notifications').delete().eq('user_id', user.id);
+      
+      // Delete chart reactions
+      await supabase.from('chart_reactions').delete().eq('user_id', user.id);
+      
+      // Delete market idea reactions
+      await supabase.from('market_idea_reactions').delete().eq('user_id', user.id);
+      
+      // Delete subscriptions
+      await supabase.from('subscriptions').delete().eq('user_id', user.id);
+      
+      // Delete coupon usage
+      await supabase.from('coupon_usage').delete().eq('user_id', user.id);
+      
+      // Delete deposits
+      await supabase.from('deposits').delete().eq('user_id', user.id);
+      
+      // Delete user roles
+      await supabase.from('user_roles').delete().eq('user_id', user.id);
+      
+      // Delete security logs
+      await supabase.from('security_logs').delete().eq('user_id', user.id);
+      
+      // Finally delete from profiles table
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -266,7 +303,7 @@ const UserManagement = () => {
       fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);
-      toast.error("Failed to delete user");
+      toast.error("Failed to delete user. Check console for details.");
     }
   };
 

@@ -39,14 +39,14 @@ export const SideDrawer = () => {
   };
 
   const menuItems = [
-    { label: "Live Signals", path: "/signals", icon: LineChart, color: "text-emerald-500", bg: "bg-emerald-500/10", activeBg: "bg-emerald-500/20" },
-    { label: "Free Trial", path: "/free-trial", icon: Play, color: "text-blue-500", bg: "bg-blue-500/10", activeBg: "bg-blue-500/20" },
-    { label: "Premium", path: "/premium", icon: Crown, color: "text-amber-500", bg: "bg-amber-500/10", activeBg: "bg-amber-500/20" },
-    { label: "Account Management", path: "/account-management", icon: Briefcase, color: "text-teal-500", bg: "bg-teal-500/10", activeBg: "bg-teal-500/20" },
-    { label: "Results", path: "/results", icon: BarChart3, color: "text-indigo-500", bg: "bg-indigo-500/10", activeBg: "bg-indigo-500/20" },
-    { label: "My Profile", path: "/profile", icon: User, color: "text-purple-500", bg: "bg-purple-500/10", activeBg: "bg-purple-500/20" },
-    { label: "Notifications", path: "/settings", icon: Bell, color: "text-rose-500", bg: "bg-rose-500/10", activeBg: "bg-rose-500/20" },
-    { label: "Settings", path: "/settings", icon: Settings, color: "text-slate-500", bg: "bg-slate-500/10", activeBg: "bg-slate-500/20" },
+    { label: "Live Signals", path: "/signals", icon: LineChart, gradient: "from-emerald-500 to-teal-400", bg: "bg-emerald-500/10" },
+    { label: "Free Trial", path: "/free-trial", icon: Play, gradient: "from-blue-500 to-cyan-400", bg: "bg-blue-500/10" },
+    { label: "Premium", path: "/premium", icon: Crown, gradient: "from-amber-500 to-orange-400", bg: "bg-amber-500/10" },
+    { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400", bg: "bg-teal-500/10" },
+    { label: "Results", path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
+    { label: "My Profile", path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
+    { label: "Notifications", path: "/settings", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
+    { label: "Settings", path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -79,8 +79,8 @@ export const SideDrawer = () => {
             <ThemeToggle />
           </div>
 
-          {/* Menu Items */}
-          <nav className="flex flex-col gap-1.5 p-4 flex-1 overflow-y-auto">
+          {/* Menu Items - Ultra Modern */}
+          <nav className="flex flex-col gap-2 p-4 flex-1 overflow-y-auto">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -94,46 +94,54 @@ export const SideDrawer = () => {
                     animationFillMode: 'backwards'
                   }}
                   className={cn(
-                    "group relative px-4 py-3.5 rounded-xl font-medium flex items-center gap-3",
-                    "transition-all duration-300 ease-out",
-                    "hover:translate-x-2 active:scale-[0.98]",
+                    "group relative px-4 py-3.5 rounded-2xl font-medium flex items-center gap-3",
+                    "transition-all duration-300 ease-out overflow-hidden",
+                    "hover:translate-x-1 active:scale-[0.98]",
                     "animate-slide-in-menu",
                     active 
-                      ? `${item.activeBg} ${item.color} shadow-md` 
-                      : "text-foreground/80 hover:bg-accent/80"
+                      ? "shadow-lg" 
+                      : "text-foreground/80 hover:bg-accent/50"
                   )}
                 >
-                  {/* Active indicator with pulse */}
+                  {/* Active gradient background */}
                   {active && (
                     <div className={cn(
-                      "absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 rounded-r-full",
-                      item.color.replace('text-', 'bg-'),
-                      "animate-pulse-glow"
+                      "absolute inset-0 bg-gradient-to-r opacity-90",
+                      item.gradient
                     )} />
                   )}
                   
-                  {/* Icon container with enhanced animations */}
+                  {/* Shimmer for active */}
+                  {active && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]" />
+                  )}
+                  
+                  {/* Icon container */}
                   <div className={cn(
-                    "flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-300",
-                    active ? item.bg : "bg-muted/50 group-hover:bg-accent",
-                    "group-hover:scale-110 group-hover:rotate-6",
-                    active && "shadow-lg"
+                    "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-300",
+                    active 
+                      ? "bg-white/20 shadow-inner" 
+                      : "bg-muted/50 group-hover:bg-accent",
+                    "group-hover:scale-110"
                   )}>
                     <Icon className={cn(
                       "h-5 w-5 transition-all duration-300",
-                      active ? item.color : "text-muted-foreground group-hover:text-foreground",
+                      active ? "text-white" : "text-muted-foreground group-hover:text-foreground",
                       "group-hover:scale-110"
                     )} />
                   </div>
                   
-                  <span className="transition-all duration-300 group-hover:translate-x-1 font-medium">{item.label}</span>
+                  <span className={cn(
+                    "relative z-10 transition-all duration-300 font-semibold",
+                    active ? "text-white" : ""
+                  )}>
+                    {item.label}
+                  </span>
                   
-                  {/* Hover shimmer effect */}
-                  <div className={cn(
-                    "absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 overflow-hidden",
-                    "before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent",
-                    "before:translate-x-[-100%] group-hover:before:translate-x-[100%] before:transition-transform before:duration-700"
-                  )} />
+                  {/* Active indicator dot */}
+                  {active && (
+                    <div className="relative z-10 ml-auto w-2 h-2 bg-white rounded-full animate-pulse" />
+                  )}
                 </Link>
               );
             })}

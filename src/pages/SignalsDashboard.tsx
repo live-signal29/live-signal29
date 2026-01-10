@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
+import { cn } from "@/lib/utils";
 import { useSignalNotifications } from "@/hooks/useSignalNotifications";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
@@ -215,41 +216,54 @@ const SignalsDashboard = () => {
           {/* Main Dashboard Content - always accessible */}
           <>
 
-          {/* Main Category Tabs - Modern Mobile App Design */}
+          {/* Main Category Tabs - Ultra Modern Design */}
           <div className="mb-4 sm:mb-6">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2 snap-x snap-mandatory">
               {[
-                { key: "COMMODITIES", label: "Commodities", emoji: "🪙" },
-                { key: "FOREX", label: "Forex", emoji: "💱" },
-                { key: "CRYPTO", label: "Crypto", emoji: "₿" },
-                { key: "DERIV/BINARY", label: "Deriv", emoji: "📊" },
-                { key: "MARKET IDEAS", label: "Ideas", emoji: "💡" },
+                { key: "COMMODITIES", label: "Gold", emoji: "🪙", gradient: "from-amber-500 to-yellow-400" },
+                { key: "FOREX", label: "Forex", emoji: "💱", gradient: "from-emerald-500 to-teal-400" },
+                { key: "CRYPTO", label: "Crypto", emoji: "₿", gradient: "from-orange-500 to-amber-400" },
+                { key: "DERIV/BINARY", label: "Deriv", emoji: "📊", gradient: "from-violet-500 to-purple-400" },
+                { key: "MARKET IDEAS", label: "Ideas", emoji: "💡", gradient: "from-blue-500 to-cyan-400" },
               ].map((category, index) => {
                 const isActive = mainCategory === category.key;
                 return (
                   <button
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
-                    className={`
-                      category-pill
-                      snap-start flex-shrink-0 flex items-center gap-2 
-                      px-4 py-3 rounded-2xl
-                      text-sm font-semibold whitespace-nowrap
-                      transition-all duration-300 ease-out
-                      active:scale-95
-                      ${isActive 
-                        ? "category-pill-active bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25" 
-                        : "bg-card/80 backdrop-blur-sm text-muted-foreground border border-border/50 hover:border-primary/30 hover:text-foreground"
-                      }
-                    `}
+                    className={cn(
+                      "relative snap-start flex-shrink-0 flex items-center gap-2.5",
+                      "px-5 py-3 rounded-2xl",
+                      "text-sm font-bold whitespace-nowrap",
+                      "transition-all duration-300 ease-out",
+                      "active:scale-95 overflow-hidden",
+                      isActive 
+                        ? "text-white shadow-xl scale-105" 
+                        : "bg-card/90 backdrop-blur-md text-muted-foreground border border-border/30 hover:border-primary/40 hover:text-foreground hover:scale-102"
+                    )}
                     style={{
                       animationDelay: `${index * 50}ms`
                     }}
                   >
-                    <span className="text-base">{category.emoji}</span>
-                    <span>{category.label}</span>
+                    {/* Active gradient background */}
                     {isActive && (
-                      <div className="w-1.5 h-1.5 bg-primary-foreground rounded-full animate-pulse" />
+                      <div className={cn(
+                        "absolute inset-0 bg-gradient-to-r",
+                        category.gradient
+                      )} />
+                    )}
+                    
+                    {/* Shimmer effect for active */}
+                    {isActive && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]" />
+                    )}
+                    
+                    <span className="relative z-10 text-lg">{category.emoji}</span>
+                    <span className="relative z-10">{category.label}</span>
+                    
+                    {/* Active dot indicator */}
+                    {isActive && (
+                      <div className="relative z-10 w-2 h-2 bg-white rounded-full animate-pulse shadow-lg" />
                     )}
                   </button>
                 );
