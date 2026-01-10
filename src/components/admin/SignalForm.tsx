@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { signalSchema } from "@/lib/validations";
-import { Crown, TrendingUp, TrendingDown, Clock, Zap } from "lucide-react";
+import { Crown, TrendingUp, TrendingDown, Clock, Zap, Tag, FileText } from "lucide-react";
 
 interface SignalFormProps {
   onSuccess: () => void;
@@ -37,7 +37,9 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     risk_level: editSignal?.risk_level || "",
     analysis_reason: editSignal?.analysis_reason || "",
     is_premium: editSignal?.is_premium || false,
+    tag: editSignal?.tag || "",
   });
+  const [rawSignalText, setRawSignalText] = useState("");
 
   const subCategoryOptions: Record<string, string[]> = {
     FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
@@ -100,6 +102,8 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           risk_level: validation.data.risk_level || null,
           analysis_reason: validation.data.analysis_reason || null,
           is_premium: formData.is_premium,
+          tag: formData.tag || null,
+          signal_raw_text: rawSignalText || null,
         };
 
       if (editSignal) {
@@ -394,6 +398,36 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             className="mt-1"
           />
         </div>
+      </div>
+
+      {/* Tag Field */}
+      <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/5 to-pink-500/10 border border-purple-500/20">
+        <div className="flex items-center gap-2 mb-3">
+          <Tag className="h-4 w-4 text-purple-500" />
+          <Label className="text-sm font-semibold text-purple-400">Event Tag (Optional)</Label>
+        </div>
+        <Input
+          placeholder="e.g., NFP Trade, CPI News, FOMC..."
+          value={formData.tag}
+          onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+          className="border-purple-500/30 focus:border-purple-500"
+        />
+        <p className="text-xs text-muted-foreground mt-2">Tag will show on user dashboard next to entry price</p>
+      </div>
+
+      {/* Raw Signal Text Parser */}
+      <div className="p-4 rounded-xl bg-gradient-to-br from-cyan-500/5 to-blue-500/10 border border-cyan-500/20">
+        <div className="flex items-center gap-2 mb-3">
+          <FileText className="h-4 w-4 text-cyan-500" />
+          <Label className="text-sm font-semibold text-cyan-400">Paste Raw Signal (Optional)</Label>
+        </div>
+        <Textarea
+          placeholder="Paste your signal text here...&#10;Example:&#10;XAUUSD BUY&#10;Entry: 2650.00&#10;SL: 2640.00&#10;TP1: 2660.00&#10;TP2: 2670.00"
+          value={rawSignalText}
+          onChange={(e) => setRawSignalText(e.target.value)}
+          className="border-cyan-500/30 focus:border-cyan-500 min-h-[100px] font-mono text-sm"
+        />
+        <p className="text-xs text-muted-foreground mt-2">This text will be saved and displayed in card layout on user dashboard</p>
       </div>
 
       {/* Premium Access Toggle */}

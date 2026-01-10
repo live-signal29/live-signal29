@@ -709,12 +709,14 @@ export type Database = {
           profit_note: string | null
           published: boolean | null
           risk_level: string | null
+          signal_raw_text: string | null
           signal_status: string | null
           signal_type: string | null
           sl: string
           sl_hit: boolean | null
           status: string | null
           sub_category: string | null
+          tag: string | null
           tp1: string
           tp1_hit: boolean | null
           tp2: string | null
@@ -749,12 +751,14 @@ export type Database = {
           profit_note?: string | null
           published?: boolean | null
           risk_level?: string | null
+          signal_raw_text?: string | null
           signal_status?: string | null
           signal_type?: string | null
           sl: string
           sl_hit?: boolean | null
           status?: string | null
           sub_category?: string | null
+          tag?: string | null
           tp1: string
           tp1_hit?: boolean | null
           tp2?: string | null
@@ -789,12 +793,14 @@ export type Database = {
           profit_note?: string | null
           published?: boolean | null
           risk_level?: string | null
+          signal_raw_text?: string | null
           signal_status?: string | null
           signal_type?: string | null
           sl?: string
           sl_hit?: boolean | null
           status?: string | null
           sub_category?: string | null
+          tag?: string | null
           tp1?: string
           tp1_hit?: boolean | null
           tp2?: string | null
