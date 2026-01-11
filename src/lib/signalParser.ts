@@ -124,55 +124,8 @@ export const parseSignalText = (text: string): ParsedSignal => {
     result.type = 'Sell';
   }
 
-  // Regex patterns for price extraction
-  const pricePattern = /[\d]+\.?\d*/g;
-  const entryPatterns = [
-    /entry[:\s]*(\d+\.?\d*)/i,
-    /enter[:\s]*(\d+\.?\d*)/i,
-    /price[:\s]*(\d+\.?\d*)/i,
-    /ep[:\s]*(\d+\.?\d*)/i,
-    /@\s*(\d+\.?\d*)/i,
-  ];
-  
-  const slPatterns = [
-    /sl[:\s]*(\d+\.?\d*)/i,
-    /stop\s*loss[:\s]*(\d+\.?\d*)/i,
-    /stoploss[:\s]*(\d+\.?\d*)/i,
-  ];
-  
-  const tpPatterns = [
-    /tp\s*1[:\s]*(\d+\.?\d*)/i,
-    /tp1[:\s]*(\d+\.?\d*)/i,
-    /take\s*profit\s*1[:\s]*(\d+\.?\d*)/i,
-    /target\s*1[:\s]*(\d+\.?\d*)/i,
-  ];
-  
-  const tp2Patterns = [
-    /tp\s*2[:\s]*(\d+\.?\d*)/i,
-    /tp2[:\s]*(\d+\.?\d*)/i,
-    /take\s*profit\s*2[:\s]*(\d+\.?\d*)/i,
-    /target\s*2[:\s]*(\d+\.?\d*)/i,
-  ];
-  
-  const tp3Patterns = [
-    /tp\s*3[:\s]*(\d+\.?\d*)/i,
-    /tp3[:\s]*(\d+\.?\d*)/i,
-    /take\s*profit\s*3[:\s]*(\d+\.?\d*)/i,
-    /target\s*3[:\s]*(\d+\.?\d*)/i,
-  ];
-
-  const tp4Patterns = [
-    /tp\s*4[:\s]*(\d+\.?\d*)/i,
-    /tp4[:\s]*(\d+\.?\d*)/i,
-    /take\s*profit\s*4[:\s]*(\d+\.?\d*)/i,
-    /target\s*4[:\s]*(\d+\.?\d*)/i,
-  ];
-
   // Try to extract symbol from first line
-  // Common formats: "#Gold BUY 4467", "XAUUSD BUY", "Gold Buy @ 2650"
   const firstLine = lines[0] || '';
-  
-  // Remove common prefixes like #, @
   const cleanFirstLine = firstLine.replace(/^[#@\s]+/, '');
   
   // Try to find symbol in first line
@@ -183,7 +136,6 @@ export const parseSignalText = (text: string): ParsedSignal => {
       result.pair = symbolMappings[lowerWord];
       break;
     }
-    // Check if it looks like a forex pair
     if (/^[a-z]{6}$/i.test(lowerWord) || /^[a-z]{3}\/[a-z]{3}$/i.test(word)) {
       result.pair = word.toUpperCase();
       break;
@@ -200,13 +152,19 @@ export const parseSignalText = (text: string): ParsedSignal => {
     }
   }
 
-  // Extract Entry price
-  // First try to find in first line after Buy/Sell
+  // Extract Entry price from first line after Buy/Sell
   const firstLineMatch = firstLine.match(/(buy|sell)\s+(\d+\.?\d*)/i);
   if (firstLineMatch) {
     result.entry = firstLineMatch[2];
   } else {
     // Try patterns
+    const entryPatterns = [
+      /entry[:\s]*(\d+\.?\d*)/i,
+      /enter[:\s]*(\d+\.?\d*)/i,
+      /price[:\s]*(\d+\.?\d*)/i,
+      /ep[:\s]*(\d+\.?\d*)/i,
+      /@\s*(\d+\.?\d*)/i,
+    ];
     for (const pattern of entryPatterns) {
       const match = fullText.match(pattern);
       if (match) {
@@ -218,14 +176,19 @@ export const parseSignalText = (text: string): ParsedSignal => {
 
   // If still no entry, try to find price in first line
   if (!result.entry) {
+    const pricePattern = /[\d]+\.?\d*/g;
     const pricesInFirstLine = firstLine.match(pricePattern);
     if (pricesInFirstLine && pricesInFirstLine.length > 0) {
-      // Get the last price in first line (usually entry comes after symbol)
       result.entry = pricesInFirstLine[pricesInFirstLine.length - 1];
     }
   }
 
   // Extract SL
+  const slPatterns = [
+    /sl[:\s]*(\d+\.?\d*)/i,
+    /stop\s*loss[:\s]*(\d+\.?\d*)/i,
+    /stoploss[:\s]*(\d+\.?\d*)/i,
+  ];
   for (const pattern of slPatterns) {
     const match = fullText.match(pattern);
     if (match) {
@@ -234,46 +197,55 @@ export const parseSignalText = (text: string): ParsedSignal => {
     }
   }
 
-  // Extract TPs
-  for (const pattern of tpPatterns) {
-    const match = fullText.match(pattern);
-    if (match) {
-      result.tp1 = match[1];
-      break;
+  // NEW: Collect ALL TP values - handles both "TP1 4560" and "TP 4560" formats
+  const allTPValues: string[] = [];
+  
+  // First, try to find numbered TPs (TP1, TP2, etc.)
+  const numberedTPRegex = /tp\s*([1-4])[:\s]*(\d+\.?\d*)/gi;
+  let numberedMatch;
+  const numberedTPs: { index: number; value: string }[] = [];
+  
+  while ((numberedMatch = numberedTPRegex.exec(fullText)) !== null) {
+    const tpIndex = parseInt(numberedMatch[1]);
+    numberedTPs.push({ index: tpIndex, value: numberedMatch[2] });
+  }
+  
+  // If we found numbered TPs, use them
+  if (numberedTPs.length > 0) {
+    numberedTPs.sort((a, b) => a.index - b.index);
+    numberedTPs.forEach(tp => allTPValues.push(tp.value));
+  } else {
+    // If no numbered TPs, look for generic "TP" followed by price
+    // This handles: "TP 4560", "TP: 4560", "TP  4560"
+    const genericTPRegex = /(?:^|\n|\s)tp[:\s]+(\d+\.?\d*)/gi;
+    let genericMatch;
+    
+    while ((genericMatch = genericTPRegex.exec(fullText)) !== null) {
+      allTPValues.push(genericMatch[1]);
+    }
+    
+    // Also check for "take profit" variations
+    const takeProfitRegex = /take\s*profit[:\s]*(\d+\.?\d*)/gi;
+    while ((genericMatch = takeProfitRegex.exec(fullText)) !== null) {
+      if (!allTPValues.includes(genericMatch[1])) {
+        allTPValues.push(genericMatch[1]);
+      }
+    }
+    
+    // Also check for "target" variations
+    const targetRegex = /target[:\s]*(\d+\.?\d*)/gi;
+    while ((genericMatch = targetRegex.exec(fullText)) !== null) {
+      if (!allTPValues.includes(genericMatch[1])) {
+        allTPValues.push(genericMatch[1]);
+      }
     }
   }
 
-  // If no TP1 found, look for generic TP pattern
-  if (!result.tp1) {
-    const tpGenericMatch = fullText.match(/tp[:\s]*(\d+\.?\d*)/i);
-    if (tpGenericMatch) {
-      result.tp1 = tpGenericMatch[1];
-    }
-  }
-
-  for (const pattern of tp2Patterns) {
-    const match = fullText.match(pattern);
-    if (match) {
-      result.tp2 = match[1];
-      break;
-    }
-  }
-
-  for (const pattern of tp3Patterns) {
-    const match = fullText.match(pattern);
-    if (match) {
-      result.tp3 = match[1];
-      break;
-    }
-  }
-
-  for (const pattern of tp4Patterns) {
-    const match = fullText.match(pattern);
-    if (match) {
-      result.tp4 = match[1];
-      break;
-    }
-  }
+  // Assign TPs in order
+  if (allTPValues.length > 0) result.tp1 = allTPValues[0];
+  if (allTPValues.length > 1) result.tp2 = allTPValues[1];
+  if (allTPValues.length > 2) result.tp3 = allTPValues[2];
+  if (allTPValues.length > 3) result.tp4 = allTPValues[3];
 
   // Validate that we have minimum required fields
   if (result.entry && result.sl && result.tp1) {

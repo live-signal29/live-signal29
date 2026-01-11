@@ -25,6 +25,7 @@ interface SignalCardProps {
     category: string;
     risk_level?: string;
     profit_note?: string;
+    tag?: string;
   };
 }
 
@@ -92,7 +93,14 @@ const SignalCard = ({ signal }: SignalCardProps) => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Entry</p>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Entry</p>
+              {signal.tag && (
+                <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/40 border text-[9px] px-1.5 py-0 font-semibold">
+                  📰 {signal.tag}
+                </Badge>
+              )}
+            </div>
             <p className="font-mono font-bold text-base text-foreground">{signal.entry}</p>
           </div>
         </div>
