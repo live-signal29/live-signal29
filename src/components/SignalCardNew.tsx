@@ -323,8 +323,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   </span>
                 </span>
                 {signal.tag && (
-                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 border text-[9px] px-1.5 py-0">
-                    {signal.tag}
+                  <Badge className="bg-purple-500/25 text-purple-300 border-purple-500/50 border text-[9px] px-1.5 py-0.5 font-semibold shadow-sm">
+                    📰 {signal.tag}
                   </Badge>
                 )}
               </div>
