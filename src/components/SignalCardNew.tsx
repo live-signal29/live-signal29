@@ -274,42 +274,33 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   return (
     <Card 
       ref={cardRef}
-      className={`overflow-hidden transition-all duration-300 relative
-        ${signal.is_premium 
-          ? 'border-2 border-yellow-500/30 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.3),0_4px_8px_-4px_rgba(0,0,0,0.2)]' 
-          : 'border border-border shadow-[0_6px_20px_-6px_rgba(0,0,0,0.25),0_3px_6px_-3px_rgba(0,0,0,0.15)]'
-        }
-        ${!isLocked && 'hover:shadow-[0_12px_32px_-8px_rgba(0,0,0,0.35),0_6px_12px_-6px_rgba(0,0,0,0.2)] hover:translate-y-[-2px]'}
-        bg-card
-      `}
+      className={`overflow-hidden transition-all duration-300 shadow-sm relative bg-card ${
+        signal.is_premium 
+          ? 'border-2 border-primary/40' 
+          : 'border-border'
+      } ${!isLocked && 'hover:border-primary/50 hover:shadow-md'}`}
     >
       <CardContent className="p-0 relative z-10">
         {/* NEW Badge - only on unlocked */}
         {isNewSignal && !isLocked && (
-          <div className="absolute top-3 right-3 z-20">
-            <Badge className="bg-gradient-to-r from-primary to-secondary text-primary-foreground text-[10px] px-2.5 py-1 animate-pulse shadow-lg shadow-primary/30 font-bold">
-              ✨ NEW
+          <div className="absolute top-2 right-2 z-10">
+            <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 animate-pulse">
+              NEW
             </Badge>
           </div>
         )}
 
-        {/* Header - Always Visible with 3D depth */}
-        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border/30 bg-gradient-to-r from-transparent via-muted/20 to-transparent">
-          <div className="flex items-start gap-2.5">
-            {/* 3D Buy/Sell Badge */}
-            <Badge className={`${signal.type === "Buy" 
-              ? "bg-gradient-to-br from-success to-success/80 text-success-foreground shadow-lg shadow-success/30" 
-              : "bg-gradient-to-br from-destructive to-destructive/80 text-destructive-foreground shadow-lg shadow-destructive/30"
-            } border-0 font-bold text-xs px-2.5 py-1 mt-0.5`}>
-              {signal.type === "Buy" ? "📈" : "📉"} {signal.type.toUpperCase()}
+        {/* Header - Always Visible */}
+        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border">
+          <div className="flex items-start gap-2">
+            <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs mt-0.5`}>
+              {signal.type.toUpperCase()}
             </Badge>
             {signal.is_premium && (
               <div className="relative">
-                <div className="bg-gradient-to-br from-yellow-400 to-amber-500 p-1 rounded-full shadow-lg shadow-yellow-500/40">
-                  <Crown className="h-3.5 w-3.5 text-yellow-900 flex-shrink-0 animate-crown-bounce" />
-                </div>
-                <div className="absolute inset-0 animate-ping opacity-20">
-                  <div className="bg-yellow-400 rounded-full w-full h-full" />
+                <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-1 animate-crown-bounce drop-shadow-[0_0_6px_hsl(45_100%_50%/0.6)]" />
+                <div className="absolute inset-0 animate-ping opacity-30">
+                  <Crown className="h-4 w-4 text-yellow-400 mt-1" />
                 </div>
               </div>
             )}
@@ -418,100 +409,75 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         ) : (
           /* Unlocked State - Show all details */
           <>
-            {/* Badges Row - 3D Glass style */}
-            <div className="flex flex-wrap gap-2 p-3 sm:p-4 bg-gradient-to-r from-muted/30 via-muted/10 to-muted/30 border-b border-border/20">
+            {/* Badges Row - Side aligned */}
+            <div className="flex flex-wrap gap-1.5 p-2 sm:p-3 bg-card border-b border-border/50">
               {signal.risk_level && (
-                <Badge className={`${getRiskLevelColor()} text-[10px] sm:text-xs shadow-sm backdrop-blur-sm`}>
-                  {signal.risk_level === "High" ? "🔥" : signal.risk_level === "Medium" ? "⚡" : "✅"} {signal.risk_level} Risk
+                <Badge className={`${getRiskLevelColor()} border text-[10px] sm:text-xs`}>
+                  {signal.risk_level} Risk
                 </Badge>
               )}
               {signal.signal_type && (
-                <Badge variant="outline" className="bg-card/80 backdrop-blur-sm text-[10px] sm:text-xs shadow-sm border-border/50">
-                  {signal.signal_type === "Scalping" ? "⚡" : signal.signal_type === "Swing" ? "📈" : "📊"} {signal.signal_type}
+                <Badge variant="outline" className="bg-card text-[10px] sm:text-xs">
+                  {signal.signal_type}
                 </Badge>
               )}
               {signal.pips_result && (
-                <Badge className="bg-gradient-to-r from-success/20 to-success/10 text-success border-success/50 border text-[10px] sm:text-xs font-bold shadow-sm">
-                  💰 {signal.pips_result}
+                <Badge className="bg-success/10 text-success border-success border text-[10px] sm:text-xs font-semibold">
+                  {signal.pips_result}
                 </Badge>
               )}
             </div>
 
-            {/* TP/SL Table - 3D Glass cards */}
+            {/* TP/SL Table */}
             <div className="p-3 sm:p-4">
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                {/* TP1 */}
-                <div className={`flex justify-between items-center p-2.5 rounded-xl transition-all ${
-                  signal.tp1_hit 
-                    ? 'bg-gradient-to-r from-success/20 to-success/5 border border-success/30 shadow-sm shadow-success/20' 
-                    : 'bg-muted/30 border border-border/30'
-                }`}>
-                  <span className="text-muted-foreground text-xs sm:text-sm font-medium flex items-center gap-1.5">
-                    🎯 TP 1 {signal.tp1_hit && <span className="text-success font-bold animate-tp-tick">✓</span>}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground text-xs sm:text-sm">
+                    TAKE PROFIT 1 {signal.tp1_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                   </span>
-                  <span className={`font-bold text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
+                  <span className={`font-semibold text-xs sm:text-sm ${signal.tp1_hit ? 'text-success' : 'text-foreground'}`}>
                     {signal.tp1}
                   </span>
                 </div>
                 
-                {/* TP2 */}
                 {signal.tp2 && (
-                  <div className={`flex justify-between items-center p-2.5 rounded-xl transition-all ${
-                    signal.tp2_hit 
-                      ? 'bg-gradient-to-r from-success/20 to-success/5 border border-success/30 shadow-sm shadow-success/20' 
-                      : 'bg-muted/30 border border-border/30'
-                  }`}>
-                    <span className="text-muted-foreground text-xs sm:text-sm font-medium flex items-center gap-1.5">
-                      🎯 TP 2 {signal.tp2_hit && <span className="text-success font-bold animate-tp-tick">✓</span>}
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground text-xs sm:text-sm">
+                      TAKE PROFIT 2 {signal.tp2_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
-                    <span className={`font-bold text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
+                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp2_hit ? 'text-success' : 'text-foreground'}`}>
                       {signal.tp2}
                     </span>
                   </div>
                 )}
                 
-                {/* TP3 */}
                 {signal.tp3 && (
-                  <div className={`flex justify-between items-center p-2.5 rounded-xl transition-all ${
-                    signal.tp3_hit 
-                      ? 'bg-gradient-to-r from-success/20 to-success/5 border border-success/30 shadow-sm shadow-success/20' 
-                      : 'bg-muted/30 border border-border/30'
-                  }`}>
-                    <span className="text-muted-foreground text-xs sm:text-sm font-medium flex items-center gap-1.5">
-                      🎯 TP 3 {signal.tp3_hit && <span className="text-success font-bold animate-tp-tick">✓</span>}
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground text-xs sm:text-sm">
+                      TAKE PROFIT 3 {signal.tp3_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
-                    <span className={`font-bold text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
+                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp3_hit ? 'text-success' : 'text-foreground'}`}>
                       {signal.tp3}
                     </span>
                   </div>
                 )}
 
-                {/* TP4 */}
                 {signal.tp4 && (
-                  <div className={`flex justify-between items-center p-2.5 rounded-xl transition-all ${
-                    signal.tp4_hit 
-                      ? 'bg-gradient-to-r from-success/20 to-success/5 border border-success/30 shadow-sm shadow-success/20' 
-                      : 'bg-muted/30 border border-border/30'
-                  }`}>
-                    <span className="text-muted-foreground text-xs sm:text-sm font-medium flex items-center gap-1.5">
-                      🎯 TP 4 {signal.tp4_hit && <span className="text-success font-bold animate-tp-tick">✓</span>}
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground text-xs sm:text-sm">
+                      TAKE PROFIT 4 {signal.tp4_hit && <span className="text-success inline-block animate-tp-tick">✓</span>}
                     </span>
-                    <span className={`font-bold text-sm ${signal.tp4_hit ? 'text-success' : 'text-foreground'}`}>
+                    <span className={`font-semibold text-xs sm:text-sm ${signal.tp4_hit ? 'text-success' : 'text-foreground'}`}>
                       {signal.tp4}
                     </span>
                   </div>
                 )}
                 
-                {/* SL */}
-                <div className={`flex justify-between items-center p-2.5 rounded-xl transition-all ${
-                  signal.sl_hit 
-                    ? 'bg-gradient-to-r from-destructive/20 to-destructive/5 border border-destructive/30 shadow-sm shadow-destructive/20' 
-                    : 'bg-muted/30 border border-border/30'
-                }`}>
-                  <span className="text-muted-foreground text-xs sm:text-sm font-medium flex items-center gap-1.5">
-                    🛡️ STOP LOSS {signal.sl_hit && <span className="text-destructive font-bold">✗</span>}
+                <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground text-xs sm:text-sm">
+                    SL-BELOW {signal.sl_hit && <span className="text-destructive">✗</span>}
                   </span>
-                  <span className={`font-bold text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
+                  <span className={`font-semibold text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
                     {signal.sl}
                   </span>
                 </div>
@@ -544,19 +510,19 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 )}
               </div>
 
-              {/* Analysis Reason - 3D Card */}
+              {/* Analysis Reason */}
               {signal.analysis_reason && (
-                <div className="mt-3 p-3 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/30">
+                <div className="mt-3 pt-3 border-t border-border">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    <span className="font-bold text-foreground">💡 Analysis:</span> {signal.analysis_reason}
+                    <span className="font-semibold">Analysis:</span> {signal.analysis_reason}
                   </p>
                 </div>
               )}
 
               {/* Raw Signal Text Display */}
               {signal.signal_raw_text && (
-                <div className="mt-3 p-3 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20">
-                  <p className="text-[10px] text-cyan-400 font-bold mb-1">📋 Signal Details:</p>
+                <div className="mt-3 pt-3 border-t border-cyan-500/30 bg-cyan-500/5 rounded-lg p-2">
+                  <p className="text-[10px] text-cyan-400 font-semibold mb-1">📋 Signal Details:</p>
                   <pre className="text-[10px] sm:text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
                     {signal.signal_raw_text}
                   </pre>
@@ -565,65 +531,51 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
 
               {/* Note */}
               {signal.note && (
-                <div className="mt-3 p-3 rounded-xl bg-muted/20 border border-border/20">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">📝 {signal.note}</p>
+                <div className="mt-2 pt-2 border-t border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{signal.note}</p>
                 </div>
               )}
 
-              {/* Profit Note / Running P/L + Status - 3D Footer */}
-              <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 border border-border/30">
-                {signal.profit_note ? (
-                  // Show static profit note (typically for CLOSED signals)
-                  <div className="flex items-center">
-                    <Badge className={`text-[10px] px-2 py-0.5 ${
-                      isClosed 
-                        ? 'bg-destructive/20 text-destructive border-destructive/30' 
-                        : isPending 
-                          ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' 
-                          : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                    } border`}>
-                      {isClosed ? '🔴 CLOSED' : isPending ? '🟡 PENDING' : '🟢 ACTIVE'}
-                    </Badge>
-                    <p className="flex-1 text-center text-xs sm:text-sm font-bold text-success">
-                      {signal.profit_note}
-                    </p>
-                  </div>
-                ) : isOpen && runningPL ? (
-                  // Show running P/L ONLY for OPEN signals
-                  <div className="flex items-center">
-                    <Badge className="text-[10px] px-2 py-0.5 bg-gradient-to-r from-success/30 to-success/20 text-success border-success/40 border animate-pulse">
-                      🟢 LIVE
-                    </Badge>
-                    <p className="flex-1 text-center text-sm font-bold">
-                      <span className="text-muted-foreground">P/L:</span>{' '}
-                      <span className={`${runningPL.isProfit ? 'text-success' : 'text-destructive'}`}>
-                        {runningPL.formatted}
-                      </span>
-                    </p>
-                  </div>
-                ) : isPending ? (
-                  // Pending: show Pending status on left + center helper text
-                  <div className="flex items-center">
-                    <Badge className="text-[10px] px-2 py-0.5 bg-orange-500/20 text-orange-400 border-orange-500/30 border">
-                      🟡 PENDING
-                    </Badge>
-                    <p className="flex-1 text-center text-xs sm:text-sm font-bold text-orange-400 animate-pulse">
-                      ⏳ Waiting for entry...
-                    </p>
-                  </div>
-                ) : (
-                  // Default: just show status
-                  <div className="flex justify-start">
-                    <Badge className={`text-[10px] px-2 py-0.5 border ${
-                      isClosed 
-                        ? 'bg-destructive/20 text-destructive border-destructive/30' 
-                        : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                    }`}>
-                      {isClosed ? '🔴 CLOSED' : '🟢 ACTIVE'}
-                    </Badge>
-                  </div>
-                )}
-              </div>
+              {/* Profit Note / Running P/L + Status together */}
+              {signal.profit_note ? (
+                // Show static profit note (typically for CLOSED signals)
+                <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
+                  <span className={`text-[10px] font-medium ${
+                    isClosed ? 'text-destructive' : isPending ? 'text-orange-500' : 'text-blue-500'
+                  }`}>
+                    {isClosed ? 'Close' : isPending ? 'Pending' : 'Open'}
+                  </span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
+                    {signal.profit_note}
+                  </p>
+                </div>
+              ) : isOpen && runningPL ? (
+                // Show running P/L ONLY for OPEN signals
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
+                  <span className="text-[10px] font-medium text-blue-500">Active</span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-bold">
+                    <span className="text-foreground">Running P/L:</span>{' '}
+                    <span className={runningPL.isProfit ? 'text-success' : 'text-destructive'}>
+                      {runningPL.formatted}
+                    </span>
+                  </p>
+                </div>
+              ) : isPending ? (
+                // Pending: show Pending status on left + center helper text
+                <div className="mt-2 pt-2 border-t border-border/30 flex items-center">
+                  <span className="text-[10px] font-medium text-orange-500">Pending</span>
+                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-orange-500 animate-pulse">
+                    ⏳ Wait for entry level
+                  </p>
+                </div>
+              ) : (
+                // Default: just show status
+                <div className="mt-2 pt-2 border-t border-border/30 flex justify-start">
+                  <span className={`text-[10px] font-medium ${isClosed ? 'text-destructive' : 'text-blue-500'}`}>
+                    {isClosed ? 'Close' : 'Open'}
+                  </span>
+                </div>
+              )}
             </div>
           </>
         )}
