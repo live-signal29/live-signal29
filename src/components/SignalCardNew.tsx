@@ -274,26 +274,15 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   return (
     <Card 
       ref={cardRef}
-      className={`overflow-hidden transition-all duration-300 relative group
+      className={`overflow-hidden transition-all duration-300 relative
         ${signal.is_premium 
-          ? 'border-2 border-yellow-500/50 shadow-[0_8px_32px_-8px_hsl(45_100%_50%/0.3)]' 
-          : 'border border-border/60 shadow-[0_4px_24px_-4px_hsl(var(--primary)/0.15)]'
+          ? 'border-2 border-yellow-500/30 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.3),0_4px_8px_-4px_rgba(0,0,0,0.2)]' 
+          : 'border border-border shadow-[0_6px_20px_-6px_rgba(0,0,0,0.25),0_3px_6px_-3px_rgba(0,0,0,0.15)]'
         }
-        ${!isLocked && 'hover:shadow-[0_12px_40px_-8px_hsl(var(--primary)/0.25)] hover:translate-y-[-2px] hover:border-primary/50'}
-        bg-gradient-to-br from-card via-card to-muted/30
-        backdrop-blur-sm
-        rounded-2xl
-        before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none
-        after:absolute after:inset-[1px] after:rounded-[15px] after:bg-gradient-to-br after:from-white/10 after:via-transparent after:to-black/5 after:pointer-events-none after:opacity-50
+        ${!isLocked && 'hover:shadow-[0_12px_32px_-8px_rgba(0,0,0,0.35),0_6px_12px_-6px_rgba(0,0,0,0.2)] hover:translate-y-[-2px]'}
+        bg-card
       `}
-      style={{
-        transform: 'perspective(1000px) rotateX(0deg)',
-        transformStyle: 'preserve-3d',
-      }}
     >
-      {/* 3D Shine Effect */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
-      
       <CardContent className="p-0 relative z-10">
         {/* NEW Badge - only on unlocked */}
         {isNewSignal && !isLocked && (
