@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,144 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { signalSchema } from "@/lib/validations";
-import { Crown, TrendingUp, TrendingDown, Clock, Zap, Tag, FileText, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
-import { parseSignalText, getCategoryFromSymbol } from "@/lib/signalParser";
-import { ParsedSignal } from "@/lib/signalParser";
-
-// Raw Signal Parser Component
-interface RawSignalParserProps {
-  rawSignalText: string;
-  setRawSignalText: (text: string) => void;
-  onParsedSignal: (parsed: ParsedSignal) => void;
-}
-
-const RawSignalParser = ({ rawSignalText, setRawSignalText, onParsedSignal }: RawSignalParserProps) => {
-  const [parseResult, setParseResult] = useState<ParsedSignal | null>(null);
-  const [isAutoParseEnabled, setIsAutoParseEnabled] = useState(true);
-
-  useEffect(() => {
-    if (rawSignalText && isAutoParseEnabled) {
-      const debounceTimer = setTimeout(() => {
-        const parsed = parseSignalText(rawSignalText);
-        setParseResult(parsed);
-      }, 300);
-      return () => clearTimeout(debounceTimer);
-    } else {
-      setParseResult(null);
-    }
-  }, [rawSignalText, isAutoParseEnabled]);
-
-  const handleApplyParsed = () => {
-    if (parseResult && parseResult.isValid) {
-      onParsedSignal(parseResult);
-    }
-  };
-
-  return (
-    <div className="p-4 rounded-xl bg-gradient-to-br from-cyan-500/5 to-blue-500/10 border border-cyan-500/20 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-cyan-500" />
-          <Label className="text-sm font-semibold text-cyan-400">Auto-Parse Raw Signal</Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Auto-parse</span>
-          <Switch 
-            checked={isAutoParseEnabled} 
-            onCheckedChange={setIsAutoParseEnabled}
-            className="data-[state=checked]:bg-cyan-500"
-          />
-        </div>
-      </div>
-      
-      <Textarea
-        placeholder="Paste signal text here...&#10;&#10;Examples:&#10;#Gold BUY 2650&#10;TP1: 2660&#10;TP2: 2670&#10;SL: 2640&#10;&#10;or&#10;&#10;XAUUSD SELL @ 2680&#10;Entry: 2680&#10;SL: 2690&#10;TP: 2660"
-        value={rawSignalText}
-        onChange={(e) => setRawSignalText(e.target.value)}
-        className="border-cyan-500/30 focus:border-cyan-500 min-h-[120px] font-mono text-sm"
-      />
-
-      {/* Parse Result Preview */}
-      {parseResult && rawSignalText && (
-        <div className={`p-3 rounded-lg border ${parseResult.isValid ? 'bg-success/10 border-success/30' : 'bg-destructive/10 border-destructive/30'}`}>
-          <div className="flex items-center gap-2 mb-2">
-            {parseResult.isValid ? (
-              <>
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                <span className="text-sm font-semibold text-success">Signal Parsed Successfully</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-4 w-4 text-destructive" />
-                <span className="text-sm font-semibold text-destructive">Parse Error: {parseResult.error}</span>
-              </>
-            )}
-          </div>
-          
-          {parseResult.isValid && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
-              <div className="bg-background/50 p-2 rounded">
-                <span className="text-muted-foreground">Symbol:</span>
-                <span className="ml-1 font-bold">{parseResult.pair || 'N/A'}</span>
-              </div>
-              <div className="bg-background/50 p-2 rounded">
-                <span className="text-muted-foreground">Type:</span>
-                <span className={`ml-1 font-bold ${parseResult.type === 'Buy' ? 'text-success' : 'text-destructive'}`}>
-                  {parseResult.type}
-                </span>
-              </div>
-              <div className="bg-background/50 p-2 rounded">
-                <span className="text-muted-foreground">Entry:</span>
-                <span className="ml-1 font-bold text-blue-400">{parseResult.entry}</span>
-              </div>
-              <div className="bg-background/50 p-2 rounded">
-                <span className="text-muted-foreground">SL:</span>
-                <span className="ml-1 font-bold text-destructive">{parseResult.sl}</span>
-              </div>
-              <div className="bg-background/50 p-2 rounded">
-                <span className="text-muted-foreground">TP1:</span>
-                <span className="ml-1 font-bold text-success">{parseResult.tp1}</span>
-              </div>
-              {parseResult.tp2 && (
-                <div className="bg-background/50 p-2 rounded">
-                  <span className="text-muted-foreground">TP2:</span>
-                  <span className="ml-1 font-bold text-success">{parseResult.tp2}</span>
-                </div>
-              )}
-              {parseResult.tp3 && (
-                <div className="bg-background/50 p-2 rounded">
-                  <span className="text-muted-foreground">TP3:</span>
-                  <span className="ml-1 font-bold text-success">{parseResult.tp3}</span>
-                </div>
-              )}
-              {parseResult.tp4 && (
-                <div className="bg-background/50 p-2 rounded">
-                  <span className="text-muted-foreground">TP4:</span>
-                  <span className="ml-1 font-bold text-success">{parseResult.tp4}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {parseResult.isValid && (
-            <Button 
-              type="button"
-              onClick={handleApplyParsed}
-              className="w-full mt-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Apply Parsed Values to Form
-            </Button>
-          )}
-        </div>
-      )}
-
-      <p className="text-xs text-muted-foreground">
-        Paste raw signal text and it will auto-detect Symbol, Buy/Sell, Entry, SL, and TP values
-      </p>
-    </div>
-  );
-};
+import { Crown, TrendingUp, TrendingDown, Clock, Zap, Tag, FileText } from "lucide-react";
 
 interface SignalFormProps {
   onSuccess: () => void;
@@ -176,7 +39,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     is_premium: editSignal?.is_premium || false,
     tag: editSignal?.tag || "",
   });
-  const [rawSignalText, setRawSignalText] = useState("");
+  
 
   const subCategoryOptions: Record<string, string[]> = {
     FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
@@ -240,7 +103,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           analysis_reason: validation.data.analysis_reason || null,
           is_premium: formData.is_premium,
           tag: formData.tag || null,
-          signal_raw_text: rawSignalText || null,
+          signal_raw_text: null,
         };
 
       if (editSignal) {
@@ -552,29 +415,6 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         <p className="text-xs text-muted-foreground mt-2">Tag will show on user dashboard next to entry price</p>
       </div>
 
-      {/* Raw Signal Text Parser with Auto-Parse */}
-      <RawSignalParser 
-        rawSignalText={rawSignalText}
-        setRawSignalText={setRawSignalText}
-        onParsedSignal={(parsed) => {
-          if (parsed.isValid) {
-            setFormData(prev => ({
-              ...prev,
-              pair: parsed.pair || prev.pair,
-              type: parsed.type,
-              entry: parsed.entry,
-              sl: parsed.sl,
-              tp1: parsed.tp1,
-              tp2: parsed.tp2 || '',
-              tp3: parsed.tp3 || '',
-              main_category: getCategoryFromSymbol(parsed.pair),
-              category: getCategoryFromSymbol(parsed.pair),
-              sub_category: parsed.pair,
-            }));
-            toast.success("Signal parsed successfully!");
-          }
-        }}
-      />
 
       {/* Premium Access Toggle */}
       <div className="flex items-center justify-between p-4 border border-yellow-500/30 rounded-xl bg-gradient-to-r from-yellow-500/5 to-yellow-500/10">
