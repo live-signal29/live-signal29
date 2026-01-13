@@ -246,45 +246,17 @@ const UserManagement = () => {
 
   const handleDeleteUser = async (user: UserProfile) => {
     try {
-      // Delete all related data from dependent tables in order
-      // Using Promise.allSettled to continue even if some fail
-      const deleteOperations = [
-        supabase.from('user_favorites').delete().eq('user_id', user.id),
-        supabase.from('user_favorite_pairs').delete().eq('user_id', user.id),
-        supabase.from('user_signal_views').delete().eq('user_id', user.id),
-        supabase.from('user_login_history').delete().eq('user_id', user.id),
-        supabase.from('notifications').delete().eq('user_id', user.id),
-        supabase.from('chart_reactions').delete().eq('user_id', user.id),
-        supabase.from('market_idea_reactions').delete().eq('user_id', user.id),
-        supabase.from('subscriptions').delete().eq('user_id', user.id),
-        supabase.from('coupon_usage').delete().eq('user_id', user.id),
-        supabase.from('deposits').delete().eq('user_id', user.id),
-        supabase.from('user_roles').delete().eq('user_id', user.id),
-        supabase.from('security_logs').delete().eq('user_id', user.id),
-        supabase.from('trade_history').delete().eq('user_id', user.id),
-      ];
-
-      // Execute all delete operations
-      const results = await Promise.allSettled(deleteOperations);
-      
-      // Log any failures but continue
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          console.warn(`Delete operation ${index} failed:`, result.reason);
-        } else if (result.value?.error) {
-          console.warn(`Delete operation ${index} error:`, result.value.error);
-        }
+      // Server-side deletion: removes auth user, revokes sessions, and deletes related data
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId: user.id },
       });
 
-      // Finally delete the profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      if (profileError) {
-        console.error("Profile deletion error:", profileError);
-        throw new Error(`Failed to delete profile: ${profileError.message}`);
+      if ((data as any)?.error) {
+        throw new Error((data as any).error);
       }
 
       // Log the admin action
