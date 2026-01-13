@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState, lazy, Suspense, useCallback, useRef } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -47,23 +48,97 @@ const LoadingSpinner = () => (
   </div>
 );
 
+const clearAuthStorage = () => {
+  try {
+    // Remove only auth-related keys (don’t nuke all app storage)
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const authKey = projectId ? `sb-${projectId}-auth-token` : null;
+
+    if (authKey) {
+      localStorage.removeItem(authKey);
+      sessionStorage.removeItem(authKey);
+    }
+
+    // Also remove any stray Supabase auth keys
+    for (const storage of [localStorage, sessionStorage]) {
+      const keys: string[] = [];
+      for (let i = 0; i < storage.length; i++) {
+        const k = storage.key(i);
+        if (!k) continue;
+        if (k.startsWith("sb-") && k.endsWith("-auth-token")) keys.push(k);
+      }
+      keys.forEach((k) => storage.removeItem(k));
+    }
+  } catch {
+    // ignore
+  }
+};
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<any>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionRef = useRef<Session | null>(null);
+
+  const verifyUserStillExists = useCallback(async (s: Session) => {
+    const userId = s?.user?.id;
+    if (!userId) return;
+
+    // If their profile row is missing, treat as deleted user => force logout + redirect
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error || !data) {
+      await supabase.auth.signOut();
+      clearAuthStorage();
+      navigate('/login?reason=deleted', { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
+    // Listener FIRST (best practice)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      sessionRef.current = s as Session | null;
+      setSession(s as Session | null);
+      setLoading(false);
+
+      if (s?.user) {
+        setTimeout(() => {
+          verifyUserStillExists(s as Session);
+        }, 0);
+      }
+    });
+
+    // THEN initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      sessionRef.current = session as Session | null;
+      setSession(session as Session | null);
       setLoading(false);
+
+      if (session?.user) {
+        setTimeout(() => {
+          verifyUserStillExists(session as Session);
+        }, 0);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
+    // Periodic verification (covers refresh / cached sessions)
+    const interval = setInterval(() => {
+      const s = sessionRef.current;
+      if (s?.user) {
+        verifyUserStillExists(s);
+      }
+    }, 30_000);
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(interval);
+    };
+  }, [verifyUserStillExists]);
 
   if (loading) {
     return (
@@ -72,8 +147,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  
-  if (!session) return <Navigate to="/login" replace />;
+
+  if (!session) {
+    const returnUrl = `${location.pathname}${location.search}`;
+    return <Navigate to={`/login?returnUrl=${encodeURIComponent(returnUrl)}`} replace />;
+  }
+
   return <>{children}</>;
 };
 
