@@ -129,7 +129,7 @@ serve(async (req) => {
     const { data: signals, error } = await supabase
       .from("signals")
       .select(
-        "id, pair, type, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, status, signal_status, entry_mode, limit_entry_price, is_activated"
+        "id, pair, type, entry, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, status, signal_status, entry_mode, limit_entry_price, is_activated"
       )
       .eq("published", true)
       .neq("signal_status", "close");
@@ -213,35 +213,42 @@ serve(async (req) => {
         const isOpen = lifecycle === 'open' || updates.signal_status === 'open';
 
         if (isOpen) {
-          // TP1 - only if TP1 has a valid numeric price
+          // Get entry price for break-even calculations
+          const entryPrice = parsePrice(signal.entry || '');
+          
+          // TP1 - Auto move SL to Entry (Break Even) when TP1 hits
           if (!signal.tp1_hit && signal.tp1) {
             const tp1Price = parsePrice(signal.tp1);
             if (tp1Price > 0 && (isBuy ? priceNum >= tp1Price : priceNum <= tp1Price)) {
               updates.tp1_hit = true;
-              updates.profit_note = '1st TP done ✅ Move SL to BE 🫴';
-              console.log(`TP1 hit for signal ${signal.id}`);
+              updates.profit_note = 'TP 1 Done! Move SL to Entry (B.E) ✅';
+              // Auto-move SL to entry (break even)
+              if (entryPrice > 0) {
+                updates.sl = String(entryPrice);
+              }
+              console.log(`TP1 hit for signal ${signal.id} - SL moved to breakeven`);
             }
           }
 
-          // TP2 - only if TP2 has a valid numeric price
+          // TP2 - Growth profit
           if (!signal.tp2_hit && signal.tp2) {
             const tp2Price = parsePrice(signal.tp2);
             if (tp2Price > 0 && (isBuy ? priceNum >= tp2Price : priceNum <= tp2Price)) {
               updates.tp2_hit = true;
-              updates.profit_note = '2nd TP done ✅ Secure Profit or Hold Half for More 📈';
+              updates.profit_note = 'TP 2 Cleared! Secure More Profits 💰';
               console.log(`TP2 hit for signal ${signal.id}`);
             }
           }
 
-          // TP3 - only if TP3 has a valid numeric price - AUTO CLOSE when TP3 hits
+          // TP3 - Max profit - AUTO CLOSE when TP3 hits
           if (!signal.tp3_hit && signal.tp3) {
             const tp3Price = parsePrice(signal.tp3);
             if (tp3Price > 0 && (isBuy ? priceNum >= tp3Price : priceNum <= tp3Price)) {
               updates.tp3_hit = true;
               updates.signal_status = 'close';
               updates.status = 'close';
-              updates.profit_note = '3rd TP done 🎉 Enjoy Profit 🥳';
-              console.log(`TP3 hit for signal ${signal.id} - closing signal with profit note`);
+              updates.profit_note = 'Final Target Hit!🎊 Maximum Profit Secured ✅';
+              console.log(`TP3 hit for signal ${signal.id} - closing signal with max profit`);
             }
           }
 
@@ -254,14 +261,34 @@ serve(async (req) => {
             }
           }
 
-          // SL - if hit, close signal (only when SL has a valid numeric price)
-          if (!signal.sl_hit && signal.sl) {
+          // BREAK EVEN CHECK - If TP1 was hit AND price returns to entry
+          // This should be checked BEFORE SL check to prevent marking as SL hit
+          const isTP1Hit = signal.tp1_hit || updates.tp1_hit;
+          if (isTP1Hit && !signal.sl_hit && entryPrice > 0) {
+            // Check if price has returned to entry (with small tolerance of 0.1%)
+            const tolerance = entryPrice * 0.001;
+            const priceAtEntry = Math.abs(priceNum - entryPrice) <= tolerance;
+            
+            if (priceAtEntry) {
+              // Close at break even - NOT as SL hit
+              updates.signal_status = 'close';
+              updates.status = 'close';
+              updates.profit_note = 'TP 1 Done ✅ - Closed at B.E (No Loss)';
+              // Explicitly ensure sl_hit stays false
+              updates.sl_hit = false;
+              console.log(`Break-even close for signal ${signal.id} - TP1 was hit, closed at entry`);
+            }
+          }
+
+          // SL - ONLY if TP1 is NOT hit, close signal as loss
+          if (!signal.sl_hit && signal.sl && !isTP1Hit) {
             const slPrice = parsePrice(signal.sl);
             if (slPrice > 0 && (isBuy ? priceNum <= slPrice : priceNum >= slPrice)) {
               updates.sl_hit = true;
               updates.signal_status = 'close';
               updates.status = 'close';
-              console.log(`SL hit for signal ${signal.id} - closing signal`);
+              updates.profit_note = 'SL Hit ❌ - Staying patient for a better entry.';
+              console.log(`SL hit for signal ${signal.id} - closing signal with loss`);
             }
           }
         }

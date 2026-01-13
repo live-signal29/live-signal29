@@ -156,41 +156,41 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     ? calculateRunningPL(currentPrice, parsedEntryPrice, signal.type)
     : null;
 
-  // Auto-update TP/SL hits
+  // Auto-update TP/SL hits with smart signal management
   useEffect(() => {
     // STRICT: do not evaluate TP/SL until signal is OPEN (not pending, not closed)
-    // isPending or isClosed signals should NEVER trigger TP/SL checks
     if (!isOpen || isPending || isClosed || !currentPrice || signal.sl_hit) return;
 
     const checkAndUpdate = async () => {
       const updates: Record<string, boolean | string> = {};
+      const entryPrice = parsedEntryPrice;
 
-      // Check TP1 - Auto move SL to breakeven when TP1 hits
+      // Check TP1 - Auto move SL to Entry (Break Even)
       if (!signal.tp1_hit && signal.tp1) {
         const tp1Price = parseEntryPrice(signal.tp1);
         if (checkTPSLHit(currentPrice, tp1Price, signal.type)) {
           updates.tp1_hit = true;
-          updates.profit_note = '1st TP done ✅ SL moved to BE 🔒';
-          updates.sl = signal.entry; // Auto move SL to breakeven (entry price)
+          updates.profit_note = 'TP 1 Done! Move SL to Entry (B.E) ✅';
+          updates.sl = signal.entry; // Auto move SL to entry (break even)
         }
       }
 
-      // Check TP2
+      // Check TP2 - Growth profit
       if (!signal.tp2_hit && signal.tp2) {
         const tp2Price = parseEntryPrice(signal.tp2);
         if (checkTPSLHit(currentPrice, tp2Price, signal.type)) {
           updates.tp2_hit = true;
-          updates.profit_note = '2nd TP done ✅ Secure Profit or Hold Half for More 📈';
+          updates.profit_note = 'TP 2 Cleared! Secure More Profits 💰';
         }
       }
 
-      // Check TP3 - AUTO CLOSE when TP3 hits
+      // Check TP3 - Max Profit - AUTO CLOSE
       if (!signal.tp3_hit && signal.tp3) {
         const tp3Price = parseEntryPrice(signal.tp3);
         if (checkTPSLHit(currentPrice, tp3Price, signal.type)) {
           updates.tp3_hit = true;
           updates.signal_status = 'close';
-          updates.profit_note = '3rd TP done 🎉 Enjoy Profit 🥳';
+          updates.profit_note = 'Final Target Hit!🎊 Maximum Profit Secured ✅';
         }
       }
 
@@ -202,12 +202,27 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         }
       }
 
-      // Check SL
-      if (!signal.sl_hit && signal.sl) {
+      // BREAK EVEN CHECK - If TP1 was hit AND price returns to entry
+      const isTP1Hit = signal.tp1_hit || updates.tp1_hit;
+      if (isTP1Hit && entryPrice > 0) {
+        const tolerance = entryPrice * 0.001; // 0.1% tolerance
+        const priceAtEntry = Math.abs(currentPrice - entryPrice) <= tolerance;
+        
+        if (priceAtEntry) {
+          // Close at break even - NOT as SL hit
+          updates.signal_status = 'close';
+          updates.profit_note = 'TP 1 Done ✅ - Closed at B.E (No Loss)';
+          updates.sl_hit = 'false'; // Explicitly NOT SL hit
+        }
+      }
+
+      // Check SL - ONLY if TP1 is NOT hit
+      if (!signal.sl_hit && signal.sl && !isTP1Hit) {
         const slPrice = parseEntryPrice(signal.sl);
         if (checkTPSLHit(currentPrice, slPrice, signal.type, true)) {
           updates.sl_hit = true;
           updates.signal_status = 'close';
+          updates.profit_note = 'SL Hit ❌ - Staying patient for a better entry.';
         }
       }
 
@@ -217,7 +232,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     };
 
     checkAndUpdate();
-  }, [isOpen, isPending, isClosed, currentPrice, signal.id, signal.type, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl,
+  }, [isOpen, isPending, isClosed, currentPrice, parsedEntryPrice, signal.id, signal.type, signal.entry, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl,
       signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit, signal.sl_hit]);
   
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
@@ -536,16 +551,33 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </div>
               )}
 
-              {/* Profit Note / Running P/L + Status together */}
+              {/* Profit Note / Running P/L + Status together with smart colors */}
               {signal.profit_note ? (
-                // Show static profit note (typically for CLOSED signals)
-                <div className="mt-2 pt-2 border-t border-success/20 flex items-center">
+                // Show static profit note with smart color coding
+                <div className={`mt-2 pt-2 border-t flex items-center ${
+                  signal.profit_note.includes('SL Hit') ? 'border-red-500/30' :
+                  signal.profit_note.includes('B.E') ? 'border-blue-500/30' :
+                  'border-success/20'
+                }`}>
                   <span className={`text-[10px] font-medium ${
                     isClosed ? 'text-destructive' : isPending ? 'text-orange-500' : 'text-blue-500'
                   }`}>
                     {isClosed ? 'Close' : isPending ? 'Pending' : 'Open'}
                   </span>
-                  <p className="flex-1 text-center text-xs sm:text-sm font-semibold text-success">
+                  <p className={`flex-1 text-center text-xs sm:text-sm font-semibold ${
+                    // SL Hit - Pure Red
+                    signal.profit_note.includes('SL Hit') ? 'text-[#FF0000]' :
+                    // Break Even - Blue
+                    signal.profit_note.includes('B.E') ? 'text-[#0000FF]' :
+                    // TP1 - Light Green
+                    signal.profit_note.includes('TP 1 Done!') ? 'text-[#90EE90]' :
+                    // TP2 - Medium Green
+                    signal.profit_note.includes('TP 2') ? 'text-[#32CD32]' :
+                    // TP3/Final - Dark Green
+                    signal.profit_note.includes('Final Target') || signal.profit_note.includes('Maximum Profit') ? 'text-[#006400]' :
+                    // Default success
+                    'text-success'
+                  }`}>
                     {signal.profit_note}
                   </p>
                 </div>
