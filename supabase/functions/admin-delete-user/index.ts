@@ -139,11 +139,21 @@ serve(async (req) => {
     }
 
     // 7) Finally delete auth user so they cannot log in again with old credentials
-    const { error: authDeleteError } = await (adminClient.auth.admin as any).deleteUser?.(userId);
-    if (authDeleteError) {
-      console.error("Auth user deletion error:", authDeleteError);
-      // If public data is deleted but auth deletion fails, we still block app access via profile checks.
-      return new Response(JSON.stringify({ error: `Failed to delete auth user: ${authDeleteError.message}` }), {
+    // This completely removes the user from auth.users, allowing the email to be used for new signups
+    try {
+      const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(userId);
+      if (authDeleteError) {
+        console.error("Auth user deletion error:", authDeleteError);
+        // If public data is deleted but auth deletion fails, we still block app access via profile checks.
+        return new Response(JSON.stringify({ error: `Failed to delete auth user: ${authDeleteError.message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.log(`Successfully deleted auth user ${userId} - email can now be reused for signup`);
+    } catch (deleteError) {
+      console.error("Exception during auth user deletion:", deleteError);
+      return new Response(JSON.stringify({ error: `Exception deleting auth user: ${String(deleteError)}` }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
