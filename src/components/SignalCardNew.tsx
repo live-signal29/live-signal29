@@ -490,7 +490,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 
                 <div className="flex justify-between items-center py-1.5 border-b border-border/50">
                   <span className="text-muted-foreground text-xs sm:text-sm">
-                    SL-BELOW {signal.sl_hit && <span className="text-destructive">✗</span>}
+                    {/* BUY = SL Below, SELL = SL Above */}
+                    {isBuy ? 'SL-BELOW' : 'SL-ABOVE'} {signal.sl_hit && <span className="text-destructive">✗</span>}
                   </span>
                   <span className={`font-semibold text-xs sm:text-sm ${signal.sl_hit ? 'text-destructive' : 'text-foreground'}`}>
                     {signal.sl}
@@ -564,19 +565,19 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   }`}>
                     {isClosed ? 'Close' : isPending ? 'Pending' : 'Open'}
                   </span>
-                  <p className={`flex-1 text-center text-xs sm:text-sm font-semibold ${
+                  <p className={`flex-1 text-center text-xs sm:text-sm ${
+                    // TP3/Final - Bright Green with bold
+                    signal.profit_note.includes('Final Target') || signal.profit_note.includes('Maximum Profit') ? 'text-[#22C55E] font-bold' :
                     // SL Hit - Pure Red
-                    signal.profit_note.includes('SL Hit') ? 'text-[#FF0000]' :
+                    signal.profit_note.includes('SL Hit') ? 'text-[#FF0000] font-semibold' :
                     // Break Even - Blue
-                    signal.profit_note.includes('B.E') ? 'text-[#0000FF]' :
+                    signal.profit_note.includes('B.E') ? 'text-[#3B82F6] font-semibold' :
                     // TP1 - Light Green
-                    signal.profit_note.includes('TP 1 Done!') ? 'text-[#90EE90]' :
+                    signal.profit_note.includes('TP 1 Done!') ? 'text-[#4ADE80] font-semibold' :
                     // TP2 - Medium Green
-                    signal.profit_note.includes('TP 2') ? 'text-[#32CD32]' :
-                    // TP3/Final - Dark Green
-                    signal.profit_note.includes('Final Target') || signal.profit_note.includes('Maximum Profit') ? 'text-[#006400]' :
+                    signal.profit_note.includes('TP 2') ? 'text-[#22C55E] font-semibold' :
                     // Default success
-                    'text-success'
+                    'text-success font-semibold'
                   }`}>
                     {signal.profit_note}
                   </p>
