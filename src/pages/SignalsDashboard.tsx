@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { cn } from "@/lib/utils";
-import { useSignalNotifications } from "@/hooks/useSignalNotifications";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
@@ -42,9 +41,6 @@ const SignalsDashboard = () => {
       setShowTrialExpiredPopup(true);
     }
   }, [trialExpired, subscriptionStatus]);
-
-  // Initialize notification system
-  useSignalNotifications();
 
   const breadcrumbData = getBreadcrumbStructuredData([
     { name: "Home", url: "https://yourdomain.com" },
