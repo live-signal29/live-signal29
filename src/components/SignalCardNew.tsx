@@ -566,16 +566,16 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                     {isClosed ? 'Close' : isPending ? 'Pending' : 'Open'}
                   </span>
                   <p className={`flex-1 text-center text-xs sm:text-sm ${
-                    // TP3/Final - Bright Green with bold
-                    signal.profit_note.includes('Final Target') || signal.profit_note.includes('Maximum Profit') ? 'text-[#22C55E] font-bold' :
+                    // TP3/Final - Same green as TP hit color with bold
+                    signal.profit_note.includes('Final Target') || signal.profit_note.includes('Maximum Profit') ? 'text-success font-bold' :
                     // SL Hit - Pure Red
                     signal.profit_note.includes('SL Hit') ? 'text-[#FF0000] font-semibold' :
                     // Break Even - Blue
                     signal.profit_note.includes('B.E') ? 'text-[#3B82F6] font-semibold' :
-                    // TP1 - Light Green
-                    signal.profit_note.includes('TP 1 Done!') ? 'text-[#4ADE80] font-semibold' :
-                    // TP2 - Medium Green
-                    signal.profit_note.includes('TP 2') ? 'text-[#22C55E] font-semibold' :
+                    // TP1 - Same green as TP hit color
+                    signal.profit_note.includes('TP 1 Done!') ? 'text-success font-semibold' :
+                    // TP2 - Same green as TP hit color
+                    signal.profit_note.includes('TP 2') ? 'text-success font-semibold' :
                     // Default success
                     'text-success font-semibold'
                   }`}>
