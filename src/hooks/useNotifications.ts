@@ -105,19 +105,7 @@ export const useNotifications = () => {
           table: "notifications",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          const newNotification = payload.new as Notification;
-          
-          // Show toast notification
-          toast.success(newNotification.title, {
-            description: newNotification.message,
-            action: {
-              label: "View",
-              onClick: () => handleNotificationClick(newNotification),
-            },
-            duration: 8000,
-          });
-
+        () => {
           // Invalidate query to refresh the list
           queryClient.invalidateQueries({ queryKey: ["notifications"] });
         }
