@@ -320,9 +320,16 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
               </div>
             )}
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm sm:text-base font-bold text-primary">
-                {signal.pair}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm sm:text-base font-bold text-primary">
+                  {signal.pair}
+                </span>
+                {signal.tag && signal.tag.trim() !== '' && (
+                  <Badge className="bg-purple-600/40 text-purple-100 border-purple-400/60 border text-[10px] px-2 py-0.5 font-bold shadow-lg">
+                    📰 {signal.tag}
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs sm:text-sm font-medium">
                   <span className="text-muted-foreground">Entry:</span>
@@ -337,11 +344,6 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                     }
                   </span>
                 </span>
-                {signal.tag && signal.tag.trim() !== '' && (
-                  <Badge className="bg-purple-500/30 text-purple-200 border-purple-500/60 border text-[10px] px-2 py-0.5 font-bold shadow-md ml-1">
-                    📰 {signal.tag}
-                  </Badge>
-                )}
               </div>
               {/* Show current price for OPEN and PENDING signals with MT5-style animation */}
               {(isOpen || isPending) && currentPrice > 0 && !isLocked && (
