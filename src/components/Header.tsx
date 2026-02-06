@@ -3,7 +3,6 @@ import TrialBanner from "./TrialBanner";
 import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
-import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
 import exnessLogo from "@/assets/exness-logo-real.png";
 import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
@@ -60,7 +59,6 @@ const Header = () => {
                 <span>Join Exness</span>
               </a>
               
-              <NotificationBell />
               <TopMenuDropdown />
             </div>
           </div>
