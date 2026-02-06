@@ -436,11 +436,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                   {signal.signal_type}
                 </Badge>
               )}
-              {signal.pips_result && (
-                <Badge className="bg-success/10 text-success border-success border text-[10px] sm:text-xs font-semibold">
-                  {signal.pips_result}
-                </Badge>
-              )}
+              {/* Pips result removed from card - only count in Results page */}
             </div>
 
             {/* TP/SL Table */}
