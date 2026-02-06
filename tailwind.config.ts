@@ -50,6 +50,7 @@ export default {
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          deep: "hsl(var(--success-deep))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",

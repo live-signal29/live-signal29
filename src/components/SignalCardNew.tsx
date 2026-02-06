@@ -572,8 +572,8 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                     signal.profit_note.includes('B.E') ? 'text-[#3B82F6] font-semibold' :
                     // TP1 - Same green as TP hit color
                     signal.profit_note.includes('TP 1 Done!') ? 'text-success font-semibold' :
-                    // TP2 - Same green as TP hit color
-                    signal.profit_note.includes('TP 2') ? 'text-success font-semibold' :
+                    // TP2 - Dark green
+                    signal.profit_note.includes('TP 2') ? 'text-success-deep font-semibold' :
                     // Default success
                     'text-success font-semibold'
                   }`}>

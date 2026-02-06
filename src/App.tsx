@@ -32,6 +32,7 @@ const Premium = lazy(() => import("./pages/Premium"));
 const FreeTrial = lazy(() => import("./pages/FreeTrial"));
 const Benefits = lazy(() => import("./pages/Benefits"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const CryptoDeposit = lazy(() => import("./pages/CryptoDeposit"));
 const SharedSignal = lazy(() => import("./pages/SharedSignal"));
@@ -204,6 +205,7 @@ const App = () => (
                 <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
                 <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
                 <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
                 <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />

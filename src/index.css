@@ -45,6 +45,7 @@
     /* Trading colors - Vibrant for visibility */
     --success: 152 69% 40%;
     --success-foreground: 0 0% 100%;
+    --success-deep: 152 69% 30%;
     
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
@@ -99,6 +100,7 @@
 
     --success: 152 69% 45%;
     --success-foreground: 222 47% 7%;
+    --success-deep: 152 69% 52%;
     
     --warning: 38 92% 55%;
     --warning-foreground: 222 47% 7%;

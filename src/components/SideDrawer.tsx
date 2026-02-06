@@ -45,7 +45,7 @@ export const SideDrawer = () => {
     { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400", bg: "bg-teal-500/10" },
     { label: "Results", path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
     { label: "My Profile", path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
-    { label: "Notifications", path: "/settings", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
+    { label: "Notifications", path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
     { label: "Settings", path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
   ];
 
