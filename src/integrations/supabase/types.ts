@@ -1209,6 +1209,7 @@ export type Database = {
               sl_hit: boolean
               status: string
               sub_category: string
+              tag: string
               tp1: string
               tp1_hit: boolean
               tp2: string
@@ -1253,6 +1254,7 @@ export type Database = {
               sl_hit: boolean
               status: string
               sub_category: string
+              tag: string
               tp1: string
               tp1_hit: boolean
               tp2: string
