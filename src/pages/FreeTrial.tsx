@@ -23,6 +23,7 @@ const FreeTrial = () => {
   const [trialEndDateFormatted, setTrialEndDateFormatted] = useState<string>("");
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
   const [isExpired, setIsExpired] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     fetchTrialInfo();
@@ -30,7 +31,7 @@ const FreeTrial = () => {
 
   // Live countdown update every second
   useEffect(() => {
-    if (!trialEndDate) return;
+    if (!trialEndDate || isPremium) return;
 
     const calculateTimeLeft = () => {
       const now = new Date();
@@ -54,7 +55,7 @@ const FreeTrial = () => {
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [trialEndDate]);
+  }, [trialEndDate, isPremium]);
 
   const fetchTrialInfo = async () => {
     try {
@@ -71,12 +72,17 @@ const FreeTrial = () => {
         .single();
 
       if (profile) {
-        const endDate = new Date(profile.trial_end_date);
-        const startDate = new Date(profile.created_at);
-        
-        setTrialEndDate(endDate);
-        setTrialStartDate(format(startDate, "dd MMM yyyy"));
-        setTrialEndDateFormatted(format(endDate, "dd MMM yyyy"));
+        // Check if user is premium
+        if (profile.subscription_status === 'premium') {
+          setIsPremium(true);
+        } else {
+          const endDate = new Date(profile.trial_end_date);
+          const startDate = new Date(profile.created_at);
+          
+          setTrialEndDate(endDate);
+          setTrialStartDate(format(startDate, "dd MMM yyyy"));
+          setTrialEndDateFormatted(format(endDate, "dd MMM yyyy"));
+        }
       }
     } finally {
       setLoading(false);
@@ -89,6 +95,48 @@ const FreeTrial = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Premium user view
+  if (isPremium) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        
+        <main className="flex-1 container mx-auto px-4 py-12">
+          <div className="max-w-2xl mx-auto">
+            <Card className="border-2 border-primary">
+              <CardHeader className="text-center">
+                <CardTitle className="text-3xl font-bold text-primary mb-2">
+                  You are already Premium ⭐
+                </CardTitle>
+                <p className="text-muted-foreground">Enjoy unlimited access to all signals</p>
+              </CardHeader>
+              
+              <CardContent className="space-y-6">
+                <div className="bg-success/10 border border-success rounded-lg p-6 text-center">
+                  <CheckCircle className="h-12 w-12 text-success mx-auto mb-3" />
+                  <p className="text-success font-bold text-2xl">PREMIUM MEMBER</p>
+                  <p className="text-muted-foreground mt-2">
+                    You have full access to all premium signals and features.
+                  </p>
+                </div>
+                
+                <Button
+                  onClick={() => navigate("/signals")}
+                  className="w-full h-14 text-xl font-semibold"
+                  size="lg"
+                >
+                  View Live Signals
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+
+        <Footer />
       </div>
     );
   }
