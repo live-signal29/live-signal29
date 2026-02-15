@@ -212,54 +212,42 @@ const SignalsDashboard = () => {
           {/* Main Dashboard Content - always accessible */}
           <>
 
-          {/* Main Category Tabs - Ultra Modern Design */}
+          {/* Main Category Tabs - Clean Material Pill Bar */}
           <div className="mb-4 sm:mb-6">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2 snap-x snap-mandatory">
+            <div className="bg-muted/60 rounded-full p-1 flex overflow-x-auto scrollbar-hide">
               {[
-                { key: "COMMODITIES", label: "Gold", emoji: "🪙", gradient: "from-amber-500 to-yellow-400" },
-                { key: "FOREX", label: "Forex", emoji: "💱", gradient: "from-emerald-500 to-teal-400" },
-                { key: "CRYPTO", label: "Crypto", emoji: "₿", gradient: "from-orange-500 to-amber-400" },
-                { key: "DERIV/BINARY", label: "Deriv", emoji: "📊", gradient: "from-violet-500 to-purple-400" },
-                { key: "MARKET IDEAS", label: "Ideas", emoji: "💡", gradient: "from-blue-500 to-cyan-400" },
-              ].map((category, index) => {
+                { key: "COMMODITIES", label: "Gold" },
+                { key: "FOREX", label: "Forex" },
+                { key: "CRYPTO", label: "Crypto" },
+                { key: "DERIV/BINARY", label: "Deriv" },
+                { key: "MARKET IDEAS", label: "Ideas" },
+              ].map((category) => {
                 const isActive = mainCategory === category.key;
+                const signalCount = isActive && mainCategory !== "MARKET IDEAS" ? signals?.length : undefined;
                 return (
                   <button
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
                     className={cn(
-                      "relative snap-start flex-shrink-0 flex items-center gap-2.5",
-                      "px-5 py-3 rounded-2xl",
-                      "text-sm font-bold whitespace-nowrap",
-                      "transition-all duration-300 ease-out",
-                      "active:scale-95 overflow-hidden",
-                      isActive 
-                        ? "text-white shadow-xl scale-105" 
-                        : "bg-card/90 backdrop-blur-md text-muted-foreground border border-border/30 hover:border-primary/40 hover:text-foreground hover:scale-102"
+                      "relative flex-shrink-0 flex items-center gap-1.5",
+                      "px-4 py-2 rounded-full",
+                      "text-sm whitespace-nowrap",
+                      "transition-all duration-200 ease-out",
+                      isActive
+                        ? "bg-background text-primary font-semibold shadow-sm"
+                        : "text-muted-foreground font-medium hover:text-foreground"
                     )}
-                    style={{
-                      animationDelay: `${index * 50}ms`
-                    }}
                   >
-                    {/* Active gradient background */}
-                    {isActive && (
-                      <div className={cn(
-                        "absolute inset-0 bg-gradient-to-r",
-                        category.gradient
-                      )} />
-                    )}
-                    
-                    {/* Shimmer effect for active */}
-                    {isActive && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]" />
-                    )}
-                    
-                    <span className="relative z-10 text-lg">{category.emoji}</span>
-                    <span className="relative z-10">{category.label}</span>
-                    
-                    {/* Active dot indicator */}
-                    {isActive && (
-                      <div className="relative z-10 w-2 h-2 bg-white rounded-full animate-pulse shadow-lg" />
+                    <span>{category.label}</span>
+                    {signalCount !== undefined && signalCount > 0 && (
+                      <span className={cn(
+                        "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted-foreground/20 text-muted-foreground"
+                      )}>
+                        {signalCount}
+                      </span>
                     )}
                   </button>
                 );
