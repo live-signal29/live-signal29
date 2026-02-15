@@ -326,7 +326,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </span>
                 {signal.tag && signal.tag.trim() && (
                   <Badge className="bg-purple-500/15 text-purple-400 border border-purple-500/30 text-[10px] px-2 py-0.5 font-semibold">
-                    📰 #{signal.tag.trim()}
+                    {signal.tag.trim()}
                   </Badge>
                 )}
               </div>
