@@ -97,7 +97,7 @@ const SignalCard = ({ signal }: SignalCardProps) => {
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Entry</p>
               {signal.tag && (
                 <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/40 border text-[9px] px-1.5 py-0 font-semibold">
-                  📰 {signal.tag}
+                  {signal.tag}
                 </Badge>
               )}
             </div>
