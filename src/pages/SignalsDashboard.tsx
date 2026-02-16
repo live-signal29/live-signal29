@@ -214,7 +214,7 @@ const SignalsDashboard = () => {
 
           {/* Main Category Tabs - Clean Material Pill Bar */}
           <div className="mb-4 sm:mb-6">
-            <div className="bg-muted/60 rounded-full p-1 flex overflow-x-auto scrollbar-hide">
+            <div className="bg-card border border-border/50 rounded-full p-1 flex overflow-x-auto scrollbar-hide shadow-sm">
               {[
                 { key: "COMMODITIES", label: "Gold" },
                 { key: "FOREX", label: "Forex" },
