@@ -3,18 +3,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Fetch gold price from multiple sources with better error handling
+// Fetch gold price from multiple sources
 async function fetchGoldPrice(): Promise<number | null> {
   // Source 1: metals.live
   try {
     const response = await fetch("https://api.metals.live/v1/spot/gold", {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(6000),
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' }
     });
     if (response.ok) {
@@ -23,6 +23,8 @@ async function fetchGoldPrice(): Promise<number | null> {
         console.log("Gold price from metals.live:", data[0].price);
         return parseFloat(data[0].price);
       }
+    } else {
+      await response.text();
     }
   } catch (e) {
     console.log("metals.live failed:", String(e));
@@ -31,7 +33,7 @@ async function fetchGoldPrice(): Promise<number | null> {
   // Source 2: goldprice.org
   try {
     const response = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(6000),
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' }
     });
     if (response.ok) {
@@ -40,55 +42,22 @@ async function fetchGoldPrice(): Promise<number | null> {
         console.log("Gold price from goldprice.org:", data.items[0].xauPrice);
         return parseFloat(data.items[0].xauPrice);
       }
+    } else {
+      await response.text();
     }
   } catch (e) {
     console.log("goldprice.org failed:", String(e));
   }
 
-  // Source 3: metals.dev free API
-  try {
-    const response = await fetch("https://api.metals.dev/v1/latest?api_key=demo&currency=USD&unit=toz", {
-      signal: AbortSignal.timeout(8000),
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' }
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.metals && data.metals.gold) {
-        console.log("Gold price from metals.dev:", data.metals.gold);
-        return parseFloat(data.metals.gold);
-      }
-    }
-  } catch (e) {
-    console.log("metals.dev failed:", String(e));
-  }
-
-  console.log("All gold price sources failed");
   return null;
 }
 
-// Fetch silver price
+// Fetch silver price from multiple sources
 async function fetchSilverPrice(): Promise<number | null> {
-  // Try metals.dev
-  try {
-    const response = await fetch("https://api.metals.dev/v1/latest?api_key=demo&currency=USD&unit=toz", {
-      signal: AbortSignal.timeout(8000),
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' }
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.metals?.silver) {
-        console.log("Silver price from metals.dev:", data.metals.silver);
-        return parseFloat(data.metals.silver);
-      }
-    }
-  } catch (e) {
-    console.log("Silver metals.dev failed:", String(e));
-  }
-  
-  // Try goldprice.org for silver
+  // Source 1: goldprice.org (most reliable for silver)
   try {
     const response = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(6000),
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' }
     });
     if (response.ok) {
@@ -97,10 +66,36 @@ async function fetchSilverPrice(): Promise<number | null> {
         console.log("Silver from goldprice.org:", data.items[0].xagPrice);
         return parseFloat(data.items[0].xagPrice);
       }
+    } else {
+      await response.text();
     }
   } catch (e) {
     console.log("Silver goldprice.org failed:", String(e));
   }
+
+  // Source 2: Yahoo Finance SI=F (Silver Futures)
+  try {
+    const response = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/SI=F?interval=1m&range=1d`,
+      {
+        signal: AbortSignal.timeout(6000),
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (meta?.regularMarketPrice) {
+        console.log("Silver from Yahoo Finance:", meta.regularMarketPrice);
+        return meta.regularMarketPrice;
+      }
+    } else {
+      await response.text();
+    }
+  } catch (e) {
+    console.log("Silver Yahoo failed:", String(e));
+  }
+
   return null;
 }
 
@@ -151,6 +146,8 @@ async function fetchCryptoPrices(pairs: string[]): Promise<Record<string, number
           console.log(`Crypto price ${pair}: ${data[coinId].usd}`);
         }
       }
+    } else {
+      await response.text();
     }
   } catch (e) {
     console.log("CoinGecko failed:", String(e));
@@ -159,9 +156,96 @@ async function fetchCryptoPrices(pairs: string[]): Promise<Record<string, number
   return prices;
 }
 
-// Fetch forex prices from multiple sources
+// Fetch Oil price (WTI Crude / Brent) from free sources
+async function fetchOilPrice(): Promise<{ crude: number | null; brent: number | null }> {
+  let crude: number | null = null;
+  let brent: number | null = null;
+
+  // Try Yahoo Finance unofficial endpoint for CL=F (WTI Crude) and BZ=F (Brent)
+  for (const [symbol, label] of [['CL=F', 'crude'], ['BZ=F', 'brent']] as const) {
+    try {
+      const response = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`,
+        {
+          signal: AbortSignal.timeout(6000),
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (meta?.regularMarketPrice) {
+          const price = meta.regularMarketPrice;
+          console.log(`Oil ${label} price from Yahoo: ${price}`);
+          if (label === 'crude') crude = price;
+          else brent = price;
+        }
+      } else {
+        await response.text();
+      }
+    } catch (e) {
+      console.log(`Yahoo ${label} failed:`, String(e));
+    }
+  }
+
+  return { crude, brent };
+}
+
+// Fetch index prices (US30, NASDAQ, S&P500, etc.) from Yahoo Finance
+async function fetchIndexPrices(pairs: string[]): Promise<Record<string, number>> {
+  const prices: Record<string, number> = {};
+  
+  const indexMap: Record<string, string> = {
+    'US30': 'YM=F',        // Dow Jones Futures
+    'NASDAQ': 'NQ=F',      // NASDAQ Futures
+    'S&P500': 'ES=F',      // S&P 500 Futures
+    'DAX': 'GC=F',         // Will try DAX ETF below
+    'FTSE100': '^FTSE',
+    'NIKKEI': '^N225',
+    'NATURAL GAS': 'NG=F',
+  };
+
+  for (const pair of pairs) {
+    const upperPair = pair.toUpperCase();
+    let yahooSymbol: string | null = null;
+    
+    for (const [key, symbol] of Object.entries(indexMap)) {
+      if (upperPair.includes(key)) {
+        yahooSymbol = symbol;
+        break;
+      }
+    }
+    
+    if (!yahooSymbol) continue;
+
+    try {
+      const response = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1m&range=1d`,
+        {
+          signal: AbortSignal.timeout(6000),
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (meta?.regularMarketPrice) {
+          prices[pair] = meta.regularMarketPrice;
+          console.log(`Index price ${pair}: ${meta.regularMarketPrice}`);
+        }
+      } else {
+        await response.text();
+      }
+    } catch (e) {
+      console.log(`Yahoo ${pair} failed:`, String(e));
+    }
+  }
+
+  return prices;
+}
+
+// Fetch forex prices
 async function fetchForexPrice(base: string, quote: string): Promise<number | null> {
-  // Source 1: frankfurter.app
   try {
     const response = await fetch(
       `https://api.frankfurter.app/latest?from=${base}&to=${quote}`,
@@ -172,27 +256,12 @@ async function fetchForexPrice(base: string, quote: string): Promise<number | nu
       if (data.rates?.[quote]) {
         return data.rates[quote];
       }
+    } else {
+      await response.text();
     }
   } catch (e) {
     console.log(`frankfurter failed for ${base}/${quote}:`, String(e));
   }
-
-  // Source 2: exchangerate.host (free tier)
-  try {
-    const response = await fetch(
-      `https://api.exchangerate.host/latest?base=${base}&symbols=${quote}`,
-      { signal: AbortSignal.timeout(5000), headers: { 'User-Agent': 'Mozilla/5.0' } }
-    );
-    if (response.ok) {
-      const data = await response.json();
-      if (data.rates?.[quote]) {
-        return data.rates[quote];
-      }
-    }
-  } catch (e) {
-    console.log(`exchangerate.host failed for ${base}/${quote}:`, String(e));
-  }
-
   return null;
 }
 
@@ -204,13 +273,33 @@ async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> 
   const forexPairs: string[] = [];
   const goldPairs: string[] = [];
   const silverPairs: string[] = [];
+  const oilCrudePairs: string[] = [];
+  const oilBrentPairs: string[] = [];
+  const indexPairs: string[] = [];
+  const natGasPairs: string[] = [];
+  // Synthetic/Deriv pairs have no free API, skip them
+  const syntheticKeywords = ['BOOM', 'CRASH', 'VOL', 'V75', 'R_'];
 
   for (const pair of pairs) {
     const upper = pair.toUpperCase();
+    
+    // Check synthetic first (no API available)
+    if (syntheticKeywords.some(k => upper.includes(k))) {
+      continue; // Skip - no free API for Deriv synthetics
+    }
+    
     if (upper.includes("XAU") || upper.includes("GOLD")) {
       goldPairs.push(pair);
     } else if (upper.includes("XAG") || upper.includes("SILVER")) {
       silverPairs.push(pair);
+    } else if (upper.includes("OIL") && upper.includes("CRUDE")) {
+      oilCrudePairs.push(pair);
+    } else if (upper.includes("OIL") && upper.includes("BRENT")) {
+      oilBrentPairs.push(pair);
+    } else if (upper.includes("NATURAL GAS")) {
+      natGasPairs.push(pair);
+    } else if (['US30', 'NASDAQ', 'S&P500', 'DAX', 'FTSE', 'NIKKEI'].some(idx => upper.includes(idx))) {
+      indexPairs.push(pair);
     } else if (['BTC', 'ETH', 'XRP', 'LTC', 'ADA', 'SOL', 'DOGE', 'DOT', 'AVAX', 'MATIC', 'LINK'].some(c => upper.startsWith(c))) {
       cryptoPairs.push(pair);
     } else {
@@ -219,10 +308,15 @@ async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> 
   }
 
   // Fetch all categories in parallel
-  const [goldPrice, silverPrice, cryptoPrices] = await Promise.all([
+  const needOil = oilCrudePairs.length > 0 || oilBrentPairs.length > 0;
+  const allIndexPairs = [...indexPairs, ...natGasPairs];
+
+  const [goldPrice, silverPrice, cryptoPrices, oilPrices, indexResults] = await Promise.all([
     goldPairs.length > 0 ? fetchGoldPrice() : Promise.resolve(null),
     silverPairs.length > 0 ? fetchSilverPrice() : Promise.resolve(null),
     cryptoPairs.length > 0 ? fetchCryptoPrices(cryptoPairs) : Promise.resolve({}),
+    needOil ? fetchOilPrice() : Promise.resolve({ crude: null, brent: null }),
+    allIndexPairs.length > 0 ? fetchIndexPrices(allIndexPairs) : Promise.resolve({}),
   ]);
 
   // Apply gold price
@@ -244,7 +338,24 @@ async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> 
     prices[pair] = price < 1 ? price.toFixed(6) : price < 100 ? price.toFixed(4) : price.toFixed(2);
   }
 
-  // Fetch forex pairs (sequentially to avoid rate limits)
+  // Apply oil prices
+  if (oilPrices.crude) {
+    for (const pair of oilCrudePairs) {
+      prices[pair] = oilPrices.crude.toFixed(2);
+    }
+  }
+  if (oilPrices.brent) {
+    for (const pair of oilBrentPairs) {
+      prices[pair] = oilPrices.brent.toFixed(2);
+    }
+  }
+
+  // Apply index prices
+  for (const [pair, price] of Object.entries(indexResults)) {
+    prices[pair] = price.toFixed(2);
+  }
+
+  // Fetch forex pairs
   for (const pair of forexPairs) {
     const cleanPair = pair.replace(/[^A-Za-z]/g, '').toUpperCase();
     if (cleanPair.length >= 6) {
@@ -290,7 +401,8 @@ serve(async (req) => {
         "id, pair, type, entry, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, status, signal_status, entry_mode, limit_entry_price, is_activated"
       )
       .eq("published", true)
-      .not("signal_status", "in", '("close","CLOSE")');
+      .neq("signal_status", "close")
+      .neq("signal_status", "CLOSE");
     
     if (error) {
       console.error("Error fetching signals:", error);

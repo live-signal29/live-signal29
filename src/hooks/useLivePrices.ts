@@ -104,22 +104,32 @@ export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => 
     setError(null);
     
     try {
-      // Call edge function with retry logic for VPN/proxy compatibility
+      // Call edge function with pairs param for faster price-only responses
+      const pairsQuery = pairs.join(',');
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
       const result = await fetchWithRetry(async () => {
-        const { data, error: fnError } = await supabase.functions.invoke('fetch-live-prices', {
-          body: null,
-        });
-        
-        if (fnError) {
-          throw fnError;
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(pairsQuery)}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${anonKey}`,
+              'apikey': anonKey,
+            },
+            signal: AbortSignal.timeout(10000),
+          }
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`HTTP ${response.status}: ${text}`);
         }
-        
-        return data;
+        return response.json();
       }, 2, 1500);
       
       if (result?.prices) {
-        setPrices(result.prices);
-        failedAttemptsRef.current = 0; // Reset on success
+        setPrices(prev => ({ ...prev, ...result.prices }));
+        failedAttemptsRef.current = 0;
       }
     } catch (err) {
       failedAttemptsRef.current++;
