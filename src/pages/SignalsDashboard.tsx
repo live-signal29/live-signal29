@@ -212,15 +212,15 @@ const SignalsDashboard = () => {
           {/* Main Dashboard Content - always accessible */}
           <>
 
-          {/* Main Category Tabs - Clean Material Pill Bar */}
+           {/* Main Category Tabs - Clean Material Pill Bar */}
           <div className="mb-4 sm:mb-6">
             <div className="bg-card border border-border/50 rounded-full p-1 flex overflow-x-auto scrollbar-hide shadow-sm">
               {[
-                { key: "COMMODITIES", label: "Gold" },
-                { key: "FOREX", label: "Forex" },
-                { key: "CRYPTO", label: "Crypto" },
-                { key: "DERIV/BINARY", label: "Deriv" },
-                { key: "MARKET IDEAS", label: "Ideas" },
+                { key: "COMMODITIES", label: "Gold", activeColor: "bg-yellow-500/15 text-yellow-500", badgeColor: "bg-yellow-500 text-white" },
+                { key: "FOREX", label: "Forex", activeColor: "bg-blue-500/15 text-blue-500", badgeColor: "bg-blue-500 text-white" },
+                { key: "CRYPTO", label: "Crypto", activeColor: "bg-orange-500/15 text-orange-500", badgeColor: "bg-orange-500 text-white" },
+                { key: "DERIV/BINARY", label: "Deriv", activeColor: "bg-purple-500/15 text-purple-500", badgeColor: "bg-purple-500 text-white" },
+                { key: "MARKET IDEAS", label: "Ideas", activeColor: "bg-emerald-500/15 text-emerald-500", badgeColor: "bg-emerald-500 text-white" },
               ].map((category) => {
                 const isActive = mainCategory === category.key;
                 const signalCount = isActive && mainCategory !== "MARKET IDEAS" ? signals?.length : undefined;
@@ -234,7 +234,7 @@ const SignalsDashboard = () => {
                       "text-sm whitespace-nowrap",
                       "transition-all duration-200 ease-out",
                       isActive
-                        ? "bg-background text-primary font-semibold shadow-sm"
+                        ? `${category.activeColor} font-semibold shadow-sm`
                         : "text-muted-foreground font-medium hover:text-foreground"
                     )}
                   >
@@ -243,7 +243,7 @@ const SignalsDashboard = () => {
                       <span className={cn(
                         "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold",
                         isActive
-                          ? "bg-primary text-primary-foreground"
+                          ? category.badgeColor
                           : "bg-muted-foreground/20 text-muted-foreground"
                       )}>
                         {signalCount}
