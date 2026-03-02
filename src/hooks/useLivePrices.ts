@@ -111,13 +111,16 @@ export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => 
       
       const result = await fetchWithRetry(async () => {
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(pairsQuery)}`,
+          `https://${projectId}.supabase.co/functions/v1/fetch-live-prices`,
           {
+            method: 'POST',
             headers: {
               'Authorization': `Bearer ${anonKey}`,
               'apikey': anonKey,
+              'Content-Type': 'application/json',
             },
-            signal: AbortSignal.timeout(10000),
+            body: JSON.stringify({ pairs: pairs }),
+            signal: AbortSignal.timeout(15000),
           }
         );
         if (!response.ok) {
@@ -125,7 +128,7 @@ export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => 
           throw new Error(`HTTP ${response.status}: ${text}`);
         }
         return response.json();
-      }, 2, 1500);
+      }, 2, 2000);
       
       if (result?.prices) {
         setPrices(prev => ({ ...prev, ...result.prices }));
