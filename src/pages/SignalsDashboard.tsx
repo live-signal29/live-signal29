@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -26,6 +26,8 @@ import { ChartReactions } from "@/components/ChartReactions";
 
 const SIGNALS_PER_PAGE = 20;
 
+const CATEGORIES = ["COMMODITIES", "FOREX", "CRYPTO", "DERIV/BINARY", "MARKET IDEAS"];
+
 const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading, subscriptionStatus, trialExpired, trialEndDate } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
@@ -34,6 +36,36 @@ const SignalsDashboard = () => {
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  // Swipe gesture to change categories on mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Only trigger if horizontal swipe is dominant and > 80px
+    if (Math.abs(deltaX) > 80 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      const currentIndex = CATEGORIES.indexOf(mainCategory);
+      if (deltaX < 0 && currentIndex < CATEGORIES.length - 1) {
+        // Swipe left → next category
+        setMainCategory(CATEGORIES[currentIndex + 1]);
+        setSubCategory("all");
+      } else if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right → previous category
+        setMainCategory(CATEGORIES[currentIndex - 1]);
+        setSubCategory("all");
+      }
+    }
+  }, [mainCategory]);
 
   // Show trial expired popup every time dashboard opens for expired trial users
   useEffect(() => {
@@ -180,7 +212,11 @@ const SignalsDashboard = () => {
   // Removed blocking loading screen - show content immediately
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <SEO
         title="Live Signals Dashboard - Real-time Trading Signals"
         description="Access real-time trading signals for Forex, Crypto, Commodities, and Indices. Get instant notifications, professional analysis, and high-accuracy signals."
