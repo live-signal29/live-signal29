@@ -212,7 +212,11 @@ const SignalsDashboard = () => {
   // Removed blocking loading screen - show content immediately
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <SEO
         title="Live Signals Dashboard - Real-time Trading Signals"
         description="Access real-time trading signals for Forex, Crypto, Commodities, and Indices. Get instant notifications, professional analysis, and high-accuracy signals."
