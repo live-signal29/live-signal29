@@ -169,7 +169,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         const tp1Price = parseEntryPrice(signal.tp1);
         if (checkTPSLHit(currentPrice, tp1Price, signal.type)) {
           updates.tp1_hit = true;
-          updates.profit_note = 'TP 1 Done! Move SL to Entry (B.E) ✅';
+          updates.profit_note = 'TP 1 Hit ✅ SL moved to B.E';
           updates.sl = signal.entry; // Auto move SL to entry (break even)
         }
       }
@@ -189,7 +189,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         if (checkTPSLHit(currentPrice, tp3Price, signal.type)) {
           updates.tp3_hit = true;
           updates.signal_status = 'close';
-          updates.profit_note = 'Final Target Hit!🎊 Maximum Profit Secured ✅';
+          updates.profit_note = 'TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅';
         }
       }
 
@@ -210,7 +210,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         if (priceAtEntry) {
           // Close at break even - NOT as SL hit
           updates.signal_status = 'close';
-          updates.profit_note = 'TP 1 Done ✅ - Closed at B.E (No Loss)';
+          updates.profit_note = 'Signal Closed at Breakeven after TP1 ✅';
           updates.sl_hit = 'false'; // Explicitly NOT SL hit
         }
       }
