@@ -189,7 +189,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         if (checkTPSLHit(currentPrice, tp3Price, signal.type)) {
           updates.tp3_hit = true;
           updates.signal_status = 'close';
-          updates.profit_note = 'Final Target Hit!🎊 Maximum Profit Secured ✅';
+          updates.profit_note = 'TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅';
         }
       }
 
