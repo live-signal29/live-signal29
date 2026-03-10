@@ -444,7 +444,7 @@ serve(async (req) => {
         if (Math.abs(priceNum - entryPrice) <= tolerance) {
           updates.signal_status = "close";
           updates.status = "close";
-          updates.profit_note = "TP 1 Done ✅ - Closed at B.E (No Loss)";
+          updates.profit_note = "Signal Closed at Breakeven after TP1 ✅";
           updates.sl_hit = false;
           console.log(`B.E close: ${signal.id}`);
         }

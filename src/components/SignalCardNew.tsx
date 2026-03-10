@@ -210,7 +210,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         if (priceAtEntry) {
           // Close at break even - NOT as SL hit
           updates.signal_status = 'close';
-          updates.profit_note = 'TP 1 Done ✅ - Closed at B.E (No Loss)';
+          updates.profit_note = 'Signal Closed at Breakeven after TP1 ✅';
           updates.sl_hit = 'false'; // Explicitly NOT SL hit
         }
       }
