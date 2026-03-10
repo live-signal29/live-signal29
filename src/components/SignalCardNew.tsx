@@ -169,7 +169,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         const tp1Price = parseEntryPrice(signal.tp1);
         if (checkTPSLHit(currentPrice, tp1Price, signal.type)) {
           updates.tp1_hit = true;
-          updates.profit_note = 'TP 1 Done! Move SL to Entry (B.E) ✅';
+          updates.profit_note = 'TP 1 Hit ✅ SL moved to B.E';
           updates.sl = signal.entry; // Auto move SL to entry (break even)
         }
       }
