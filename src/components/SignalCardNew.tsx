@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Lock, Crown, Share2 } from "lucide-react";
-import { Lock, Crown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useEffect, useState, useRef, useCallback } from "react";
