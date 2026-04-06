@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 const AppInstallBanner = () => {
   const [showBanner, setShowBanner] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manuallyDismissed = useRef(false);
 
   useEffect(() => {

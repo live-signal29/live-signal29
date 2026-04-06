@@ -26,7 +26,7 @@ const CryptoDeposit = () => {
   }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     
     if (paymentData?.payment_id) {
       interval = setInterval(() => {
