@@ -84,7 +84,7 @@ export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => 
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const failedAttemptsRef = useRef(0);
   const maxFailedAttempts = 5;
   
