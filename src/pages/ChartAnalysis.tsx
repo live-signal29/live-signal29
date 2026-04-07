@@ -178,9 +178,6 @@ const ChartAnalysis = () => {
                           </p>
                         </CardContent>
                       )}
-                      <CardContent className="pt-2 border-t border-border/50">
-                        <MarketIdeaCard idea={marketIdeas!.find((m) => m.id === idea.id)!} />
-                      </CardContent>
                     </Card>
                   )}
 
