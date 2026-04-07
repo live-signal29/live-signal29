@@ -10,12 +10,22 @@ import { formatDistanceToNow } from "date-fns";
 import ChartLightbox from "@/components/ChartLightbox";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ChartReactions } from "@/components/ChartReactions";
+import MarketIdeaCard from "@/components/MarketIdeaCard";
+
+interface CombinedIdea {
+  id: string;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
+  created_at: string;
+  source: "chart" | "market";
+}
 
 const ChartAnalysis = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
 
-  const { data: analyses, isLoading } = useQuery({
+  const { data: chartAnalyses } = useQuery({
     queryKey: ["chart-analysis"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -23,15 +33,55 @@ const ChartAnalysis = () => {
         .select("*")
         .eq("published", true)
         .order("created_at", { ascending: false });
-      
       if (error) throw error;
       return data;
     },
   });
 
-  const openLightbox = (index: number) => {
-    setSelectedChartIndex(index);
-    setLightboxOpen(true);
+  const { data: marketIdeas } = useQuery({
+    queryKey: ["market-ideas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("market_ideas")
+        .select("*")
+        .eq("published", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const isLoading = !chartAnalyses && !marketIdeas;
+
+  // Merge both sources and sort by date
+  const allIdeas: CombinedIdea[] = [
+    ...(chartAnalyses?.map((a) => ({
+      id: a.id,
+      title: a.title,
+      description: a.description,
+      image_url: a.image_url,
+      created_at: a.created_at,
+      source: "chart" as const,
+    })) || []),
+    ...(marketIdeas?.map((m) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      image_url: m.image_url,
+      created_at: m.created_at,
+      source: "market" as const,
+    })) || []),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  // For lightbox, only use chart_analysis items that have images
+  const lightboxCharts = chartAnalyses?.filter((a) => a.image_url && a.image_url.trim() !== "") || [];
+
+  const openLightbox = (chartId: string) => {
+    const idx = lightboxCharts.findIndex((c) => c.id === chartId);
+    if (idx >= 0) {
+      setSelectedChartIndex(idx);
+      setLightboxOpen(true);
+    }
   };
 
   return (
@@ -53,84 +103,109 @@ const ChartAnalysis = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {analyses?.map((analysis, index) => (
-                <>
-                  <Card 
-                    key={analysis.id} 
-                    className="group overflow-hidden hover:shadow-xl transition-all duration-300"
-                  >
-                    {analysis.image_url && analysis.image_url.trim() !== '' && (
-                      <div 
-                        className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
-                        onClick={() => openLightbox(index)}
-                      >
-                        <img
-                          src={analysis.image_url}
-                          alt={analysis.title || "Chart"}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
-                          <Button
-                            size="icon"
-                            variant="secondary"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 hover:bg-white"
-                          >
-                            <Maximize2 className="h-5 w-5 text-black" />
-                          </Button>
+              {allIdeas.map((idea, index) => (
+                <div key={idea.id}>
+                  {idea.source === "chart" ? (
+                    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 h-full">
+                      {idea.image_url && idea.image_url.trim() !== '' && (
+                        <div 
+                          className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
+                          onClick={() => openLightbox(idea.id)}
+                        >
+                          <img
+                            src={idea.image_url}
+                            alt={idea.title || "Chart"}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                            <Button
+                              size="icon"
+                              variant="secondary"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 hover:bg-white"
+                            >
+                              <Maximize2 className="h-5 w-5 text-black" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    <CardHeader className="pb-2">
-                      {analysis.title && (
-                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                          {analysis.title}
-                        </CardTitle>
                       )}
-                      <p className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(analysis.created_at), { addSuffix: true })}
-                      </p>
-                    </CardHeader>
-                    {analysis.description && (
-                      <CardContent className="pt-0 pb-2">
-                        <p className="text-muted-foreground line-clamp-2">
-                          {analysis.description}
+                      <CardHeader className="pb-2">
+                        {idea.title && (
+                          <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                            {idea.title}
+                          </CardTitle>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(idea.created_at), { addSuffix: true })}
                         </p>
+                      </CardHeader>
+                      {idea.description && (
+                        <CardContent className="pt-0 pb-2">
+                          <p className="text-muted-foreground line-clamp-2">
+                            {idea.description}
+                          </p>
+                        </CardContent>
+                      )}
+                      <CardContent className="pt-2 border-t border-border/50">
+                        <ChartReactions chartId={idea.id} />
                       </CardContent>
-                    )}
-                    <CardContent className="pt-2 border-t border-border/50">
-                      <ChartReactions chartId={analysis.id} />
-                    </CardContent>
-                  </Card>
-                  
-                  {/* Add affiliate banner after first chart */}
+                    </Card>
+                  ) : (
+                    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 h-full">
+                      {idea.image_url && idea.image_url.trim() !== '' && (
+                        <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                          <img
+                            src={idea.image_url}
+                            alt={idea.title || "Market Idea"}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
+                      <CardHeader className="pb-2">
+                        {idea.title && (
+                          <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                            {idea.title}
+                          </CardTitle>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(idea.created_at), { addSuffix: true })}
+                        </p>
+                      </CardHeader>
+                      {idea.description && (
+                        <CardContent className="pt-0 pb-2">
+                          <p className="text-muted-foreground line-clamp-3">
+                            {idea.description}
+                          </p>
+                        </CardContent>
+                      )}
+                      <CardContent className="pt-2 border-t border-border/50">
+                        <MarketIdeaCard idea={marketIdeas!.find((m) => m.id === idea.id)!} />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Add affiliate banner after first item */}
                   {index === 0 && (
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2 mt-6">
                       <AffiliateBannerCarousel />
                     </div>
                   )}
-                  
-                  {/* Add affiliate banner before last chart */}
-                  {analyses && index === analyses.length - 2 && analyses.length > 1 && (
-                    <div className="md:col-span-2">
-                      <AffiliateBannerCarousel />
-                    </div>
-                  )}
-                </>
+                </div>
               ))}
             </div>
           )}
 
           {/* Lightbox */}
-          {analyses && analyses.length > 0 && (
+          {lightboxCharts.length > 0 && (
             <ChartLightbox
               isOpen={lightboxOpen}
               onClose={() => setLightboxOpen(false)}
-              charts={analyses}
+              charts={lightboxCharts}
               initialIndex={selectedChartIndex}
             />
           )}
 
-          {!isLoading && analyses?.length === 0 && (
+          {!isLoading && allIdeas.length === 0 && (
             <div className="text-center py-20">
               <p className="text-muted-foreground text-lg">No ideas found</p>
             </div>
