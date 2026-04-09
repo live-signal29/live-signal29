@@ -171,6 +171,14 @@ function generateSignalsForAsset(config: SignalConfig, session: "morning" | "eve
     const pktHour = baseHour + i;
     signalTime.setUTCHours(pktHour - 5, Math.floor(Math.random() * 45), 0, 0);
 
+    // Only the LAST signal stays open, rest are closed with TP hits
+    const isOpen = i === count - 1;
+    const tpHits = !isOpen ? pick([
+      { tp1_hit: true, tp2_hit: false, tp3_hit: false, profit_note: '✅ TP1 Hit! Profit Taken' },
+      { tp1_hit: true, tp2_hit: true, tp3_hit: false, profit_note: 'TP 2 Secured! 💰 Signal Closed' },
+      { tp1_hit: true, tp2_hit: true, tp3_hit: true, profit_note: '🎯 TP3 Hit! Maximum Profit Secured 💰' },
+    ]) : { tp1_hit: false, tp2_hit: false, tp3_hit: false, profit_note: null };
+
     signals.push({
       pair,
       type,
@@ -182,8 +190,8 @@ function generateSignalsForAsset(config: SignalConfig, session: "morning" | "eve
       tp2: tp2.toString(),
       tp3: tp3.toString(),
       sl: sl.toString(),
-      status: "open",
-      signal_status: "open",
+      status: isOpen ? "open" : "close",
+      signal_status: isOpen ? "open" : "close",
       is_premium: i === premiumIndex,
       is_activated: true,
       activated_at: signalTime.toISOString(),
@@ -195,6 +203,7 @@ function generateSignalsForAsset(config: SignalConfig, session: "morning" | "eve
       signal_raw_text: null,
       published: true,
       created_at: signalTime.toISOString(),
+      ...tpHits,
     });
   }
   return signals;
