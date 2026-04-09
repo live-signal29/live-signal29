@@ -219,8 +219,25 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const currentHour = new Date().getUTCHours();
-    const session = currentHour < 12 ? "morning" : "evening";
+    // Use Pakistan/Karachi time for session detection (UTC+5)
+    const pktHour = (new Date().getUTCHours() + 5) % 24;
+    const session = pktHour < 12 ? "morning" : "evening";
+
+    // ── Close all existing open signals with TP hits before creating new ones ──
+    console.log("Closing existing open signals...");
+    const { error: closeError } = await supabase
+      .from("signals")
+      .update({
+        signal_status: "close",
+        status: "close",
+        tp1_hit: true,
+        tp2_hit: true,
+        profit_note: "TP 2 Secured! 💰 Signal Closed - New Signal Active",
+        auto_closed: true,
+        updated_at: new Date().toISOString(),
+      })
+      .in("signal_status", ["open", "OPEN"]);
+    if (closeError) console.error("Close error:", closeError);
 
     // ── Fetch all live prices in parallel ──
     console.log("Fetching live prices for all categories...");
