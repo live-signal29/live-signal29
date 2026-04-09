@@ -179,6 +179,9 @@ const ChartAnalysis = () => {
                           </p>
                         </CardContent>
                       )}
+                      <CardContent className="pt-2 border-t border-border/50">
+                        <MarketIdeaReactions ideaId={idea.id} />
+                      </CardContent>
                     </Card>
                   )}
 
