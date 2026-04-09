@@ -143,7 +143,10 @@ function generateSignalsForAsset(config: SignalConfig, session: "morning" | "eve
   const { pair, category, mainCategory, subCategory, price, pipMultiplier, decimals } = config;
   const signals = [];
   const now = new Date();
-  const baseHour = session === "morning" ? 8 : 15;
+  // Pakistan Karachi time = UTC+5
+  const pktOffset = 5 * 60 * 60 * 1000;
+  const pktNow = new Date(now.getTime() + pktOffset);
+  const baseHour = session === "morning" ? 8 : 15; // PKT hours
   const premiumIndex = count - 1; // last signal is premium
 
   for (let i = 0; i < count; i++) {
@@ -163,8 +166,10 @@ function generateSignalsForAsset(config: SignalConfig, session: "morning" | "eve
     const tp3 = +(isBuy ? entry + tp3d : entry - tp3d).toFixed(decimals);
     const sl = +(isBuy ? entry - sld : entry + sld).toFixed(decimals);
 
+    // Convert PKT hours to UTC for storage
     const signalTime = new Date(now);
-    signalTime.setUTCHours(baseHour + i, Math.floor(Math.random() * 45), 0, 0);
+    const pktHour = baseHour + i;
+    signalTime.setUTCHours(pktHour - 5, Math.floor(Math.random() * 45), 0, 0);
 
     signals.push({
       pair,
