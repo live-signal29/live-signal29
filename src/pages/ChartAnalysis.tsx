@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import ChartLightbox from "@/components/ChartLightbox";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ChartReactions } from "@/components/ChartReactions";
+import { MarketIdeaReactions } from "@/components/MarketIdeaReactions";
 
 
 interface CombinedIdea {
