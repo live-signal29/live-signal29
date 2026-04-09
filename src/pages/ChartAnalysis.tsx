@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import ChartLightbox from "@/components/ChartLightbox";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ChartReactions } from "@/components/ChartReactions";
+import { MarketIdeaReactions } from "@/components/MarketIdeaReactions";
 
 
 interface CombinedIdea {
@@ -178,6 +179,9 @@ const ChartAnalysis = () => {
                           </p>
                         </CardContent>
                       )}
+                      <CardContent className="pt-2 border-t border-border/50">
+                        <MarketIdeaReactions ideaId={idea.id} />
+                      </CardContent>
                     </Card>
                   )}
 
