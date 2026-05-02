@@ -231,7 +231,7 @@ function generateIdeas(price: number, high: number, low: number, change: number)
     },
   ];
 
-  return ideas.sort(() => Math.random() - 0.5).slice(0, 3);
+  return ideas.sort(() => Math.random() - 0.5);
 }
 
 function tfForKind(kind: string): string {
@@ -260,28 +260,35 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // Determine slot from query param or current PKT hour
+    const url = new URL(req.url);
+    let slot = url.searchParams.get("slot"); // morning | afternoon | evening
+    if (!slot) {
+      const pktHour = (new Date().getUTCHours() + 5) % 24;
+      slot = pktHour < 12 ? "morning" : pktHour < 17 ? "afternoon" : "evening";
+    }
+    const slotLabel = slot === "morning" ? "🌅 Morning" : slot === "afternoon" ? "☀️ Afternoon" : "🌙 Evening";
+
     // Use H1 base for price summary
     const base = await fetchCandles("GC=F", "H1");
-    console.log(`Gold $${base.price}, change ${base.change}`);
+    console.log(`[${slot}] Gold $${base.price}, change ${base.change}`);
 
-    const ideas = generateIdeas(base.price, base.high, base.low, base.change);
+    const allIdeas = generateIdeas(base.price, base.high, base.low, base.change);
+    // Pick exactly 1 idea per slot
+    const idea = allIdeas[0];
 
-    const rows: any[] = [];
-    for (const idea of ideas) {
-      const tf = tfForKind(idea.kind);
-      // Fetch candles for the chosen timeframe
-      const md = await fetchCandles("GC=F", tf);
-      md.symbol = "XAU/USD";
-      const svg = buildCandleSVG(md, idea.title);
-      const filename = `auto-ideas/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${tf}.svg`;
-      const imageUrl = await uploadSvg(supabase, svg, filename);
-      rows.push({
-        title: idea.title,
-        description: idea.description,
-        published: true,
-        image_url: imageUrl,
-      });
-    }
+    const tf = tfForKind(idea.kind);
+    const md = await fetchCandles("GC=F", tf);
+    md.symbol = "XAU/USD";
+    const svg = buildCandleSVG(md, idea.title);
+    const filename = `auto-ideas/${Date.now()}-${slot}-${tf}.svg`;
+    const imageUrl = await uploadSvg(supabase, svg, filename);
+    const rows = [{
+      title: `${slotLabel} • ${idea.title}`,
+      description: idea.description,
+      published: true,
+      image_url: imageUrl,
+    }];
 
     const { data, error } = await supabase.from("market_ideas").insert(rows).select("id, title, image_url");
     if (error) {
