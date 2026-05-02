@@ -231,7 +231,7 @@ function generateIdeas(price: number, high: number, low: number, change: number)
     },
   ];
 
-  return ideas.sort(() => Math.random() - 0.5).slice(0, 3);
+  return ideas.sort(() => Math.random() - 0.5);
 }
 
 function tfForKind(kind: string): string {
