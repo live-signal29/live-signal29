@@ -317,14 +317,13 @@ Deno.serve(async (req) => {
     const base = await fetchCandles("GC=F", "H1");
     console.log(`[${slot}] Gold $${base.price}, change ${base.change}`);
 
-    const allIdeas = generateIdeas(base.price, base.high, base.low, base.change);
-    // Pick exactly 1 idea per slot
+    const { ideas: allIdeas, plan } = generateIdeas(base.price, base.high, base.low, base.change);
     const idea = allIdeas[0];
 
     const tf = tfForKind(idea.kind);
     const md = await fetchCandles("GC=F", tf);
     md.symbol = "XAU/USD";
-    const svg = buildCandleSVG(md, idea.title);
+    const svg = buildCandleSVG(md, idea.title, plan);
     const filename = `auto-ideas/${Date.now()}-${slot}-${tf}.svg`;
     const imageUrl = await uploadSvg(supabase, svg, filename);
     const rows = [{
