@@ -184,16 +184,29 @@ const SignalsDashboard = () => {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const { data: chartAnalysis, isLoading: isLoadingCharts } = useQuery({
-    queryKey: ["chart-analysis"],
+    queryKey: ["chart-analysis-and-ideas"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("chart_analysis")
-        .select("*")
-        .eq("published", true)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      return data;
+      const [charts, ideas] = await Promise.all([
+        supabase
+          .from("chart_analysis")
+          .select("*")
+          .eq("published", true)
+          .order("created_at", { ascending: false })
+          .limit(30),
+        supabase
+          .from("market_ideas")
+          .select("*")
+          .eq("published", true)
+          .order("created_at", { ascending: false })
+          .limit(30),
+      ]);
+      if (charts.error) throw charts.error;
+      if (ideas.error) throw ideas.error;
+      const merged = [
+        ...(charts.data || []),
+        ...(ideas.data || []),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return merged;
     },
     enabled: mainCategory === "MARKET IDEAS",
     staleTime: 120000,
