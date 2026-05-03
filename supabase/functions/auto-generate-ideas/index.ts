@@ -98,16 +98,29 @@ async function fetchCandles(symbol: string, tf: string): Promise<MarketData> {
   return { price: p, high: p + 20, low: p - 20, change: 12.5, candles, timeframe: tf, symbol };
 }
 
-function buildCandleSVG(md: MarketData, title: string): string {
-  const W = 800, H = 420;
-  const padL = 60, padR = 70, padT = 50, padB = 40;
+interface TradePlan {
+  action: "BUY" | "SELL";
+  entry: number;
+  tp1: number;
+  tp2: number;
+  sl: number;
+}
+
+function buildCandleSVG(md: MarketData, title: string, plan: TradePlan): string {
+  const W = 900, H = 500;
+  const padL = 60, padR = 130, padT = 80, padB = 50;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
   const candles = md.candles;
   if (!candles.length) return "";
 
-  const maxP = Math.max(...candles.map(c => c.h));
-  const minP = Math.min(...candles.map(c => c.l));
+  const allPrices = [
+    ...candles.map(c => c.h),
+    ...candles.map(c => c.l),
+    plan.entry, plan.tp1, plan.tp2, plan.sl,
+  ];
+  const maxP = Math.max(...allPrices);
+  const minP = Math.min(...allPrices);
   const range = maxP - minP || 1;
   const padPrice = range * 0.05;
   const yMax = maxP + padPrice;
@@ -116,12 +129,9 @@ function buildCandleSVG(md: MarketData, title: string): string {
 
   const candleW = Math.max(2, (innerW / candles.length) * 0.7);
   const slot = innerW / candles.length;
-
   const yOf = (p: number) => padT + ((yMax - p) / yRange) * innerH;
 
-  // Grid lines (5 horizontal)
-  let grid = "";
-  let labels = "";
+  let grid = "", labels = "";
   for (let i = 0; i <= 5; i++) {
     const y = padT + (innerH / 5) * i;
     const price = yMax - (yRange / 5) * i;
@@ -129,35 +139,51 @@ function buildCandleSVG(md: MarketData, title: string): string {
     labels += `<text x="${W - padR + 6}" y="${y + 4}" fill="#9ca3af" font-size="11" font-family="monospace">${price.toFixed(2)}</text>`;
   }
 
-  // Candles
   let body = "";
   candles.forEach((c, i) => {
     const x = padL + i * slot + (slot - candleW) / 2;
     const xMid = x + candleW / 2;
     const isUp = c.c >= c.o;
     const color = isUp ? "#10b981" : "#ef4444";
-    const yHigh = yOf(c.h);
-    const yLow = yOf(c.l);
-    const yOpen = yOf(c.o);
-    const yClose = yOf(c.c);
+    const yHigh = yOf(c.h), yLow = yOf(c.l), yOpen = yOf(c.o), yClose = yOf(c.c);
     const bodyTop = Math.min(yOpen, yClose);
     const bodyH = Math.max(1, Math.abs(yClose - yOpen));
     body += `<line x1="${xMid}" y1="${yHigh}" x2="${xMid}" y2="${yLow}" stroke="${color}" stroke-width="1"/>`;
     body += `<rect x="${x}" y="${bodyTop}" width="${candleW}" height="${bodyH}" fill="${color}" opacity="0.95"/>`;
   });
 
-  // Last price line
   const lastPrice = candles[candles.length - 1].c;
-  const lastY = yOf(lastPrice);
-  const priceColor = md.change >= 0 ? "#10b981" : "#ef4444";
-  const priceLine = `
-    <line x1="${padL}" y1="${lastY}" x2="${W - padR}" y2="${lastY}" stroke="${priceColor}" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
-    <rect x="${W - padR}" y="${lastY - 10}" width="65" height="20" fill="${priceColor}"/>
-    <text x="${W - padR + 5}" y="${lastY + 4}" fill="white" font-size="12" font-family="monospace" font-weight="bold">${lastPrice.toFixed(2)}</text>
-  `;
+  const isBuy = plan.action === "BUY";
+  const actionColor = isBuy ? "#10b981" : "#ef4444";
+  const arrow = isBuy ? "▲" : "▼";
 
-  const dirArrow = md.change >= 0 ? "▲" : "▼";
-  const changePct = ((md.change / (lastPrice - md.change || 1)) * 100).toFixed(2);
+  const levelLine = (price: number, color: string, label: string, dash = "6,4") => {
+    const y = yOf(price);
+    return `
+      <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="${color}" stroke-width="1.5" stroke-dasharray="${dash}" opacity="0.95"/>
+      <rect x="${W - padR + 2}" y="${y - 9}" width="55" height="18" fill="${color}" rx="2"/>
+      <text x="${W - padR + 5}" y="${y + 4}" fill="white" font-size="10" font-weight="bold" font-family="monospace">${label}</text>
+      <text x="${W - padR + 60}" y="${y + 4}" fill="${color}" font-size="11" font-weight="bold" font-family="monospace">${price.toFixed(2)}</text>
+    `;
+  };
+
+  const tradeLines =
+    levelLine(plan.tp2, "#10b981", "TP2") +
+    levelLine(plan.tp1, "#22c55e", "TP1") +
+    levelLine(plan.entry, "#3b82f6", "ENTRY", "8,3") +
+    levelLine(plan.sl, "#ef4444", "SL");
+
+  const yEntry = yOf(plan.entry);
+  const yTp2 = yOf(plan.tp2);
+  const ySl = yOf(plan.sl);
+  const profitZone = `<rect x="${padL}" y="${Math.min(yEntry, yTp2)}" width="${innerW}" height="${Math.abs(yTp2 - yEntry)}" fill="#10b981" opacity="0.08"/>`;
+  const lossZone = `<rect x="${padL}" y="${Math.min(yEntry, ySl)}" width="${innerW}" height="${Math.abs(ySl - yEntry)}" fill="#ef4444" opacity="0.08"/>`;
+
+  const badge = `
+    <rect x="${W - 200}" y="12" width="180" height="50" rx="10" fill="${actionColor}"/>
+    <text x="${W - 110}" y="38" text-anchor="middle" fill="white" font-size="22" font-weight="900" font-family="Arial">${arrow} ${plan.action} XAUUSD</text>
+    <text x="${W - 110}" y="55" text-anchor="middle" fill="white" font-size="11" font-family="Arial" opacity="0.95">Live @ ${lastPrice.toFixed(2)}</text>
+  `;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <defs>
@@ -167,72 +193,90 @@ function buildCandleSVG(md: MarketData, title: string): string {
       </linearGradient>
     </defs>
     <rect width="${W}" height="${H}" fill="url(#bg)"/>
-    <text x="${padL}" y="25" fill="#f3f4f6" font-size="16" font-weight="bold" font-family="Arial">${md.symbol} • ${md.timeframe}</text>
-    <text x="${padL}" y="42" fill="#9ca3af" font-size="11" font-family="Arial">${title.substring(0, 70)}</text>
-    <text x="${W - padR - 10}" y="25" text-anchor="end" fill="${priceColor}" font-size="16" font-weight="bold" font-family="monospace">${lastPrice.toFixed(2)} ${dirArrow} ${changePct}%</text>
+    <text x="${padL}" y="30" fill="#f3f4f6" font-size="20" font-weight="bold" font-family="Arial">${md.symbol} • ${md.timeframe}</text>
+    <text x="${padL}" y="50" fill="#9ca3af" font-size="12" font-family="Arial">${title.substring(0, 80)}</text>
+    <text x="${padL}" y="68" fill="${actionColor}" font-size="13" font-weight="bold" font-family="Arial">${plan.action} • Entry ${plan.entry.toFixed(2)} • TP ${plan.tp1.toFixed(2)}/${plan.tp2.toFixed(2)} • SL ${plan.sl.toFixed(2)}</text>
+    ${badge}
     ${grid}
+    ${profitZone}
+    ${lossZone}
     ${body}
+    ${tradeLines}
     ${labels}
-    ${priceLine}
-    <text x="${padL}" y="${H - 10}" fill="#6b7280" font-size="10" font-family="Arial">Live MT5/Market Feed • ${new Date().toLocaleString("en-US", { timeZone: "Asia/Karachi" })} PKT</text>
+    <text x="${padL}" y="${H - 12}" fill="#6b7280" font-size="10" font-family="Arial">🟢 Profit Zone  •  🔴 Loss Zone  •  Live MT5 Feed • ${new Date().toLocaleString("en-US", { timeZone: "Asia/Karachi" })} PKT</text>
   </svg>`;
 }
 
 function pick<T>(arr: T[]) { return arr[Math.floor(Math.random() * arr.length)]; }
 function rand(min: number, max: number) { return Math.round(min + Math.random() * (max - min)); }
 
-function generateIdeas(price: number, high: number, low: number, change: number) {
-  const direction = change >= 0 ? "bullish" : "bearish";
-  const dirEmoji = change >= 0 ? "📈" : "📉";
-  const range = high - low;
-  const support1 = Math.round(low - rand(5, 15));
-  const support2 = Math.round(low - rand(20, 40));
-  const resistance1 = Math.round(high + rand(5, 15));
-  const resistance2 = Math.round(high + rand(20, 40));
-  const fib618 = Math.round(low + range * 0.618);
-  const fib382 = Math.round(low + range * 0.382);
+function generateIdeas(price: number, _high: number, _low: number, change: number) {
+  const isBull = change >= 0;
+  const action: "BUY" | "SELL" = isBull ? "BUY" : "SELL";
+  const dirEmoji = isBull ? "🟢" : "🔴";
+  const arrow = isBull ? "📈" : "📉";
 
-  // Each idea has a "kind" used to pick timeframe
+  const plan: TradePlan = isBull
+    ? { action: "BUY", entry: +(price - 2).toFixed(2), tp1: +(price + 8).toFixed(2), tp2: +(price + 18).toFixed(2), sl: +(price - 10).toFixed(2) }
+    : { action: "SELL", entry: +(price + 2).toFixed(2), tp1: +(price - 8).toFixed(2), tp2: +(price - 18).toFixed(2), sl: +(price + 10).toFixed(2) };
+
+  const reason = isBull
+    ? pick([
+        "Higher highs ban rahi hain, bullish momentum strong.",
+        "Demand zone se strong bounce, buyers control mein.",
+        "Break of structure upside, trend continuation expected.",
+        "RSI > 55, MACD bullish cross — uptrend confirmed.",
+      ])
+    : pick([
+        "Lower lows ban rahi hain, bearish pressure barh raha hai.",
+        "Supply zone se strong rejection, sellers control mein.",
+        "Break of structure downside, downtrend continuation.",
+        "RSI < 45, MACD bearish cross — downtrend confirmed.",
+      ]);
+
   const ideas = [
     {
       kind: "daily",
-      title: `${dirEmoji} XAU/USD ${direction === "bullish" ? "Bulls Push" : "Bears Dominate"} – Gold at $${price}`,
-      description: `Gold currently $${price} (${change >= 0 ? "+" : ""}${change}). Range: $${low}-$${high}. ${
-        direction === "bullish"
-          ? `Buyers in control above $${low}. Resistance $${resistance1}, target $${resistance2}. Support $${support1}.`
-          : `Sellers pushing from $${high}. Support $${support1}, target $${support2}. Resistance $${resistance1}.`
-      } RSI ${direction === "bullish" ? "above 55" : "below 45"}.`,
-    },
-    {
-      kind: "daily",
-      title: `🎯 Gold Key Levels – Support $${support1} | Resistance $${resistance1}`,
-      description: `XAU/USD at $${price}. High $${high}, Low $${low}. Fib 61.8% $${fib618}, 38.2% $${fib382}. ${
-        price > fib618 ? `Above golden ratio – bullish. Target $${resistance1}.` : `Testing below – watch bounce $${fib382}.`
-      }`,
+      title: `${dirEmoji} ${action} XAU/USD @ ${plan.entry} — Gold ${arrow} $${price}`,
+      description:
+`📊 SIGNAL: ${action} XAUUSD (Gold)
+🎯 Entry: ${plan.entry}
+✅ TP1: ${plan.tp1}  •  TP2: ${plan.tp2}
+🛑 SL: ${plan.sl}
+
+📌 Reason: ${reason}
+💡 Action plan: Price ${plan.entry} pe ${action.toLowerCase()} karein. TP1 hit hone par SL ko entry pe move karein (risk-free trade). Phir TP2 tak ride karein.
+⚠️ Risk: Sirf 1-2% capital risk karein per trade.`,
     },
     {
       kind: "scalping",
-      title: `💡 Gold Scalping Zones – ${price > high - range / 2 ? "Buy Dips" : "Sell Rallies"} Near $${price}`,
-      description: `Intraday scalping XAU/USD $${price}. ${
-        price > high - range / 2
-          ? `Buy zone $${low}-$${Math.round(low + range * 0.25)}, target $${high}, SL $${Math.round(low - 5)}.`
-          : `Sell zone $${Math.round(high - range * 0.25)}-$${high}, target $${low}, SL $${Math.round(high + 5)}.`
-      } MACD ${pick(["bullish M15 cross", "bearish M30 div", "H1 momentum shift"])}.`,
+      title: `${dirEmoji} ${action} Scalp XAU/USD @ ${plan.entry}`,
+      description:
+`⚡ SCALP: ${action} XAUUSD
+🎯 Entry: ${plan.entry}
+✅ TP: ${plan.tp1}
+🛑 SL: ${plan.sl}
+
+📌 ${reason}
+💡 Quick M15 scalp — 8-10 pip target, fast in & out.`,
     },
     {
       kind: "weekly",
-      title: `📊 Weekly Gold Outlook – $${support2} to $${resistance2} Range`,
-      description: `XAU/USD weekly: consolidating $${support2}-$${resistance2}. Current $${price}. ${pick(["Symmetrical triangle", "Ascending channel", "Descending wedge"])} on H4. Break above $${resistance1} → $${resistance2}. Break below $${support1} → $${support2}.`,
-    },
-    {
-      kind: "scalping",
-      title: `🔥 Gold ${change >= 0 ? "Rally" : "Selloff"} Alert – ${Math.abs(change)} Points Move`,
-      description: `XAU/USD moved ${change >= 0 ? "up" : "down"} ${Math.abs(change)} pts to $${price}. Order blocks $${Math.round(price - 15)} & $${Math.round(price + 15)}. Next: ${pick([`continuation to $${direction === "bullish" ? resistance1 : support1}`, `consolidation $${Math.round(price - 10)}-$${Math.round(price + 10)}`])}.`,
+      title: `${dirEmoji} Weekly ${action} Outlook XAU/USD`,
+      description:
+`📅 WEEKLY ${action} BIAS: XAUUSD
+🎯 Entry zone: ${plan.entry}
+✅ TP1: ${plan.tp1}  •  TP2: ${plan.tp2}
+🛑 SL: ${plan.sl}
+
+📌 ${reason}
+💡 Swing trade — multi-day hold, wait for clean entry confirmation.`,
     },
   ];
 
-  return ideas.sort(() => Math.random() - 0.5);
+  return { ideas: ideas.sort(() => Math.random() - 0.5), plan };
 }
+
 
 function tfForKind(kind: string): string {
   if (kind === "scalping") return "M15";
@@ -273,14 +317,13 @@ Deno.serve(async (req) => {
     const base = await fetchCandles("GC=F", "H1");
     console.log(`[${slot}] Gold $${base.price}, change ${base.change}`);
 
-    const allIdeas = generateIdeas(base.price, base.high, base.low, base.change);
-    // Pick exactly 1 idea per slot
+    const { ideas: allIdeas, plan } = generateIdeas(base.price, base.high, base.low, base.change);
     const idea = allIdeas[0];
 
     const tf = tfForKind(idea.kind);
     const md = await fetchCandles("GC=F", tf);
     md.symbol = "XAU/USD";
-    const svg = buildCandleSVG(md, idea.title);
+    const svg = buildCandleSVG(md, idea.title, plan);
     const filename = `auto-ideas/${Date.now()}-${slot}-${tf}.svg`;
     const imageUrl = await uploadSvg(supabase, svg, filename);
     const rows = [{
