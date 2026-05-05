@@ -559,6 +559,8 @@ export type Database = {
           full_name: string
           id: string
           phone_number: string | null
+          referral_code: string | null
+          referred_by: string | null
           selected_categories: string[] | null
           subscription_end_date: string | null
           subscription_plan: string | null
@@ -576,6 +578,8 @@ export type Database = {
           full_name: string
           id: string
           phone_number?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           selected_categories?: string[] | null
           subscription_end_date?: string | null
           subscription_plan?: string | null
@@ -593,6 +597,8 @@ export type Database = {
           full_name?: string
           id?: string
           phone_number?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           selected_categories?: string[] | null
           subscription_end_date?: string | null
           subscription_plan?: string | null
@@ -602,7 +608,57 @@ export type Database = {
           trial_end_date?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referred_user_id: string
+          referrer_id: string
+          reward_applied: boolean
+          reward_days_granted: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referred_user_id: string
+          referrer_id: string
+          reward_applied?: boolean
+          reward_days_granted?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referred_user_id?: string
+          referrer_id?: string
+          reward_applied?: boolean
+          reward_days_granted?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       security_logs: {
         Row: {
@@ -1116,6 +1172,7 @@ export type Database = {
           win_rate: number
         }[]
       }
+      generate_referral_code: { Args: { _user_id: string }; Returns: string }
       get_accuracy_stats: {
         Args: never
         Returns: {
@@ -1180,6 +1237,17 @@ export type Database = {
           total_losses: number
           total_profit: number
           total_trades: number
+          total_wins: number
+          win_rate: number
+        }[]
+      }
+      get_per_pair_stats: {
+        Args: never
+        Returns: {
+          pair: string
+          total_losses: number
+          total_pips: number
+          total_signals: number
           total_wins: number
           win_rate: number
         }[]
