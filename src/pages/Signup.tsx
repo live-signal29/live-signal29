@@ -23,6 +23,8 @@ const Signup = () => {
   // Get return URL from query params
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/onboarding';
+  const refCode = searchParams.get('ref') || '';
+  const [referralCode, setReferralCode] = useState(refCode);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +55,7 @@ const Signup = () => {
           data: {
             full_name: validation.data.fullName,
             terms_accepted: validation.data.termsAccepted,
+            referred_by_code: referralCode ? referralCode.trim().toUpperCase() : undefined,
           }
         }
       });
@@ -173,6 +176,21 @@ const Signup = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
+              />
+            </div>
+
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.65s' }}>
+              <Label htmlFor="referralCode" className="text-sm font-medium flex items-center gap-1">
+                Referral Code <span className="text-xs text-muted-foreground">(optional, +3 free days for friend)</span>
+              </Label>
+              <Input
+                id="referralCode"
+                type="text"
+                placeholder="ABC12345"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                maxLength={12}
+                className="uppercase tracking-wider font-mono transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
               />
             </div>
 
