@@ -38,6 +38,9 @@ const CryptoDeposit = lazy(() => import("./pages/CryptoDeposit"));
 const SharedSignal = lazy(() => import("./pages/SharedSignal"));
 const AccountManagement = lazy(() => import("./pages/AccountManagement"));
 const Results = lazy(() => import("./pages/Results"));
+const EconomicCalendar = lazy(() => import("./pages/EconomicCalendar"));
+const Calculator = lazy(() => import("./pages/Calculator"));
+const Referrals = lazy(() => import("./pages/Referrals"));
 
 const LoadingSpinner = () => (
   <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -211,6 +214,9 @@ const App = () => (
                 <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
                 <Route path="/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
                 <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                <Route path="/economic-calendar" element={<ProtectedRoute><EconomicCalendar /></ProtectedRoute>} />
+                <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
+                <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

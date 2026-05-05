@@ -12,7 +12,10 @@ import {
   Smartphone, 
   LogOut,
   Briefcase,
-  BarChart3
+  BarChart3,
+  Calendar as CalendarIcon,
+  Calculator as CalcIcon,
+  Gift
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -44,6 +47,9 @@ export const SideDrawer = () => {
     { label: "Premium", path: "/premium", icon: Crown, gradient: "from-amber-500 to-orange-400", bg: "bg-amber-500/10" },
     { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400", bg: "bg-teal-500/10" },
     { label: "Results", path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
+    { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, gradient: "from-indigo-500 to-blue-400", bg: "bg-indigo-500/10" },
+    { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, gradient: "from-cyan-500 to-sky-400", bg: "bg-cyan-500/10" },
+    { label: "Invite & Earn", path: "/referrals", icon: Gift, gradient: "from-orange-500 to-amber-400", bg: "bg-orange-500/10" },
     { label: "My Profile", path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
     { label: "Notifications", path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
     { label: "Settings", path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },

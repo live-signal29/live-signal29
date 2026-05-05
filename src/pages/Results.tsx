@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { Calendar } from "lucide-react";
 import SEO from "@/components/SEO";
 import XAUUSDAccuracyStats from "@/components/XAUUSDAccuracyStats";
+import PerPairPerformance from "@/components/PerPairPerformance";
 
 const Results = () => {
   return (
@@ -26,6 +27,9 @@ const Results = () => {
 
           {/* XAUUSD Accuracy Stats - Only working section */}
           <XAUUSDAccuracyStats />
+
+          {/* Per-pair performance breakdown */}
+          <PerPairPerformance />
         </div>
       </main>
 
