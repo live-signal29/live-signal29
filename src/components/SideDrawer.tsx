@@ -15,8 +15,13 @@ import {
   BarChart3,
   Calendar as CalendarIcon,
   Calculator as CalcIcon,
-  Gift
+  Gift,
+  Bell as BellIcon,
+  BookOpen,
+  Sparkles
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +38,7 @@ export const SideDrawer = () => {
   const [otherAppsOpen, setOtherAppsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -42,17 +48,20 @@ export const SideDrawer = () => {
   };
 
   const menuItems = [
-    { label: "Live Signals", path: "/signals", icon: LineChart, gradient: "from-emerald-500 to-teal-400", bg: "bg-emerald-500/10" },
-    { label: "Free Trial", path: "/free-trial", icon: Play, gradient: "from-blue-500 to-cyan-400", bg: "bg-blue-500/10" },
-    { label: "Premium", path: "/premium", icon: Crown, gradient: "from-amber-500 to-orange-400", bg: "bg-amber-500/10" },
+    { label: t("live_signals"), path: "/signals", icon: LineChart, gradient: "from-emerald-500 to-teal-400", bg: "bg-emerald-500/10" },
+    { label: t("ai_chat"), path: "/ai-chat", icon: Sparkles, gradient: "from-fuchsia-500 to-purple-500", bg: "bg-fuchsia-500/10" },
+    { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, gradient: "from-pink-500 to-rose-400", bg: "bg-pink-500/10" },
+    { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, gradient: "from-lime-500 to-green-400", bg: "bg-lime-500/10" },
+    { label: t("free_trial"), path: "/free-trial", icon: Play, gradient: "from-blue-500 to-cyan-400", bg: "bg-blue-500/10" },
+    { label: t("premium"), path: "/premium", icon: Crown, gradient: "from-amber-500 to-orange-400", bg: "bg-amber-500/10" },
     { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400", bg: "bg-teal-500/10" },
-    { label: "Results", path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
+    { label: t("results"), path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
     { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, gradient: "from-indigo-500 to-blue-400", bg: "bg-indigo-500/10" },
     { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, gradient: "from-cyan-500 to-sky-400", bg: "bg-cyan-500/10" },
     { label: "Invite & Earn", path: "/referrals", icon: Gift, gradient: "from-orange-500 to-amber-400", bg: "bg-orange-500/10" },
-    { label: "My Profile", path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
-    { label: "Notifications", path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
-    { label: "Settings", path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
+    { label: t("profile"), path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
+    { label: t("notifications"), path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
+    { label: t("settings"), path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -200,6 +209,11 @@ export const SideDrawer = () => {
 
           {/* Footer Section */}
           <div className="p-4 border-t border-border/50 bg-background/50 backdrop-blur-sm space-y-3">
+            {/* Language Switcher */}
+            <div className="flex justify-center">
+              <LanguageSwitcher />
+            </div>
+
             {/* App Version */}
             <div className="text-center">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 text-xs text-muted-foreground">

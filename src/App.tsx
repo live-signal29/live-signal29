@@ -41,6 +41,9 @@ const Results = lazy(() => import("./pages/Results"));
 const EconomicCalendar = lazy(() => import("./pages/EconomicCalendar"));
 const Calculator = lazy(() => import("./pages/Calculator"));
 const Referrals = lazy(() => import("./pages/Referrals"));
+const PriceAlerts = lazy(() => import("./pages/PriceAlerts"));
+const TradeJournal = lazy(() => import("./pages/TradeJournal"));
+const AIChat = lazy(() => import("./pages/AIChat"));
 
 const LoadingSpinner = () => (
   <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -217,6 +220,9 @@ const App = () => (
                 <Route path="/economic-calendar" element={<ProtectedRoute><EconomicCalendar /></ProtectedRoute>} />
                 <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
                 <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+                <Route path="/price-alerts" element={<ProtectedRoute><PriceAlerts /></ProtectedRoute>} />
+                <Route path="/trade-journal" element={<ProtectedRoute><TradeJournal /></ProtectedRoute>} />
+                <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
