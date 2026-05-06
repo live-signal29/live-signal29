@@ -384,6 +384,33 @@ export type Database = {
         }
         Relationships: []
       }
+      login_streaks: {
+        Row: {
+          current_streak: number
+          last_login_date: string
+          longest_streak: number
+          total_rewards_granted: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          last_login_date?: string
+          longest_streak?: number
+          total_rewards_granted?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          last_login_date?: string
+          longest_streak?: number
+          total_rewards_granted?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       market_idea_reactions: {
         Row: {
           created_at: string
@@ -546,6 +573,42 @@ export type Database = {
           read?: boolean
           title?: string
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      price_alerts: {
+        Row: {
+          condition: string
+          created_at: string
+          id: string
+          is_active: boolean
+          note: string | null
+          pair: string
+          target_price: number
+          triggered_at: string | null
+          user_id: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          pair: string
+          target_price: number
+          triggered_at?: string | null
+          user_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          pair?: string
+          target_price?: number
+          triggered_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1025,6 +1088,66 @@ export type Database = {
           },
         ]
       }
+      trade_journal: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          entry_price: number
+          exit_price: number | null
+          id: string
+          lot_size: number
+          notes: string | null
+          opened_at: string
+          pair: string
+          pips: number | null
+          pnl: number | null
+          result: string | null
+          stop_loss: number | null
+          take_profit: number | null
+          trade_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          entry_price: number
+          exit_price?: number | null
+          id?: string
+          lot_size?: number
+          notes?: string | null
+          opened_at?: string
+          pair: string
+          pips?: number | null
+          pnl?: number | null
+          result?: string | null
+          stop_loss?: number | null
+          take_profit?: number | null
+          trade_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          entry_price?: number
+          exit_price?: number | null
+          id?: string
+          lot_size?: number
+          notes?: string | null
+          opened_at?: string
+          pair?: string
+          pips?: number | null
+          pnl?: number | null
+          result?: string | null
+          stop_loss?: number | null
+          take_profit?: number | null
+          trade_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_favorite_pairs: {
         Row: {
           created_at: string
@@ -1372,6 +1495,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_daily_login: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user" | "signal_manager" | "finance_manager"
