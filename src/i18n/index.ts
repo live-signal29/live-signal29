@@ -1,0 +1,150 @@
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+
+const resources = {
+  en: {
+    translation: {
+      live_signals: "Live Signals",
+      free_trial: "Free Trial",
+      premium: "Premium",
+      results: "Results",
+      profile: "My Profile",
+      notifications: "Notifications",
+      settings: "Settings",
+      logout: "Logout",
+      ai_chat: "AI Assistant",
+      price_alerts: "Price Alerts",
+      trade_journal: "Trade Journal",
+      streak: "Login Streak",
+      day: "day",
+      days: "days",
+      streak_msg: "Keep logging in daily to earn bonus premium days!",
+      ask_anything: "Ask me anything about trading...",
+      send: "Send",
+      add_alert: "Add Alert",
+      pair: "Pair",
+      target_price: "Target Price",
+      condition: "Condition",
+      above: "Above",
+      below: "Below",
+      no_alerts: "No active alerts. Add one to get notified.",
+      add_trade: "Log Trade",
+      entry: "Entry",
+      exit: "Exit",
+      lot_size: "Lot Size",
+      result: "Result",
+      win: "Win",
+      loss: "Loss",
+      breakeven: "Breakeven",
+      open: "Open",
+      total_trades: "Total Trades",
+      win_rate: "Win Rate",
+      total_pnl: "Total P/L",
+      language: "Language",
+    },
+  },
+  ur: {
+    translation: {
+      live_signals: "لائیو سگنلز",
+      free_trial: "فری ٹرائل",
+      premium: "پریمیم",
+      results: "نتائج",
+      profile: "میری پروفائل",
+      notifications: "اطلاعات",
+      settings: "سیٹنگز",
+      logout: "لاگ آؤٹ",
+      ai_chat: "AI اسسٹنٹ",
+      price_alerts: "پرائس الرٹس",
+      trade_journal: "ٹریڈ جرنل",
+      streak: "لاگ ان اسٹریک",
+      day: "دن",
+      days: "دن",
+      streak_msg: "روزانہ لاگ ان کریں اور بونس پریمیم دن حاصل کریں!",
+      ask_anything: "ٹریڈنگ کے بارے میں کچھ بھی پوچھیں...",
+      send: "بھیجیں",
+      add_alert: "الرٹ شامل کریں",
+      pair: "پیئر",
+      target_price: "ٹارگٹ پرائس",
+      condition: "شرط",
+      above: "اوپر",
+      below: "نیچے",
+      no_alerts: "کوئی فعال الرٹ نہیں۔ ایک شامل کریں۔",
+      add_trade: "ٹریڈ لاگ کریں",
+      entry: "انٹری",
+      exit: "ایگزٹ",
+      lot_size: "لاٹ سائز",
+      result: "نتیجہ",
+      win: "جیت",
+      loss: "نقصان",
+      breakeven: "بریک ایون",
+      open: "اوپن",
+      total_trades: "کل ٹریڈز",
+      win_rate: "جیت کی شرح",
+      total_pnl: "کل منافع/نقصان",
+      language: "زبان",
+    },
+  },
+  hi: {
+    translation: {
+      live_signals: "लाइव सिग्नल",
+      free_trial: "फ्री ट्रायल",
+      premium: "प्रीमियम",
+      results: "परिणाम",
+      profile: "प्रोफ़ाइल",
+      notifications: "सूचनाएं",
+      settings: "सेटिंग्स",
+      logout: "लॉग आउट",
+      ai_chat: "AI सहायक",
+      price_alerts: "प्राइस अलर्ट",
+      trade_journal: "ट्रेड जर्नल",
+      streak: "लॉगिन स्ट्रीक",
+      day: "दिन",
+      days: "दिन",
+      streak_msg: "रोज़ लॉगिन करके बोनस प्रीमियम दिन कमाएँ!",
+      ask_anything: "ट्रेडिंग के बारे में कुछ भी पूछें...",
+      send: "भेजें",
+      add_alert: "अलर्ट जोड़ें",
+      pair: "पेयर",
+      target_price: "लक्ष्य मूल्य",
+      condition: "शर्त",
+      above: "ऊपर",
+      below: "नीचे",
+      no_alerts: "कोई सक्रिय अलर्ट नहीं।",
+      add_trade: "ट्रेड लॉग करें",
+      entry: "एंट्री",
+      exit: "एग्जिट",
+      lot_size: "लॉट साइज़",
+      result: "परिणाम",
+      win: "जीत",
+      loss: "हार",
+      breakeven: "बराबर",
+      open: "खुला",
+      total_trades: "कुल ट्रेड",
+      win_rate: "जीत दर",
+      total_pnl: "कुल लाभ/हानि",
+      language: "भाषा",
+    },
+  },
+};
+
+const saved = typeof window !== "undefined" ? localStorage.getItem("app_lang") : null;
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: saved || "en",
+  fallbackLng: "en",
+  interpolation: { escapeValue: false },
+});
+
+if (typeof window !== "undefined") {
+  document.documentElement.dir = i18n.language === "ur" || i18n.language === "ar" ? "rtl" : "ltr";
+}
+
+i18n.on("languageChanged", (lng) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("app_lang", lng);
+    document.documentElement.dir = lng === "ur" || lng === "ar" ? "rtl" : "ltr";
+  }
+});
+
+export default i18n;
