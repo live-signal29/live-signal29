@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Newspaper, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import ReactMarkdown from "react-markdown";
 import { format } from "date-fns";
 

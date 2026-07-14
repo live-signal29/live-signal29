@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Trophy, Medal, Award } from "lucide-react";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 
 interface Row { user_id: string; full_name: string; total_trades: number; wins: number; win_rate: number; total_pnl: number; }
 

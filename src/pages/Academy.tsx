@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { GraduationCap, PlayCircle } from "lucide-react";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import ReactMarkdown from "react-markdown";
 
 interface Lesson { id: string; title: string; level: string; content: string; video_url?: string; order_index: number; }

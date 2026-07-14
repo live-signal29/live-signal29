@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Gift, Copy, Check } from "lucide-react";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { toast } from "sonner";
 
 export default function GiftPremium() {
