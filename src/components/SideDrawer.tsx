@@ -1,24 +1,9 @@
 import { useState } from "react";
 import { 
-  Menu, 
-  ChevronDown, 
-  ExternalLink, 
-  LineChart, 
-  Play, 
-  Crown, 
-  User, 
-  Bell, 
-  Settings, 
-  Smartphone, 
-  LogOut,
-  Briefcase,
-  BarChart3,
-  Calendar as CalendarIcon,
-  Calculator as CalcIcon,
-  Gift,
-  Bell as BellIcon,
-  BookOpen,
-  Sparkles
+  Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
+  Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
+  Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
+  Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
