@@ -49,6 +49,7 @@ export const SideDrawer = () => {
     { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, gradient: "from-indigo-500 to-blue-400", bg: "bg-indigo-500/10" },
     { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, gradient: "from-cyan-500 to-sky-400", bg: "bg-cyan-500/10" },
     { label: "Invite & Earn", path: "/referrals", icon: Gift, gradient: "from-orange-500 to-amber-400", bg: "bg-orange-500/10" },
+    { label: "Gift Premium", path: "/gift-premium", icon: Gift, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
     { label: t("profile"), path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
     { label: t("notifications"), path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
     { label: t("settings"), path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
