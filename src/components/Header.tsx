@@ -49,6 +49,7 @@ const Header = () => {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5">
+              <GlobalSearch />
               <ThemeToggle />
               
               {/* Exness CTA - Desktop only */}
