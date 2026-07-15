@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { 
   Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
@@ -21,9 +21,45 @@ const APP_VERSION = "1.0.0";
 export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
   const [otherAppsOpen, setOtherAppsOpen] = useState(false);
+  const menuScrollRef = useRef<HTMLElement | null>(null);
+  const touchStartY = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const htmlOverscroll = document.documentElement.style.overscrollBehaviorY;
+    const bodyOverscroll = document.body.style.overscrollBehaviorY;
+
+    document.documentElement.style.overscrollBehaviorY = "none";
+    document.body.style.overscrollBehaviorY = "none";
+
+    return () => {
+      document.documentElement.style.overscrollBehaviorY = htmlOverscroll;
+      document.body.style.overscrollBehaviorY = bodyOverscroll;
+    };
+  }, [open]);
+
+  const handleMenuTouchStart = (event: TouchEvent<HTMLElement>) => {
+    touchStartY.current = event.touches[0]?.clientY ?? 0;
+  };
+
+  const handleMenuTouchMove = (event: TouchEvent<HTMLElement>) => {
+    const scroller = menuScrollRef.current;
+    const currentY = event.touches[0]?.clientY ?? touchStartY.current;
+    const pullDirection = currentY - touchStartY.current;
+
+    if (!scroller) return;
+
+    const atTop = scroller.scrollTop <= 0;
+    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
+
+    if ((atTop && pullDirection > 0) || (atBottom && pullDirection < 0)) {
+      event.preventDefault();
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -64,8 +100,8 @@ export const SideDrawer = () => {
           <Menu className="h-6 w-6" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/50 flex flex-col h-full max-h-screen overflow-hidden">
-        <div className="flex flex-col h-full min-h-0 bg-gradient-to-b from-background to-muted/30">
+      <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/50 flex flex-col h-dvh max-h-dvh overflow-hidden overscroll-none touch-pan-y">
+        <div className="flex flex-col h-full min-h-0 bg-gradient-to-b from-background to-muted/30 overscroll-none">
 
           {/* Logo & App Name */}
           <div className="flex items-center gap-3 p-5 border-b border-border/50 bg-background/80 backdrop-blur-sm">
@@ -87,7 +123,13 @@ export const SideDrawer = () => {
           </div>
 
           {/* Menu Items - Ultra Modern */}
-          <nav className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <nav
+            data-sidebar-menu-scroll="true"
+            ref={menuScrollRef}
+            onTouchStart={handleMenuTouchStart}
+            onTouchMove={handleMenuTouchMove}
+            className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]"
+          >
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.path);
