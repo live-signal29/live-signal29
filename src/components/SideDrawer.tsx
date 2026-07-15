@@ -64,8 +64,9 @@ export const SideDrawer = () => {
           <Menu className="h-6 w-6" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/50">
-        <div className="flex flex-col h-full bg-gradient-to-b from-background to-muted/30">
+      <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/50 flex flex-col h-full max-h-screen overflow-hidden">
+        <div className="flex flex-col h-full min-h-0 bg-gradient-to-b from-background to-muted/30">
+
           {/* Logo & App Name */}
           <div className="flex items-center gap-3 p-5 border-b border-border/50 bg-background/80 backdrop-blur-sm">
             <div className="relative">
@@ -86,7 +87,7 @@ export const SideDrawer = () => {
           </div>
 
           {/* Menu Items - Ultra Modern */}
-          <nav className="flex flex-col gap-2 p-4 flex-1 overflow-y-auto">
+          <nav className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.path);

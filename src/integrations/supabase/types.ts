@@ -1517,6 +1517,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_create_weekly_flash_sale: { Args: never; Returns: undefined }
       calculate_signal_stats: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
