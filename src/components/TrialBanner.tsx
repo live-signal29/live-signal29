@@ -13,10 +13,19 @@ const TrialBanner = () => {
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
+  const [hidePremium, setHidePremium] = useState(false);
 
   useEffect(() => {
     loadTrialInfo();
   }, []);
+
+  // Auto-hide premium banner after 5 seconds
+  useEffect(() => {
+    if (!isPremium) return;
+    const t = setTimeout(() => setHidePremium(true), 5000);
+    return () => clearTimeout(t);
+  }, [isPremium]);
+
 
   // Live countdown timer
   useEffect(() => {
@@ -68,20 +77,23 @@ const TrialBanner = () => {
     }
   };
 
-  // Show premium banner for premium users
+  // Show premium banner for premium users (auto-hide after 5s)
   if (isPremium) {
+    if (hidePremium) return null;
     return (
-      <div className="bg-gradient-to-r from-primary/20 to-success/20 border-b border-primary/30">
+      <div className="bg-gradient-to-r from-primary/20 to-success/20 border-b border-primary/30 animate-in fade-in slide-in-from-top-2 duration-500">
         <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-center gap-2 text-sm">
             <span className="font-medium">
               ⭐ You are our Premium User - Enjoy unlimited access!
             </span>
+            <button onClick={() => setHidePremium(true)} className="ml-2 text-xs opacity-60 hover:opacity-100">✕</button>
           </div>
         </div>
       </div>
     );
   }
+
 
   // Show trial banner with live countdown
   if (timeLeft) {
