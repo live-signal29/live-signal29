@@ -1,4 +1,4 @@
-import { useRef, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { 
   Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
@@ -26,6 +26,21 @@ export const SideDrawer = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const htmlOverscroll = document.documentElement.style.overscrollBehaviorY;
+    const bodyOverscroll = document.body.style.overscrollBehaviorY;
+
+    document.documentElement.style.overscrollBehaviorY = "none";
+    document.body.style.overscrollBehaviorY = "none";
+
+    return () => {
+      document.documentElement.style.overscrollBehaviorY = htmlOverscroll;
+      document.body.style.overscrollBehaviorY = bodyOverscroll;
+    };
+  }, [open]);
 
   const handleMenuTouchStart = (event: TouchEvent<HTMLElement>) => {
     touchStartY.current = event.touches[0]?.clientY ?? 0;
