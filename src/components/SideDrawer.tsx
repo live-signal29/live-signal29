@@ -87,7 +87,7 @@ export const SideDrawer = () => {
           </div>
 
           {/* Menu Items - Ultra Modern */}
-          <nav className="flex flex-col gap-2 p-4 flex-1 overflow-y-auto">
+          <nav className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.path);
