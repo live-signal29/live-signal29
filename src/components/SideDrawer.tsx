@@ -124,6 +124,7 @@ export const SideDrawer = () => {
 
           {/* Menu Items - Ultra Modern */}
           <nav
+            data-sidebar-menu-scroll="true"
             ref={menuScrollRef}
             onTouchStart={handleMenuTouchStart}
             onTouchMove={handleMenuTouchMove}
