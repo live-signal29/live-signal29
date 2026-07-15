@@ -13,10 +13,19 @@ const TrialBanner = () => {
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
+  const [hidePremium, setHidePremium] = useState(false);
 
   useEffect(() => {
     loadTrialInfo();
   }, []);
+
+  // Auto-hide premium banner after 5 seconds
+  useEffect(() => {
+    if (!isPremium) return;
+    const t = setTimeout(() => setHidePremium(true), 5000);
+    return () => clearTimeout(t);
+  }, [isPremium]);
+
 
   // Live countdown timer
   useEffect(() => {
