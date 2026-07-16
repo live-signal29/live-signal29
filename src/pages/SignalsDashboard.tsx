@@ -251,9 +251,9 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
 
-          {/* Daily login streak */}
+          {/* Rotating home banner: streak → upcoming signal countdown */}
           <div className="mb-3">
-            <StreakBadge />
+            <HomeRotatingBanner />
           </div>
 
           {/* Top Ad Banner - Only for non-premium users */}
