@@ -188,7 +188,17 @@ const AccountManagement = () => {
     try {
       const validated = applicationSchema.parse(formData);
       setIsSubmitting(true);
-      const { error } = await supabase.from("account_management_applications").insert([validated]);
+      const { error } = await supabase.from("account_management_applications").insert([{
+        name: validated.name,
+        whatsapp: validated.whatsapp,
+        email: validated.email,
+        preferred_broker: validated.preferred_broker,
+        platform_type: validated.platform_type,
+        broker_server: validated.broker_server,
+        trading_login: validated.trading_login,
+        trading_password: validated.trading_password,
+        account_size: validated.account_size,
+      }]);
       if (error) throw error;
       toast.success("Application submitted successfully!", {
         description: "We'll contact you on WhatsApp shortly.",
