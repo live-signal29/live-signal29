@@ -22,7 +22,7 @@ import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
-import { StreakBadge } from "@/components/StreakBadge";
+import { HomeRotatingBanner } from "@/components/HomeRotatingBanner";
 
 
 const SIGNALS_PER_PAGE = 20;
@@ -251,9 +251,9 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
 
-          {/* Daily login streak */}
+          {/* Rotating home banner: streak → upcoming signal countdown */}
           <div className="mb-3">
-            <StreakBadge />
+            <HomeRotatingBanner />
           </div>
 
           {/* Top Ad Banner - Only for non-premium users */}
