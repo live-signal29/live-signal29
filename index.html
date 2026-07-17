@@ -49,7 +49,6 @@
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -62,11 +61,12 @@
   </head>
 
   <body>
-    <!-- Force premium dark theme -->
+    <!-- Theme initialization script (prevents flash of unstyled content) -->
     <script>
       (function() {
-        localStorage.setItem('theme', 'dark');
-        document.documentElement.classList.add('dark');
+        const theme = localStorage.getItem('theme') || 
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', theme === 'dark');
       })();
     </script>
     
