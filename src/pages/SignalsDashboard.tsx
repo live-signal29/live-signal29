@@ -23,6 +23,7 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { HomeRotatingBanner } from "@/components/HomeRotatingBanner";
+import { LiveGoldHero } from "@/components/LiveGoldHero";
 
 
 const SIGNALS_PER_PAGE = 20;
@@ -251,6 +252,9 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
 
+          {/* Live XAUUSD hero + KPI stats row */}
+          <LiveGoldHero />
+
           {/* Rotating home banner: streak → upcoming signal countdown */}
           <div className="mb-3">
             <HomeRotatingBanner />
@@ -273,7 +277,7 @@ const SignalsDashboard = () => {
                 { key: "COMMODITIES", label: "Gold", activeColor: "bg-yellow-500/15 text-yellow-500", badgeColor: "bg-yellow-500 text-white" },
                 { key: "FOREX", label: "Forex", activeColor: "bg-blue-500/15 text-blue-500", badgeColor: "bg-blue-500 text-white" },
                 { key: "CRYPTO", label: "Crypto", activeColor: "bg-orange-500/15 text-orange-500", badgeColor: "bg-orange-500 text-white" },
-                { key: "DERIV/BINARY", label: "Deriv", activeColor: "bg-purple-500/15 text-purple-500", badgeColor: "bg-purple-500 text-white" },
+                { key: "DERIV/BINARY", label: "Indices", activeColor: "bg-purple-500/15 text-purple-500", badgeColor: "bg-purple-500 text-white" },
                 { key: "MARKET IDEAS", label: "Ideas", activeColor: "bg-emerald-500/15 text-emerald-500", badgeColor: "bg-emerald-500 text-white" },
               ].map((category) => {
                 const isActive = mainCategory === category.key;
