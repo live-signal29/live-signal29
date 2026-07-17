@@ -10,14 +10,14 @@ import { Target, Clock, Flame, TrendingUp, Coins } from "lucide-react";
  */
 export const LiveGoldHero = () => {
   const { prices } = useLivePricesFetch(["XAUUSD"], true);
-  const gold = prices?.XAUUSD;
+  const goldPrice = prices?.XAUUSD ? parseFloat(prices.XAUUSD) : undefined;
 
   // Rotating mini history for tiny sparkline
   const [history, setHistory] = useState<number[]>([]);
   useEffect(() => {
-    if (!gold?.price) return;
-    setHistory((h) => [...h.slice(-19), gold.price]);
-  }, [gold?.price]);
+    if (!goldPrice) return;
+    setHistory((h) => [...h.slice(-19), goldPrice]);
+  }, [goldPrice]);
 
   const [nextSignalIn, setNextSignalIn] = useState({ m: 2, s: 45 });
   useEffect(() => {
