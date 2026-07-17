@@ -124,7 +124,25 @@ export const SideDrawer = () => {
             onTouchMove={handleMenuTouchMove}
             className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]"
           >
-            {menuItems.map((item, index) => {
+            {/* VIP Premium hero card */}
+            <Link
+              to="/premium"
+              onClick={() => setOpen(false)}
+              className="group relative overflow-hidden rounded-2xl p-4 mb-2 border border-amber-500/30 bg-[radial-gradient(ellipse_at_top_right,_hsl(43_96%_20%/0.4),_transparent_70%),linear-gradient(135deg,_hsl(210_25%_10%),_hsl(210_25%_7%))] shadow-[0_10px_30px_-15px_hsl(43_96%_50%/0.4)]"
+            >
+              <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-amber-400/10 blur-2xl" />
+              <div className="relative flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 shrink-0">
+                  <Crown className="h-5 w-5 text-black" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">VIP Premium</p>
+                  <p className="text-[10px] text-muted-foreground">Active Until 25 Aug 2026</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-amber-400/70" />
+              </div>
+            </Link>
+
               const Icon = item.icon;
               const active = isActive(item.path);
               return (
