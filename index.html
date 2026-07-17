@@ -62,12 +62,11 @@
   </head>
 
   <body>
-    <!-- Theme initialization script (prevents flash of unstyled content) -->
+    <!-- Force premium dark theme -->
     <script>
       (function() {
-        const theme = localStorage.getItem('theme') || 
-          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.classList.toggle('dark', theme === 'dark');
+        localStorage.setItem('theme', 'dark');
+        document.documentElement.classList.add('dark');
       })();
     </script>
     
