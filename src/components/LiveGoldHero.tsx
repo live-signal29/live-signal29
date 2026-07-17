@@ -97,7 +97,7 @@ export const LiveGoldHero = () => {
             </svg>
             <div className="text-right">
               <p className={`text-lg sm:text-xl font-black tabular-nums ${isUp ? "text-emerald-400" : "text-red-500"}`}>
-                {gold?.price?.toFixed(2) ?? "—"}
+                {goldPrice ? goldPrice.toFixed(2) : "—"}
               </p>
               <p className={`text-[10px] font-bold ${isUp ? "text-emerald-400/80" : "text-red-500/80"}`}>
                 {isUp ? "+" : ""}
