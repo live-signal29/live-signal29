@@ -143,6 +143,7 @@ export const SideDrawer = () => {
               </div>
             </Link>
 
+            {menuItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.path);
               return (
