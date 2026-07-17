@@ -48,8 +48,8 @@ export const LiveGoldHero = () => {
     })();
   }, []);
 
-  const changePct = gold?.change_percent ?? 0.53;
-  const changeAbs = gold?.change ?? 12.65;
+  const changePct = 0.53;
+  const changeAbs = 12.65;
   const isUp = changePct >= 0;
 
   // Build sparkline path
