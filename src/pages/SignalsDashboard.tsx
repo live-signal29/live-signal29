@@ -252,6 +252,9 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
 
+          {/* Live XAUUSD hero + KPI stats row */}
+          <LiveGoldHero />
+
           {/* Rotating home banner: streak → upcoming signal countdown */}
           <div className="mb-3">
             <HomeRotatingBanner />
