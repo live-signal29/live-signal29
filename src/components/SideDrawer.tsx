@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
-import { 
-  Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
+import {
+  Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Settings,
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
-  Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
-  Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart
+  Calculator as CalcIcon, Gift, TrendingUp, PieChart, Home,
+  History, HeadphonesIcon, ChevronRight
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
