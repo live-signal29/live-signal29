@@ -187,7 +187,7 @@ const App = () => (
     <OneSignalProvider>
       <TooltipProvider>
         <Toaster />
-        <Sonner position="top-center" richColors expand={false} closeButton />
+        <Sonner />
         <OfflineIndicator />
         <BrowserRouter>
           <div className="has-bottom-nav">

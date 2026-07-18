@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
-import {
-  Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Settings,
+import { 
+  Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
-  Calculator as CalcIcon, Gift, TrendingUp, PieChart, Home,
-  History, HeadphonesIcon, ChevronRight
+  Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
+  Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -69,20 +69,26 @@ export const SideDrawer = () => {
   };
 
   const menuItems = [
-    { label: "Dashboard", path: "/", icon: Home, gradient: "from-emerald-500 to-teal-400" },
-    { label: "Live Signals", path: "/signals", icon: LineChart, gradient: "from-emerald-500 to-green-400" },
-    { label: "Signal History", path: "/backtesting", icon: History, gradient: "from-slate-500 to-slate-400" },
-    { label: "Results", path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400" },
-    { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, gradient: "from-indigo-500 to-blue-400" },
-    { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, gradient: "from-cyan-500 to-sky-400" },
-    { label: "Compound Calculator", path: "/compound", icon: TrendingUp, gradient: "from-green-500 to-emerald-400" },
-    { label: "Portfolio", path: "/portfolio", icon: PieChart, gradient: "from-teal-500 to-cyan-400" },
-    { label: "Premium VIP", path: "/premium", icon: Crown, gradient: "from-amber-500 to-yellow-400" },
-    { label: "Invite & Earn", path: "/referrals", icon: Gift, gradient: "from-orange-500 to-amber-400" },
-    { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400" },
-    { label: "My Profile", path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400" },
-    { label: "Settings", path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400" },
-    { label: "Contact Support", path: "/contact", icon: HeadphonesIcon, gradient: "from-rose-500 to-pink-400" },
+    { label: t("live_signals"), path: "/signals", icon: LineChart, gradient: "from-emerald-500 to-teal-400", bg: "bg-emerald-500/10" },
+    { label: t("ai_chat"), path: "/ai-chat", icon: Sparkles, gradient: "from-fuchsia-500 to-purple-500", bg: "bg-fuchsia-500/10" },
+    { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, gradient: "from-sky-500 to-blue-500", bg: "bg-sky-500/10" },
+    { label: "Trading Academy", path: "/academy", icon: GraduationCap, gradient: "from-emerald-500 to-green-500", bg: "bg-emerald-500/10" },
+    { label: "Leaderboard", path: "/leaderboard", icon: Trophy, gradient: "from-yellow-500 to-amber-400", bg: "bg-yellow-500/10" },
+    { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, gradient: "from-pink-500 to-rose-400", bg: "bg-pink-500/10" },
+    { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, gradient: "from-lime-500 to-green-400", bg: "bg-lime-500/10" },
+    { label: "Portfolio", path: "/portfolio", icon: PieChart, gradient: "from-teal-500 to-cyan-400", bg: "bg-teal-500/10" },
+    { label: "Backtesting", path: "/backtesting", icon: History, gradient: "from-purple-500 to-indigo-400", bg: "bg-purple-500/10" },
+    { label: "Compound Calc", path: "/compound", icon: TrendingUp, gradient: "from-green-500 to-emerald-400", bg: "bg-green-500/10" },
+    { label: t("premium"), path: "/premium", icon: Crown, gradient: "from-amber-500 to-orange-400", bg: "bg-amber-500/10" },
+    { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400", bg: "bg-teal-500/10" },
+    { label: t("results"), path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
+    { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, gradient: "from-indigo-500 to-blue-400", bg: "bg-indigo-500/10" },
+    { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, gradient: "from-cyan-500 to-sky-400", bg: "bg-cyan-500/10" },
+    { label: "Invite & Earn", path: "/referrals", icon: Gift, gradient: "from-orange-500 to-amber-400", bg: "bg-orange-500/10" },
+    { label: "Gift Premium", path: "/gift-premium", icon: Gift, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
+    { label: t("profile"), path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
+    { label: t("notifications"), path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
+    { label: t("settings"), path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -124,25 +130,6 @@ export const SideDrawer = () => {
             onTouchMove={handleMenuTouchMove}
             className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]"
           >
-            {/* VIP Premium hero card */}
-            <Link
-              to="/premium"
-              onClick={() => setOpen(false)}
-              className="group relative overflow-hidden rounded-2xl p-4 mb-2 border border-amber-500/30 bg-[radial-gradient(ellipse_at_top_right,_hsl(43_96%_20%/0.4),_transparent_70%),linear-gradient(135deg,_hsl(210_25%_10%),_hsl(210_25%_7%))] shadow-[0_10px_30px_-15px_hsl(43_96%_50%/0.4)]"
-            >
-              <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-amber-400/10 blur-2xl" />
-              <div className="relative flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 shrink-0">
-                  <Crown className="h-5 w-5 text-black" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-black text-amber-400 uppercase tracking-widest">VIP Premium</p>
-                  <p className="text-[10px] text-muted-foreground">Active Until 25 Aug 2026</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-amber-400/70" />
-              </div>
-            </Link>
-
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.path);
