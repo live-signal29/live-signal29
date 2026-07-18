@@ -22,8 +22,19 @@ export const OneSignalProvider = ({ children }: { children: React.ReactNode }) =
           table: 'signals',
           filter: 'published=eq.true'
         },
-        () => {
-          // New signal notifications disabled - only TP/SL/Chart notifications
+        (payload) => {
+          const s: any = payload.new;
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🚀 New Signal', {
+              body: `${s.pair} ${String(s.type || '').toUpperCase()} @ ${s.entry}`,
+              icon: '/icon-192.png',
+              badge: '/icon-192.png',
+              tag: `new-${s.id}`,
+            });
+          }
+          toast.success('🚀 New Signal Published', {
+            description: `${s.pair} ${String(s.type || '').toUpperCase()} — Entry ${s.entry}`,
+          });
         }
       )
       .on(
