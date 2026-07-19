@@ -23,6 +23,8 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { HomeRotatingBanner } from "@/components/HomeRotatingBanner";
+import { LiveDashboardHeader } from "@/components/LiveDashboardHeader";
+
 
 
 const SIGNALS_PER_PAGE = 20;
