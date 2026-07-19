@@ -37,15 +37,11 @@ export const SideDrawer = () => {
     const bodyOverscroll = body.style.overscrollBehaviorY;
     const htmlOverflow = root.style.overflow;
     const bodyOverflow = body.style.overflow;
-    const htmlTouchAction = root.style.touchAction;
-    const bodyTouchAction = body.style.touchAction;
 
     root.style.overscrollBehaviorY = "none";
     body.style.overscrollBehaviorY = "none";
     root.style.overflow = "hidden";
     body.style.overflow = "hidden";
-    root.style.touchAction = "none";
-    body.style.touchAction = "none";
 
     const handleTouchStart = (event: globalThis.TouchEvent) => {
       lastTouchY.current = event.touches[0]?.clientY ?? 0;
@@ -89,8 +85,6 @@ export const SideDrawer = () => {
       body.style.overscrollBehaviorY = bodyOverscroll;
       root.style.overflow = htmlOverflow;
       body.style.overflow = bodyOverflow;
-      root.style.touchAction = htmlTouchAction;
-      body.style.touchAction = bodyTouchAction;
     };
   }, [open]);
 
