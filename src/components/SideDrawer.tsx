@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { 
   Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
@@ -22,7 +22,7 @@ export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
   const [otherAppsOpen, setOtherAppsOpen] = useState(false);
   const menuScrollRef = useRef<HTMLElement | null>(null);
-  const touchStartY = useRef(0);
+  const lastTouchY = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -30,36 +30,63 @@ export const SideDrawer = () => {
   useEffect(() => {
     if (!open) return;
 
-    const htmlOverscroll = document.documentElement.style.overscrollBehaviorY;
-    const bodyOverscroll = document.body.style.overscrollBehaviorY;
+    const root = document.documentElement;
+    const body = document.body;
+    const scroller = menuScrollRef.current;
+    const htmlOverscroll = root.style.overscrollBehaviorY;
+    const bodyOverscroll = body.style.overscrollBehaviorY;
+    const htmlOverflow = root.style.overflow;
+    const bodyOverflow = body.style.overflow;
 
-    document.documentElement.style.overscrollBehaviorY = "none";
-    document.body.style.overscrollBehaviorY = "none";
+    root.style.overscrollBehaviorY = "none";
+    body.style.overscrollBehaviorY = "none";
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+
+    const handleTouchStart = (event: globalThis.TouchEvent) => {
+      lastTouchY.current = event.touches[0]?.clientY ?? 0;
+    };
+
+    const handleMenuTouchMove = (event: globalThis.TouchEvent) => {
+      if (!scroller || event.touches.length !== 1) return;
+
+      const currentY = event.touches[0]?.clientY ?? lastTouchY.current;
+      const deltaY = lastTouchY.current - currentY;
+      const canScroll = scroller.scrollHeight > scroller.clientHeight;
+      const atTop = scroller.scrollTop <= 0;
+      const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
+
+      if (!canScroll || (atTop && deltaY < 0) || (atBottom && deltaY > 0)) {
+        event.preventDefault();
+      }
+
+      lastTouchY.current = currentY;
+    };
+
+    const handleDocumentTouchMove = (event: globalThis.TouchEvent) => {
+      const target = event.target as Node | null;
+
+      if (scroller && target && scroller.contains(target)) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    scroller?.addEventListener("touchstart", handleTouchStart, { passive: true });
+    scroller?.addEventListener("touchmove", handleMenuTouchMove, { passive: false });
+    document.addEventListener("touchmove", handleDocumentTouchMove, { passive: false });
 
     return () => {
-      document.documentElement.style.overscrollBehaviorY = htmlOverscroll;
-      document.body.style.overscrollBehaviorY = bodyOverscroll;
+      scroller?.removeEventListener("touchstart", handleTouchStart);
+      scroller?.removeEventListener("touchmove", handleMenuTouchMove);
+      document.removeEventListener("touchmove", handleDocumentTouchMove);
+      root.style.overscrollBehaviorY = htmlOverscroll;
+      body.style.overscrollBehaviorY = bodyOverscroll;
+      root.style.overflow = htmlOverflow;
+      body.style.overflow = bodyOverflow;
     };
   }, [open]);
-
-  const handleMenuTouchStart = (event: TouchEvent<HTMLElement>) => {
-    touchStartY.current = event.touches[0]?.clientY ?? 0;
-  };
-
-  const handleMenuTouchMove = (event: TouchEvent<HTMLElement>) => {
-    const scroller = menuScrollRef.current;
-    const currentY = event.touches[0]?.clientY ?? touchStartY.current;
-    const pullDirection = currentY - touchStartY.current;
-
-    if (!scroller) return;
-
-    const atTop = scroller.scrollTop <= 0;
-    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
-
-    if ((atTop && pullDirection > 0) || (atBottom && pullDirection < 0)) {
-      event.preventDefault();
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -126,9 +153,7 @@ export const SideDrawer = () => {
           <nav
             data-sidebar-menu-scroll="true"
             ref={menuScrollRef}
-            onTouchStart={handleMenuTouchStart}
-            onTouchMove={handleMenuTouchMove}
-            className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]"
+            className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] [touch-action:pan-y]"
           >
             {menuItems.map((item, index) => {
               const Icon = item.icon;
