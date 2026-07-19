@@ -23,6 +23,8 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { HomeRotatingBanner } from "@/components/HomeRotatingBanner";
+import { LiveDashboardHeader } from "@/components/LiveDashboardHeader";
+
 
 
 const SIGNALS_PER_PAGE = 20;
@@ -251,10 +253,16 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
 
+          {/* Compact live gold banner + real-time stats */}
+          <div className="mb-3">
+            <LiveDashboardHeader />
+          </div>
+
           {/* Rotating home banner: streak → upcoming signal countdown */}
           <div className="mb-3">
             <HomeRotatingBanner />
           </div>
+
 
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
