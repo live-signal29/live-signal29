@@ -253,10 +253,16 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
 
+          {/* Compact live gold banner + real-time stats */}
+          <div className="mb-3">
+            <LiveDashboardHeader />
+          </div>
+
           {/* Rotating home banner: streak → upcoming signal countdown */}
           <div className="mb-3">
             <HomeRotatingBanner />
           </div>
+
 
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
