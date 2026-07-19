@@ -88,25 +88,22 @@ export const HomeRotatingBanner = () => {
       key={`upcoming-${animKey}`}
       className="animate-in fade-in slide-in-from-top-2 duration-500"
     >
-      <Card className="p-4 bg-gradient-to-br from-primary/10 via-purple-500/10 to-primary/10 border-primary/30">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Rocket className="h-9 w-9 text-primary animate-pulse" />
-          </div>
+      <Card className="p-2.5 bg-gradient-to-br from-primary/10 via-purple-500/10 to-primary/10 border-primary/30">
+        <div className="flex items-center gap-2.5">
+          <Rocket className="h-6 w-6 text-primary animate-pulse flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-semibold flex items-center gap-2">
-              🚀 New Signal Coming Soon
-            </p>
-            <p className="text-xs text-muted-foreground">
-              A new trading signal will be published in less than 3 minutes. Stay ready!
+            <p className="text-xs font-semibold truncate">🚀 New Signal Coming Soon</p>
+            <p className="text-[10px] text-muted-foreground truncate">
+              Publishing in less than 3 minutes. Stay ready!
             </p>
           </div>
-          <div className="flex items-center gap-1.5 bg-background/80 rounded-lg px-3 py-2 font-mono font-bold text-primary">
-            <Clock className="h-4 w-4 animate-pulse" />
+          <div className="flex items-center gap-1 bg-background/80 rounded-md px-2 py-1 font-mono font-bold text-primary text-xs">
+            <Clock className="h-3 w-3" />
             <span className="tabular-nums">{mm}:{ss}</span>
           </div>
         </div>
       </Card>
+
     </div>
   );
 };
