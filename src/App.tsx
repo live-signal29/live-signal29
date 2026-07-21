@@ -44,13 +44,6 @@ const Referrals = lazy(() => import("./pages/Referrals"));
 const PriceAlerts = lazy(() => import("./pages/PriceAlerts"));
 const TradeJournal = lazy(() => import("./pages/TradeJournal"));
 const AIChat = lazy(() => import("./pages/AIChat"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
-const Academy = lazy(() => import("./pages/Academy"));
-const MarketBrief = lazy(() => import("./pages/MarketBrief"));
-const GiftPremium = lazy(() => import("./pages/GiftPremium"));
-const Portfolio = lazy(() => import("./pages/Portfolio"));
-const Backtesting = lazy(() => import("./pages/Backtesting"));
-const CompoundCalculator = lazy(() => import("./pages/CompoundCalculator"));
 
 const LoadingSpinner = () => (
   <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -230,13 +223,6 @@ const App = () => (
                 <Route path="/price-alerts" element={<ProtectedRoute><PriceAlerts /></ProtectedRoute>} />
                 <Route path="/trade-journal" element={<ProtectedRoute><TradeJournal /></ProtectedRoute>} />
                 <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
-                <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-                <Route path="/academy" element={<ProtectedRoute><Academy /></ProtectedRoute>} />
-                <Route path="/market-brief" element={<ProtectedRoute><MarketBrief /></ProtectedRoute>} />
-                <Route path="/gift-premium" element={<ProtectedRoute><GiftPremium /></ProtectedRoute>} />
-                <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-                <Route path="/backtesting" element={<ProtectedRoute><Backtesting /></ProtectedRoute>} />
-                <Route path="/compound" element={<ProtectedRoute><CompoundCalculator /></ProtectedRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
