@@ -305,7 +305,7 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
         )}
 
         {/* Header - Always Visible */}
-        <div className="flex justify-between items-start p-3 sm:p-4 border-b border-border">
+        <div className="flex justify-between items-start p-2.5 sm:p-3 border-b border-border">
           <div className="flex items-start gap-2">
             <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs mt-0.5`}>
               {signal.type.toUpperCase()}

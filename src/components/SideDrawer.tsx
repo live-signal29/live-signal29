@@ -1,24 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { 
-  Menu, 
-  ChevronDown, 
-  ExternalLink, 
-  LineChart, 
-  Play, 
-  Crown, 
-  User, 
-  Bell, 
-  Settings, 
-  Smartphone, 
-  LogOut,
-  Briefcase,
-  BarChart3,
-  Calendar as CalendarIcon,
-  Calculator as CalcIcon,
-  Gift,
-  Bell as BellIcon,
-  BookOpen,
-  Sparkles
+  Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
+  Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
+  Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
+  Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -36,9 +21,72 @@ const APP_VERSION = "1.0.0";
 export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
   const [otherAppsOpen, setOtherAppsOpen] = useState(false);
+  const menuScrollRef = useRef<HTMLElement | null>(null);
+  const lastTouchY = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const scroller = menuScrollRef.current;
+    const htmlOverscroll = root.style.overscrollBehaviorY;
+    const bodyOverscroll = body.style.overscrollBehaviorY;
+    const htmlOverflow = root.style.overflow;
+    const bodyOverflow = body.style.overflow;
+
+    root.style.overscrollBehaviorY = "none";
+    body.style.overscrollBehaviorY = "none";
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+
+    const handleTouchStart = (event: globalThis.TouchEvent) => {
+      lastTouchY.current = event.touches[0]?.clientY ?? 0;
+    };
+
+    const handleMenuTouchMove = (event: globalThis.TouchEvent) => {
+      if (!scroller || event.touches.length !== 1) return;
+
+      const currentY = event.touches[0]?.clientY ?? lastTouchY.current;
+      const deltaY = lastTouchY.current - currentY;
+      const canScroll = scroller.scrollHeight > scroller.clientHeight;
+      const atTop = scroller.scrollTop <= 0;
+      const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
+
+      if (!canScroll || (atTop && deltaY < 0) || (atBottom && deltaY > 0)) {
+        event.preventDefault();
+      }
+
+      lastTouchY.current = currentY;
+    };
+
+    const handleDocumentTouchMove = (event: globalThis.TouchEvent) => {
+      const target = event.target as Node | null;
+
+      if (scroller && target && scroller.contains(target)) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    scroller?.addEventListener("touchstart", handleTouchStart, { passive: true });
+    scroller?.addEventListener("touchmove", handleMenuTouchMove, { passive: false });
+    document.addEventListener("touchmove", handleDocumentTouchMove, { passive: false });
+
+    return () => {
+      scroller?.removeEventListener("touchstart", handleTouchStart);
+      scroller?.removeEventListener("touchmove", handleMenuTouchMove);
+      document.removeEventListener("touchmove", handleDocumentTouchMove);
+      root.style.overscrollBehaviorY = htmlOverscroll;
+      body.style.overscrollBehaviorY = bodyOverscroll;
+      root.style.overflow = htmlOverflow;
+      body.style.overflow = bodyOverflow;
+    };
+  }, [open]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -50,15 +98,21 @@ export const SideDrawer = () => {
   const menuItems = [
     { label: t("live_signals"), path: "/signals", icon: LineChart, gradient: "from-emerald-500 to-teal-400", bg: "bg-emerald-500/10" },
     { label: t("ai_chat"), path: "/ai-chat", icon: Sparkles, gradient: "from-fuchsia-500 to-purple-500", bg: "bg-fuchsia-500/10" },
+    { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, gradient: "from-sky-500 to-blue-500", bg: "bg-sky-500/10" },
+    { label: "Trading Academy", path: "/academy", icon: GraduationCap, gradient: "from-emerald-500 to-green-500", bg: "bg-emerald-500/10" },
+    { label: "Leaderboard", path: "/leaderboard", icon: Trophy, gradient: "from-yellow-500 to-amber-400", bg: "bg-yellow-500/10" },
     { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, gradient: "from-pink-500 to-rose-400", bg: "bg-pink-500/10" },
     { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, gradient: "from-lime-500 to-green-400", bg: "bg-lime-500/10" },
-    { label: t("free_trial"), path: "/free-trial", icon: Play, gradient: "from-blue-500 to-cyan-400", bg: "bg-blue-500/10" },
+    { label: "Portfolio", path: "/portfolio", icon: PieChart, gradient: "from-teal-500 to-cyan-400", bg: "bg-teal-500/10" },
+    { label: "Backtesting", path: "/backtesting", icon: History, gradient: "from-purple-500 to-indigo-400", bg: "bg-purple-500/10" },
+    { label: "Compound Calc", path: "/compound", icon: TrendingUp, gradient: "from-green-500 to-emerald-400", bg: "bg-green-500/10" },
     { label: t("premium"), path: "/premium", icon: Crown, gradient: "from-amber-500 to-orange-400", bg: "bg-amber-500/10" },
     { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400", bg: "bg-teal-500/10" },
     { label: t("results"), path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
     { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, gradient: "from-indigo-500 to-blue-400", bg: "bg-indigo-500/10" },
     { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, gradient: "from-cyan-500 to-sky-400", bg: "bg-cyan-500/10" },
     { label: "Invite & Earn", path: "/referrals", icon: Gift, gradient: "from-orange-500 to-amber-400", bg: "bg-orange-500/10" },
+    { label: "Gift Premium", path: "/gift-premium", icon: Gift, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
     { label: t("profile"), path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
     { label: t("notifications"), path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
     { label: t("settings"), path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
@@ -73,8 +127,9 @@ export const SideDrawer = () => {
           <Menu className="h-6 w-6" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/50">
-        <div className="flex flex-col h-full bg-gradient-to-b from-background to-muted/30">
+      <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/50 flex flex-col h-dvh max-h-dvh overflow-hidden overscroll-none touch-pan-y">
+        <div className="flex flex-col h-full min-h-0 bg-gradient-to-b from-background to-muted/30 overscroll-none">
+
           {/* Logo & App Name */}
           <div className="flex items-center gap-3 p-5 border-b border-border/50 bg-background/80 backdrop-blur-sm">
             <div className="relative">
@@ -95,7 +150,11 @@ export const SideDrawer = () => {
           </div>
 
           {/* Menu Items - Ultra Modern */}
-          <nav className="flex flex-col gap-2 p-4 flex-1 overflow-y-auto">
+          <nav
+            data-sidebar-menu-scroll="true"
+            ref={menuScrollRef}
+            className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] [touch-action:pan-y]"
+          >
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.path);

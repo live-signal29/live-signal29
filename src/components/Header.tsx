@@ -4,12 +4,15 @@ import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
 import { TopMenuDropdown } from "./TopMenuDropdown";
 import { ThemeToggle } from "./ThemeToggle";
+import { GlobalSearch } from "./GlobalSearch";
+import { FlashSaleBanner } from "./FlashSaleBanner";
 import exnessLogo from "@/assets/exness-logo-real.png";
 import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
 const Header = () => {
   return (
     <>
+      <FlashSaleBanner />
       <AppInstallBanner />
       <TrialBanner />
       <header className="sticky top-0 z-40 w-full">
@@ -46,6 +49,7 @@ const Header = () => {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5">
+              <GlobalSearch />
               <ThemeToggle />
               
               {/* Exness CTA - Desktop only */}

@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_lessons: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          level: string
+          order_index: number | null
+          published: boolean | null
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          level?: string
+          order_index?: number | null
+          published?: boolean | null
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          level?: string
+          order_index?: number | null
+          published?: boolean | null
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       account_management_applications: {
         Row: {
           account_size: string
@@ -315,6 +348,36 @@ export type Database = {
         }
         Relationships: []
       }
+      flash_sales: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          discount_percent: number
+          ends_at: string
+          id: string
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          discount_percent: number
+          ends_at: string
+          id?: string
+          starts_at?: string
+          title: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          discount_percent?: number
+          ends_at?: string
+          id?: string
+          starts_at?: string
+          title?: string
+        }
+        Relationships: []
+      }
       forex_news_alerts: {
         Row: {
           actual: string | null
@@ -354,6 +417,36 @@ export type Database = {
           previous?: string | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      gift_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          days: number
+          id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          days?: number
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          days?: number
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
         }
         Relationships: []
       }
@@ -408,6 +501,33 @@ export type Database = {
           total_rewards_granted?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      market_briefs: {
+        Row: {
+          brief_date: string
+          created_at: string
+          id: string
+          sentiment: string | null
+          summary: string
+          title: string
+        }
+        Insert: {
+          brief_date?: string
+          created_at?: string
+          id?: string
+          sentiment?: string | null
+          summary: string
+          title: string
+        }
+        Update: {
+          brief_date?: string
+          created_at?: string
+          id?: string
+          sentiment?: string | null
+          summary?: string
+          title?: string
         }
         Relationships: []
       }
@@ -573,6 +693,42 @@ export type Database = {
           read?: boolean
           title?: string
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      portfolio_accounts: {
+        Row: {
+          account_number: string
+          balance: number | null
+          broker: string
+          created_at: string
+          equity: number | null
+          id: string
+          nickname: string | null
+          profit_loss: number | null
+          user_id: string
+        }
+        Insert: {
+          account_number: string
+          balance?: number | null
+          broker: string
+          created_at?: string
+          equity?: number | null
+          id?: string
+          nickname?: string | null
+          profit_loss?: number | null
+          user_id: string
+        }
+        Update: {
+          account_number?: string
+          balance?: number | null
+          broker?: string
+          created_at?: string
+          equity?: number | null
+          id?: string
+          nickname?: string | null
+          profit_loss?: number | null
           user_id?: string
         }
         Relationships: []
@@ -759,6 +915,57 @@ export type Database = {
           ip_address?: string | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      signal_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          signal_id: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          signal_id: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          signal_id?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      signal_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          rating: number
+          signal_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rating: number
+          signal_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rating?: number
+          signal_id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1148,6 +1355,33 @@ export type Database = {
         }
         Relationships: []
       }
+      two_factor_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          used: boolean | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          used?: boolean | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          used?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_favorite_pairs: {
         Row: {
           created_at: string
@@ -1283,6 +1517,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_create_weekly_flash_sale: { Args: never; Returns: undefined }
       calculate_signal_stats: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -1350,6 +1585,17 @@ export type Database = {
           yesterday_premium_wins: number
           yesterday_total: number
           yesterday_wins: number
+        }[]
+      }
+      get_leaderboard: {
+        Args: never
+        Returns: {
+          full_name: string
+          total_pnl: number
+          total_trades: number
+          user_id: string
+          win_rate: number
+          wins: number
         }[]
       }
       get_mt5_demo_stats: {
@@ -1496,6 +1742,7 @@ export type Database = {
         Returns: boolean
       }
       record_daily_login: { Args: never; Returns: Json }
+      redeem_gift_code: { Args: { _code: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user" | "signal_manager" | "finance_manager"
