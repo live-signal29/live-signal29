@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { 
-  Menu, ChevronDown, ExternalLink, LineChart, Play, Crown, User, Bell, Settings, 
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Bell, Settings,
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
   Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
   Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart
@@ -18,283 +18,236 @@ import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
 const APP_VERSION = "1.0.0";
 
+type MenuItem = {
+  label: string;
+  path: string;
+  icon: typeof LineChart;
+  tint: string;
+};
+
+const MenuRow = memo(
+  ({ item, active, onNavigate }: { item: MenuItem; active: boolean; onNavigate: () => void }) => {
+    const Icon = item.icon;
+    return (
+      <Link
+        to={item.path}
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-3 h-[50px] px-3 rounded-xl",
+          "transition-colors duration-200 will-change-transform",
+          active
+            ? "bg-primary/12 text-primary shadow-sm shadow-primary/10"
+            : "text-foreground/85 hover:bg-accent/60 active:bg-accent"
+        )}
+      >
+        <span
+          className={cn(
+            "flex items-center justify-center w-9 h-9 rounded-lg shrink-0",
+            active ? "bg-primary/15" : "bg-muted/60"
+          )}
+        >
+          <Icon className={cn("h-[22px] w-[22px]", active ? "text-primary" : item.tint)} />
+        </span>
+        <span className={cn("text-sm tracking-tight truncate", active ? "font-semibold" : "font-medium")}>
+          {item.label}
+        </span>
+        {active && <span className="ml-auto h-5 w-1 rounded-full bg-primary shrink-0" />}
+      </Link>
+    );
+  }
+);
+MenuRow.displayName = "MenuRow";
+
 export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
   const [otherAppsOpen, setOtherAppsOpen] = useState(false);
   const menuScrollRef = useRef<HTMLElement | null>(null);
-  const lastTouchY = useRef(0);
+  const scrollPos = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
 
+  // Lock the page behind the drawer without touching touch-action inside it,
+  // so the menu list keeps native 60 FPS scrolling and never triggers pull-to-refresh.
   useEffect(() => {
     if (!open) return;
 
     const root = document.documentElement;
     const body = document.body;
-    const scroller = menuScrollRef.current;
-    const htmlOverscroll = root.style.overscrollBehaviorY;
-    const bodyOverscroll = body.style.overscrollBehaviorY;
-    const htmlOverflow = root.style.overflow;
-    const bodyOverflow = body.style.overflow;
+    const prev = {
+      htmlOverscroll: root.style.overscrollBehaviorY,
+      bodyOverscroll: body.style.overscrollBehaviorY,
+      bodyOverflow: body.style.overflow,
+    };
 
     root.style.overscrollBehaviorY = "none";
     body.style.overscrollBehaviorY = "none";
-    root.style.overflow = "hidden";
     body.style.overflow = "hidden";
 
-    const handleTouchStart = (event: globalThis.TouchEvent) => {
-      lastTouchY.current = event.touches[0]?.clientY ?? 0;
-    };
-
-    const handleMenuTouchMove = (event: globalThis.TouchEvent) => {
-      if (!scroller || event.touches.length !== 1) return;
-
-      const currentY = event.touches[0]?.clientY ?? lastTouchY.current;
-      const deltaY = lastTouchY.current - currentY;
-      const canScroll = scroller.scrollHeight > scroller.clientHeight;
-      const atTop = scroller.scrollTop <= 0;
-      const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
-
-      if (!canScroll || (atTop && deltaY < 0) || (atBottom && deltaY > 0)) {
-        event.preventDefault();
-      }
-
-      lastTouchY.current = currentY;
-    };
-
-    const handleDocumentTouchMove = (event: globalThis.TouchEvent) => {
-      const target = event.target as Node | null;
-
-      if (scroller && target && scroller.contains(target)) {
-        return;
-      }
-
-      event.preventDefault();
-    };
-
-    scroller?.addEventListener("touchstart", handleTouchStart, { passive: true });
-    scroller?.addEventListener("touchmove", handleMenuTouchMove, { passive: false });
-    document.addEventListener("touchmove", handleDocumentTouchMove, { passive: false });
+    // Restore scroll position of the menu list when reopening.
+    const scroller = menuScrollRef.current;
+    if (scroller) scroller.scrollTop = scrollPos.current;
 
     return () => {
-      scroller?.removeEventListener("touchstart", handleTouchStart);
-      scroller?.removeEventListener("touchmove", handleMenuTouchMove);
-      document.removeEventListener("touchmove", handleDocumentTouchMove);
-      root.style.overscrollBehaviorY = htmlOverscroll;
-      body.style.overscrollBehaviorY = bodyOverscroll;
-      root.style.overflow = htmlOverflow;
-      body.style.overflow = bodyOverflow;
+      root.style.overscrollBehaviorY = prev.htmlOverscroll;
+      body.style.overscrollBehaviorY = prev.bodyOverscroll;
+      body.style.overflow = prev.bodyOverflow;
     };
   }, [open]);
 
-  const handleLogout = async () => {
+  const rememberScroll = useCallback(() => {
+    if (menuScrollRef.current) scrollPos.current = menuScrollRef.current.scrollTop;
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    rememberScroll();
+    setOpen(false);
+  }, [rememberScroll]);
+
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
-    navigate("/login");
     setOpen(false);
-  };
+    navigate("/login");
+  }, [navigate]);
 
-  const menuItems = [
-    { label: t("live_signals"), path: "/signals", icon: LineChart, gradient: "from-emerald-500 to-teal-400", bg: "bg-emerald-500/10" },
-    { label: t("ai_chat"), path: "/ai-chat", icon: Sparkles, gradient: "from-fuchsia-500 to-purple-500", bg: "bg-fuchsia-500/10" },
-    { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, gradient: "from-sky-500 to-blue-500", bg: "bg-sky-500/10" },
-    { label: "Trading Academy", path: "/academy", icon: GraduationCap, gradient: "from-emerald-500 to-green-500", bg: "bg-emerald-500/10" },
-    { label: "Leaderboard", path: "/leaderboard", icon: Trophy, gradient: "from-yellow-500 to-amber-400", bg: "bg-yellow-500/10" },
-    { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, gradient: "from-pink-500 to-rose-400", bg: "bg-pink-500/10" },
-    { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, gradient: "from-lime-500 to-green-400", bg: "bg-lime-500/10" },
-    { label: "Portfolio", path: "/portfolio", icon: PieChart, gradient: "from-teal-500 to-cyan-400", bg: "bg-teal-500/10" },
-    { label: "Backtesting", path: "/backtesting", icon: History, gradient: "from-purple-500 to-indigo-400", bg: "bg-purple-500/10" },
-    { label: "Compound Calc", path: "/compound", icon: TrendingUp, gradient: "from-green-500 to-emerald-400", bg: "bg-green-500/10" },
-    { label: t("premium"), path: "/premium", icon: Crown, gradient: "from-amber-500 to-orange-400", bg: "bg-amber-500/10" },
-    { label: "Account Management", path: "/account-management", icon: Briefcase, gradient: "from-teal-500 to-emerald-400", bg: "bg-teal-500/10" },
-    { label: t("results"), path: "/results", icon: BarChart3, gradient: "from-violet-500 to-purple-400", bg: "bg-violet-500/10" },
-    { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, gradient: "from-indigo-500 to-blue-400", bg: "bg-indigo-500/10" },
-    { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, gradient: "from-cyan-500 to-sky-400", bg: "bg-cyan-500/10" },
-    { label: "Invite & Earn", path: "/referrals", icon: Gift, gradient: "from-orange-500 to-amber-400", bg: "bg-orange-500/10" },
-    { label: "Gift Premium", path: "/gift-premium", icon: Gift, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
-    { label: t("profile"), path: "/profile", icon: User, gradient: "from-purple-500 to-pink-400", bg: "bg-purple-500/10" },
-    { label: t("notifications"), path: "/notifications", icon: Bell, gradient: "from-rose-500 to-pink-400", bg: "bg-rose-500/10" },
-    { label: t("settings"), path: "/settings", icon: Settings, gradient: "from-slate-500 to-gray-400", bg: "bg-slate-500/10" },
-  ];
-
-  const isActive = (path: string) => location.pathname === path;
+  const menuItems = useMemo<MenuItem[]>(
+    () => [
+      { label: t("live_signals"), path: "/signals", icon: LineChart, tint: "text-emerald-500" },
+      { label: t("ai_chat"), path: "/ai-chat", icon: Sparkles, tint: "text-fuchsia-500" },
+      { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, tint: "text-sky-500" },
+      { label: "Trading Academy", path: "/academy", icon: GraduationCap, tint: "text-emerald-500" },
+      { label: "Leaderboard", path: "/leaderboard", icon: Trophy, tint: "text-amber-500" },
+      { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, tint: "text-pink-500" },
+      { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, tint: "text-lime-600" },
+      { label: "Portfolio", path: "/portfolio", icon: PieChart, tint: "text-teal-500" },
+      { label: "Backtesting", path: "/backtesting", icon: History, tint: "text-purple-500" },
+      { label: "Compound Calc", path: "/compound", icon: TrendingUp, tint: "text-green-500" },
+      { label: t("premium"), path: "/premium", icon: Crown, tint: "text-amber-500" },
+      { label: "Account Management", path: "/account-management", icon: Briefcase, tint: "text-teal-500" },
+      { label: t("results"), path: "/results", icon: BarChart3, tint: "text-violet-500" },
+      { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, tint: "text-indigo-500" },
+      { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, tint: "text-cyan-500" },
+      { label: "Invite & Earn", path: "/referrals", icon: Gift, tint: "text-orange-500" },
+      { label: "Gift Premium", path: "/gift-premium", icon: Gift, tint: "text-rose-500" },
+      { label: t("profile"), path: "/profile", icon: User, tint: "text-purple-500" },
+      { label: t("notifications"), path: "/notifications", icon: Bell, tint: "text-rose-500" },
+      { label: t("settings"), path: "/settings", icon: Settings, tint: "text-slate-500" },
+    ],
+    [t]
+  );
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) rememberScroll();
+        setOpen(next);
+      }}
+    >
       <SheetTrigger asChild>
-        <button className="p-2 hover:bg-accent rounded-md transition-all duration-200 hover:scale-105 active:scale-95">
+        <button
+          aria-label="Open menu"
+          className="p-2 rounded-lg hover:bg-accent transition-colors duration-200 active:scale-95"
+        >
           <Menu className="h-6 w-6" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/50 flex flex-col h-dvh max-h-dvh overflow-hidden overscroll-none touch-pan-y">
-        <div className="flex flex-col h-full min-h-0 bg-gradient-to-b from-background to-muted/30 overscroll-none">
-
-          {/* Logo & App Name */}
-          <div className="flex items-center gap-3 p-5 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-            <div className="relative">
-              <img 
-                src={trendFriendLogo} 
-                alt="Trend is Friend Logo" 
-                className="w-14 h-14 rounded-2xl shadow-lg shadow-primary/30 ring-2 ring-primary/20"
+      <SheetContent
+        side="left"
+        className="w-[286px] sm:w-[320px] p-0 border-r border-border/60 shadow-2xl flex flex-col h-dvh max-h-dvh overflow-hidden"
+      >
+        <div className="flex flex-col h-full min-h-0 bg-background">
+          {/* Sticky header */}
+          <div className="shrink-0 flex items-center gap-3 px-4 py-3.5 border-b border-border/60 bg-background/95 backdrop-blur-md">
+            <div className="relative shrink-0">
+              <img
+                src={trendFriendLogo}
+                alt="Trend is Friend logo"
+                width={44}
+                height={44}
+                loading="eager"
+                decoding="async"
+                className="w-11 h-11 rounded-xl ring-1 ring-primary/20 shadow-md shadow-primary/20"
               />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background animate-pulse" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
             </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold tracking-wide bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                TREND IS FRIEND
-              </h2>
-              <p className="text-xs text-muted-foreground">Live Trading Signals</p>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-[15px] font-bold tracking-tight truncate">TREND IS FRIEND</h2>
+              <p className="text-[11px] text-muted-foreground truncate">Live Trading Signals</p>
             </div>
             <ThemeToggle />
           </div>
 
-          {/* Menu Items - Ultra Modern */}
+          {/* Scrollable menu */}
           <nav
-            data-sidebar-menu-scroll="true"
             ref={menuScrollRef}
-            className="flex flex-col gap-2 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] [touch-action:pan-y]"
+            onScroll={rememberScroll}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-2.5 py-2.5 space-y-1"
           >
-            {menuItems.map((item, index) => {
-              const Icon = item.icon;
-              const active = isActive(item.path);
-              return (
-                <Link
-                  key={item.path + item.label}
-                  to={item.path}
-                  onClick={() => setOpen(false)}
-                  style={{ 
-                    animationDelay: `${index * 60}ms`,
-                    animationFillMode: 'backwards'
-                  }}
-                  className={cn(
-                    "group relative px-4 py-3.5 rounded-2xl font-medium flex items-center gap-3",
-                    "transition-all duration-300 ease-out overflow-hidden",
-                    "hover:translate-x-1 active:scale-[0.98]",
-                    "animate-slide-in-menu",
-                    active 
-                      ? "shadow-lg" 
-                      : "text-foreground/80 hover:bg-accent/50"
-                  )}
-                >
-                  {/* Active gradient background */}
-                  {active && (
-                    <div className={cn(
-                      "absolute inset-0 bg-gradient-to-r opacity-90",
-                      item.gradient
-                    )} />
-                  )}
-                  
-                  {/* Shimmer for active */}
-                  {active && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]" />
-                  )}
-                  
-                  {/* Icon container */}
-                  <div className={cn(
-                    "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-300",
-                    active 
-                      ? "bg-white/20 shadow-inner" 
-                      : "bg-muted/50 group-hover:bg-accent",
-                    "group-hover:scale-110"
-                  )}>
-                    <Icon className={cn(
-                      "h-5 w-5 transition-all duration-300",
-                      active ? "text-white" : "text-muted-foreground group-hover:text-foreground",
-                      "group-hover:scale-110"
-                    )} />
-                  </div>
-                  
-                  <span className={cn(
-                    "relative z-10 transition-all duration-300 font-semibold",
-                    active ? "text-white" : ""
-                  )}>
-                    {item.label}
-                  </span>
-                  
-                  {/* Active indicator dot */}
-                  {active && (
-                    <div className="relative z-10 ml-auto w-2 h-2 bg-white rounded-full animate-pulse" />
-                  )}
-                </Link>
-              );
-            })}
-            
-            {/* Other Apps Section */}
+            {menuItems.map((item) => (
+              <MenuRow
+                key={item.path + item.label}
+                item={item}
+                active={location.pathname === item.path}
+                onNavigate={closeDrawer}
+              />
+            ))}
+
             <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
-              <CollapsibleTrigger className={cn(
-                "w-full px-4 py-3.5 rounded-xl font-medium flex items-center justify-between",
-                "transition-all duration-300 ease-out",
-                "hover:bg-accent/80 hover:translate-x-1 active:scale-[0.98]",
-                "text-foreground/80 group"
-              )}>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 group-hover:bg-accent transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
-                    <Smartphone className="h-5 w-5 text-cyan-500" />
-                  </div>
-                  <span>Other Apps</span>
-                </div>
-                <ChevronDown className={cn(
-                  "h-4 w-4 transition-transform duration-300",
-                  otherAppsOpen ? 'rotate-180' : ''
-                )} />
+              <CollapsibleTrigger className="w-full h-[50px] px-3 rounded-xl flex items-center gap-3 text-foreground/85 hover:bg-accent/60 transition-colors duration-200">
+                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted/60 shrink-0">
+                  <Smartphone className="h-[22px] w-[22px] text-cyan-500" />
+                </span>
+                <span className="text-sm font-medium">Other Apps</span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 ml-auto transition-transform duration-200",
+                    otherAppsOpen && "rotate-180"
+                  )}
+                />
               </CollapsibleTrigger>
-              <CollapsibleContent className="animate-accordion-down">
-                <div className="ml-6 mt-1 space-y-1 border-l-2 border-border/50 pl-4">
+              <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                <div className="ml-6 my-1 space-y-0.5 border-l border-border/60 pl-3">
                   <a
                     href="http://cryptoincome.vercel.app"
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-accent/80 transition-all duration-200 text-sm text-muted-foreground hover:text-foreground group"
+                    onClick={closeDrawer}
+                    className="flex items-center justify-between py-2.5 px-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 group"
                   >
                     <span>Crypto Investment</span>
-                    <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-x-0.5" />
+                    <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
                   </a>
                   <a
                     href="https://one.exnessonelink.com/a/vtkbbmje"
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-accent/80 transition-all duration-200 text-sm text-muted-foreground hover:text-foreground group"
+                    onClick={closeDrawer}
+                    className="flex items-center justify-between py-2.5 px-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 group"
                   >
                     <span>Open Forex Account</span>
-                    <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-x-0.5" />
+                    <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
                   </a>
                 </div>
               </CollapsibleContent>
             </Collapsible>
           </nav>
 
-          {/* Footer Section */}
-          <div className="p-4 border-t border-border/50 bg-background/50 backdrop-blur-sm space-y-3">
-            {/* Language Switcher */}
-            <div className="flex justify-center">
+          {/* Sticky footer */}
+          <div className="shrink-0 px-3 py-3 border-t border-border/60 bg-background/95 backdrop-blur-md space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
               <LanguageSwitcher />
-            </div>
-
-            {/* App Version */}
-            <div className="text-center">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 text-xs text-muted-foreground">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Version {APP_VERSION}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 text-[11px] text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />v{APP_VERSION}
               </span>
             </div>
-
-            {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className={cn(
-                "w-full px-4 py-3 rounded-xl font-medium flex items-center justify-center gap-2",
-                "bg-gradient-to-r from-destructive to-destructive/80",
-                "text-destructive-foreground shadow-lg shadow-destructive/20",
-                "transition-all duration-300 ease-out",
-                "hover:shadow-xl hover:shadow-destructive/30 hover:scale-[1.02]",
-                "active:scale-[0.98]"
-              )}
+              className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-destructive text-destructive-foreground shadow-md shadow-destructive/20 transition-colors duration-200 hover:bg-destructive/90 active:scale-[0.99]"
             >
-              <LogOut className="h-5 w-5" />
-              <span>Logout</span>
+              <LogOut className="h-[18px] w-[18px]" />
+              Logout
             </button>
           </div>
         </div>

@@ -61,25 +61,42 @@ const Signup = () => {
       });
 
       if (error) {
-        // Map common errors to user-friendly messages
-        if (error.message.includes("already registered")) {
-          toast.error("This email is already registered");
+        const msg = (error.message || "").toLowerCase();
+        if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already")) {
+          toast.error("This email is already registered. Please sign in instead.");
+        } else if (msg.includes("weak") || msg.includes("pwned") || msg.includes("easy to guess")) {
+          toast.error("This password appears in known data breaches. Please choose a stronger, unique password.");
+        } else if (msg.includes("invalid") && msg.includes("email")) {
+          toast.error("Please enter a valid email address.");
+        } else if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
+          toast.error("Too many attempts. Please wait a minute and try again.");
+        } else if (msg.includes("failed to fetch") || msg.includes("network")) {
+          toast.error("Network issue. Check your connection and try again.");
         } else {
-          toast.error("Signup failed. Please try again.");
+          toast.error(error.message || "Signup failed. Please try again.");
         }
         return;
       }
 
       if (data.user) {
-        toast.success("Account created successfully!");
-        navigate(`/login${returnUrl !== '/onboarding' ? `?returnUrl=${returnUrl}` : ''}`);
-        
-        // Update profile asynchronously (non-blocking)
-        supabase.from('profiles').update({
-          country_code: validation.data.countryCode || null,
-          phone_number: validation.data.phoneNumber || null,
-        }).eq('id', data.user.id);
+        // Save the extra profile fields (works because the trigger already created the row)
+        if (validation.data.countryCode || validation.data.phoneNumber) {
+          await supabase.from('profiles').update({
+            country_code: validation.data.countryCode || null,
+            phone_number: validation.data.phoneNumber || null,
+          }).eq('id', data.user.id);
+        }
+
+        if (data.session) {
+          // Email confirmation disabled -> user is already signed in, go straight in.
+          toast.success("Account created! Welcome aboard 🎉");
+          navigate(returnUrl);
+        } else {
+          toast.success("Account created! Please confirm your email, then sign in.");
+          navigate(`/login${returnUrl !== '/onboarding' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
+        }
       }
+
     } catch (error: any) {
       toast.error("An unexpected error occurred. Please try again.");
     } finally {

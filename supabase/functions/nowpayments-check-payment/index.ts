@@ -74,6 +74,16 @@ serve(async (req) => {
     const paymentStatus = await response.json();
     console.log('Payment status:', paymentStatus.payment_status);
 
+    // Read the deposit BEFORE updating so we know whether it was already credited.
+    const { data: existingDeposit } = await supabase
+      .from('deposits')
+      .select('amount, status')
+      .eq('payment_id', payment_id)
+      .eq('user_id', user.id)
+      .single();
+
+    const alreadyCredited = existingDeposit?.status === 'finished';
+
     // Update deposit status
     const { error: updateError } = await supabase
       .from('deposits')
@@ -86,37 +96,29 @@ serve(async (req) => {
       // Don't expose internal error to client
     }
 
-    // If payment is finished, update user balance
-    if (paymentStatus.payment_status === 'finished') {
-      const { data: deposit } = await supabase
-        .from('deposits')
-        .select('amount')
-        .eq('payment_id', payment_id)
-        .eq('user_id', user.id)
+    // Credit the balance only once, on the first transition to "finished".
+    if (paymentStatus.payment_status === 'finished' && existingDeposit && !alreadyCredited) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', user.id)
         .single();
 
-      if (deposit) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('balance')
-          .eq('id', user.id)
-          .single();
+      const currentBalance = parseFloat((profile?.balance ?? 0).toString());
+      const newBalance = currentBalance + parseFloat(existingDeposit.amount.toString());
 
-        const currentBalance = profile?.balance || 0;
-        const newBalance = parseFloat(currentBalance.toString()) + parseFloat(deposit.amount.toString());
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', user.id);
 
-        const { error: balanceError } = await supabase
-          .from('profiles')
-          .update({ balance: newBalance })
-          .eq('id', user.id);
-
-        if (balanceError) {
-          console.error('Error updating balance:', balanceError);
-        } else {
-          console.log(`Balance updated: ${currentBalance} -> ${newBalance}`);
-        }
+      if (balanceError) {
+        console.error('Error updating balance:', balanceError);
+      } else {
+        console.log(`Balance credited once for payment ${payment_id}`);
       }
     }
+
 
     return new Response(
       JSON.stringify(paymentStatus),
