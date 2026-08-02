@@ -23,7 +23,9 @@ type MenuItem = {
   path: string;
   icon: typeof LineChart;
   tint: string;
+  badge?: string;
 };
+
 
 const MenuRow = memo(
   ({ item, active, onNavigate }: { item: MenuItem; active: boolean; onNavigate: () => void }) => {
@@ -211,14 +213,28 @@ export const SideDrawer = () => {
             onScroll={rememberScroll}
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-2.5 py-2.5 space-y-1"
           >
-            {menuItems.map((item) => (
-              <MenuRow
-                key={item.path + item.label}
-                item={item}
-                active={location.pathname === item.path}
-                onNavigate={closeDrawer}
-              />
+            {menuGroups.map((group) => (
+              <div key={group.title} className="pb-1">
+                <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                  {group.title}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <MenuRow
+                      key={item.path + item.label}
+                      item={item}
+                      active={location.pathname === item.path}
+                      onNavigate={closeDrawer}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
+
+            <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+              Other
+            </p>
+
 
             <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
               <CollapsibleTrigger className="w-full h-[50px] px-3 rounded-xl flex items-center gap-3 text-foreground/85 hover:bg-accent/60 transition-colors duration-200">
