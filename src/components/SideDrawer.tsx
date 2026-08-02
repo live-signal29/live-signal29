@@ -23,7 +23,9 @@ type MenuItem = {
   path: string;
   icon: typeof LineChart;
   tint: string;
+  badge?: string;
 };
+
 
 const MenuRow = memo(
   ({ item, active, onNavigate }: { item: MenuItem; active: boolean; onNavigate: () => void }) => {
@@ -51,7 +53,13 @@ const MenuRow = memo(
         <span className={cn("text-sm tracking-tight truncate", active ? "font-semibold" : "font-medium")}>
           {item.label}
         </span>
-        {active && <span className="ml-auto h-5 w-1 rounded-full bg-primary shrink-0" />}
+        {item.badge && (
+          <span className="ml-auto px-1.5 py-0.5 rounded-md bg-primary/15 text-primary text-[9px] font-bold uppercase shrink-0">
+            {item.badge}
+          </span>
+        )}
+        {active && <span className={cn("h-5 w-1 rounded-full bg-primary shrink-0", !item.badge && "ml-auto")} />}
+
       </Link>
     );
   }
@@ -111,31 +119,57 @@ export const SideDrawer = () => {
     navigate("/login");
   }, [navigate]);
 
-  const menuItems = useMemo<MenuItem[]>(
+  const menuGroups = useMemo<{ title: string; items: MenuItem[] }[]>(
     () => [
-      { label: t("live_signals"), path: "/signals", icon: LineChart, tint: "text-emerald-500" },
-      { label: t("ai_chat"), path: "/ai-chat", icon: Sparkles, tint: "text-fuchsia-500" },
-      { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, tint: "text-sky-500" },
-      { label: "Trading Academy", path: "/academy", icon: GraduationCap, tint: "text-emerald-500" },
-      { label: "Leaderboard", path: "/leaderboard", icon: Trophy, tint: "text-amber-500" },
-      { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, tint: "text-pink-500" },
-      { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, tint: "text-lime-600" },
-      { label: "Portfolio", path: "/portfolio", icon: PieChart, tint: "text-teal-500" },
-      { label: "Backtesting", path: "/backtesting", icon: History, tint: "text-purple-500" },
-      { label: "Compound Calc", path: "/compound", icon: TrendingUp, tint: "text-green-500" },
-      { label: t("premium"), path: "/premium", icon: Crown, tint: "text-amber-500" },
-      { label: "Account Management", path: "/account-management", icon: Briefcase, tint: "text-teal-500" },
-      { label: t("results"), path: "/results", icon: BarChart3, tint: "text-violet-500" },
-      { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, tint: "text-indigo-500" },
-      { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, tint: "text-cyan-500" },
-      { label: "Invite & Earn", path: "/referrals", icon: Gift, tint: "text-orange-500" },
-      { label: "Gift Premium", path: "/gift-premium", icon: Gift, tint: "text-rose-500" },
-      { label: t("profile"), path: "/profile", icon: User, tint: "text-purple-500" },
-      { label: t("notifications"), path: "/notifications", icon: Bell, tint: "text-rose-500" },
-      { label: t("settings"), path: "/settings", icon: Settings, tint: "text-slate-500" },
+      {
+        title: "Live Trading",
+        items: [
+          { label: t("live_signals"), path: "/signals", icon: LineChart, tint: "text-emerald-500" },
+          { label: "Portfolio", path: "/portfolio", icon: PieChart, tint: "text-teal-500" },
+          { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, tint: "text-lime-600" },
+          { label: t("results"), path: "/results", icon: BarChart3, tint: "text-violet-500" },
+        ],
+      },
+      {
+        title: "Learn & Analyze",
+        items: [
+          { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, tint: "text-sky-500" },
+          { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, tint: "text-indigo-500" },
+          { label: "Trading Academy", path: "/academy", icon: GraduationCap, tint: "text-emerald-500" },
+          { label: "Backtesting", path: "/backtesting", icon: History, tint: "text-purple-500" },
+        ],
+      },
+      {
+        title: "Tools",
+        items: [
+          { label: "AI Assistant", path: "/ai-chat", icon: Sparkles, tint: "text-fuchsia-500", badge: "New" },
+          { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, tint: "text-cyan-500" },
+          { label: "Compound Calculator", path: "/compound", icon: TrendingUp, tint: "text-green-500" },
+          { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, tint: "text-pink-500" },
+        ],
+      },
+      {
+        title: "Premium",
+        items: [
+          { label: t("premium"), path: "/premium", icon: Crown, tint: "text-amber-500", badge: "Pro" },
+          { label: "Gift Premium", path: "/gift-premium", icon: Gift, tint: "text-rose-500" },
+          { label: "Invite & Earn", path: "/referrals", icon: Gift, tint: "text-orange-500" },
+        ],
+      },
+      {
+        title: "Account",
+        items: [
+          { label: "Account Management", path: "/account-management", icon: Briefcase, tint: "text-teal-500" },
+          { label: "My Profile", path: "/profile", icon: User, tint: "text-purple-500" },
+          { label: t("notifications"), path: "/notifications", icon: Bell, tint: "text-rose-500" },
+          { label: t("settings"), path: "/settings", icon: Settings, tint: "text-slate-500" },
+          { label: "Leaderboard", path: "/leaderboard", icon: Trophy, tint: "text-amber-500" },
+        ],
+      },
     ],
     [t]
   );
+
 
   return (
     <Sheet
@@ -185,14 +219,28 @@ export const SideDrawer = () => {
             onScroll={rememberScroll}
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-2.5 py-2.5 space-y-1"
           >
-            {menuItems.map((item) => (
-              <MenuRow
-                key={item.path + item.label}
-                item={item}
-                active={location.pathname === item.path}
-                onNavigate={closeDrawer}
-              />
+            {menuGroups.map((group) => (
+              <div key={group.title} className="pb-1">
+                <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                  {group.title}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <MenuRow
+                      key={item.path + item.label}
+                      item={item}
+                      active={location.pathname === item.path}
+                      onNavigate={closeDrawer}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
+
+            <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+              Other
+            </p>
+
 
             <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
               <CollapsibleTrigger className="w-full h-[50px] px-3 rounded-xl flex items-center gap-3 text-foreground/85 hover:bg-accent/60 transition-colors duration-200">
