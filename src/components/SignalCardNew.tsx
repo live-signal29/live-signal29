@@ -9,6 +9,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { parseEntryPrice, calculateRunningPL, checkTPSLHit } from "@/hooks/useLivePrices";
 import { supabase } from "@/integrations/supabase/client";
 import confetti from "canvas-confetti";
+import SignalCardExtras from "./SignalCardExtras";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -581,8 +583,22 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
                 </div>
               )}
             </div>
+
+            <SignalCardExtras
+              signalId={signal.id}
+              pair={signal.pair}
+              type={signal.type}
+              entryPrice={parsedEntryPrice}
+              sl={parseEntryPrice(signal.sl)}
+              tps={[signal.tp1, signal.tp2, signal.tp3, signal.tp4].map((t) => (t ? parseEntryPrice(t) : 0))}
+              currentPrice={currentPrice}
+              createdAt={signal.created_at}
+              isOpen={isOpen}
+              analysis={signal.analysis_reason}
+            />
           </>
         )}
+
       </CardContent>
     </Card>
   );
