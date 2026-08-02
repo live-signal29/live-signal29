@@ -53,7 +53,13 @@ const MenuRow = memo(
         <span className={cn("text-sm tracking-tight truncate", active ? "font-semibold" : "font-medium")}>
           {item.label}
         </span>
-        {active && <span className="ml-auto h-5 w-1 rounded-full bg-primary shrink-0" />}
+        {item.badge && (
+          <span className="ml-auto px-1.5 py-0.5 rounded-md bg-primary/15 text-primary text-[9px] font-bold uppercase shrink-0">
+            {item.badge}
+          </span>
+        )}
+        {active && <span className={cn("h-5 w-1 rounded-full bg-primary shrink-0", !item.badge && "ml-auto")} />}
+
       </Link>
     );
   }
