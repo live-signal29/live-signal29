@@ -5,11 +5,12 @@ import { useState, useEffect } from "react";
 
 const navItems = [
   { icon: TrendingUp, label: "Signals", path: "/", gradient: "from-emerald-500 to-teal-400" },
-  { icon: ClipboardList, label: "Account", path: "/account-management", gradient: "from-blue-500 to-cyan-400" },
   { icon: BarChart3, label: "Results", path: "/results", gradient: "from-violet-500 to-purple-400" },
+  { icon: ClipboardList, label: "Account", path: "/account-management", gradient: "from-blue-500 to-cyan-400" },
   { icon: Wallet, label: "Premium", path: "/premium", gradient: "from-amber-500 to-orange-400" },
   { icon: User, label: "Profile", path: "/profile", gradient: "from-rose-500 to-pink-400" },
 ];
+
 
 // Routes where bottom navigation should be hidden
 const hiddenRoutes = [
