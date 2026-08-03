@@ -292,12 +292,12 @@ const SignalsDashboard = () => {
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
                     className={cn(
-                      "flex-shrink-0 rounded-full px-4 py-1.5 text-xs font-bold whitespace-nowrap transition-colors",
+                      "flex-shrink-0 rounded-full px-4 py-2 text-[13px] font-bold whitespace-nowrap transition-colors border",
                       isActive
                         ? isGold
-                          ? "bg-warning text-warning-foreground"
-                          : "bg-foreground text-background"
-                        : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                          ? "bg-warning text-warning-foreground border-warning"
+                          : "bg-foreground text-background border-foreground"
+                        : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                     )}
                   >
                     {category.label}
@@ -426,25 +426,30 @@ const SignalsDashboard = () => {
 
                     const dateEntries = Object.entries(groupedSignals);
                     
-                    return dateEntries.map(([date, daySignals], index) => (
+                    return dateEntries.map(([date, daySignals]) => (
                       <div key={date}>
                         <div className="space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                            {daySignals.map((signal) => (
-                              <SignalCardNew 
-                                key={signal.id} 
-                                signal={signal as any}
-                                hasAccess={hasAccess}
-                                subscriptionStatus={subscriptionStatus}
-                                livePrice={livePrices[signal.pair] ? parseFloat(livePrices[signal.pair]) : undefined}
-                              />
+                            {daySignals.map((signal, i) => (
+                              <React.Fragment key={signal.id}>
+                                <SignalCardNew
+                                  signal={signal as any}
+                                  hasAccess={hasAccess}
+                                  subscriptionStatus={subscriptionStatus}
+                                  livePrice={livePrices[signal.pair] ? parseFloat(livePrices[signal.pair]) : undefined}
+                                />
+                                {(i + 1) % 3 === 0 && (
+                                  <div className="md:col-span-2">
+                                    <AffiliateBannerCarousel />
+                                  </div>
+                                )}
+                              </React.Fragment>
                             ))}
                           </div>
-                          
                         </div>
-                        
                       </div>
                     ));
+
                   })()}
                   
                   {/* Infinite scroll loader */}
@@ -472,8 +477,6 @@ const SignalsDashboard = () => {
             <StreakStatsRow />
           </div>
 
-          {/* Brokers side by side */}
-          <AffiliateBannerCarousel />
 
 
           {/* Bottom Ad Banner - Only for non-premium users */}

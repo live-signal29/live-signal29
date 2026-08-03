@@ -42,72 +42,38 @@ export const BottomNavigation = () => {
       "transition-all duration-500 ease-out",
       mounted ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
     )}>
-      {/* Modern floating bar with gradient border */}
-      <div className="mx-3 mb-3">
-        <div className="relative rounded-[28px] overflow-hidden">
-          {/* Animated gradient border */}
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 animate-[shimmer_3s_ease-in-out_infinite]" />
-          
-          {/* Inner background */}
-          <div className="absolute inset-[1px] rounded-[27px] bg-background/95 backdrop-blur-2xl" />
-          
-          {/* Content */}
-          <div className="relative flex items-center justify-around py-1 px-1">
-            {navItems.map((item, index) => {
-              const isActive = location.pathname === item.path || 
-                (item.path === "/" && (location.pathname === "/signals" || location.pathname.includes("signals")));
-              
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl",
-                    "transition-all duration-300 ease-out",
-                    "active:scale-90",
-                    isActive ? "scale-105" : "hover:scale-105"
-                  )}
-                >
-                  {/* Active background with gradient */}
-                  {isActive && (
-                    <div className={cn(
-                      "absolute inset-0 rounded-xl bg-gradient-to-br opacity-20",
-                      item.gradient,
-                      "animate-scale-in"
-                    )} />
-                  )}
-                  
-                  {/* Icon container */}
-                  <div className={cn(
-                    "relative z-10 flex items-center justify-center w-8 h-8 rounded-lg",
-                    "transition-all duration-300",
-                    isActive 
-                      ? cn("bg-gradient-to-br shadow-md", item.gradient)
-                      : "bg-muted/50"
-                  )}>
-                    <item.icon className={cn(
-                      "h-4 w-4 transition-all duration-300",
-                      isActive 
-                        ? "text-white stroke-[2.5] drop-shadow-sm" 
-                        : "text-muted-foreground stroke-[1.5]"
-                    )} />
-                  </div>
-                  
-                  {/* Label */}
-                  <span className={cn(
-                    "relative z-10 text-[9px] transition-all duration-300",
-                    isActive 
-                      ? "font-bold text-foreground" 
-                      : "font-medium text-muted-foreground"
-                  )}>
-                    {item.label}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+      {/* Flat compact bar like reference */}
+      <div className="border-t border-border/60 bg-background/95 backdrop-blur-xl">
+        <div className="flex items-center justify-around px-1 py-1.5">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path ||
+              (item.path === "/" && (location.pathname === "/signals" || location.pathname.includes("signals")));
+
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "relative flex flex-col items-center gap-0.5 rounded-full px-3 py-1 transition-colors active:scale-95",
+                  isActive ? "bg-muted/70" : ""
+                )}
+              >
+                <item.icon className={cn(
+                  "h-[18px] w-[18px]",
+                  isActive ? "text-primary stroke-[2.5]" : "text-muted-foreground stroke-[1.75]"
+                )} />
+                <span className={cn(
+                  "text-[9px] leading-none",
+                  isActive ? "font-bold text-foreground" : "font-medium text-muted-foreground"
+                )}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
+
     </nav>
   );
 };

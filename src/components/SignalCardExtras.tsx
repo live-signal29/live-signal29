@@ -136,12 +136,12 @@ const SignalCardExtras = memo((props: Props) => {
       : "bg-success/15 text-success";
 
   return (
-    <div className="space-y-2.5 p-3">
+    <div className="space-y-2 p-2.5">
       {/* Row 1 — direction, risk, pair · style */}
       <div className="flex items-center gap-2">
         <span
           className={cn(
-            "rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white",
+            "rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white",
             isBuy ? "bg-success" : "bg-destructive"
           )}
         >
@@ -150,7 +150,7 @@ const SignalCardExtras = memo((props: Props) => {
         {riskLevel && (
           <span
             className={cn(
-              "rounded-full px-2.5 py-1 text-[10px] font-bold whitespace-nowrap",
+              "rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap",
               riskTone
             )}
           >
@@ -180,17 +180,17 @@ const SignalCardExtras = memo((props: Props) => {
       </div>
 
       {/* Row 2 — entry / current / state */}
-      <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2">
+      <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-2.5 py-1.5">
         <div className="min-w-0">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Entry</div>
-          <div className="text-base font-extrabold tabular-nums leading-tight">{fmt(entryPrice)}</div>
+          <div className="text-sm font-extrabold tabular-nums leading-tight">{fmt(entryPrice)}</div>
         </div>
         <span className="text-muted-foreground">⟶</span>
         <div className="min-w-0 flex-1 text-center">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Current</div>
           <div
             className={cn(
-              "text-base font-extrabold tabular-nums leading-tight",
+              "text-sm font-extrabold tabular-nums leading-tight",
               currentPrice > 0 ? (isBuy ? "text-success" : "text-success") : "text-muted-foreground"
             )}
           >
@@ -203,7 +203,7 @@ const SignalCardExtras = memo((props: Props) => {
           </div>
           <div
             className={cn(
-              "flex items-center justify-end gap-1 text-sm font-extrabold leading-tight",
+              "flex items-center justify-end gap-1 text-xs font-extrabold leading-tight",
               isClosed ? "text-destructive" : isPending ? "text-warning" : "text-success"
             )}
           >
@@ -217,7 +217,7 @@ const SignalCardExtras = memo((props: Props) => {
       {span > 0 && (
         <div className="pt-1">
           <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-destructive via-warning to-success" />
-          <div className="relative mt-1 h-9">
+          <div className="relative mt-1 h-8">
             {currentPrice > 0 && (
               <div
                 className="absolute -top-6 -translate-x-1/2 rounded-md border border-border bg-card px-1.5 py-0.5 text-[9px] font-bold tabular-nums shadow"
@@ -256,14 +256,14 @@ const SignalCardExtras = memo((props: Props) => {
       {/* Row 4 — timer / avg win / running P/L */}
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-[10px] text-muted-foreground">
             ⏱ Time in Trade:{" "}
             <span className="font-extrabold tabular-nums text-warning">{isOpen ? elapsed : "--:--:--"}</span>
           </span>
-          <span className="text-[11px] text-muted-foreground">⌛ Avg win: 2.5hrs</span>
+          <span className="text-[10px] text-muted-foreground">⌛ Avg win: 2.5hrs</span>
         </div>
         {profitNote ? (
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-[10px] text-muted-foreground">
             📊{" "}
             <span
               className={cn(
@@ -279,7 +279,7 @@ const SignalCardExtras = memo((props: Props) => {
             </span>
           </div>
         ) : (
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-[10px] text-muted-foreground">
             📊 Running P/L:{" "}
             <span
               className={cn(
@@ -294,13 +294,13 @@ const SignalCardExtras = memo((props: Props) => {
       </div>
 
       {/* Row 5 — sentiment */}
-      <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2">
-        <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">📊 Market Sentiment</span>
-        <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-muted">
+      <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-2.5 py-1.5">
+        <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">📊 Market Sentiment</span>
+        <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
           <div className="bg-success transition-all duration-500" style={{ width: `${buyPct}%` }} />
           <div className="bg-destructive transition-all duration-500" style={{ width: `${sellPct}%` }} />
         </div>
-        <span className="shrink-0 text-[11px] font-extrabold">
+        <span className="shrink-0 text-[10px] font-extrabold">
           <span className="text-success">{buyPct}%</span>
           <span className="text-muted-foreground"> / </span>
           <span className="text-destructive">{sellPct}%</span>
@@ -310,11 +310,11 @@ const SignalCardExtras = memo((props: Props) => {
       {/* Row 6 — analysis */}
       <div
         className={cn(
-          "flex items-center gap-2 rounded-xl border-l-[3px] bg-muted/40 px-3 py-2",
+          "flex items-center gap-2 rounded-xl border-l-[3px] bg-muted/40 px-2.5 py-1.5",
           isBuy ? "border-l-success" : "border-l-destructive"
         )}
       >
-        <p className="flex-1 text-[11px] leading-snug">
+        <p className="flex-1 text-[10px] leading-snug">
           <span className={cn("font-extrabold", isBuy ? "text-success" : "text-destructive")}>
             {isBuy ? "▲" : "▼"}
           </span>{" "}
@@ -345,7 +345,7 @@ const SignalCardExtras = memo((props: Props) => {
       <div className="flex justify-end">
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 rounded-full px-3 text-[11px] font-bold">
+            <Button variant="outline" size="sm" className="h-6 rounded-full px-2.5 text-[9px] font-bold">
               💰 Pips Calculator
             </Button>
           </DialogTrigger>
