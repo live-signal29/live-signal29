@@ -477,8 +477,6 @@ const SignalsDashboard = () => {
             <StreakStatsRow />
           </div>
 
-          {/* Brokers side by side */}
-          <AffiliateBannerCarousel />
 
 
           {/* Bottom Ad Banner - Only for non-premium users */}
