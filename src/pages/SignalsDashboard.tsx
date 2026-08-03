@@ -440,18 +440,9 @@ const SignalsDashboard = () => {
                               />
                             ))}
                           </div>
-                          <div className="border-t border-border/50 my-4"></div>
+                          
                         </div>
                         
-                        {/* Show affiliate banner carousel after first date group (Today's signals) */}
-                        {index === 0 && dateEntries.length > 1 && (
-                          <AffiliateBannerCarousel />
-                        )}
-                        
-                        {/* Show affiliate banner before last date group */}
-                        {index === dateEntries.length - 2 && dateEntries.length > 2 && (
-                          <AffiliateBannerCarousel />
-                        )}
                       </div>
                     ));
                   })()}
