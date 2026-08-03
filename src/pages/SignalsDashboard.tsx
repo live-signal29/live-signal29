@@ -22,8 +22,9 @@ import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
-import { HomeRotatingBanner } from "@/components/HomeRotatingBanner";
+import { StreakStatsRow } from "@/components/StreakStatsRow";
 import { LiveDashboardHeader } from "@/components/LiveDashboardHeader";
+
 
 
 
@@ -258,10 +259,8 @@ const SignalsDashboard = () => {
             <LiveDashboardHeader />
           </div>
 
-          {/* Rotating home banner: streak → upcoming signal countdown */}
-          <div className="mb-3">
-            <HomeRotatingBanner />
-          </div>
+
+
 
 
           {/* Top Ad Banner - Only for non-premium users */}
@@ -275,47 +274,40 @@ const SignalsDashboard = () => {
           <>
 
            {/* Main Category Tabs - Clean Material Pill Bar */}
-          <div className="mb-4 sm:mb-6">
-            <div className="bg-card border border-border/50 rounded-full p-1 flex overflow-x-auto scrollbar-hide shadow-sm">
+          <div className="mb-3">
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
               {[
-                { key: "COMMODITIES", label: "Gold", activeColor: "bg-yellow-500/15 text-yellow-500", badgeColor: "bg-yellow-500 text-white" },
-                { key: "FOREX", label: "Forex", activeColor: "bg-blue-500/15 text-blue-500", badgeColor: "bg-blue-500 text-white" },
-                { key: "CRYPTO", label: "Crypto", activeColor: "bg-orange-500/15 text-orange-500", badgeColor: "bg-orange-500 text-white" },
-                { key: "DERIV/BINARY", label: "Deriv", activeColor: "bg-purple-500/15 text-purple-500", badgeColor: "bg-purple-500 text-white" },
-                { key: "MARKET IDEAS", label: "Ideas", activeColor: "bg-emerald-500/15 text-emerald-500", badgeColor: "bg-emerald-500 text-white" },
+                { key: "COMMODITIES", label: "Gold" },
+                { key: "FOREX", label: "Forex" },
+                { key: "CRYPTO", label: "Crypto" },
+                { key: "DERIV/BINARY", label: "Deriv" },
+                { key: "MARKET IDEAS", label: "Ideas" },
               ].map((category) => {
                 const isActive = mainCategory === category.key;
-                const signalCount = isActive && mainCategory !== "MARKET IDEAS" ? signals?.length : undefined;
+                const signalCount =
+                  isActive && mainCategory !== "MARKET IDEAS" ? signals?.length : undefined;
+                const isGold = category.key === "COMMODITIES";
                 return (
                   <button
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
                     className={cn(
-                      "relative flex-shrink-0 flex items-center gap-1.5",
-                      "px-4 py-2 rounded-full",
-                      "text-sm whitespace-nowrap",
-                      "transition-all duration-200 ease-out",
+                      "flex-shrink-0 rounded-full px-4 py-1.5 text-xs font-bold whitespace-nowrap transition-colors",
                       isActive
-                        ? `${category.activeColor} font-semibold shadow-sm`
-                        : "text-muted-foreground font-medium hover:text-foreground"
+                        ? isGold
+                          ? "bg-warning text-warning-foreground"
+                          : "bg-foreground text-background"
+                        : "bg-muted/60 text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <span>{category.label}</span>
-                    {signalCount !== undefined && signalCount > 0 && (
-                      <span className={cn(
-                        "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold",
-                        isActive
-                          ? category.badgeColor
-                          : "bg-muted-foreground/20 text-muted-foreground"
-                      )}>
-                        {signalCount}
-                      </span>
-                    )}
+                    {category.label}
+                    {signalCount !== undefined && signalCount > 0 && ` ${signalCount}`}
                   </button>
                 );
               })}
             </div>
           </div>
+
 
 
           {/* Favorites Filter Button */}
@@ -483,6 +475,15 @@ const SignalsDashboard = () => {
               )}
             </>
           )}
+
+          {/* Streak + next signal + today pips */}
+          <div className="mt-3">
+            <StreakStatsRow />
+          </div>
+
+          {/* Brokers side by side */}
+          <AffiliateBannerCarousel />
+
 
           {/* Bottom Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
