@@ -15,9 +15,16 @@ const Header = () => {
 
   return (
     <>
-      <FlashSaleBanner />
-      <AppInstallBanner />
-      <TrialBanner />
+      {/* Reference design: keep the top area clean — max one promo strip at a time */}
+      {!isPremium ? (
+        <>
+          <FlashSaleBanner />
+          <TrialBanner />
+        </>
+      ) : (
+        <AppInstallBanner />
+      )}
+
       <header className="sticky top-0 z-40 w-full">
         <div className="glass-card rounded-b-2xl mx-2 mt-0 border-t-0">
           <div className="flex h-14 items-center justify-between px-3">
