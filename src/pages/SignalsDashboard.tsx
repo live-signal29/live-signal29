@@ -426,25 +426,30 @@ const SignalsDashboard = () => {
 
                     const dateEntries = Object.entries(groupedSignals);
                     
-                    return dateEntries.map(([date, daySignals], index) => (
+                    return dateEntries.map(([date, daySignals]) => (
                       <div key={date}>
                         <div className="space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                            {daySignals.map((signal) => (
-                              <SignalCardNew 
-                                key={signal.id} 
-                                signal={signal as any}
-                                hasAccess={hasAccess}
-                                subscriptionStatus={subscriptionStatus}
-                                livePrice={livePrices[signal.pair] ? parseFloat(livePrices[signal.pair]) : undefined}
-                              />
+                            {daySignals.map((signal, i) => (
+                              <React.Fragment key={signal.id}>
+                                <SignalCardNew
+                                  signal={signal as any}
+                                  hasAccess={hasAccess}
+                                  subscriptionStatus={subscriptionStatus}
+                                  livePrice={livePrices[signal.pair] ? parseFloat(livePrices[signal.pair]) : undefined}
+                                />
+                                {(i + 1) % 3 === 0 && (
+                                  <div className="md:col-span-2">
+                                    <AffiliateBannerCarousel />
+                                  </div>
+                                )}
+                              </React.Fragment>
                             ))}
                           </div>
-                          
                         </div>
-                        
                       </div>
                     ));
+
                   })()}
                   
                   {/* Infinite scroll loader */}
