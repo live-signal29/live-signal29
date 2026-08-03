@@ -292,12 +292,12 @@ const SignalsDashboard = () => {
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
                     className={cn(
-                      "flex-shrink-0 rounded-full px-4 py-1.5 text-xs font-bold whitespace-nowrap transition-colors",
+                      "flex-shrink-0 rounded-full px-4 py-2 text-[13px] font-bold whitespace-nowrap transition-colors border",
                       isActive
                         ? isGold
-                          ? "bg-warning text-warning-foreground"
-                          : "bg-foreground text-background"
-                        : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                          ? "bg-warning text-warning-foreground border-warning"
+                          : "bg-foreground text-background border-foreground"
+                        : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                     )}
                   >
                     {category.label}
