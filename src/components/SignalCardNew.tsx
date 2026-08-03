@@ -288,143 +288,93 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   };
 
   return (
-    <Card 
+    <Card
       ref={cardRef}
-      className={`overflow-hidden transition-all duration-300 shadow-sm relative bg-card ${
-        signal.is_premium 
-          ? 'border-2 border-primary/40' 
-          : 'border-border'
-      } ${!isLocked && 'hover:border-primary/50 hover:shadow-md'}`}
+      className={`relative overflow-hidden rounded-2xl bg-card shadow-sm transition-all duration-300 ${
+        signal.is_premium ? "border border-primary/30" : "border border-border"
+      }`}
     >
-      <CardContent className="p-0 relative z-10">
-        {/* NEW Badge - only on unlocked */}
+      <CardContent className="relative z-10 p-0">
         {isNewSignal && !isLocked && (
-          <div className="absolute top-2 right-2 z-10">
-            <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 animate-pulse">
+          <div className="absolute right-2 top-2 z-10">
+            <Badge className="animate-pulse bg-primary px-1.5 py-0 text-[9px] text-primary-foreground">
               NEW
             </Badge>
           </div>
         )}
 
-        {/* Header - Always Visible */}
-        <div className="flex justify-between items-start p-2.5 sm:p-3 border-b border-border">
-          <div className="flex items-start gap-2">
-            <Badge className={`${signal.type === "Buy" ? "bg-success/10 text-success border-success" : "bg-destructive/10 text-destructive border-destructive"} border font-bold text-xs mt-0.5`}>
-              {signal.type.toUpperCase()}
-            </Badge>
-            {signal.is_premium && (
-              <div className="relative">
-                <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-1 animate-crown-bounce drop-shadow-[0_0_6px_hsl(45_100%_50%/0.6)]" />
-                <div className="absolute inset-0 animate-ping opacity-30">
-                  <Crown className="h-4 w-4 text-yellow-400 mt-1" />
-                </div>
-              </div>
-            )}
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm sm:text-base font-bold text-primary">
-                  {signal.pair}
-                </span>
-                {signal.tag && signal.tag.trim() && (
-                  <Badge className="bg-purple-500/15 text-purple-400 border border-purple-500/30 text-[10px] px-2 py-0.5 font-semibold">
-                    {signal.tag.trim()}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs sm:text-sm font-medium">
-                  <span className="text-muted-foreground">Entry:</span>
-                  <span className={`font-semibold ml-1 ${
-                    isLocked ? 'text-yellow-500' : isPending ? 'text-orange-500' : (isLimitOrder ? 'text-success' : 'text-blue-500')
-                  }`}>
-                    {isLimitOrder
-                      ? (isPending
-                          ? `${signal.type === 'Buy' ? 'Limit Buy' : 'Limit Sell'} @ ${limitPrice}`
-                          : `${signal.type}`)
-                      : signal.entry
-                    }
-                  </span>
-                </span>
-              </div>
-              {/* Show current price for OPEN and PENDING signals with MT5-style animation */}
-              {(isOpen || isPending) && currentPrice > 0 && !isLocked && (
-                <span className="text-[10px] text-muted-foreground">
-                  Current: <span
-                    key={currentPrice}
-                    className={`font-semibold px-1 py-0.5 rounded transition-colors ${
-                      priceDirection === 'up'
-                        ? 'text-success animate-price-up'
-                        : priceDirection === 'down'
-                          ? 'text-destructive animate-price-down'
-                          : 'text-foreground'
-                    }`}
-                  >
-                    {currentPrice.toFixed(2)}
-                  </span>
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 hover:bg-accent"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Share2 className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
-                  Share on WhatsApp
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('telegram')}>
-                  Share on Telegram
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('copy')}>
-                  Copy Link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">
-              {formatDate(signal.created_at)}
-            </span>
-          </div>
-        </div>
-
         {isLocked ? (
           /* Locked State - Free user viewing premium signal */
           <>
-            <div 
-              className="flex flex-col items-center justify-center gap-2 py-6 px-4 cursor-pointer hover:bg-muted/50 transition-colors text-center"
+            <div className="flex items-center gap-2 px-3 pt-3">
+              <Badge
+                className={`${
+                  isBuy
+                    ? "bg-success text-white"
+                    : "bg-destructive text-white"
+                } rounded-full border-0 px-3 py-1 text-[11px] font-extrabold uppercase`}
+              >
+                {signal.type}
+              </Badge>
+              <Crown className="h-4 w-4 text-yellow-500" />
+              <span className="ml-auto text-[11px] text-muted-foreground">{formatDate(signal.created_at)}</span>
+            </div>
+            <div
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 px-4 py-6 text-center transition-colors hover:bg-muted/50"
               onClick={() => navigate("/premium")}
             >
-              <div className="bg-muted p-2 rounded-full">
+              <div className="rounded-full bg-muted p-2">
                 <Lock className="h-5 w-5 text-muted-foreground" />
               </div>
-              <span className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
+              <span className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary">
                 🔒 BUY premium to see signal
               </span>
             </div>
-            {/* Footer showing status left, LIVE SIGNAL centered */}
-            <div className="px-3 py-2 border-t border-border flex items-center">
-              <span className={`text-[10px] font-medium ${
-                getStatusText() === 'CLOSE' ? 'text-destructive' : 'text-blue-500'
-              }`}>
-                {getStatusText() === 'CLOSE' ? 'Close' : 'Open'}
+            <div className="flex items-center border-t border-border px-3 py-2">
+              <span
+                className={`text-[10px] font-medium ${
+                  getStatusText() === "CLOSE" ? "text-destructive" : "text-blue-500"
+                }`}
+              >
+                {getStatusText() === "CLOSE" ? "Close" : "Open"}
               </span>
-              {/* LIVE SIGNAL centered - only when OPEN */}
-              {getStatusText() !== 'CLOSE' && (
-                <span className="flex-1 text-center text-base font-bold text-success animate-pulse">
+              {getStatusText() !== "CLOSE" && (
+                <span className="flex-1 animate-pulse text-center text-base font-bold text-success">
                   LIVE SIGNAL
                 </span>
               )}
             </div>
           </>
         ) : (
+          <SignalCardExtras
+            signalId={signal.id}
+            pair={signal.pair}
+            type={signal.type}
+            entryPrice={parsedEntryPrice}
+            sl={parseEntryPrice(signal.sl)}
+            tps={[signal.tp1, signal.tp2, signal.tp3, signal.tp4].map((t) => (t ? parseEntryPrice(t) : 0))}
+            tpHits={[signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit]}
+            slHit={!!signal.sl_hit}
+            currentPrice={currentPrice}
+            createdAt={signal.created_at}
+            isOpen={isOpen}
+            isPending={isPending}
+            isClosed={isClosed}
+            analysis={signal.analysis_reason}
+            riskLevel={signal.risk_level}
+            signalType={signal.signal_type || signal.tag}
+            profitNote={signal.profit_note}
+            runningPL={runningPL}
+            onShare={handleShare}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default SignalCardNew;
+
           /* Unlocked State - Show all details */
           <>
             {/* Badges Row - Side aligned */}
