@@ -26,11 +26,11 @@ export const AffiliateBannerCarousel = () => {
             <img src={xmLogo} alt="XM broker" className="w-full h-full object-contain" />
           </div>
           <div className="text-center">
-            <div className="text-sm font-bold leading-tight">XM</div>
-            <div className="text-[10px] text-muted-foreground leading-tight">Multi-regulated</div>
+            <div className="text-sm font-bold leading-tight">🏆 XM</div>
+            <div className="text-[10px] text-muted-foreground leading-tight">Min. $5 · Regulated</div>
           </div>
           <span className="w-full inline-flex items-center justify-center gap-1 h-8 rounded-xl bg-warning text-warning-foreground text-xs font-semibold transition-transform group-hover:scale-[1.02]">
-            Trade
+            ⚡ Trade
             <ExternalLink className="h-3 w-3" />
           </span>
         </a>
@@ -46,11 +46,11 @@ export const AffiliateBannerCarousel = () => {
             <img src={exnessLogo} alt="Exness broker" className="w-full h-full object-contain" />
           </div>
           <div className="text-center">
-            <div className="text-sm font-bold leading-tight">Exness</div>
-            <div className="text-[10px] text-muted-foreground leading-tight">Low spreads</div>
+            <div className="text-sm font-bold leading-tight">🚀 Exness</div>
+            <div className="text-[10px] text-muted-foreground leading-tight">Min. $10 · IB Link</div>
           </div>
           <span className="w-full inline-flex items-center justify-center gap-1 h-8 rounded-xl bg-success text-success-foreground text-xs font-semibold transition-transform group-hover:scale-[1.02]">
-            IB Link
+            🔗 IB Link
             <ExternalLink className="h-3 w-3" />
           </span>
         </a>
