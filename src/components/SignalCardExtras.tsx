@@ -241,7 +241,10 @@ const SignalCardExtras = memo((props: Props) => {
                 style={{ left: `${Math.min(94, Math.max(6, p(t)))}%` }}
               >
                 <div className="mx-auto h-3.5 w-[3px] rounded bg-success" />
-                <div className="mt-0.5 whitespace-nowrap text-[9px] font-bold text-success">
+                <div
+                  className="mt-0.5 whitespace-nowrap text-[9px] font-bold text-success"
+                  style={{ transform: i % 2 ? "translateY(10px)" : undefined }}
+                >
                   TP{i + 1} {fmt(t)} {tpHits[i] ? "✓" : ""}
                 </div>
               </div>
