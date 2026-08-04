@@ -136,7 +136,7 @@ const SignalCardExtras = memo((props: Props) => {
       : "bg-success/15 text-success";
 
   return (
-    <div className="space-y-2 p-2.5">
+    <div className="space-y-2.5 px-3.5 pb-3 pt-3.5">
       {/* Row 1 — direction, risk, pair · style */}
       <div className="flex items-center gap-2">
         <span
