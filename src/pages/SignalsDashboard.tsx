@@ -275,7 +275,7 @@ const SignalsDashboard = () => {
 
            {/* Main Category Tabs - Clean Material Pill Bar */}
           <div className="mb-3">
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+            <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
               {[
                 { key: "COMMODITIES", label: "Gold" },
                 { key: "FOREX", label: "Forex" },
@@ -292,12 +292,12 @@ const SignalsDashboard = () => {
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
                     className={cn(
-                      "flex-shrink-0 rounded-full px-4 py-2 text-[13px] font-bold whitespace-nowrap transition-colors border",
+                      "flex-shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors",
                       isActive
                         ? isGold
                           ? "bg-warning text-warning-foreground border-warning"
                           : "bg-foreground text-background border-foreground"
-                        : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
+                        : "border-transparent bg-muted text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {category.label}
@@ -307,6 +307,7 @@ const SignalsDashboard = () => {
               })}
             </div>
           </div>
+
 
 
 

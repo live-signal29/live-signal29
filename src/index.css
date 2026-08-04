@@ -57,10 +57,11 @@
     --affiliate: 43 96% 56%;
     --affiliate-foreground: 0 0% 10%;
 
-    /* Soft gradient for glassmorphism */
-    --gradient-start: 220 20% 97%;
-    --gradient-mid: 200 30% 96%;
-    --gradient-end: 174 30% 95%;
+    /* Clean airy light surface (flat, no heavy gradient) */
+    --gradient-start: 220 20% 98%;
+    --gradient-mid: 220 20% 98%;
+    --gradient-end: 220 16% 96%;
+
 
     /* Glass effect variables */
     --glass-bg: 0 0% 100% / 0.7;

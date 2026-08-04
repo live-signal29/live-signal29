@@ -25,9 +25,10 @@ const Header = () => {
         <AppInstallBanner />
       )}
 
-      <header className="sticky top-0 z-40 w-full">
-        <div className="glass-card rounded-b-2xl mx-2 mt-0 border-t-0">
-          <div className="flex h-14 items-center justify-between px-3">
+      <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-xl">
+        <div>
+          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
+
             {/* Left: Brand */}
             <Link to="/" className="min-w-0 flex flex-col justify-center">
               <span className="flex items-center gap-1.5 leading-none">

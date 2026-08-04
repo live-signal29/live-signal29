@@ -44,8 +44,9 @@ export const StreakStatsRow = () => {
   const nextMin = Math.max(1, Math.ceil(secondsLeft / 60));
 
   return (
-    <Card className="rounded-2xl px-3.5 py-3">
+    <Card className="rounded-[14px] border-border px-3 py-2 shadow-[0_1px_3px_hsl(var(--foreground)/0.05)]">
       <div className="flex items-center gap-3">
+
         {/* Streak ring */}
         <div
           className="relative h-9 w-9 shrink-0 rounded-full"

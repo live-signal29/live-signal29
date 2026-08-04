@@ -9,6 +9,142 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// ───────────────────────── MT5 (MetaApi) PRIMARY SOURCE ─────────────────────────
+// Credentials stay server-side only; never returned to the client.
+const METAAPI_TOKEN = Deno.env.get("METAAPI_TOKEN") || "";
+const MT5_LOGIN = Deno.env.get("MT5_LOGIN") || "";
+const MT5_SERVER = Deno.env.get("MT5_SERVER") || "";
+const MT5_PASSWORD = Deno.env.get("MT5_PASSWORD") || "";
+
+const PROVISIONING = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
+const CLIENT_API = "https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai";
+
+let cachedAccountId: string | null = null;
+let cachedAccountAt = 0;
+
+async function getMt5AccountId(): Promise<string | null> {
+  if (!METAAPI_TOKEN || !MT5_LOGIN || !MT5_SERVER) return null;
+  if (cachedAccountId && Date.now() - cachedAccountAt < 10 * 60 * 1000) return cachedAccountId;
+  try {
+    const r = await fetch(`${PROVISIONING}/users/current/accounts`, {
+      headers: { "auth-token": METAAPI_TOKEN },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) {
+      console.log("MT5 list accounts failed:", r.status, (await r.text()).slice(0, 200));
+      return null;
+    }
+    const raw = await r.json();
+    const accounts = Array.isArray(raw) ? raw : raw?.items || [];
+    console.log(`MT5 accounts visible: ${accounts.length}`);
+    let acc = accounts.find(
+      (a: any) => String(a.login) === String(MT5_LOGIN) && a.server === MT5_SERVER
+    ) || accounts.find((a: any) => String(a.login) === String(MT5_LOGIN));
+
+    if (!acc && MT5_PASSWORD) {
+      const c = await fetch(`${PROVISIONING}/users/current/accounts`, {
+        method: "POST",
+        headers: { "auth-token": METAAPI_TOKEN, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Prices-${MT5_LOGIN}`,
+          type: "cloud",
+          login: MT5_LOGIN,
+          password: MT5_PASSWORD,
+          server: MT5_SERVER,
+          platform: "mt5",
+          magic: 0,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (c.ok) acc = await c.json();
+      else console.log("MT5 create account failed:", c.status, (await c.text()).slice(0, 200));
+    }
+
+    const id = acc?._id || acc?.id;
+    if (!id) { console.log("MT5 account not resolved"); return null; }
+    console.log("MT5 account:", id, "state:", acc?.state);
+
+
+    if (acc?.state && acc.state !== "DEPLOYED") {
+      await fetch(`${PROVISIONING}/users/current/accounts/${id}/deploy`, {
+        method: "POST",
+        headers: { "auth-token": METAAPI_TOKEN },
+        signal: AbortSignal.timeout(8000),
+      }).catch(() => {});
+    }
+
+    cachedAccountId = id;
+    cachedAccountAt = Date.now();
+    return id;
+  } catch (e) {
+    console.log("MT5 account lookup fail:", String(e));
+    return null;
+  }
+}
+
+/** Map an app pair label to the broker's MT5 symbol. */
+function toMt5Symbol(pair: string): string | null {
+  const upper = pair.toUpperCase();
+  const letters = upper.replace(/[^A-Z0-9]/g, "");
+
+  if (upper.includes("XAU") || upper.includes("GOLD")) return "XAUUSD";
+  if (upper.includes("XAG") || upper.includes("SILVER")) return "XAGUSD";
+  if (upper.includes("BRENT")) return "UKOIL";
+  if (upper.includes("CRUDE") || upper.includes("WTI")) return "USOIL";
+  if (upper.includes("NATURAL GAS") || letters.startsWith("NGAS")) return "XNGUSD";
+  if (upper.includes("US30") || upper.includes("DOW")) return "US30";
+  if (upper.includes("NASDAQ") || upper.includes("NAS100")) return "US100";
+  if (upper.includes("S&P") || upper.includes("SP500") || upper.includes("SPX")) return "US500";
+  if (upper.includes("DAX") || upper.includes("GER")) return "DE30";
+  if (upper.includes("FTSE") || upper.includes("UK100")) return "UK100";
+  if (upper.includes("NIKKEI") || upper.includes("JP225")) return "JP225";
+
+  // Crypto + FX: 6-char base/quote symbols
+  if (/^[A-Z]{6,7}$/.test(letters)) return letters.slice(0, 6);
+  return null;
+}
+
+/** Decimal places to render for a symbol. */
+function priceDecimals(symbol: string): number {
+  if (symbol === "XAUUSD" || symbol.startsWith("US") || symbol.startsWith("DE") ||
+      symbol.startsWith("UK") || symbol.startsWith("JP")) return 2;
+  if (symbol === "XAGUSD") return 3;
+  if (symbol.endsWith("JPY")) return 3;
+  if (/^(BTC|ETH|XRP|LTC|ADA|SOL|DOGE|DOT|AVAX|LINK)/.test(symbol)) return 2;
+  return 5;
+}
+
+/** Fetch live MT5 prices for the given app pairs. Returns only what MT5 answered. */
+async function fetchMt5Prices(pairs: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  const accountId = await getMt5AccountId();
+  if (!accountId) return out;
+
+  const jobs = pairs.map(async (pair) => {
+    const symbol = toMt5Symbol(pair);
+    if (!symbol) return;
+    try {
+      const r = await fetch(
+        `${CLIENT_API}/users/current/accounts/${accountId}/symbols/${encodeURIComponent(symbol)}/current-price`,
+        { headers: { "auth-token": METAAPI_TOKEN }, signal: AbortSignal.timeout(6000) }
+      );
+      if (!r.ok) { await r.text(); return; }
+      const d = await r.json();
+      const bid = Number(d?.bid);
+      const ask = Number(d?.ask);
+      const mid = bid && ask ? (bid + ask) / 2 : bid || ask;
+      if (mid > 0) out[pair] = mid.toFixed(priceDecimals(symbol));
+    } catch (e) {
+      console.log(`MT5 ${pair} fail:`, String(e));
+    }
+  });
+
+  await Promise.all(jobs);
+  if (Object.keys(out).length) console.log("MT5 prices:", JSON.stringify(out));
+  return out;
+}
+
+
 // ─── Yahoo Finance helper ───
 async function fetchYahooPrice(symbol: string): Promise<number | null> {
   try {
@@ -228,10 +364,18 @@ async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> 
   const indexPairs: string[] = [];
   const syntheticKeywords = ["BOOM", "CRASH", "VOL", "V75", "R_"];
 
+  // MT5 is the primary market-data source; public APIs are only a fallback.
+  const mt5Candidates = pairs.filter(
+    p => !syntheticKeywords.some(k => p.toUpperCase().includes(k))
+  );
+  const mt5Prices = mt5Candidates.length > 0 ? await fetchMt5Prices(mt5Candidates) : {};
+  Object.assign(prices, mt5Prices);
+
   for (const pair of pairs) {
     const upper = pair.toUpperCase();
     if (syntheticKeywords.some(k => upper.includes(k))) continue;
-    
+    if (prices[pair]) continue; // already resolved from MT5
+
     if (upper.includes("XAU") || upper.includes("GOLD")) goldPairs.push(pair);
     else if (upper.includes("XAG") || upper.includes("SILVER")) silverPairs.push(pair);
     else if (upper.includes("OIL") && upper.includes("CRUDE")) oilCrudePairs.push(pair);
@@ -241,6 +385,7 @@ async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> 
     else if (["BTC", "ETH", "XRP", "LTC", "ADA", "SOL", "DOGE", "DOT", "AVAX", "MATIC", "LINK"].some(c => upper.startsWith(c))) cryptoPairs.push(pair);
     else forexPairs.push(pair);
   }
+
 
   const needOil = oilCrudePairs.length > 0 || oilBrentPairs.length > 0;
 
