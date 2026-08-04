@@ -50,8 +50,9 @@ export const LiveDashboardHeader = () => {
   })();
 
   return (
-    <Card className="rounded-2xl px-3 py-2">
-      <div className="flex items-center gap-2.5">
+    <Card className="rounded-2xl border-border px-3.5 py-2.5 shadow-[0_1px_3px_hsl(var(--foreground)/0.05)]">
+      <div className="flex items-center gap-3">
+
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-extrabold tracking-tight">XAUUSD</span>
