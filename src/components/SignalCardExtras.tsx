@@ -311,7 +311,7 @@ const SignalCardExtras = memo((props: Props) => {
       {/* Row 6 — analysis */}
       <div
         className={cn(
-          "flex items-center gap-2 rounded-xl border-l-[3px] bg-muted/40 px-2.5 py-1.5",
+          "flex items-center gap-2 rounded-[10px] border border-border border-l-[3px] bg-muted/40 px-3 py-1.5",
           isBuy ? "border-l-success" : "border-l-destructive"
         )}
       >
