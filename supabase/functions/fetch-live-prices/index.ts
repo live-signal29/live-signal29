@@ -357,10 +357,18 @@ async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> 
   const indexPairs: string[] = [];
   const syntheticKeywords = ["BOOM", "CRASH", "VOL", "V75", "R_"];
 
+  // MT5 is the primary market-data source; public APIs are only a fallback.
+  const mt5Candidates = pairs.filter(
+    p => !syntheticKeywords.some(k => p.toUpperCase().includes(k))
+  );
+  const mt5Prices = mt5Candidates.length > 0 ? await fetchMt5Prices(mt5Candidates) : {};
+  Object.assign(prices, mt5Prices);
+
   for (const pair of pairs) {
     const upper = pair.toUpperCase();
     if (syntheticKeywords.some(k => upper.includes(k))) continue;
-    
+    if (prices[pair]) continue; // already resolved from MT5
+
     if (upper.includes("XAU") || upper.includes("GOLD")) goldPairs.push(pair);
     else if (upper.includes("XAG") || upper.includes("SILVER")) silverPairs.push(pair);
     else if (upper.includes("OIL") && upper.includes("CRUDE")) oilCrudePairs.push(pair);
@@ -370,6 +378,7 @@ async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> 
     else if (["BTC", "ETH", "XRP", "LTC", "ADA", "SOL", "DOGE", "DOT", "AVAX", "MATIC", "LINK"].some(c => upper.startsWith(c))) cryptoPairs.push(pair);
     else forexPairs.push(pair);
   }
+
 
   const needOil = oilCrudePairs.length > 0 || oilBrentPairs.length > 0;
 
