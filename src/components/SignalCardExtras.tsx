@@ -180,7 +180,8 @@ const SignalCardExtras = memo((props: Props) => {
       </div>
 
       {/* Row 2 — entry / current / state */}
-      <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-2.5 py-1.5">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2">
+
         <div className="min-w-0">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Entry</div>
           <div className="text-sm font-extrabold tabular-nums leading-tight">{fmt(entryPrice)}</div>
