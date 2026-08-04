@@ -295,7 +295,7 @@ const SignalCardExtras = memo((props: Props) => {
       </div>
 
       {/* Row 5 — sentiment */}
-      <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-2.5 py-1.5">
+      <div className="flex items-center gap-2 rounded-[10px] border border-border bg-muted/40 px-3 py-1.5">
         <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">📊 Market Sentiment</span>
         <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
           <div className="bg-success transition-all duration-500" style={{ width: `${buyPct}%` }} />
