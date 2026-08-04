@@ -30,11 +30,16 @@ async function getMt5AccountId(): Promise<string | null> {
       headers: { "auth-token": METAAPI_TOKEN },
       signal: AbortSignal.timeout(8000),
     });
-    if (!r.ok) { await r.text(); return null; }
-    const accounts = await r.json();
-    let acc = (accounts || []).find(
+    if (!r.ok) {
+      console.log("MT5 list accounts failed:", r.status, (await r.text()).slice(0, 200));
+      return null;
+    }
+    const raw = await r.json();
+    const accounts = Array.isArray(raw) ? raw : raw?.items || [];
+    console.log(`MT5 accounts visible: ${accounts.length}`);
+    let acc = accounts.find(
       (a: any) => String(a.login) === String(MT5_LOGIN) && a.server === MT5_SERVER
-    );
+    ) || accounts.find((a: any) => String(a.login) === String(MT5_LOGIN));
 
     if (!acc && MT5_PASSWORD) {
       const c = await fetch(`${PROVISIONING}/users/current/accounts`, {
@@ -52,11 +57,13 @@ async function getMt5AccountId(): Promise<string | null> {
         signal: AbortSignal.timeout(15000),
       });
       if (c.ok) acc = await c.json();
-      else await c.text();
+      else console.log("MT5 create account failed:", c.status, (await c.text()).slice(0, 200));
     }
 
     const id = acc?._id || acc?.id;
-    if (!id) return null;
+    if (!id) { console.log("MT5 account not resolved"); return null; }
+    console.log("MT5 account:", id, "state:", acc?.state);
+
 
     if (acc?.state && acc.state !== "DEPLOYED") {
       await fetch(`${PROVISIONING}/users/current/accounts/${id}/deploy`, {
