@@ -86,7 +86,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 h-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-11 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="ideas" className="text-xs sm:text-sm py-2">Ideas</TabsTrigger>
             <TabsTrigger value="headlines" className="text-xs sm:text-sm py-2">Headlines</TabsTrigger>
@@ -97,7 +97,13 @@ const AdminDashboard = () => {
             <TabsTrigger value="offers" className="text-xs sm:text-sm py-2">Offers</TabsTrigger>
             <TabsTrigger value="user-activity" className="text-xs sm:text-sm py-2">Analytics</TabsTrigger>
             <TabsTrigger value="activity" className="text-xs sm:text-sm py-2">Activity</TabsTrigger>
+            <TabsTrigger value="integrations" className="text-xs sm:text-sm py-2">MT5</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="integrations" className="space-y-4">
+            <MT5ConnectionSettings />
+          </TabsContent>
+
 
           <TabsContent value="signals" className="space-y-4">
             <Card>
