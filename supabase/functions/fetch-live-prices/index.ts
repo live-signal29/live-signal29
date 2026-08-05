@@ -11,10 +11,38 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // ───────────────────────── MT5 (MetaApi) PRIMARY SOURCE ─────────────────────────
 // Credentials stay server-side only; never returned to the client.
-const METAAPI_TOKEN = Deno.env.get("METAAPI_TOKEN") || "";
-const MT5_LOGIN = Deno.env.get("MT5_LOGIN") || "";
-const MT5_SERVER = Deno.env.get("MT5_SERVER") || "";
-const MT5_PASSWORD = Deno.env.get("MT5_PASSWORD") || "";
+// Priority: admin-managed value in public.integration_settings > project secret.
+let METAAPI_TOKEN = Deno.env.get("METAAPI_TOKEN") || "";
+let MT5_LOGIN = Deno.env.get("MT5_LOGIN") || "";
+let MT5_SERVER = Deno.env.get("MT5_SERVER") || "";
+let MT5_PASSWORD = Deno.env.get("MT5_PASSWORD") || "";
+
+let credsLoadedAt = 0;
+async function loadStoredCredentials() {
+  if (Date.now() - credsLoadedAt < 60_000) return;
+  credsLoadedAt = Date.now();
+  try {
+    const admin = createClient(supabaseUrl, supabaseServiceKey);
+    const { data } = await admin
+      .from("integration_settings")
+      .select("key, value")
+      .in("key", ["METAAPI_TOKEN", "MT5_LOGIN", "MT5_SERVER", "MT5_PASSWORD"]);
+    for (const row of data || []) {
+      const v = String(row.value || "").trim();
+      if (!v) continue;
+      if (row.key === "METAAPI_TOKEN" && v !== METAAPI_TOKEN) {
+        METAAPI_TOKEN = v;
+        cachedAccountId = null;
+      }
+      if (row.key === "MT5_LOGIN") MT5_LOGIN = v;
+      if (row.key === "MT5_SERVER") MT5_SERVER = v;
+      if (row.key === "MT5_PASSWORD") MT5_PASSWORD = v;
+    }
+  } catch (_e) {
+    // stored credentials unavailable — fall back to project secrets
+  }
+}
+
 
 const PROVISIONING = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
 const CLIENT_API = "https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai";
@@ -23,6 +51,7 @@ let cachedAccountId: string | null = null;
 let cachedAccountAt = 0;
 
 async function getMt5AccountId(): Promise<string | null> {
+  await loadStoredCredentials();
   if (!METAAPI_TOKEN || !MT5_LOGIN || !MT5_SERVER) return null;
   if (cachedAccountId && Date.now() - cachedAccountAt < 10 * 60 * 1000) return cachedAccountId;
   try {
