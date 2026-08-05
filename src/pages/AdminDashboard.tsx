@@ -18,6 +18,7 @@ import UserActivityDashboard from "@/components/admin/UserActivityDashboard";
 import AccountApplications from "@/components/admin/AccountApplications";
 import PerformanceManagement from "@/components/admin/PerformanceManagement";
 import HeadlinesManagement from "@/components/admin/HeadlinesManagement";
+import MT5ConnectionSettings from "@/components/admin/MT5ConnectionSettings";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
