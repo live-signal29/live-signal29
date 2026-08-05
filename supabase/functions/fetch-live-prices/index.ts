@@ -51,6 +51,7 @@ let cachedAccountId: string | null = null;
 let cachedAccountAt = 0;
 
 async function getMt5AccountId(): Promise<string | null> {
+  await loadStoredCredentials();
   if (!METAAPI_TOKEN || !MT5_LOGIN || !MT5_SERVER) return null;
   if (cachedAccountId && Date.now() - cachedAccountAt < 10 * 60 * 1000) return cachedAccountId;
   try {
