@@ -9,118 +9,126 @@
 
 @layer base {
   :root {
-    /* Light theme - Modern fintech premium */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* Light theme — premium "Midnight Indigo" light surface */
+    --background: 225 30% 97%;
+    --foreground: 226 45% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 226 45% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 226 45% 12%;
 
-    /* Primary - Vibrant teal/cyan */
-    --primary: 174 72% 40%;
+    /* Primary - electric indigo */
+    --primary: 243 75% 58%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 258 90% 68%;
 
-    /* Secondary - Deep blue */
-    --secondary: 220 70% 50%;
+    /* Secondary - neon cyan */
+    --secondary: 189 94% 43%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 226 25% 94%;
+    --muted-foreground: 226 12% 45%;
 
-    --accent: 174 72% 40%;
+    --accent: 189 94% 43%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 174 72% 40%;
+    --border: 226 22% 89%;
+    --input: 226 22% 89%;
+    --ring: 243 75% 58%;
 
-    --radius: 1rem;
+    --radius: 1.15rem;
 
-    /* Trading colors - Vibrant for visibility */
-    --success: 152 69% 40%;
+    /* Trading colors */
+    --success: 152 72% 40%;
     --success-foreground: 0 0% 100%;
-    --success-deep: 152 75% 38%;
-    
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --success-deep: 152 76% 34%;
 
-    --buy: 152 69% 40%;
-    --sell: 0 72% 51%;
-    
-    /* Premium gold accent */
+    --warning: 38 95% 50%;
+    --warning-foreground: 0 0% 12%;
+
+    --buy: 152 72% 40%;
+    --sell: 0 80% 55%;
+
     --affiliate: 43 96% 56%;
     --affiliate-foreground: 0 0% 10%;
 
-    /* Clean airy light surface (flat, no heavy gradient) */
-    --gradient-start: 220 20% 98%;
-    --gradient-mid: 220 20% 98%;
-    --gradient-end: 220 16% 96%;
+    --gradient-start: 228 40% 99%;
+    --gradient-mid: 232 38% 97%;
+    --gradient-end: 245 40% 95%;
 
+    /* Glass + glow */
+    --glass-bg: 0 0% 100% / 0.78;
+    --glass-border: 243 60% 70% / 0.18;
+    --glass-blur: 22px;
 
-    /* Glass effect variables */
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.5;
-    --glass-blur: 20px;
+    --glow-primary: 243 75% 58%;
+    --glow-accent: 189 94% 43%;
+    --glow-strength: 0.35;
   }
 
   .dark {
-    /* Dark theme - Premium fintech dark mode */
-    --background: 222 47% 7%;
-    --foreground: 210 40% 98%;
+    /* Dark theme — deep midnight with neon glow */
+    --background: 233 45% 6%;
+    --foreground: 220 40% 98%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 233 40% 10%;
+    --card-foreground: 220 40% 98%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 233 40% 10%;
+    --popover-foreground: 220 40% 98%;
 
-    --primary: 174 72% 50%;
-    --primary-foreground: 222 47% 7%;
+    --primary: 250 90% 68%;
+    --primary-foreground: 233 45% 6%;
+    --primary-glow: 265 95% 74%;
 
-    --secondary: 217 91% 60%;
-    --secondary-foreground: 222 47% 7%;
+    --secondary: 189 94% 55%;
+    --secondary-foreground: 233 45% 6%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 232 30% 16%;
+    --muted-foreground: 222 22% 68%;
 
-    --accent: 174 72% 50%;
-    --accent-foreground: 222 47% 7%;
+    --accent: 189 94% 55%;
+    --accent-foreground: 233 45% 6%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 80% 60%;
+    --destructive-foreground: 220 40% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 174 72% 50%;
+    --border: 232 30% 20%;
+    --input: 232 30% 20%;
+    --ring: 250 90% 68%;
 
-    --success: 152 69% 45%;
-    --success-foreground: 222 47% 7%;
-    --success-deep: 152 69% 52%;
-    
-    --warning: 38 92% 55%;
-    --warning-foreground: 222 47% 7%;
+    --success: 152 72% 48%;
+    --success-foreground: 233 45% 6%;
+    --success-deep: 152 72% 55%;
 
-    --buy: 152 69% 45%;
-    --sell: 0 72% 55%;
-    
-    --affiliate: 43 96% 56%;
-    --affiliate-foreground: 222 47% 7%;
+    --warning: 40 96% 58%;
+    --warning-foreground: 233 45% 6%;
 
-    --gradient-start: 222 47% 5%;
-    --gradient-mid: 222 47% 8%;
-    --gradient-end: 220 50% 10%;
+    --buy: 152 72% 48%;
+    --sell: 0 80% 62%;
 
-    --glass-bg: 222 47% 11% / 0.8;
-    --glass-border: 217 33% 25% / 0.5;
-    --glass-blur: 20px;
+    --affiliate: 43 96% 60%;
+    --affiliate-foreground: 233 45% 6%;
+
+    --gradient-start: 234 50% 5%;
+    --gradient-mid: 240 45% 8%;
+    --gradient-end: 250 45% 11%;
+
+    --glass-bg: 233 40% 11% / 0.75;
+    --glass-border: 250 70% 70% / 0.22;
+    --glass-blur: 22px;
+
+    --glow-primary: 250 90% 68%;
+    --glow-accent: 189 94% 60%;
+    --glow-strength: 0.55;
   }
 }
+
 
 @layer base {
   * {
