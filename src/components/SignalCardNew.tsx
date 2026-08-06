@@ -290,8 +290,10 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
   return (
     <Card
       ref={cardRef}
-      className={`relative overflow-hidden rounded-[20px] bg-card shadow-[0_1px_3px_hsl(var(--foreground)/0.05)] transition-all duration-300 ${
-        signal.is_premium ? "border border-primary/30" : "border border-border"
+      className={`premium-card animate-rise-in relative overflow-hidden rounded-[20px] bg-card transition-all duration-300 ${
+        signal.is_premium
+          ? "border border-primary/40 shadow-[0_1px_3px_hsl(var(--foreground)/0.05),0_14px_36px_-22px_hsl(var(--glow-primary)/0.9)]"
+          : "border border-border"
       }`}
     >
       <CardContent className="relative z-10 p-0">
