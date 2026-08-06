@@ -273,16 +273,16 @@ const SignalsDashboard = () => {
           {/* Main Dashboard Content - always accessible */}
           <>
 
-           {/* Main Category Tabs - Clean Material Pill Bar */}
+           {/* Main Category Tabs — 3D glowing pills */}
           <div className="mb-3">
-            <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               {[
                 { key: "COMMODITIES", label: "Gold" },
                 { key: "FOREX", label: "Forex" },
                 { key: "CRYPTO", label: "Crypto" },
                 { key: "DERIV/BINARY", label: "Deriv" },
                 { key: "MARKET IDEAS", label: "Ideas" },
-              ].map((category) => {
+              ].map((category, i) => {
                 const isActive = mainCategory === category.key;
                 const signalCount =
                   isActive && mainCategory !== "MARKET IDEAS" ? signals?.length : undefined;
@@ -292,12 +292,17 @@ const SignalsDashboard = () => {
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
                     className={cn(
-                      "flex-shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors",
+                      "animate-rise-in flex-shrink-0 rounded-full border px-4 py-1.5 text-[11.5px] font-bold whitespace-nowrap",
+                      "transition-all duration-200 active:scale-95",
+                      i === 1 && "stagger-1",
+                      i === 2 && "stagger-2",
+                      i === 3 && "stagger-3",
+                      i === 4 && "stagger-4",
                       isActive
                         ? isGold
-                          ? "bg-warning text-warning-foreground border-warning"
-                          : "bg-foreground text-background border-foreground"
-                        : "border-transparent bg-muted text-muted-foreground hover:text-foreground"
+                          ? "border-transparent text-warning-foreground bg-gradient-to-br from-warning to-affiliate shadow-[0_6px_18px_-6px_hsl(var(--affiliate)/0.7),0_0_18px_hsl(var(--affiliate)/0.45)]"
+                          : "border-transparent text-primary-foreground bg-gradient-to-br from-primary via-primary-glow to-accent shadow-[0_6px_18px_-6px_hsl(var(--glow-primary)/0.8),0_0_18px_hsl(var(--glow-primary)/0.45)]"
+                        : "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
                     )}
                   >
                     {category.label}

@@ -9,118 +9,126 @@
 
 @layer base {
   :root {
-    /* Light theme - Modern fintech premium */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* Light theme — premium "Midnight Indigo" light surface */
+    --background: 225 30% 97%;
+    --foreground: 226 45% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 226 45% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 226 45% 12%;
 
-    /* Primary - Vibrant teal/cyan */
-    --primary: 174 72% 40%;
+    /* Primary - electric indigo */
+    --primary: 243 75% 58%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 258 90% 68%;
 
-    /* Secondary - Deep blue */
-    --secondary: 220 70% 50%;
+    /* Secondary - neon cyan */
+    --secondary: 189 94% 43%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 226 25% 94%;
+    --muted-foreground: 226 12% 45%;
 
-    --accent: 174 72% 40%;
+    --accent: 189 94% 43%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 174 72% 40%;
+    --border: 226 22% 89%;
+    --input: 226 22% 89%;
+    --ring: 243 75% 58%;
 
-    --radius: 1rem;
+    --radius: 1.15rem;
 
-    /* Trading colors - Vibrant for visibility */
-    --success: 152 69% 40%;
+    /* Trading colors */
+    --success: 152 72% 40%;
     --success-foreground: 0 0% 100%;
-    --success-deep: 152 75% 38%;
-    
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --success-deep: 152 76% 34%;
 
-    --buy: 152 69% 40%;
-    --sell: 0 72% 51%;
-    
-    /* Premium gold accent */
+    --warning: 38 95% 50%;
+    --warning-foreground: 0 0% 12%;
+
+    --buy: 152 72% 40%;
+    --sell: 0 80% 55%;
+
     --affiliate: 43 96% 56%;
     --affiliate-foreground: 0 0% 10%;
 
-    /* Clean airy light surface (flat, no heavy gradient) */
-    --gradient-start: 220 20% 98%;
-    --gradient-mid: 220 20% 98%;
-    --gradient-end: 220 16% 96%;
+    --gradient-start: 228 40% 99%;
+    --gradient-mid: 232 38% 97%;
+    --gradient-end: 245 40% 95%;
 
+    /* Glass + glow */
+    --glass-bg: 0 0% 100% / 0.78;
+    --glass-border: 243 60% 70% / 0.18;
+    --glass-blur: 22px;
 
-    /* Glass effect variables */
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.5;
-    --glass-blur: 20px;
+    --glow-primary: 243 75% 58%;
+    --glow-accent: 189 94% 43%;
+    --glow-strength: 0.35;
   }
 
   .dark {
-    /* Dark theme - Premium fintech dark mode */
-    --background: 222 47% 7%;
-    --foreground: 210 40% 98%;
+    /* Dark theme — deep midnight with neon glow */
+    --background: 233 45% 6%;
+    --foreground: 220 40% 98%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 233 40% 10%;
+    --card-foreground: 220 40% 98%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 233 40% 10%;
+    --popover-foreground: 220 40% 98%;
 
-    --primary: 174 72% 50%;
-    --primary-foreground: 222 47% 7%;
+    --primary: 250 90% 68%;
+    --primary-foreground: 233 45% 6%;
+    --primary-glow: 265 95% 74%;
 
-    --secondary: 217 91% 60%;
-    --secondary-foreground: 222 47% 7%;
+    --secondary: 189 94% 55%;
+    --secondary-foreground: 233 45% 6%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 232 30% 16%;
+    --muted-foreground: 222 22% 68%;
 
-    --accent: 174 72% 50%;
-    --accent-foreground: 222 47% 7%;
+    --accent: 189 94% 55%;
+    --accent-foreground: 233 45% 6%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 80% 60%;
+    --destructive-foreground: 220 40% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 174 72% 50%;
+    --border: 232 30% 20%;
+    --input: 232 30% 20%;
+    --ring: 250 90% 68%;
 
-    --success: 152 69% 45%;
-    --success-foreground: 222 47% 7%;
-    --success-deep: 152 69% 52%;
-    
-    --warning: 38 92% 55%;
-    --warning-foreground: 222 47% 7%;
+    --success: 152 72% 48%;
+    --success-foreground: 233 45% 6%;
+    --success-deep: 152 72% 55%;
 
-    --buy: 152 69% 45%;
-    --sell: 0 72% 55%;
-    
-    --affiliate: 43 96% 56%;
-    --affiliate-foreground: 222 47% 7%;
+    --warning: 40 96% 58%;
+    --warning-foreground: 233 45% 6%;
 
-    --gradient-start: 222 47% 5%;
-    --gradient-mid: 222 47% 8%;
-    --gradient-end: 220 50% 10%;
+    --buy: 152 72% 48%;
+    --sell: 0 80% 62%;
 
-    --glass-bg: 222 47% 11% / 0.8;
-    --glass-border: 217 33% 25% / 0.5;
-    --glass-blur: 20px;
+    --affiliate: 43 96% 60%;
+    --affiliate-foreground: 233 45% 6%;
+
+    --gradient-start: 234 50% 5%;
+    --gradient-mid: 240 45% 8%;
+    --gradient-end: 250 45% 11%;
+
+    --glass-bg: 233 40% 11% / 0.75;
+    --glass-border: 250 70% 70% / 0.22;
+    --glass-blur: 22px;
+
+    --glow-primary: 250 90% 68%;
+    --glow-accent: 189 94% 60%;
+    --glow-strength: 0.55;
   }
 }
+
 
 @layer base {
   * {
@@ -522,4 +530,155 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
+}
+
+/* ───────────── Premium 3D + Glow design layer ───────────── */
+@layer components {
+  /* 3D glowing icon tile — used in nav bar, drawer, category pills */
+  .icon-3d {
+    @apply relative flex items-center justify-center rounded-[14px] shrink-0;
+    background:
+      linear-gradient(160deg,
+        hsl(var(--primary) / 0.22) 0%,
+        hsl(var(--primary-glow) / 0.12) 45%,
+        hsl(var(--accent) / 0.18) 100%);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.35),
+      inset 0 -2px 6px hsl(var(--primary) / 0.18),
+      0 4px 12px -4px hsl(var(--glow-primary) / calc(var(--glow-strength) * 0.6));
+    transition: transform 220ms cubic-bezier(.34,1.56,.64,1), box-shadow 220ms ease;
+  }
+
+  .icon-3d::after {
+    content: "";
+    position: absolute;
+    inset: 1px 1px 55% 1px;
+    border-radius: 12px 12px 20px 20px;
+    background: linear-gradient(180deg, hsl(0 0% 100% / 0.28), transparent);
+    pointer-events: none;
+  }
+
+  .icon-3d-active {
+    background:
+      linear-gradient(160deg,
+        hsl(var(--primary)) 0%,
+        hsl(var(--primary-glow)) 55%,
+        hsl(var(--accent)) 100%);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.5),
+      0 0 0 1px hsl(var(--primary) / 0.5),
+      0 6px 18px -4px hsl(var(--glow-primary) / var(--glow-strength)),
+      0 0 22px hsl(var(--glow-primary) / var(--glow-strength));
+    transform: translateY(-2px) scale(1.04);
+  }
+
+  .icon-3d-gold {
+    background: linear-gradient(160deg, hsl(var(--warning)) 0%, hsl(var(--affiliate)) 100%);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.5),
+      0 6px 18px -4px hsl(var(--affiliate) / 0.5),
+      0 0 22px hsl(var(--affiliate) / 0.45);
+  }
+
+  .icon-3d:active { transform: translateY(0) scale(0.94); }
+
+  /* Premium surface card with soft glow edge */
+  .premium-card {
+    @apply rounded-2xl border bg-card;
+    border-color: hsl(var(--border));
+    box-shadow:
+      0 1px 2px hsl(var(--foreground) / 0.04),
+      0 10px 30px -18px hsl(var(--glow-primary) / calc(var(--glow-strength) * 0.7));
+    transition: box-shadow 260ms ease, transform 260ms ease;
+  }
+
+  .premium-card:hover {
+    box-shadow:
+      0 2px 4px hsl(var(--foreground) / 0.05),
+      0 16px 40px -18px hsl(var(--glow-primary) / var(--glow-strength));
+  }
+
+  /* Animated gradient border wrapper */
+  .glow-border {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .glow-border::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(115deg,
+      hsl(var(--primary) / 0.8),
+      hsl(var(--accent) / 0.6),
+      hsl(var(--primary-glow) / 0.8),
+      hsl(var(--primary) / 0.8));
+    background-size: 280% 280%;
+    animation: gradient-drift 7s ease infinite;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Glowing text for key numbers */
+  .text-glow {
+    text-shadow: 0 0 14px hsl(var(--glow-primary) / calc(var(--glow-strength) * 0.9));
+  }
+
+  .text-glow-success {
+    text-shadow: 0 0 14px hsl(var(--success) / 0.5);
+  }
+
+  /* Shine sweep on premium CTAs */
+  .shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shine::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(100deg, transparent, hsl(0 0% 100% / 0.35), transparent);
+    animation: shine-sweep 3.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@layer utilities {
+  @keyframes gradient-drift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes shine-sweep {
+    0% { left: -60%; }
+    60%, 100% { left: 130%; }
+  }
+
+  @keyframes glow-breathe {
+    0%, 100% { box-shadow: 0 0 12px hsl(var(--glow-primary) / 0.35); }
+    50% { box-shadow: 0 0 26px hsl(var(--glow-primary) / 0.7); }
+  }
+
+  @keyframes rise-in {
+    0% { opacity: 0; transform: translateY(14px) scale(0.985); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .animate-glow-breathe { animation: glow-breathe 2.6s ease-in-out infinite; }
+  .animate-rise-in { animation: rise-in 0.45s cubic-bezier(.22,1,.36,1) both; }
+
+  .stagger-1 { animation-delay: 40ms; }
+  .stagger-2 { animation-delay: 90ms; }
+  .stagger-3 { animation-delay: 140ms; }
+  .stagger-4 { animation-delay: 190ms; }
 }

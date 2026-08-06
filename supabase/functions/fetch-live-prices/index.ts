@@ -281,7 +281,10 @@ async function fetchCryptoPrices(pairs: string[]): Promise<Record<string, number
   const pairToCoin: Record<string, string> = {};
 
   for (const pair of pairs) {
-    const base = pair.split("/")[0]?.toUpperCase();
+    const letters = pair.toUpperCase().replace(/[^A-Z]/g, "");
+    const base =
+      Object.keys(coinMap).find((c) => letters.startsWith(c)) ||
+      pair.split("/")[0]?.toUpperCase();
     if (base && coinMap[base]) {
       coinIds.push(coinMap[base]);
       pairToCoin[coinMap[base]] = pair;
