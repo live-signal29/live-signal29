@@ -50,8 +50,12 @@ export const LiveDashboardHeader = () => {
   })();
 
   return (
-    <Card className="rounded-2xl border-border px-3.5 py-2.5 shadow-[0_1px_3px_hsl(var(--foreground)/0.05)]">
+    <Card className="premium-card glow-border overflow-hidden rounded-2xl border-border px-3.5 py-2.5">
       <div className="flex items-center gap-3">
+        <span className="icon-3d icon-3d-gold h-9 w-9">
+          <span className="relative z-[1] text-[13px] font-extrabold text-warning-foreground">Au</span>
+        </span>
+
 
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">

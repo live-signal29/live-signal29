@@ -25,7 +25,7 @@ const Header = () => {
         <AppInstallBanner />
       )}
 
-      <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-2xl shadow-[0_6px_24px_-20px_hsl(var(--glow-primary)/0.9)]">
         <div>
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
 
@@ -33,14 +33,14 @@ const Header = () => {
             <Link to="/" className="min-w-0 flex flex-col justify-center">
               <span className="flex items-center gap-1.5 leading-none">
                 <span className="text-xl font-extrabold tracking-tight">Live</span>
-                <span className="text-xl font-extrabold tracking-tight text-warning">
+                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-warning via-affiliate to-warning bg-clip-text text-transparent">
                   Signals
                 </span>
                 <span
                   className={
                     isPremium
-                      ? "rounded-md bg-warning/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-warning"
-                      : "rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground"
+                      ? "shine rounded-md bg-gradient-to-br from-warning to-affiliate px-1.5 py-0.5 text-[9px] font-bold uppercase text-warning-foreground shadow-[0_0_12px_hsl(var(--affiliate)/0.6)]"
+                      : "rounded-md border border-border/70 bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground"
                   }
                 >
                   {isPremium ? "Pro" : "Free"}
@@ -58,11 +58,13 @@ const Header = () => {
                 <ThemeToggle />
               </div>
 
-              <div className="rounded-full border border-border/70 bg-muted/50 px-1">
+              <div className="icon-3d h-9 w-9">
                 <SideDrawer />
               </div>
 
-              <NotificationBell />
+              <div className="icon-3d h-9 w-9">
+                <NotificationBell />
+              </div>
             </div>
           </div>
         </div>
