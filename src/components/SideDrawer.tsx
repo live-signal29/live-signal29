@@ -35,20 +35,20 @@ const MenuRow = memo(
         to={item.path}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-3 h-[50px] px-3 rounded-xl",
-          "transition-colors duration-200 will-change-transform",
+          "group flex items-center gap-3 h-[52px] px-2.5 rounded-xl",
+          "transition-all duration-200 will-change-transform",
           active
-            ? "bg-primary/12 text-primary shadow-sm shadow-primary/10"
-            : "text-foreground/85 hover:bg-accent/60 active:bg-accent"
+            ? "bg-primary/10 text-primary shadow-[0_6px_20px_-12px_hsl(var(--glow-primary)/0.9)]"
+            : "text-foreground/85 hover:bg-accent/10 active:bg-accent/20"
         )}
       >
-        <span
-          className={cn(
-            "flex items-center justify-center w-9 h-9 rounded-lg shrink-0",
-            active ? "bg-primary/15" : "bg-muted/60"
-          )}
-        >
-          <Icon className={cn("h-[22px] w-[22px]", active ? "text-primary" : item.tint)} />
+        <span className={cn("icon-3d h-9 w-9", active && "icon-3d-active")}>
+          <Icon
+            className={cn(
+              "h-[19px] w-[19px] relative z-[1] stroke-[2]",
+              active ? "text-primary-foreground" : item.tint
+            )}
+          />
         </span>
         <span className={cn("text-sm tracking-tight truncate", active ? "font-semibold" : "font-medium")}>
           {item.label}
@@ -58,8 +58,7 @@ const MenuRow = memo(
             {item.badge}
           </span>
         )}
-        {active && <span className={cn("h-5 w-1 rounded-full bg-primary shrink-0", !item.badge && "ml-auto")} />}
-
+        {active && <span className={cn("h-5 w-1 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--glow-primary))] shrink-0", !item.badge && "ml-auto")} />}
       </Link>
     );
   }
