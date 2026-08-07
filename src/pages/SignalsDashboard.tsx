@@ -411,15 +411,29 @@ const SignalsDashboard = () => {
               ) : (
                 <div className="space-y-6">
                   {signals && signals.length > 0 && (() => {
-                    const filteredSignals = signals;
+                    const lifecycle = (s: any) =>
+                      (s.signal_status || s.status || "open").toLowerCase();
+                    const filteredSignals =
+                      statusFilter === "all"
+                        ? signals
+                        : signals.filter((s: any) =>
+                            statusFilter === "active"
+                              ? lifecycle(s) === "open"
+                              : statusFilter === "pending"
+                              ? lifecycle(s) === "pending"
+                              : lifecycle(s) === "close"
+                          );
 
                     if (filteredSignals.length === 0) {
                       return (
                         <div className="text-center py-20">
-                          <p className="text-muted-foreground text-lg">No signals found</p>
+                          <p className="text-muted-foreground text-lg">
+                            No {statusFilter === "all" ? "" : statusFilter} signals found
+                          </p>
                         </div>
                       );
                     }
+
 
                     const groupedSignals: { [key: string]: typeof filteredSignals } = {};
                     filteredSignals.forEach((signal) => {
