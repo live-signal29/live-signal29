@@ -199,18 +199,16 @@ const SignalCardExtras = memo((props: Props) => {
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            {isClosed ? "Closed" : isPending ? "Pending" : "Active"}
-          </div>
-          <div
-            className={cn(
-              "flex items-center justify-end gap-1 text-xs font-extrabold leading-tight",
-              isClosed ? "text-destructive" : isPending ? "text-warning" : "text-success"
-            )}
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            {isClosed ? "End" : isPending ? "Wait" : "Run"}
-          </div>
+          {isClosed ? (
+            <span className="status-chip-closed">● Closed</span>
+          ) : isPending ? (
+            <span className="status-chip-pending">◍ Pending</span>
+          ) : (
+            <span className="status-chip-live">
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+              Active
+            </span>
+          )}
         </div>
       </div>
 
