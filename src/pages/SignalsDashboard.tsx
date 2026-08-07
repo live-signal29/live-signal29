@@ -36,6 +36,7 @@ const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading, subscriptionStatus, trialExpired, trialEndDate } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
   const [subCategory, setSubCategory] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "closed">("all");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -312,11 +313,59 @@ const SignalsDashboard = () => {
               })}
             </div>
           </div>
+          {/* Status filter — Active / Pending / Closed */}
+          {mainCategory !== "MARKET IDEAS" && (
+            <div className="mb-3 flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+              {(() => {
+                const lifecycle = (s: any) => (s.signal_status || s.status || "open").toLowerCase();
+                const list: any[] = signals || [];
+                const counts = {
+                  all: list.length,
+                  active: list.filter((s) => lifecycle(s) === "open").length,
+                  pending: list.filter((s) => lifecycle(s) === "pending").length,
+                  closed: list.filter((s) => lifecycle(s) === "close").length,
+                };
+                const tabs = [
+                  { key: "all" as const, label: "All", dot: "bg-primary" },
+                  { key: "active" as const, label: "Active", dot: "bg-success" },
+                  { key: "pending" as const, label: "Pending", dot: "bg-warning" },
+                  { key: "closed" as const, label: "Closed", dot: "bg-muted-foreground" },
+                ];
+                return tabs.map((t) => {
+                  const on = statusFilter === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => setStatusFilter(t.key)}
+                      className={cn(
+                        "flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold transition-all duration-200 active:scale-95",
+                        on
+                          ? t.key === "active"
+                            ? "border-success/60 bg-success/15 text-success shadow-[0_0_16px_-4px_hsl(var(--success)/0.6)]"
+                            : t.key === "pending"
+                            ? "border-warning/60 bg-warning/15 text-warning"
+                            : t.key === "closed"
+                            ? "border-border bg-muted text-foreground"
+                            : "border-primary/60 bg-primary/15 text-primary shadow-[0_0_16px_-4px_hsl(var(--glow-primary)/0.7)]"
+                          : "border-border/70 bg-muted/40 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          t.dot,
+                          t.key === "active" && "animate-pulse"
+                        )}
+                      />
+                      {t.label}
+                      <span className="tabular-nums opacity-70">{counts[t.key]}</span>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          )}
 
-
-
-
-          {/* Favorites Filter Button */}
 
           {/* Market Ideas View */}
           {mainCategory === "MARKET IDEAS" && (
@@ -411,15 +460,29 @@ const SignalsDashboard = () => {
               ) : (
                 <div className="space-y-6">
                   {signals && signals.length > 0 && (() => {
-                    const filteredSignals = signals;
+                    const lifecycle = (s: any) =>
+                      (s.signal_status || s.status || "open").toLowerCase();
+                    const filteredSignals =
+                      statusFilter === "all"
+                        ? signals
+                        : signals.filter((s: any) =>
+                            statusFilter === "active"
+                              ? lifecycle(s) === "open"
+                              : statusFilter === "pending"
+                              ? lifecycle(s) === "pending"
+                              : lifecycle(s) === "close"
+                          );
 
                     if (filteredSignals.length === 0) {
                       return (
                         <div className="text-center py-20">
-                          <p className="text-muted-foreground text-lg">No signals found</p>
+                          <p className="text-muted-foreground text-lg">
+                            No {statusFilter === "all" ? "" : statusFilter} signals found
+                          </p>
                         </div>
                       );
                     }
+
 
                     const groupedSignals: { [key: string]: typeof filteredSignals } = {};
                     filteredSignals.forEach((signal) => {

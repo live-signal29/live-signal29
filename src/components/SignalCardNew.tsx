@@ -291,19 +291,32 @@ const SignalCardNew = ({ signal, hasAccess = true, subscriptionStatus, livePrice
     <Card
       ref={cardRef}
       className={`premium-card animate-rise-in relative overflow-hidden rounded-[20px] bg-card transition-all duration-300 ${
-        signal.is_premium
-          ? "border border-primary/40 shadow-[0_1px_3px_hsl(var(--foreground)/0.05),0_14px_36px_-22px_hsl(var(--glow-primary)/0.9)]"
-          : "border border-border"
-      }`}
+        isClosed
+          ? "card-closed-dim border border-border"
+          : isPending
+          ? "border border-warning/50 shadow-[0_0_18px_-6px_hsl(var(--warning)/0.45)]"
+          : "card-live-ring border"
+      } ${signal.is_premium && !isClosed ? "ring-1 ring-primary/25" : ""}`}
     >
       <CardContent className="relative z-10 p-0">
-        {isNewSignal && !isLocked && (
-          <div className="absolute right-2 top-2 z-10">
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
+          {isNewSignal && !isLocked && (
             <Badge className="animate-pulse bg-primary px-1.5 py-0 text-[9px] text-primary-foreground">
               NEW
             </Badge>
-          </div>
-        )}
+          )}
+          {isClosed ? (
+            <span className="status-chip-closed">Closed</span>
+          ) : isPending ? (
+            <span className="status-chip-pending">Pending</span>
+          ) : (
+            <span className="status-chip-live">
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+              Live
+            </span>
+          )}
+        </div>
+
 
         {isLocked ? (
           /* Locked State - Free user viewing premium signal */

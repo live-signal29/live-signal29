@@ -7,8 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Eye, EyeOff, Check, X, Circle } from "lucide-react";
 import { signupSchema } from "@/lib/validations";
+
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (v: string) => v.length >= 8 },
+  { label: "One uppercase letter (A-Z)", test: (v: string) => /[A-Z]/.test(v) },
+  { label: "One lowercase letter (a-z)", test: (v: string) => /[a-z]/.test(v) },
+  { label: "One number (0-9)", test: (v: string) => /[0-9]/.test(v) },
+];
 
 const Signup = () => {
   const [fullName, setFullName] = useState("");
@@ -16,9 +23,12 @@ const Signup = () => {
   const [countryCode, setCountryCode] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const passedCount = PASSWORD_RULES.filter((r) => r.test(password)).length;
   
   // Get return URL from query params
   const searchParams = new URLSearchParams(window.location.search);
@@ -185,15 +195,76 @@ const Signup = () => {
 
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.6s' }}>
               <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setPasswordFocused(true)}
+                  required
+                  aria-describedby="password-requirements"
+                  className="pr-10 transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {/* Password strength meter */}
+              <div className="flex gap-1" aria-hidden="true">
+                {[0, 1, 2, 3].map((i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
+                      passedCount > i
+                        ? passedCount === 4
+                          ? "bg-success"
+                          : passedCount >= 3
+                          ? "bg-warning"
+                          : "bg-destructive"
+                        : "bg-muted"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Requirement checklist */}
+              <ul id="password-requirements" className="space-y-1 rounded-xl border border-border bg-muted/40 p-2.5">
+                <li className="mb-1 text-[11px] font-semibold text-muted-foreground">
+                  Password must contain:
+                </li>
+                {PASSWORD_RULES.map((rule) => {
+                  const ok = rule.test(password);
+                  const show = passwordFocused || password.length > 0;
+                  return (
+                    <li
+                      key={rule.label}
+                      className={`flex items-center gap-1.5 text-[11px] transition-colors ${
+                        !show ? "text-muted-foreground" : ok ? "text-success" : "text-destructive"
+                      }`}
+                    >
+                      {show && ok ? (
+                        <Check className="h-3.5 w-3.5 shrink-0" />
+                      ) : show ? (
+                        <X className="h-3.5 w-3.5 shrink-0" />
+                      ) : (
+                        <Circle className="h-3 w-3 shrink-0" />
+                      )}
+                      <span>{rule.label}</span>
+                    </li>
+                  );
+                })}
+                <li className="pt-1 text-[10px] leading-snug text-muted-foreground">
+                  Tip: avoid common passwords (e.g. "password123") — they are rejected for security.
+                </li>
+              </ul>
             </div>
 
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.65s' }}>
