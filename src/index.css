@@ -682,3 +682,105 @@
   .stagger-3 { animation-delay: 140ms; }
   .stagger-4 { animation-delay: 190ms; }
 }
+
+/* ───────────── 3D Glowing Ring system ───────────── */
+@layer components {
+  /* Rotating neon ring wrapper — put content inside */
+  .ring-3d {
+    @apply relative inline-flex items-center justify-center rounded-full;
+    padding: 2px;
+    background:
+      conic-gradient(
+        from 0deg,
+        hsl(var(--glow-primary) / 0.95),
+        hsl(var(--glow-accent) / 0.9),
+        hsl(var(--primary-glow) / 0.95),
+        hsl(var(--glow-primary) / 0.95)
+      );
+    box-shadow:
+      0 0 0 1px hsl(var(--glass-border)),
+      0 0 14px hsl(var(--glow-primary) / var(--glow-strength)),
+      0 6px 18px -8px hsl(var(--glow-primary) / var(--glow-strength));
+    animation: ring-spin 4.5s linear infinite;
+  }
+
+  .ring-3d > * {
+    animation: ring-spin 4.5s linear infinite reverse;
+  }
+
+  .ring-3d-inner {
+    @apply flex items-center justify-center rounded-full bg-card;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.28), inset 0 -3px 8px hsl(var(--glow-primary) / 0.18);
+  }
+
+  /* Status ring variants */
+  .ring-3d-live {
+    background:
+      conic-gradient(
+        from 0deg,
+        hsl(var(--success)),
+        hsl(var(--success-deep, var(--success))),
+        hsl(var(--success) / 0.35),
+        hsl(var(--success))
+      );
+    box-shadow:
+      0 0 16px hsl(var(--success) / 0.55),
+      0 6px 18px -8px hsl(var(--success) / 0.6);
+  }
+
+  .ring-3d-pending {
+    background:
+      conic-gradient(from 0deg, hsl(var(--warning)), hsl(var(--warning) / 0.3), hsl(var(--warning)));
+    box-shadow: 0 0 14px hsl(var(--warning) / 0.5);
+  }
+
+  .ring-3d-closed {
+    background: conic-gradient(from 0deg, hsl(var(--muted-foreground) / 0.6), hsl(var(--muted-foreground) / 0.2));
+    box-shadow: none;
+    animation: none;
+  }
+  .ring-3d-closed > * { animation: none; }
+
+  /* Pill-shaped glowing status chip */
+  .status-chip-live {
+    @apply relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white;
+    background: linear-gradient(135deg, hsl(var(--success)) 0%, hsl(var(--glow-accent)) 100%);
+    box-shadow: 0 0 14px hsl(var(--success) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35);
+    animation: glow-breathe 2s ease-in-out infinite;
+  }
+
+  .status-chip-pending {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide;
+    background: linear-gradient(135deg, hsl(var(--warning)) 0%, hsl(var(--affiliate)) 100%);
+    color: hsl(var(--warning-foreground));
+    box-shadow: 0 0 12px hsl(var(--warning) / 0.45), inset 0 1px 0 hsl(0 0% 100% / 0.3);
+  }
+
+  .status-chip-closed {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground;
+  }
+
+  /* Live glowing outline for the whole active signal card */
+  .card-live-ring {
+    position: relative;
+    border-color: hsl(var(--success) / 0.55) !important;
+    box-shadow:
+      0 0 0 1px hsl(var(--success) / 0.28),
+      0 0 22px -4px hsl(var(--success) / 0.4),
+      0 16px 40px -24px hsl(var(--success) / 0.6);
+  }
+
+  .card-closed-dim {
+    opacity: 0.82;
+    filter: saturate(0.75);
+  }
+}
+
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes glow-breathe {
+  0%, 100% { box-shadow: 0 0 10px hsl(var(--success) / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.35); }
+  50% { box-shadow: 0 0 22px hsl(var(--success) / 0.75), inset 0 1px 0 hsl(0 0% 100% / 0.35); }
+}
