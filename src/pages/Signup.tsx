@@ -7,8 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Eye, EyeOff, Check, X, Circle } from "lucide-react";
 import { signupSchema } from "@/lib/validations";
+
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (v: string) => v.length >= 8 },
+  { label: "One uppercase letter (A-Z)", test: (v: string) => /[A-Z]/.test(v) },
+  { label: "One lowercase letter (a-z)", test: (v: string) => /[a-z]/.test(v) },
+  { label: "One number (0-9)", test: (v: string) => /[0-9]/.test(v) },
+];
 
 const Signup = () => {
   const [fullName, setFullName] = useState("");
@@ -16,9 +23,12 @@ const Signup = () => {
   const [countryCode, setCountryCode] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const passedCount = PASSWORD_RULES.filter((r) => r.test(password)).length;
   
   // Get return URL from query params
   const searchParams = new URLSearchParams(window.location.search);
