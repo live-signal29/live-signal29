@@ -36,6 +36,7 @@ const SignalsDashboard = () => {
   const { hasAccess, loading: accessLoading, subscriptionStatus, trialExpired, trialEndDate } = useSubscriptionAccess();
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
   const [subCategory, setSubCategory] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "closed">("all");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
