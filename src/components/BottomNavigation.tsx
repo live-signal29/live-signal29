@@ -31,22 +31,38 @@ export const BottomNavigation = () => {
 
   // ===== AUTO HIDE LOGIC (15 Seconds) =====
   const resetTimer = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
+    // Pehle purane timer ko saaf karo
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
     if (isOpen) {
+      // Timer set karo
       timerRef.current = setTimeout(() => {
         setIsOpen(false);
+        timerRef.current = null;
       }, 15000); // 15 seconds
     }
   };
 
   const handleToggle = () => {
+    // Toggle logic
     setIsOpen(!isOpen);
+    
+    // Agar open kar rahe ho, timer shuru karo
     if (!isOpen) {
+      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         setIsOpen(false);
+        timerRef.current = null;
       }, 15000);
     } else {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      // Agar close kar rahe ho, timer band karo
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     }
   };
 
@@ -54,7 +70,10 @@ export const BottomNavigation = () => {
   useEffect(() => {
     resetTimer();
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [isOpen]);
 
@@ -97,7 +116,10 @@ export const BottomNavigation = () => {
                   to={item.path}
                   onClick={() => {
                     setIsOpen(false);
-                    if (timerRef.current) clearTimeout(timerRef.current);
+                    if (timerRef.current) {
+                      clearTimeout(timerRef.current);
+                      timerRef.current = null;
+                    }
                   }}
                   className="relative flex flex-col items-center gap-0.5 px-2 py-1"
                 >
