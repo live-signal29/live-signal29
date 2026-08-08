@@ -27,7 +27,6 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
   const isBuy = signal.type?.toLowerCase() === "buy";
   const currentPriceNum = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
 
-  // Time format: "2m ago", "5m ago" etc.
   const getTimeAgo = (dateStr: string) => {
     try {
       return formatDistanceToNow(new Date(dateStr), { addSuffix: true })
@@ -41,7 +40,6 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
     }
   };
 
-  // Dynamic Icon & Subtitle based on Pair
   const renderPairIconAndSub = () => {
     const pairUpper = signal.pair?.toUpperCase() || "";
     if (pairUpper.includes("XAU") || pairUpper.includes("GOLD")) {
@@ -79,11 +77,11 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
   return (
     <div className="relative mb-3.5 w-full rounded-[22px] border border-white/[0.08] bg-[#0c0e18] p-4 text-white shadow-xl backdrop-blur-md transition-all duration-300 hover:border-white/20">
       
-      {/* --- TOP ROW --- */}
-      <div className="grid grid-cols-12 items-center gap-2">
+      {/* --- TOP ROW (4 Columns Layout) --- */}
+      <div className="grid grid-cols-12 items-start gap-1">
         
-        {/* Left: Icon + Pair Name + Badges */}
-        <div className="col-span-5 flex items-center gap-3">
+        {/* Col 1: Icon + Pair + Badges (Spans 4 cols) */}
+        <div className="col-span-4 flex items-center gap-3">
           {pairDetails.icon}
           <div>
             <h3 className="text-base font-extrabold tracking-tight text-white leading-tight">
@@ -113,16 +111,16 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
           </div>
         </div>
 
-        {/* Center: Entry Price */}
-        <div className="col-span-3 text-left pl-1">
+        {/* Col 2: Entry Price (Spans 2 cols) */}
+        <div className="col-span-2 text-left">
           <span className="text-[10px] font-medium text-slate-400 block">Entry Price</span>
           <span className="font-mono text-sm font-bold text-white tracking-tight">
             {signal.entry}
           </span>
         </div>
 
-        {/* Center-Right: Current Price */}
-        <div className="col-span-2 text-left">
+        {/* Col 3: Current Price (Spans 3 cols) */}
+        <div className="col-span-3 text-left">
           <span className="text-[10px] font-medium text-slate-400 block">Current Price</span>
           <span
             className={cn(
@@ -134,13 +132,24 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
           </span>
         </div>
 
-        {/* Right: Time */}
-        <div className="col-span-2 text-right">
-          <span className="text-[10px] font-medium text-slate-400 block">Time</span>
-          <div className="flex items-center justify-end gap-1 text-[11px] font-medium text-slate-300">
-            <Clock className="h-3 w-3 text-slate-400" />
-            <span>{getTimeAgo(signal.created_at)}</span>
+        {/* Col 4: Time + View Details Button (Spans 3 cols) */}
+        <div className="col-span-3 flex flex-col items-end gap-2">
+          <div className="text-right">
+            <span className="text-[10px] font-medium text-slate-400 block">Time</span>
+            <div className="flex items-center justify-end gap-1 text-[11px] font-medium text-slate-300">
+              <Clock className="h-3 w-3 text-slate-400" />
+              <span>{getTimeAgo(signal.created_at)}</span>
+            </div>
           </div>
+
+          {/* Button shifted to top-right under Time */}
+          <button
+            onClick={() => navigate(`/signal/${signal.id}`)}
+            className="flex items-center gap-1.5 rounded-full border border-purple-500/50 bg-gradient-to-r from-purple-900/40 via-purple-900/20 to-purple-950/40 px-3 py-1 text-[10px] font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all hover:bg-purple-900/60 mt-0.5"
+          >
+            View Details
+            <ArrowRight className="h-3 w-3" />
+          </button>
         </div>
 
       </div>
@@ -148,45 +157,32 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
       {/* Divider */}
       <div className="my-3.5 h-[1px] w-full bg-white/[0.06]" />
 
-      {/* --- BOTTOM ROW (SL, TPs & View Details) --- */}
+      {/* --- BOTTOM ROW (SL & TPs) --- */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 text-xs font-bold">
+        
+        <div className="flex w-full justify-between text-xs font-bold px-1">
           
           {/* SL */}
           <div className="flex items-center gap-1 text-[#ef4444]">
-            <span className="text-[11px] uppercase">SL</span>
+            <span className="text-[11px] uppercase font-semibold text-slate-400">SL</span>
             <span className="font-mono text-slate-200">{signal.sl}</span>
           </div>
 
-          <div className="h-3 w-[1px] bg-white/10" />
-
           {/* TP1 */}
           <div className="flex items-center gap-1 text-[#10b981]">
-            <span className="text-[11px] uppercase">TP1</span>
+            <span className="text-[11px] uppercase font-semibold text-slate-400">TP1</span>
             <span className="font-mono text-[#10b981]">{signal.tp1}</span>
           </div>
 
           {/* TP2 */}
           {signal.tp2 && (
-            <>
-              <div className="h-3 w-[1px] bg-white/10" />
-              <div className="flex items-center gap-1 text-[#10b981]">
-                <span className="text-[11px] uppercase">TP2</span>
-                <span className="font-mono text-[#10b981]">{signal.tp2}</span>
-              </div>
-            </>
+            <div className="flex items-center gap-1 text-[#10b981]">
+              <span className="text-[11px] uppercase font-semibold text-slate-400">TP2</span>
+              <span className="font-mono text-[#10b981]">{signal.tp2}</span>
+            </div>
           )}
-
         </div>
 
-        {/* Reference Exact Purple "View Details ->" Oval Button */}
-        <button
-          onClick={() => navigate(`/signal/${signal.id}`)}
-          className="flex items-center gap-1.5 rounded-full border border-purple-500/50 bg-gradient-to-r from-purple-900/40 via-purple-900/20 to-purple-950/40 px-4 py-1.5 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all hover:bg-purple-900/60"
-        >
-          View Details
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
       </div>
 
       {/* Optional Profit Note */}
