@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const TopMenuDrawer = () => {
+export const TopMenuDropdown = () => {
   const navigate = useNavigate();
 
   const handleShare = () => {
