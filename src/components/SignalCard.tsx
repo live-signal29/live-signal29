@@ -1,3 +1,6 @@
+const TEST_NEW_CARD = true;
+
+
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
@@ -78,6 +81,9 @@ const SignalCard = ({ signal }: SignalCardProps) => {
       ? "bg-red-500/10 text-red-400 border-red-500/20"
       : "bg-amber-500/10 text-amber-400 border-amber-500/20";
 
+console.log("NEW SIGNAL CARD CODE IS RUNNING");
+
+  
   return (
     <article
       className={cn(
