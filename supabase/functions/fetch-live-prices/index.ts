@@ -3,661 +3,979 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// ───────────────────────── MT5 (MetaApi) PRIMARY SOURCE ─────────────────────────
-// Credentials stay server-side only; never returned to the client.
-// Priority: admin-managed value in public.integration_settings > project secret.
-let METAAPI_TOKEN = Deno.env.get("METAAPI_TOKEN") || "";
-let MT5_LOGIN = Deno.env.get("MT5_LOGIN") || "";
-let MT5_SERVER = Deno.env.get("MT5_SERVER") || "";
-let MT5_PASSWORD = Deno.env.get("MT5_PASSWORD") || "";
+const PROVISIONING =
+  "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
 
-let credsLoadedAt = 0;
-async function loadStoredCredentials() {
-  if (Date.now() - credsLoadedAt < 60_000) return;
-  credsLoadedAt = Date.now();
-  try {
-    const admin = createClient(supabaseUrl, supabaseServiceKey);
-    const { data } = await admin
-      .from("integration_settings")
-      .select("key, value")
-      .in("key", ["METAAPI_TOKEN", "MT5_LOGIN", "MT5_SERVER", "MT5_PASSWORD"]);
-    for (const row of data || []) {
-      const v = String(row.value || "").trim();
-      if (!v) continue;
-      if (row.key === "METAAPI_TOKEN" && v !== METAAPI_TOKEN) {
-        METAAPI_TOKEN = v;
-        cachedAccountId = null;
-      }
-      if (row.key === "MT5_LOGIN") MT5_LOGIN = v;
-      if (row.key === "MT5_SERVER") MT5_SERVER = v;
-      if (row.key === "MT5_PASSWORD") MT5_PASSWORD = v;
-    }
-  } catch (_e) {
-    // stored credentials unavailable — fall back to project secrets
-  }
-}
+const CLIENT_API =
+  "https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai";
 
+const KEYS = [
+  "METAAPI_TOKEN",
+  "MT5_LOGIN",
+  "MT5_SERVER",
+  "MT5_PASSWORD",
+];
 
-const PROVISIONING = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
-const CLIENT_API = "https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai";
+let METAAPI_TOKEN = "";
+let MT5_LOGIN = "";
+let MT5_SERVER = "";
+let MT5_PASSWORD = "";
 
 let cachedAccountId: string | null = null;
 let cachedAccountAt = 0;
+let credentialsLoadedAt = 0;
+
+/* =========================================================
+   LOAD MT5 CREDENTIALS FROM ADMIN SETTINGS
+========================================================= */
+
+async function loadCredentials() {
+  if (Date.now() - credentialsLoadedAt < 30_000) return;
+
+  const admin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data, error } = await admin
+    .from("integration_settings")
+    .select("key,value")
+    .in("key", KEYS);
+
+  if (error) {
+    console.error("Could not load MT5 settings:", error.message);
+    return;
+  }
+
+  for (const row of data || []) {
+    const value = String(row.value || "").trim();
+
+    if (row.key === "METAAPI_TOKEN") METAAPI_TOKEN = value;
+    if (row.key === "MT5_LOGIN") MT5_LOGIN = value;
+    if (row.key === "MT5_SERVER") MT5_SERVER = value;
+    if (row.key === "MT5_PASSWORD") MT5_PASSWORD = value;
+  }
+
+  credentialsLoadedAt = Date.now();
+
+  console.log(
+    "MT5 credentials loaded:",
+    Boolean(METAAPI_TOKEN),
+    Boolean(MT5_LOGIN),
+    Boolean(MT5_SERVER),
+    Boolean(MT5_PASSWORD)
+  );
+}
+
+/* =========================================================
+   GET / CREATE MT5 ACCOUNT
+========================================================= */
 
 async function getMt5AccountId(): Promise<string | null> {
-  await loadStoredCredentials();
-  if (!METAAPI_TOKEN || !MT5_LOGIN || !MT5_SERVER) return null;
-  if (cachedAccountId && Date.now() - cachedAccountAt < 10 * 60 * 1000) return cachedAccountId;
+  await loadCredentials();
+
+  if (!METAAPI_TOKEN || !MT5_LOGIN || !MT5_SERVER) {
+    console.error("MT5 credentials are incomplete");
+    return null;
+  }
+
+  if (
+    cachedAccountId &&
+    Date.now() - cachedAccountAt < 10 * 60 * 1000
+  ) {
+    return cachedAccountId;
+  }
+
   try {
-    const r = await fetch(`${PROVISIONING}/users/current/accounts`, {
-      headers: { "auth-token": METAAPI_TOKEN },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!r.ok) {
-      console.log("MT5 list accounts failed:", r.status, (await r.text()).slice(0, 200));
+    const response = await fetch(
+      `${PROVISIONING}/users/current/accounts`,
+      {
+        headers: {
+          "auth-token": METAAPI_TOKEN,
+        },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        "MetaApi account list failed:",
+        response.status,
+        (await response.text()).slice(0, 500)
+      );
       return null;
     }
-    const raw = await r.json();
-    const accounts = Array.isArray(raw) ? raw : raw?.items || [];
-    console.log(`MT5 accounts visible: ${accounts.length}`);
-    let acc = accounts.find(
-      (a: any) => String(a.login) === String(MT5_LOGIN) && a.server === MT5_SERVER
-    ) || accounts.find((a: any) => String(a.login) === String(MT5_LOGIN));
 
-    if (!acc && MT5_PASSWORD) {
-      const c = await fetch(`${PROVISIONING}/users/current/accounts`, {
-        method: "POST",
-        headers: { "auth-token": METAAPI_TOKEN, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: `Prices-${MT5_LOGIN}`,
-          type: "cloud",
-          login: MT5_LOGIN,
-          password: MT5_PASSWORD,
-          server: MT5_SERVER,
-          platform: "mt5",
-          magic: 0,
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (c.ok) acc = await c.json();
-      else console.log("MT5 create account failed:", c.status, (await c.text()).slice(0, 200));
+    const raw = await response.json();
+
+    const accounts = Array.isArray(raw)
+      ? raw
+      : raw?.items || [];
+
+    console.log("MetaApi accounts:", accounts.length);
+
+    let account =
+      accounts.find(
+        (a: any) =>
+          String(a.login) === String(MT5_LOGIN) &&
+          String(a.server).toLowerCase() ===
+            String(MT5_SERVER).toLowerCase()
+      ) ||
+      accounts.find(
+        (a: any) =>
+          String(a.login) === String(MT5_LOGIN)
+      );
+
+    /* CREATE ACCOUNT IF IT DOES NOT EXIST */
+
+    if (!account && MT5_PASSWORD) {
+      console.log("Creating MetaApi MT5 account...");
+
+      const createResponse = await fetch(
+        `${PROVISIONING}/users/current/accounts`,
+        {
+          method: "POST",
+          headers: {
+            "auth-token": METAAPI_TOKEN,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: `LiveSignals-${MT5_LOGIN}`,
+            type: "cloud",
+            login: MT5_LOGIN,
+            password: MT5_PASSWORD,
+            server: MT5_SERVER,
+            platform: "mt5",
+            magic: 0,
+          }),
+          signal: AbortSignal.timeout(15000),
+        }
+      );
+
+      if (createResponse.ok) {
+        account = await createResponse.json();
+        console.log("MetaApi account created");
+      } else {
+        console.error(
+          "MetaApi account creation failed:",
+          createResponse.status,
+          (await createResponse.text()).slice(0, 500)
+        );
+        return null;
+      }
     }
 
-    const id = acc?._id || acc?.id;
-    if (!id) { console.log("MT5 account not resolved"); return null; }
-    console.log("MT5 account:", id, "state:", acc?.state);
+    const accountId = account?._id || account?.id;
 
-
-    if (acc?.state && acc.state !== "DEPLOYED") {
-      await fetch(`${PROVISIONING}/users/current/accounts/${id}/deploy`, {
-        method: "POST",
-        headers: { "auth-token": METAAPI_TOKEN },
-        signal: AbortSignal.timeout(8000),
-      }).catch(() => {});
+    if (!accountId) {
+      console.error("MetaApi account ID not found");
+      return null;
     }
 
-    cachedAccountId = id;
+    console.log(
+      "MT5 account:",
+      accountId,
+      "state:",
+      account?.state
+    );
+
+    /* DEPLOY ACCOUNT */
+
+    if (
+      account?.state &&
+      !["DEPLOYED", "DEPLOYING"].includes(account.state)
+    ) {
+      console.log("Deploying MT5 account...");
+
+      const deployResponse = await fetch(
+        `${PROVISIONING}/users/current/accounts/${accountId}/deploy`,
+        {
+          method: "POST",
+          headers: {
+            "auth-token": METAAPI_TOKEN,
+          },
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+
+      console.log(
+        "Deploy response:",
+        deployResponse.status
+      );
+    }
+
+    cachedAccountId = accountId;
     cachedAccountAt = Date.now();
-    return id;
-  } catch (e) {
-    console.log("MT5 account lookup fail:", String(e));
+
+    return accountId;
+  } catch (error) {
+    console.error(
+      "MT5 account error:",
+      String(error)
+    );
     return null;
   }
 }
 
-/** Map an app pair label to the broker's MT5 symbol. */
-function toMt5Symbol(pair: string): string | null {
-  const upper = pair.toUpperCase();
-  const letters = upper.replace(/[^A-Z0-9]/g, "");
+/* =========================================================
+   FIND ACTUAL BROKER SYMBOL
+========================================================= */
 
-  if (upper.includes("XAU") || upper.includes("GOLD")) return "XAUUSD";
-  if (upper.includes("XAG") || upper.includes("SILVER")) return "XAGUSD";
-  if (upper.includes("BRENT")) return "UKOIL";
-  if (upper.includes("CRUDE") || upper.includes("WTI")) return "USOIL";
-  if (upper.includes("NATURAL GAS") || letters.startsWith("NGAS")) return "XNGUSD";
-  if (upper.includes("US30") || upper.includes("DOW")) return "US30";
-  if (upper.includes("NASDAQ") || upper.includes("NAS100")) return "US100";
-  if (upper.includes("S&P") || upper.includes("SP500") || upper.includes("SPX")) return "US500";
-  if (upper.includes("DAX") || upper.includes("GER")) return "DE30";
-  if (upper.includes("FTSE") || upper.includes("UK100")) return "UK100";
-  if (upper.includes("NIKKEI") || upper.includes("JP225")) return "JP225";
+async function findBrokerSymbol(
+  accountId: string,
+  appPair: string
+): Promise<string | null> {
 
-  // Crypto + FX: 6-char base/quote symbols
-  if (/^[A-Z]{6,7}$/.test(letters)) return letters.slice(0, 6);
-  return null;
-}
+  const upper = appPair
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 
-/** Decimal places to render for a symbol. */
-function priceDecimals(symbol: string): number {
-  if (symbol === "XAUUSD" || symbol.startsWith("US") || symbol.startsWith("DE") ||
-      symbol.startsWith("UK") || symbol.startsWith("JP")) return 2;
-  if (symbol === "XAGUSD") return 3;
-  if (symbol.endsWith("JPY")) return 3;
-  if (/^(BTC|ETH|XRP|LTC|ADA|SOL|DOGE|DOT|AVAX|LINK)/.test(symbol)) return 2;
-  return 5;
-}
+  let preferred: string[] = [];
 
-/** Fetch live MT5 prices for the given app pairs. Returns only what MT5 answered. */
-async function fetchMt5Prices(pairs: string[]): Promise<Record<string, string>> {
-  const out: Record<string, string> = {};
-  const accountId = await getMt5AccountId();
-  if (!accountId) return out;
-
-  const jobs = pairs.map(async (pair) => {
-    const symbol = toMt5Symbol(pair);
-    if (!symbol) return;
-    try {
-      const r = await fetch(
-        `${CLIENT_API}/users/current/accounts/${accountId}/symbols/${encodeURIComponent(symbol)}/current-price`,
-        { headers: { "auth-token": METAAPI_TOKEN }, signal: AbortSignal.timeout(6000) }
-      );
-      if (!r.ok) { await r.text(); return; }
-      const d = await r.json();
-      const bid = Number(d?.bid);
-      const ask = Number(d?.ask);
-      const mid = bid && ask ? (bid + ask) / 2 : bid || ask;
-      if (mid > 0) out[pair] = mid.toFixed(priceDecimals(symbol));
-    } catch (e) {
-      console.log(`MT5 ${pair} fail:`, String(e));
-    }
-  });
-
-  await Promise.all(jobs);
-  if (Object.keys(out).length) console.log("MT5 prices:", JSON.stringify(out));
-  return out;
-}
-
-
-// ─── Yahoo Finance helper ───
-async function fetchYahooPrice(symbol: string): Promise<number | null> {
-  try {
-    const r = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`,
-      { signal: AbortSignal.timeout(6000), headers: { "User-Agent": "Mozilla/5.0" } }
-    );
-    if (r.ok) {
-      const d = await r.json();
-      const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if (price) { console.log(`Yahoo ${symbol}: ${price}`); return price; }
-    } else await r.text();
-  } catch (e) { console.log(`Yahoo ${symbol} fail:`, String(e)); }
-  return null;
-}
-
-// ─── GOLD ───
-async function fetchGoldPrice(): Promise<number | null> {
-  // Source 1: Yahoo Finance GC=F (Gold Futures) - most reliable
-  const yahooPrice = await fetchYahooPrice("GC=F");
-  if (yahooPrice) return yahooPrice;
-
-  // Source 2: metals.live
-  try {
-    const r = await fetch("https://api.metals.live/v1/spot/gold", {
-      signal: AbortSignal.timeout(5000),
-      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-    });
-    if (r.ok) {
-      const d = await r.json();
-      if (Array.isArray(d) && d.length > 0 && d[0].price) {
-        console.log("Gold metals.live:", d[0].price);
-        return parseFloat(d[0].price);
-      }
-    } else await r.text();
-  } catch (e) { console.log("metals.live fail:", String(e)); }
-
-  // Source 3: goldprice.org
-  try {
-    const r = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
-      signal: AbortSignal.timeout(5000),
-      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-    });
-    if (r.ok) {
-      const d = await r.json();
-      if (d.items?.[0]?.xauPrice) {
-        console.log("Gold goldprice.org:", d.items[0].xauPrice);
-        return parseFloat(d.items[0].xauPrice);
-      }
-    } else await r.text();
-  } catch (e) { console.log("goldprice.org fail:", String(e)); }
-
-  return null;
-}
-
-// ─── SILVER ───
-async function fetchSilverPrice(): Promise<number | null> {
-  // Source 1: Yahoo Finance SI=F (Silver Futures)
-  const yahooPrice = await fetchYahooPrice("SI=F");
-  if (yahooPrice) return yahooPrice;
-
-  // Source 2: goldprice.org
-  try {
-    const r = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
-      signal: AbortSignal.timeout(5000),
-      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-    });
-    if (r.ok) {
-      const d = await r.json();
-      if (d.items?.[0]?.xagPrice) {
-        console.log("Silver goldprice.org:", d.items[0].xagPrice);
-        return parseFloat(d.items[0].xagPrice);
-      }
-    } else await r.text();
-  } catch (e) { console.log("Silver goldprice.org fail:", String(e)); }
-
-  // Source 3: metals.live
-  try {
-    const r = await fetch("https://api.metals.live/v1/spot/silver", {
-      signal: AbortSignal.timeout(5000),
-      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-    });
-    if (r.ok) {
-      const d = await r.json();
-      if (Array.isArray(d) && d.length > 0 && d[0].price) {
-        console.log("Silver metals.live:", d[0].price);
-        return parseFloat(d[0].price);
-      }
-    } else await r.text();
-  } catch (e) { console.log("Silver metals.live fail:", String(e)); }
-
-  return null;
-}
-
-// ─── CRYPTO via CoinGecko ───
-async function fetchCryptoPrices(pairs: string[]): Promise<Record<string, number>> {
-  const prices: Record<string, number> = {};
-  const coinMap: Record<string, string> = {
-    BTC: "bitcoin", ETH: "ethereum", XRP: "ripple", LTC: "litecoin",
-    ADA: "cardano", SOL: "solana", DOGE: "dogecoin", DOT: "polkadot",
-    AVAX: "avalanche-2", MATIC: "matic-network", LINK: "chainlink",
-  };
-
-  const coinIds: string[] = [];
-  const pairToCoin: Record<string, string> = {};
-
-  for (const pair of pairs) {
-    const letters = pair.toUpperCase().replace(/[^A-Z]/g, "");
-    const base =
-      Object.keys(coinMap).find((c) => letters.startsWith(c)) ||
-      pair.split("/")[0]?.toUpperCase();
-    if (base && coinMap[base]) {
-      coinIds.push(coinMap[base]);
-      pairToCoin[coinMap[base]] = pair;
-    }
+  if (
+    upper.includes("XAU") ||
+    upper.includes("GOLD")
+  ) {
+    preferred = ["XAUUSD", "GOLD"];
+  } else if (
+    upper.includes("XAG") ||
+    upper.includes("SILVER")
+  ) {
+    preferred = ["XAGUSD", "SILVER"];
+  } else if (
+    upper.includes("BTC")
+  ) {
+    preferred = ["BTCUSD"];
+  } else if (
+    upper.includes("ETH")
+  ) {
+    preferred = ["ETHUSD"];
+  } else if (
+    /^[A-Z]{6}$/.test(upper)
+  ) {
+    preferred = [upper];
+  } else {
+    preferred = [upper];
   }
-  if (coinIds.length === 0) return prices;
 
   try {
-    const r = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(",")}&vs_currencies=usd`,
-      { signal: AbortSignal.timeout(8000), headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" } }
-    );
-    if (r.ok) {
-      const d = await r.json();
-      for (const [coinId, pair] of Object.entries(pairToCoin)) {
-        if (d[coinId]?.usd) {
-          prices[pair] = d[coinId].usd;
-          console.log(`Crypto ${pair}: ${d[coinId].usd}`);
-        }
+    const response = await fetch(
+      `${CLIENT_API}/users/current/accounts/${accountId}/symbols`,
+      {
+        headers: {
+          "auth-token": METAAPI_TOKEN,
+        },
+        signal: AbortSignal.timeout(10000),
       }
-    } else await r.text();
-  } catch (e) { console.log("CoinGecko fail:", String(e)); }
-
-  return prices;
-}
-
-// ─── OIL via Yahoo Finance ───
-async function fetchOilPrice(): Promise<{ crude: number | null; brent: number | null }> {
-  let crude: number | null = null;
-  let brent: number | null = null;
-
-  for (const [symbol, label] of [["CL=F", "crude"], ["BZ=F", "brent"]] as const) {
-    try {
-      const r = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`,
-        { signal: AbortSignal.timeout(6000), headers: { "User-Agent": "Mozilla/5.0" } }
-      );
-      if (r.ok) {
-        const d = await r.json();
-        const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (price) {
-          console.log(`Oil ${label}: ${price}`);
-          if (label === "crude") crude = price; else brent = price;
-        }
-      } else await r.text();
-    } catch (e) { console.log(`Yahoo ${label} fail:`, String(e)); }
-  }
-  return { crude, brent };
-}
-
-// ─── INDICES via Yahoo Finance ───
-async function fetchIndexPrices(pairs: string[]): Promise<Record<string, number>> {
-  const prices: Record<string, number> = {};
-  const indexMap: Record<string, string> = {
-    US30: "YM=F", NASDAQ: "NQ=F", "S&P500": "ES=F",
-    DAX: "GC=F", FTSE100: "^FTSE", NIKKEI: "^N225", "NATURAL GAS": "NG=F",
-  };
-
-  for (const pair of pairs) {
-    const upper = pair.toUpperCase();
-    let yahooSymbol: string | null = null;
-    for (const [key, sym] of Object.entries(indexMap)) {
-      if (upper.includes(key)) { yahooSymbol = sym; break; }
-    }
-    if (!yahooSymbol) continue;
-
-    try {
-      const r = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1m&range=1d`,
-        { signal: AbortSignal.timeout(6000), headers: { "User-Agent": "Mozilla/5.0" } }
-      );
-      if (r.ok) {
-        const d = await r.json();
-        const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (price) {
-          prices[pair] = price;
-          console.log(`Index ${pair}: ${price}`);
-        }
-      } else await r.text();
-    } catch (e) { console.log(`Yahoo ${pair} fail:`, String(e)); }
-  }
-  return prices;
-}
-
-// ─── FOREX via Frankfurter ───
-async function fetchForexPrice(base: string, quote: string): Promise<number | null> {
-  try {
-    const r = await fetch(
-      `https://api.frankfurter.app/latest?from=${base}&to=${quote}`,
-      { signal: AbortSignal.timeout(5000), headers: { "User-Agent": "Mozilla/5.0" } }
     );
-    if (r.ok) {
-      const d = await r.json();
-      if (d.rates?.[quote]) return d.rates[quote];
-    } else await r.text();
-  } catch (e) { console.log(`Forex ${base}/${quote} fail:`, String(e)); }
-  return null;
+
+    if (!response.ok) {
+      console.error(
+        "Could not read MT5 symbols:",
+        response.status
+      );
+      return preferred[0] || null;
+    }
+
+    const raw = await response.json();
+
+    const symbols = Array.isArray(raw)
+      ? raw
+      : raw?.symbols || raw?.items || [];
+
+    if (!symbols.length) {
+      return preferred[0] || null;
+    }
+
+    const names = symbols.map((s: any) =>
+      typeof s === "string"
+        ? s
+        : s.symbol || s.name
+    ).filter(Boolean);
+
+    /* EXACT MATCH FIRST */
+
+    for (const wanted of preferred) {
+      const exact = names.find(
+        (s: string) =>
+          s.toUpperCase() === wanted.toUpperCase()
+      );
+
+      if (exact) return exact;
+    }
+
+    /* PREFIX / SUFFIX MATCH */
+
+    for (const wanted of preferred) {
+      const match = names.find(
+        (s: string) => {
+          const normalized = s
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "");
+
+          return (
+            normalized === wanted.toUpperCase() ||
+            normalized.startsWith(wanted.toUpperCase())
+          );
+        }
+      );
+
+      if (match) return match;
+    }
+
+    console.log(
+      `No broker symbol found for ${appPair}`
+    );
+
+    return null;
+  } catch (error) {
+    console.error(
+      "Symbol lookup error:",
+      String(error)
+    );
+
+    return preferred[0] || null;
+  }
 }
 
-// ─── MAIN PRICE FETCHER ───
-async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> {
-  const prices: Record<string, string> = {};
-  const cryptoPairs: string[] = [];
-  const forexPairs: string[] = [];
-  const goldPairs: string[] = [];
-  const silverPairs: string[] = [];
-  const oilCrudePairs: string[] = [];
-  const oilBrentPairs: string[] = [];
-  const indexPairs: string[] = [];
-  const syntheticKeywords = ["BOOM", "CRASH", "VOL", "V75", "R_"];
+/* =========================================================
+   GET REAL MT5 PRICE
+========================================================= */
 
-  // MT5 is the primary market-data source; public APIs are only a fallback.
-  const mt5Candidates = pairs.filter(
-    p => !syntheticKeywords.some(k => p.toUpperCase().includes(k))
+async function fetchMt5Price(
+  accountId: string,
+  appPair: string
+): Promise<string | null> {
+
+  const symbol = await findBrokerSymbol(
+    accountId,
+    appPair
   );
-  const mt5Prices = mt5Candidates.length > 0 ? await fetchMt5Prices(mt5Candidates) : {};
-  Object.assign(prices, mt5Prices);
+
+  if (!symbol) return null;
+
+  try {
+    const response = await fetch(
+      `${CLIENT_API}/users/current/accounts/${accountId}/symbols/${encodeURIComponent(
+        symbol
+      )}/current-price?keepSubscription=true`,
+      {
+        headers: {
+          "auth-token": METAAPI_TOKEN,
+        },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        `MT5 price failed ${appPair} (${symbol}):`,
+        response.status,
+        (await response.text()).slice(0, 300)
+      );
+      return null;
+    }
+
+    const data = await response.json();
+
+    const bid = Number(data?.bid);
+    const ask = Number(data?.ask);
+
+    if (!bid && !ask) {
+      console.error(
+        `MT5 returned no bid/ask for ${symbol}`
+      );
+      return null;
+    }
+
+    const price =
+      bid > 0 && ask > 0
+        ? (bid + ask) / 2
+        : bid > 0
+        ? bid
+        : ask;
+
+    if (!price || price <= 0) return null;
+
+    console.log(
+      `REAL MT5 PRICE: ${appPair} -> ${symbol} -> ${price}`
+    );
+
+    return price.toFixed(
+      symbol.toUpperCase().includes("JPY")
+        ? 3
+        : symbol.toUpperCase().includes("XAG")
+        ? 3
+        : symbol.toUpperCase().includes("XAU")
+        ? 2
+        : 5
+    );
+
+  } catch (error) {
+    console.error(
+      `MT5 price error ${appPair}:`,
+      String(error)
+    );
+    return null;
+  }
+}
+
+/* =========================================================
+   FETCH ALL PRICES
+   IMPORTANT:
+   MT5 ONLY — NO YAHOO / NO OTHER FALLBACK
+========================================================= */
+
+async function fetchAllPrices(
+  pairs: string[]
+): Promise<Record<string, string>> {
+
+  const prices: Record<string, string> = {};
+
+  const accountId = await getMt5AccountId();
+
+  if (!accountId) {
+    console.error(
+      "No MT5 account available. Returning no prices."
+    );
+    return prices;
+  }
 
   for (const pair of pairs) {
-    const upper = pair.toUpperCase();
-    if (syntheticKeywords.some(k => upper.includes(k))) continue;
-    if (prices[pair]) continue; // already resolved from MT5
 
-    if (upper.includes("XAU") || upper.includes("GOLD")) goldPairs.push(pair);
-    else if (upper.includes("XAG") || upper.includes("SILVER")) silverPairs.push(pair);
-    else if (upper.includes("OIL") && upper.includes("CRUDE")) oilCrudePairs.push(pair);
-    else if (upper.includes("OIL") && upper.includes("BRENT")) oilBrentPairs.push(pair);
-    else if (upper.includes("NATURAL GAS")) indexPairs.push(pair);
-    else if (["US30", "NASDAQ", "S&P500", "DAX", "FTSE", "NIKKEI"].some(idx => upper.includes(idx))) indexPairs.push(pair);
-    else if (["BTC", "ETH", "XRP", "LTC", "ADA", "SOL", "DOGE", "DOT", "AVAX", "MATIC", "LINK"].some(c => upper.startsWith(c))) cryptoPairs.push(pair);
-    else forexPairs.push(pair);
-  }
+    const price = await fetchMt5Price(
+      accountId,
+      pair
+    );
 
-
-  const needOil = oilCrudePairs.length > 0 || oilBrentPairs.length > 0;
-
-  const [goldPrice, silverPrice, cryptoPrices, oilPrices, indexResults] = await Promise.all([
-    goldPairs.length > 0 ? fetchGoldPrice() : Promise.resolve(null),
-    silverPairs.length > 0 ? fetchSilverPrice() : Promise.resolve(null),
-    cryptoPairs.length > 0 ? fetchCryptoPrices(cryptoPairs) : Promise.resolve({}),
-    needOil ? fetchOilPrice() : Promise.resolve({ crude: null, brent: null }),
-    indexPairs.length > 0 ? fetchIndexPrices(indexPairs) : Promise.resolve({}),
-  ]);
-
-  if (goldPrice) goldPairs.forEach(p => { prices[p] = goldPrice.toFixed(2); });
-  if (silverPrice) silverPairs.forEach(p => { prices[p] = silverPrice.toFixed(4); });
-  
-  for (const [pair, price] of Object.entries(cryptoPrices)) {
-    prices[pair] = price < 1 ? price.toFixed(6) : price < 100 ? price.toFixed(4) : price.toFixed(2);
-  }
-  
-  if (oilPrices.crude) oilCrudePairs.forEach(p => { prices[p] = oilPrices.crude!.toFixed(2); });
-  if (oilPrices.brent) oilBrentPairs.forEach(p => { prices[p] = oilPrices.brent!.toFixed(2); });
-  
-  for (const [pair, price] of Object.entries(indexResults)) {
-    prices[pair] = price.toFixed(2);
-  }
-
-  // Fetch forex pairs sequentially (rate limited API)
-  for (const pair of forexPairs) {
-    const cleanPair = pair.replace(/[^A-Za-z]/g, "").toUpperCase();
-    if (cleanPair.length >= 6) {
-      const base = cleanPair.substring(0, 3);
-      const quote = cleanPair.substring(3, 6);
-      const price = await fetchForexPrice(base, quote);
-      if (price) {
-        prices[pair] = price.toFixed(5);
-        console.log(`Forex ${pair}: ${price.toFixed(5)}`);
-      }
+    if (price) {
+      prices[pair] = price;
     }
   }
+
+  console.log(
+    "FINAL MT5 PRICES:",
+    JSON.stringify(prices)
+  );
 
   return prices;
 }
 
-// ─── HELPER: Parse TP/SL price values ───
-function parsePrice(priceStr: string): number {
+/* =========================================================
+   PRICE PARSER
+========================================================= */
+
+function parsePrice(
+  priceStr: string
+): number {
+
   if (!priceStr) return 0;
-  // Skip non-numeric values like "OPEN", "BE", "SL OPEN"
-  if (/[a-zA-Z]/.test(priceStr.replace(/[-–.\s]/g, ''))) return 0;
-  const cleaned = priceStr.replace(/[^\d.\-–]/g, "");
-  const parts = cleaned.split(/[-–]/);
-  if (parts.length >= 2) {
-    return (parseFloat(parts[0]) + parseFloat(parts[1])) / 2;
+
+  if (
+    /[a-zA-Z]/.test(
+      priceStr.replace(/[-–.\s]/g, "")
+    )
+  ) {
+    return 0;
   }
+
+  const cleaned = priceStr.replace(
+    /[^\d.\-–]/g,
+    ""
+  );
+
+  const parts = cleaned.split(/[-–]/);
+
+  if (parts.length >= 2) {
+    return (
+      parseFloat(parts[0]) +
+      parseFloat(parts[1])
+    ) / 2;
+  }
+
   return parseFloat(cleaned) || 0;
 }
 
-// ─── SERVE ───
+/* =========================================================
+   SERVER
+========================================================= */
+
 serve(async (req) => {
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(
+      null,
+      { headers: corsHeaders }
+    );
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseServiceKey
+    );
+
+    /* =====================================================
+       GET PAIRS FROM REQUEST
+    ===================================================== */
+
     const url = new URL(req.url);
-    const pairsParam = url.searchParams.get("pairs");
 
-    // ── CLIENT-SIDE PRICE-ONLY REQUEST (GET or POST with pairs) ──
-    let clientPairs: string[] | null = null;
+    const pairsParam =
+      url.searchParams.get("pairs");
+
+    let clientPairs: string[] = [];
+
     if (pairsParam) {
-      clientPairs = pairsParam.split(",").map(p => p.trim()).filter(Boolean);
+
+      clientPairs = pairsParam
+        .split(",")
+        .map(p => p.trim())
+        .filter(Boolean);
+
     } else if (req.method === "POST") {
+
       try {
+
         const body = await req.json();
-        if (body?.pairs && Array.isArray(body.pairs)) {
-          clientPairs = body.pairs.filter(Boolean);
+
+        if (
+          body?.pairs &&
+          Array.isArray(body.pairs)
+        ) {
+          clientPairs =
+            body.pairs
+              .map((p: any) => String(p))
+              .filter(Boolean);
         }
-      } catch { /* not JSON body, proceed to full update */ }
+
+      } catch {
+        clientPairs = [];
+      }
     }
 
-    if (clientPairs && clientPairs.length > 0) {
-      const prices = await fetchAllPrices(clientPairs);
+    /* =====================================================
+       PRICE-ONLY REQUEST
+    ===================================================== */
+
+    if (clientPairs.length > 0) {
+
+      const prices =
+        await fetchAllPrices(clientPairs);
+
       return new Response(
-        JSON.stringify({ success: true, prices }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          success: true,
+          source: "MT5",
+          prices,
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              "application/json",
+          },
+        }
       );
     }
 
-    // ── FULL UPDATE MODE: fetch active signals, update prices + TP/SL ──
-    const { data: signals, error } = await supabase
+    /* =====================================================
+       FULL SIGNAL UPDATE
+    ===================================================== */
+
+    const {
+      data: signals,
+      error,
+    } = await supabase
       .from("signals")
-      .select("id, pair, type, entry, tp1, tp2, tp3, tp4, sl, tp1_hit, tp2_hit, tp3_hit, tp4_hit, sl_hit, status, signal_status, entry_mode, limit_entry_price, is_activated")
+      .select(
+        "id,pair,type,entry,tp1,tp2,tp3,tp4,sl,tp1_hit,tp2_hit,tp3_hit,tp4_hit,sl_hit,status,signal_status,entry_mode,limit_entry_price,is_activated"
+      )
       .eq("published", true)
-      .not("signal_status", "ilike", "close");
+      .not(
+        "signal_status",
+        "ilike",
+        "close"
+      );
 
-    if (error) { console.error("Signals fetch error:", error); throw error; }
-    console.log(`Active signals: ${signals?.length || 0}`);
+    if (error) {
+      console.error(
+        "Signals fetch error:",
+        error
+      );
+      throw error;
+    }
 
-    if (!signals || signals.length === 0) {
+    if (
+      !signals ||
+      signals.length === 0
+    ) {
+
       return new Response(
-        JSON.stringify({ message: "No active signals", prices: {} }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          success: true,
+          message:
+            "No active signals",
+          source: "MT5",
+          prices: {},
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              "application/json",
+          },
+        }
       );
     }
 
-    const uniquePairs = [...new Set(signals.map(s => s.pair))];
-    console.log("Pairs:", uniquePairs);
+    const uniquePairs = [
+      ...new Set(
+        signals.map(
+          s => s.pair
+        )
+      ),
+    ];
 
-    const prices = await fetchAllPrices(uniquePairs);
-    console.log("Prices:", JSON.stringify(prices));
+    const prices =
+      await fetchAllPrices(
+        uniquePairs
+      );
 
     let updatedCount = 0;
     let activatedCount = 0;
 
+    /* =====================================================
+       UPDATE SIGNALS
+    ===================================================== */
+
     for (const signal of signals) {
-      const currentPrice = prices[signal.pair];
+
+      const currentPrice =
+        prices[signal.pair];
+
       if (!currentPrice) continue;
 
-      const priceNum = parseFloat(currentPrice);
-      const updates: Record<string, any> = { current_price: currentPrice };
-      const isBuy = signal.type?.toLowerCase() === "buy";
-      const lifecycle = String(signal.signal_status || signal.status || "").toLowerCase();
+      const priceNum =
+        parseFloat(
+          currentPrice
+        );
 
-      if (lifecycle === "close") {
-        await supabase.from("signals").update(updates).eq("id", signal.id);
-        updatedCount++;
-        continue;
-      }
+      const updates: Record<
+        string,
+        any
+      > = {
+        current_price:
+          currentPrice,
+      };
 
-      // ── LIMIT ORDER ACTIVATION ──
-      const isLimitOrder = signal.entry_mode === "limit";
-      const isPending = lifecycle === "pending";
-      const limitPrice = typeof signal.limit_entry_price === "number" ? signal.limit_entry_price : 0;
+      const isBuy =
+        signal.type?.toLowerCase() ===
+        "buy";
 
-      if (isLimitOrder && isPending && limitPrice > 0) {
-        const shouldActivate = isBuy ? priceNum <= limitPrice : priceNum >= limitPrice;
+      const lifecycle =
+        String(
+          signal.signal_status ||
+          signal.status ||
+          ""
+        ).toLowerCase();
+
+      /* LIMIT ORDER */
+
+      const isLimitOrder =
+        signal.entry_mode ===
+        "limit";
+
+      const isPending =
+        lifecycle === "pending";
+
+      const limitPrice =
+        typeof signal.limit_entry_price ===
+        "number"
+          ? signal.limit_entry_price
+          : 0;
+
+      if (
+        isLimitOrder &&
+        isPending &&
+        limitPrice > 0
+      ) {
+
+        const shouldActivate =
+          isBuy
+            ? priceNum <= limitPrice
+            : priceNum >= limitPrice;
+
         if (shouldActivate) {
-          updates.signal_status = "open";
-          updates.status = "open";
-          updates.is_activated = true;
-          updates.activated_at = new Date().toISOString();
+
+          updates.signal_status =
+            "open";
+
+          updates.status =
+            "open";
+
+          updates.is_activated =
+            true;
+
+          updates.activated_at =
+            new Date().toISOString();
+
           activatedCount++;
-          console.log(`Limit activated: ${signal.id} @ ${priceNum}`);
         }
       }
 
-      const isOpen = lifecycle === "open" || updates.signal_status === "open";
+      const isOpen =
+        lifecycle === "open" ||
+        updates.signal_status ===
+          "open";
+
       if (!isOpen) {
-        await supabase.from("signals").update(updates).eq("id", signal.id);
+
+        await supabase
+          .from("signals")
+          .update(updates)
+          .eq(
+            "id",
+            signal.id
+          );
+
         updatedCount++;
+
         continue;
       }
 
-      const entryPrice = parsePrice(signal.entry || "");
+      const entryPrice =
+        parsePrice(
+          signal.entry || ""
+        );
 
-      // ── TP1: Auto move SL to entry (breakeven) ──
-      if (!signal.tp1_hit && signal.tp1) {
-        const tp1Price = parsePrice(signal.tp1);
-        if (tp1Price > 0 && (isBuy ? priceNum >= tp1Price : priceNum <= tp1Price)) {
-          updates.tp1_hit = true;
-          updates.profit_note = "TP 1 Hit ✅ SL moved to B.E";
-          if (entryPrice > 0) updates.sl = String(entryPrice);
-          console.log(`TP1 hit: ${signal.id}`);
+      /* TP1 */
+
+      if (
+        !signal.tp1_hit &&
+        signal.tp1
+      ) {
+
+        const tp1Price =
+          parsePrice(
+            signal.tp1
+          );
+
+        if (
+          tp1Price > 0 &&
+          (
+            isBuy
+              ? priceNum >= tp1Price
+              : priceNum <= tp1Price
+          )
+        ) {
+
+          updates.tp1_hit =
+            true;
+
+          updates.profit_note =
+            "TP 1 Hit ✅ SL moved to B.E";
+
+          if (
+            entryPrice > 0
+          ) {
+            updates.sl =
+              String(
+                entryPrice
+              );
+          }
         }
       }
 
-      // ── TP2 ──
-      if (!signal.tp2_hit && signal.tp2) {
-        const tp2Price = parsePrice(signal.tp2);
-        if (tp2Price > 0 && (isBuy ? priceNum >= tp2Price : priceNum <= tp2Price)) {
-          updates.tp2_hit = true;
-          updates.profit_note = "TP 2 Cleared! Secure More Profits 💰";
-          console.log(`TP2 hit: ${signal.id}`);
+      /* TP2 */
+
+      if (
+        !signal.tp2_hit &&
+        signal.tp2
+      ) {
+
+        const tp2Price =
+          parsePrice(
+            signal.tp2
+          );
+
+        if (
+          tp2Price > 0 &&
+          (
+            isBuy
+              ? priceNum >= tp2Price
+              : priceNum <= tp2Price
+          )
+        ) {
+
+          updates.tp2_hit =
+            true;
+
+          updates.profit_note =
+            "TP 2 Cleared! Secure More Profits 💰";
         }
       }
 
-      // ── TP3: AUTO CLOSE ──
-      if (!signal.tp3_hit && signal.tp3) {
-        const tp3Price = parsePrice(signal.tp3);
-        if (tp3Price > 0 && (isBuy ? priceNum >= tp3Price : priceNum <= tp3Price)) {
-          updates.tp3_hit = true;
-          updates.signal_status = "close";
-          updates.status = "close";
-          updates.profit_note = "TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅";
-          console.log(`TP3 hit + close: ${signal.id}`);
+      /* TP3 */
+
+      if (
+        !signal.tp3_hit &&
+        signal.tp3
+      ) {
+
+        const tp3Price =
+          parsePrice(
+            signal.tp3
+          );
+
+        if (
+          tp3Price > 0 &&
+          (
+            isBuy
+              ? priceNum >= tp3Price
+              : priceNum <= tp3Price
+          )
+        ) {
+
+          updates.tp3_hit =
+            true;
+
+          updates.signal_status =
+            "close";
+
+          updates.status =
+            "close";
+
+          updates.profit_note =
+            "TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅";
         }
       }
 
-      // ── TP4 ──
-      if (!signal.tp4_hit && signal.tp4) {
-        const tp4Price = parsePrice(signal.tp4);
-        if (tp4Price > 0 && (isBuy ? priceNum >= tp4Price : priceNum <= tp4Price)) {
-          updates.tp4_hit = true;
-          console.log(`TP4 hit: ${signal.id}`);
+      /* TP4 */
+
+      if (
+        !signal.tp4_hit &&
+        signal.tp4
+      ) {
+
+        const tp4Price =
+          parsePrice(
+            signal.tp4
+          );
+
+        if (
+          tp4Price > 0 &&
+          (
+            isBuy
+              ? priceNum >= tp4Price
+              : priceNum <= tp4Price
+          )
+        ) {
+
+          updates.tp4_hit =
+            true;
         }
       }
 
-      // ── BREAK EVEN CHECK ──
-      const isTP1Hit = signal.tp1_hit || updates.tp1_hit;
-      if (isTP1Hit && !signal.sl_hit && entryPrice > 0) {
-        const tolerance = entryPrice * 0.001;
-        if (Math.abs(priceNum - entryPrice) <= tolerance) {
-          updates.signal_status = "close";
-          updates.status = "close";
-          updates.profit_note = "Signal Closed at Breakeven after TP1 ✅";
-          updates.sl_hit = false;
-          console.log(`B.E close: ${signal.id}`);
+      /* SL */
+
+      const tp1Hit =
+        signal.tp1_hit ||
+        updates.tp1_hit;
+
+      if (
+        !signal.sl_hit &&
+        signal.sl &&
+        !tp1Hit
+      ) {
+
+        const slPrice =
+          parsePrice(
+            signal.sl
+          );
+
+        if (
+          slPrice > 0 &&
+          (
+            isBuy
+              ? priceNum <= slPrice
+              : priceNum >= slPrice
+          )
+        ) {
+
+          updates.sl_hit =
+            true;
+
+          updates.signal_status =
+            "close";
+
+          updates.status =
+            "close";
+
+          updates.profit_note =
+            "SL Hit ❌";
         }
       }
 
-      // ── SL: ONLY if TP1 NOT hit ──
-      if (!signal.sl_hit && signal.sl && !isTP1Hit) {
-        const slPrice = parsePrice(signal.sl);
-        if (slPrice > 0 && (isBuy ? priceNum <= slPrice : priceNum >= slPrice)) {
-          updates.sl_hit = true;
-          updates.signal_status = "close";
-          updates.status = "close";
-          updates.profit_note = "SL Hit ❌ - Staying patient for a better entry.";
-          console.log(`SL hit: ${signal.id}`);
-        }
-      }
+      await supabase
+        .from("signals")
+        .update(updates)
+        .eq(
+          "id",
+          signal.id
+        );
 
-      await supabase.from("signals").update(updates).eq("id", signal.id);
       updatedCount++;
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        pricesUpdated: updatedCount,
-        limitOrdersActivated: activatedCount,
-        pairs: Object.keys(prices),
+        source: "MT5",
+        pricesUpdated:
+          updatedCount,
+        limitOrdersActivated:
+          activatedCount,
+        pairs:
+          Object.keys(prices),
         prices,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type":
+            "application/json",
+        },
+      }
     );
+
   } catch (error) {
-    console.error("fetch-live-prices error:", error);
+
+    console.error(
+      "fetch-live-prices error:",
+      error
+    );
+
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: false,
+        source: "MT5",
+        error:
+          "MT5 live price service failed",
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type":
+            "application/json",
+        },
+      }
     );
   }
 });
