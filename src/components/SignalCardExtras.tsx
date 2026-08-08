@@ -1,9 +1,3 @@
-import { memo } from "react";
-
-const SignalCardExtras = memo(() => {
+export default function SignalCardExtras() {
   return null;
-});
-
-SignalCardExtras.displayName = "SignalCardExtras";
-
-export default SignalCardExtras;
+}
