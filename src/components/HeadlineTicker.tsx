@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, Megaphone, Zap } from "lucide-react";
+import { TrendingUp, ShieldAlert, Zap, Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Headline {
@@ -11,29 +11,6 @@ interface Headline {
   is_active: boolean;
   created_at: string;
 }
-
-// Function to render headline text with first word in specific color
-const renderHeadlineText = (text: string, isHighAlert: boolean) => {
-  const words = text.split(" ");
-  if (words.length === 0) return null;
-  
-  const firstWord = words[0];
-  const restOfText = words.slice(1).join(" ");
-  
-  return (
-    <span className={cn("text-[13px] tracking-wide", isHighAlert && "font-bold")}>
-      <span className={cn(
-        "font-extrabold mr-1",
-        isHighAlert 
-          ? "bg-gradient-to-r from-red-500 to-red-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" 
-          : "text-primary"
-      )}>
-        {firstWord}
-      </span>
-      <span className="text-slate-300/90">{restOfText}</span>
-    </span>
-  );
-};
 
 const HeadlineTicker = () => {
   const { data: headline, refetch } = useQuery({
@@ -75,71 +52,88 @@ const HeadlineTicker = () => {
     };
   }, [refetch]);
 
-  const renderTickerItem = useCallback((isHighAlert: boolean, text: string) => (
-    <div className="flex items-center gap-3 whitespace-nowrap px-6 shrink-0 h-full">
-      <div className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border shadow-lg",
-        isHighAlert 
-          ? "border-red-500/40 bg-red-500/10 shadow-red-500/20" 
-          : "border-blue-500/30 bg-blue-500/10 shadow-blue-500/20"
-      )}>
-        {isHighAlert ? (
-          <AlertTriangle className="h-3.5 w-3.5 text-red-400 animate-pulse" />
-        ) : (
-          <Zap className="h-3.5 w-3.5 text-blue-400" />
-        )}
-      </div>
-      {renderHeadlineText(text, isHighAlert)}
-    </div>
-  ), []);
-
   if (!headline) return null;
 
   const isHighAlert = headline.headline_type === "high_alert";
 
   return (
-    <div
-      className={cn(
-        "w-full overflow-hidden py-3 relative",
-        isHighAlert
-          ? "bg-gradient-to-r from-red-950/30 via-red-900/10 to-red-950/30 border-y border-red-500/20 shadow-[inset_0_0_20px_rgba(239,68,68,0.05)]"
-          : "bg-[#0e101c]/80 border-y border-white/5 backdrop-blur-sm shadow-[inset_0_0_20px_rgba(59,130,246,0.02)]"
-      )}
-    >
-      {/* Glowing line at top edge */}
+    <div className="w-full flex justify-center px-2 py-3">
+      
+      {/* CYBERPUNK GLASS CARD */}
       <div className={cn(
-        "absolute top-0 left-0 right-0 h-[1px]",
+        "relative w-full max-w-[340px] overflow-hidden rounded-2xl border p-[2px] transition-all duration-500 hover:scale-[1.02]",
         isHighAlert 
-          ? "bg-gradient-to-r from-transparent via-red-500/60 to-transparent" 
-          : "bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"
-      )} />
-
-      {/* Marquee Container */}
-      <div className="flex items-center overflow-hidden relative h-7">
+          ? "border-red-500/30 bg-gradient-to-br from-red-500/20 via-transparent to-red-500/5 shadow-[0_0_40px_rgba(239,68,68,0.15)]" 
+          : "border-blue-500/30 bg-gradient-to-br from-blue-500/20 via-transparent to-blue-500/5 shadow-[0_0_40px_rgba(59,130,246,0.15)]"
+      )}>
         
-        {/* CSS Keyframes for the ticker animation */}
-        <style>{`
-          @keyframes ticker {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-33.33%); }
-          }
-          .animate-ticker-custom {
-            animation: ticker 30s linear infinite;
-            display: flex;
-            width: fit-content;
-          }
-          .animate-ticker-custom:hover {
-            animation-play-state: paused;
-          }
-        `}</style>
+        {/* INNER GLASS BACKGROUND */}
+        <div className="relative h-[52px] w-full rounded-2xl bg-[#0a0b14]/90 backdrop-blur-xl flex items-center justify-between px-4 overflow-hidden">
+          
+          {/* ANIMATED GLOW ORB (Rotating) */}
+          <div className={cn(
+            "absolute -left-10 -top-10 h-20 w-20 rounded-full blur-2xl animate-spin-slow duration-[8s]",
+            isHighAlert ? "bg-red-500/30" : "bg-blue-500/30"
+          )} />
 
-        <div className="animate-ticker-custom">
-          {/* We render 3 items to ensure a seamless continuous loop */}
-          {renderTickerItem(isHighAlert, headline.text)}
-          {renderTickerItem(isHighAlert, headline.text)}
-          {renderTickerItem(isHighAlert, headline.text)}
+          {/* TOP & BOTTOM NEON LINES (Scanline effect) */}
+          <div className={cn(
+            "absolute left-0 right-0 h-[1px] top-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse",
+            isHighAlert ? "via-red-400/60" : "via-blue-400/60"
+          )} />
+          <div className={cn(
+            "absolute left-0 right-0 h-[1px] bottom-0 bg-gradient-to-r from-transparent via-white/20 to-transparent",
+            isHighAlert ? "via-red-400/40" : "via-blue-400/40"
+          )} />
+
+          {/* LEFT: ICON + TEXT */}
+          <div className="flex items-center gap-3 relative z-10 flex-1 min-w-0">
+            
+            {/* DYNAMIC ICON CONTAINER */}
+            <div className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-lg backdrop-blur-sm",
+              isHighAlert 
+                ? "border-red-500/50 bg-red-500/10 shadow-red-500/20" 
+                : "border-blue-500/50 bg-blue-500/10 shadow-blue-500/20"
+            )}>
+              {isHighAlert ? (
+                <ShieldAlert className="h-4 w-4 text-red-400 animate-pulse" />
+              ) : (
+                <TrendingUp className="h-4 w-4 text-blue-400" />
+              )}
+            </div>
+
+            {/* TEXT WITH GLOW */}
+            <div className="flex-1 min-w-0 flex items-center gap-1.5">
+              {/* Animated Sparkle Icon */}
+              <Sparkles className={cn(
+                "h-3 w-3 animate-pulse",
+                isHighAlert ? "text-red-300" : "text-blue-300"
+              )} />
+              
+              <div className="truncate">
+                <span className={cn(
+                  "text-[13px] font-extrabold tracking-wide",
+                  isHighAlert 
+                    ? "bg-gradient-to-r from-red-300 to-red-100 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(239,68,68,0.4)]" 
+                    : "bg-gradient-to-r from-blue-300 to-blue-100 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]"
+                )}>
+                  {headline.text}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: ACTION BUTTON */}
+          <div className="relative z-10 shrink-0 ml-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300 group-hover:border-white/20 group-hover:shadow-lg cursor-pointer">
+              <ArrowRight className="h-3 w-3 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all duration-300" />
+            </div>
+          </div>
+
         </div>
       </div>
+
     </div>
   );
 };
