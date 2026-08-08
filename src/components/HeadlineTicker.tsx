@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, Megaphone } from "lucide-react";
+import {
+  AlertTriangle,
+  Megaphone,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Headline {
@@ -31,16 +34,12 @@ const HeadlineTicker = () => {
         })
         .limit(1);
 
-      // No active headline is NOT an error
       if (error) {
-        console.error(
-          "Headline fetch error:",
-          error
-        );
+        console.error("Headline fetch error:", error);
         return null;
       }
 
-      return data && data.length > 0
+      return data?.[0]
         ? (data[0] as Headline)
         : null;
     },
@@ -71,10 +70,7 @@ const HeadlineTicker = () => {
     };
   }, [refetch]);
 
-  // No active headline
-  if (!headline) {
-    return null;
-  }
+  if (!headline) return null;
 
   const isHighAlert =
     headline.headline_type === "high_alert";
@@ -88,27 +84,42 @@ const HeadlineTicker = () => {
     .slice(1)
     .join(" ");
 
-  const Content = () => (
-    <div className="flex items-center gap-2.5 whitespace-nowrap px-6">
+  const TickerContent = () => (
+    <div className="flex items-center gap-2 whitespace-nowrap px-5 sm:px-7">
       {/* Icon */}
       <div
         className={cn(
           "flex h-6 w-6 shrink-0 items-center justify-center",
-          "rounded-full border",
+          "rounded-full border shadow-sm",
+
           isHighAlert
-            ? "border-red-500/30 bg-red-500/10"
-            : "border-primary/25 bg-primary/10"
+            ? [
+                "border-red-300",
+                "bg-red-100",
+                "text-red-600",
+                "dark:border-red-500/40",
+                "dark:bg-red-500/15",
+                "dark:text-red-400",
+              ]
+            : [
+                "border-blue-200",
+                "bg-blue-100",
+                "text-blue-600",
+                "dark:border-blue-500/40",
+                "dark:bg-blue-500/15",
+                "dark:text-blue-400",
+              ]
         )}
       >
         {isHighAlert ? (
           <AlertTriangle
-            className="h-3.5 w-3.5 text-red-500 dark:text-red-400"
-            strokeWidth={2.5}
+            className="h-3.5 w-3.5"
+            strokeWidth={2.6}
           />
         ) : (
           <Megaphone
-            className="h-3.5 w-3.5 text-primary"
-            strokeWidth={2.3}
+            className="h-3.5 w-3.5"
+            strokeWidth={2.4}
           />
         )}
       </div>
@@ -116,49 +127,55 @@ const HeadlineTicker = () => {
       {/* Label */}
       <span
         className={cn(
-          "text-[8px] font-extrabold uppercase",
-          "tracking-[0.15em]",
+          "text-[8px] font-black uppercase",
+          "tracking-[0.16em]",
+
           isHighAlert
-            ? "text-red-500 dark:text-red-400"
-            : "text-primary"
+            ? "text-red-600 dark:text-red-400"
+            : "text-blue-600 dark:text-blue-400"
         )}
       >
-        {isHighAlert ? "Alert" : "Update"}
+        {isHighAlert ? "HIGH ALERT" : "MARKET UPDATE"}
       </span>
 
-      {/* Separator */}
+      {/* Divider */}
       <span
         className={cn(
-          "h-1 w-1 rounded-full shrink-0",
+          "h-1 w-1 shrink-0 rounded-full",
+
           isHighAlert
             ? "bg-red-500 dark:bg-red-400 animate-pulse"
-            : "bg-primary"
+            : "bg-blue-500 dark:bg-blue-400"
         )}
       />
 
-      {/* Text */}
+      {/* Headline text */}
       <span
         className={cn(
           "text-[11px] sm:text-xs",
           "leading-none tracking-wide",
+
           isHighAlert
             ? "font-semibold"
-            : "font-medium"
+            : "font-medium",
+
+          "text-slate-700 dark:text-slate-200"
         )}
       >
         <span
           className={cn(
             "font-extrabold",
+
             isHighAlert
-              ? "text-red-500 dark:text-red-400"
-              : "text-primary"
+              ? "text-red-600 dark:text-red-400"
+              : "text-blue-600 dark:text-blue-400"
           )}
         >
           {firstWord}
         </span>
 
         {remainingText && (
-          <span className="text-foreground/75">
+          <span className="text-slate-600 dark:text-slate-300">
             {" "}
             {remainingText}
           </span>
@@ -171,53 +188,78 @@ const HeadlineTicker = () => {
     <div
       className={cn(
         "relative w-full overflow-hidden",
-        "border-y py-1.5",
-        "backdrop-blur-xl",
+        "border-y",
+        "py-2",
 
-        isHighAlert
-          ? [
-              "border-red-500/20",
-              "bg-red-500/[0.04]",
-              "dark:border-red-400/20",
-              "dark:bg-red-400/[0.05]",
-            ]
-          : [
-              "border-border/50",
-              "bg-muted/30",
-              "dark:bg-muted/20",
-            ]
+        // NORMAL
+        !isHighAlert && [
+          "border-blue-200",
+          "bg-blue-50",
+          "dark:border-blue-500/20",
+          "dark:bg-slate-900/80",
+        ],
+
+        // HIGH ALERT
+        isHighAlert && [
+          "border-red-200",
+          "bg-red-50",
+          "dark:border-red-500/25",
+          "dark:bg-red-950/30",
+        ]
       )}
     >
+      {/* Top highlight */}
+      <div
+        className={cn(
+          "pointer-events-none absolute left-0 right-0 top-0 h-px",
+
+          isHighAlert
+            ? "bg-red-400/40 dark:bg-red-500/30"
+            : "bg-blue-400/40 dark:bg-blue-500/30"
+        )}
+      />
+
+      {/* Bottom highlight */}
+      <div
+        className={cn(
+          "pointer-events-none absolute left-0 right-0 bottom-0 h-px",
+
+          isHighAlert
+            ? "bg-red-300/50 dark:bg-red-500/20"
+            : "bg-blue-300/50 dark:bg-blue-500/20"
+        )}
+      />
+
       {/* Left fade */}
       <div
-        className="
-          pointer-events-none
-          absolute left-0 top-0 bottom-0
-          z-10 w-8
-          bg-gradient-to-r
-          from-background
-          to-transparent
-        "
+        className={cn(
+          "pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-10",
+          "bg-gradient-to-r",
+
+          isHighAlert
+            ? "from-red-50 dark:from-red-950/80"
+            : "from-blue-50 dark:from-slate-900"
+        )}
       />
 
       {/* Right fade */}
       <div
-        className="
-          pointer-events-none
-          absolute right-0 top-0 bottom-0
-          z-10 w-8
-          bg-gradient-to-l
-          from-background
-          to-transparent
-        "
+        className={cn(
+          "pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-10",
+          "bg-gradient-to-l",
+
+          isHighAlert
+            ? "from-red-50 dark:from-red-950/80"
+            : "from-blue-50 dark:from-slate-900"
+        )}
       />
 
       {/* Moving ticker */}
-      <div className="flex items-center animate-ticker">
-        <Content />
-        <Content />
-        <Content />
-        <Content />
+      <div className="relative z-[2] flex items-center animate-ticker">
+        <TickerContent />
+        <TickerContent />
+        <TickerContent />
+        <TickerContent />
       </div>
     </div>
   );
