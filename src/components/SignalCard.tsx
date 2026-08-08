@@ -1,6 +1,3 @@
-const TEST_NEW_CARD = true;
-
-
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
@@ -9,10 +6,9 @@ import {
   AlertCircle,
   Target,
   Shield,
-  Share2,
-  Info,
   Clock3,
   Timer,
+  Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -61,270 +57,309 @@ const SignalCard = ({ signal }: SignalCardProps) => {
     signal.status === "SL Hit" ||
     signal.status === "Closed";
 
-  const tpList = [
+  const targets = [
     { label: "TP1", value: signal.tp1, hit: signal.tp1_hit },
     { label: "TP2", value: signal.tp2, hit: signal.tp2_hit },
     { label: "TP3", value: signal.tp3, hit: signal.tp3_hit },
     { label: "TP4", value: signal.tp4, hit: signal.tp4_hit },
-  ].filter((tp) => tp.value);
+  ].filter((item) => item.value);
 
-  const tpCount = tpList.length;
-  const hitCount = tpList.filter((tp) => tp.hit).length;
+  const tpCount = targets.length;
+  const hitCount = targets.filter((item) => item.hit).length;
 
   const progress =
     tpCount > 0 ? (hitCount / tpCount) * 100 : 0;
 
-  const riskClass =
+  const statusText = isProfit
+    ? "ALL TP HIT"
+    : isLoss
+    ? "CLOSED"
+    : "ACTIVE";
+
+  const statusColor = isProfit
+    ? "text-emerald-400"
+    : isLoss
+    ? "text-red-400"
+    : "text-cyan-400";
+
+  const riskColor =
     signal.risk_level?.toLowerCase() === "low"
-      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
       : signal.risk_level?.toLowerCase() === "high"
-      ? "bg-red-500/10 text-red-400 border-red-500/20"
-      : "bg-amber-500/10 text-amber-400 border-amber-500/20";
+      ? "border-red-500/20 bg-red-500/10 text-red-400"
+      : "border-amber-500/20 bg-amber-500/10 text-amber-400";
 
-console.log("NEW SIGNAL CARD CODE IS RUNNING");
-
-  
   return (
     <article
       className={cn(
-        "group relative overflow-hidden rounded-[22px]",
-        "border border-white/10",
-        "bg-[#101322]",
-        "shadow-[0_12px_35px_rgba(0,0,0,0.28)]",
+        "relative overflow-hidden rounded-2xl",
+        "border border-white/[0.08]",
+        "bg-[#111522]",
+        "shadow-[0_10px_35px_rgba(0,0,0,0.30)]",
         "transition-all duration-300",
-        "hover:-translate-y-1 hover:border-primary/30"
+        "hover:-translate-y-0.5 hover:border-white/15"
       )}
     >
-      {/* Top glow */}
+      {/* BUY / SELL top accent */}
       <div
         className={cn(
-          "absolute left-0 top-0 h-1 w-full",
+          "h-1 w-full",
           signal.type === "Buy"
             ? "bg-gradient-to-r from-emerald-400 via-green-400 to-transparent"
             : "bg-gradient-to-r from-red-500 via-orange-400 to-transparent"
         )}
       />
 
-      <div className="p-4 sm:p-5">
+      <div className="p-4">
 
-        {/* HEADER */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+        {/* ================= HEADER ================= */}
+        <div className="flex items-center justify-between gap-3">
 
-            {/* BUY / SELL */}
+          <div className="flex min-w-0 items-center gap-2.5">
+
             <div
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2",
-                "text-xs font-extrabold tracking-wide",
+                "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5",
+                "text-[11px] font-black",
                 signal.type === "Buy"
-                  ? "bg-emerald-500 text-white shadow-[0_0_18px_rgba(16,185,129,0.25)]"
-                  : "bg-red-500 text-white shadow-[0_0_18px_rgba(239,68,68,0.25)]"
+                  ? "bg-emerald-500/15 text-emerald-400"
+                  : "bg-red-500/15 text-red-400"
               )}
             >
               {signal.type === "Buy" ? (
-                <TrendingUp className="h-4 w-4" />
+                <TrendingUp className="h-3.5 w-3.5" />
               ) : (
-                <TrendingDown className="h-4 w-4" />
+                <TrendingDown className="h-3.5 w-3.5" />
               )}
 
               {signal.type.toUpperCase()}
             </div>
 
-            {/* PAIR */}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="truncate text-base font-bold text-white sm:text-lg">
+                <h3 className="truncate text-[17px] font-black tracking-tight text-white">
                   {signal.pair}
                 </h3>
 
                 {isActive && (
-                  <span className="flex items-center gap-1 text-[9px] font-bold uppercase text-red-400">
+                  <span className="flex shrink-0 items-center gap-1 text-[8px] font-black tracking-wider text-red-400">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
                     LIVE
                   </span>
                 )}
               </div>
 
-              <p className="mt-0.5 text-[10px] text-slate-400">
-                {signal.category || "Trading"} •{" "}
-                {signal.tag || "Swing"}
+              <p className="truncate text-[9px] text-slate-500">
+                {signal.category || "Trading"}
+                {signal.tag ? ` • ${signal.tag}` : ""}
               </p>
             </div>
           </div>
 
-          {/* SHARE */}
-          <button
-            type="button"
-            className="rounded-full p-2 text-slate-400 transition hover:bg-white/5 hover:text-white"
-            aria-label="Share signal"
+          {/* Status */}
+          <div
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 rounded-full",
+              "border border-white/5 bg-white/[0.03]",
+              "px-2.5 py-1.5 text-[8px] font-black tracking-wider",
+              statusColor
+            )}
           >
-            <Share2 className="h-4 w-4" />
-          </button>
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                isLoss ? "bg-red-500" : "bg-emerald-400",
+                isActive && "animate-pulse"
+              )}
+            />
+            {statusText}
+          </div>
         </div>
 
-        {/* ENTRY / CURRENT / STATUS */}
-        <div className="mt-4 rounded-2xl border border-white/5 bg-[#171a2b] p-3">
-          <div className="grid grid-cols-3 gap-2">
+        {/* ================= ENTRY PANEL ================= */}
+        <div className="mt-4 rounded-xl border border-white/[0.06] bg-[#171b2a] p-3">
+
+          <div className="grid grid-cols-3 items-center">
 
             <div>
-              <p className="text-[9px] uppercase tracking-wider text-slate-500">
+              <p className="text-[8px] font-semibold uppercase tracking-widest text-slate-500">
                 Entry
               </p>
+
               <p className="mt-1 font-mono text-sm font-bold text-white">
                 {signal.entry}
               </p>
             </div>
 
             <div className="text-center">
-              <p className="text-[9px] uppercase tracking-wider text-slate-500">
-                Target
+              <p className="text-[8px] font-semibold uppercase tracking-widest text-slate-500">
+                First Target
               </p>
+
               <p className="mt-1 font-mono text-sm font-bold text-emerald-400">
                 {signal.tp1}
               </p>
             </div>
 
             <div className="text-right">
-              <p className="text-[9px] uppercase tracking-wider text-slate-500">
-                Status
+              <p className="text-[8px] font-semibold uppercase tracking-widest text-slate-500">
+                Stop Loss
               </p>
 
-              <p
-                className={cn(
-                  "mt-1 flex items-center justify-end gap-1 text-xs font-bold",
-                  isProfit
-                    ? "text-emerald-400"
-                    : isLoss
-                    ? "text-red-400"
-                    : "text-emerald-400"
-                )}
-              >
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    isLoss ? "bg-red-500" : "bg-emerald-400"
-                  )}
-                />
-                {isProfit ? "TP HIT" : isLoss ? "CLOSED" : "ACTIVE"}
+              <p className="mt-1 font-mono text-sm font-bold text-red-400">
+                {signal.sl}
               </p>
             </div>
+
           </div>
         </div>
 
-        {/* PRICE LINE */}
-        <div className="relative my-4 h-8">
-          <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400" />
+        {/* ================= TRADE PATH ================= */}
+        <div className="relative my-5 px-1">
 
-          <div className="absolute left-[10%] top-1/2 -translate-y-1/2">
-            <div className="h-3 w-0.5 bg-red-400" />
-          </div>
+          <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-gradient-to-r from-red-500/70 via-amber-400/70 to-emerald-400/80" />
 
-          <div className="absolute left-[55%] top-1/2 -translate-y-1/2">
-            <div className="h-3 w-0.5 bg-emerald-400" />
-          </div>
+          <div className="relative flex items-center justify-between">
 
-          <div className="absolute right-[8%] top-1/2 -translate-y-1/2">
-            <div className="h-3 w-0.5 bg-emerald-400" />
-          </div>
+            <div className="flex flex-col items-start">
+              <span className="mb-1 rounded-md bg-red-500/10 px-1.5 py-0.5 text-[7px] font-bold text-red-400">
+                SL
+              </span>
+              <span className="h-2.5 w-2.5 rounded-full border-2 border-red-400 bg-[#111522]" />
+            </div>
 
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-full border border-white/10 bg-[#171a2b] px-2.5 py-1 text-[9px] font-bold text-white">
-            {signal.entry}
+            <div className="flex flex-col items-center">
+              <span className="mb-1 rounded-md bg-white/10 px-1.5 py-0.5 text-[7px] font-bold text-slate-300">
+                ENTRY
+              </span>
+              <span className="h-3.5 w-3.5 rounded-full border-[3px] border-cyan-400 bg-[#111522] shadow-[0_0_10px_rgba(34,211,238,0.35)]" />
+            </div>
+
+            <div className="flex flex-col items-end">
+              <span className="mb-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[7px] font-bold text-emerald-400">
+                TP
+              </span>
+              <span className="h-2.5 w-2.5 rounded-full border-2 border-emerald-400 bg-[#111522]" />
+            </div>
+
           </div>
         </div>
 
-        {/* SL / TP */}
+        {/* ================= TP / SL ================= */}
         <div className="grid grid-cols-2 gap-2">
 
-          <div className="rounded-xl border border-red-500/15 bg-red-500/5 p-2.5">
-            <div className="flex items-center gap-1 text-[9px] font-semibold text-red-400">
-              <AlertCircle className="h-3 w-3" />
-              STOP LOSS
+          <div className="rounded-xl border border-red-500/10 bg-red-500/[0.04] p-2.5">
+
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="h-3 w-3 text-red-400" />
+
+              <span className="text-[8px] font-bold uppercase tracking-wider text-red-400">
+                Stop Loss
+              </span>
             </div>
 
             <p className="mt-1 font-mono text-xs font-bold text-red-300">
               {signal.sl}
             </p>
+
+            {signal.sl_hit && (
+              <span className="mt-1 block text-[8px] font-black text-red-400">
+                STOP HIT
+              </span>
+            )}
           </div>
 
-          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-2.5">
-            <div className="flex items-center gap-1 text-[9px] font-semibold text-emerald-400">
-              <Target className="h-3 w-3" />
-              TAKE PROFIT
+          <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.04] p-2.5">
+
+            <div className="flex items-center gap-1.5">
+              <Target className="h-3 w-3 text-emerald-400" />
+
+              <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-400">
+                Take Profit
+              </span>
             </div>
 
             <p className="mt-1 font-mono text-xs font-bold text-emerald-300">
               {signal.tp1}
             </p>
+
+            {signal.tp1_hit && (
+              <span className="mt-1 flex items-center gap-1 text-[8px] font-black text-emerald-400">
+                <CheckCircle2 className="h-3 w-3" />
+                HIT
+              </span>
+            )}
           </div>
+
         </div>
 
-        {/* TP PROGRESS */}
-        {tpCount > 1 && (
-          <div className="mt-4">
+        {/* ================= ALL TARGETS ================= */}
+        {targets.length > 1 && (
+          <div className="mt-3">
+
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[9px] text-slate-500">
-                TP Progress
+              <span className="text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+                Target Progress
               </span>
 
-              <span className="text-[9px] font-bold text-emerald-400">
-                {hitCount}/{tpCount} Completed
+              <span className="text-[8px] font-bold text-emerald-400">
+                {hitCount}/{tpCount} Hit
               </span>
             </div>
 
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              {targets.map((target) => (
+                <div
+                  key={target.label}
+                  className={cn(
+                    "flex items-center justify-between rounded-lg border px-2 py-1.5",
+                    target.hit
+                      ? "border-emerald-500/15 bg-emerald-500/[0.05]"
+                      : "border-white/[0.05] bg-white/[0.015]"
+                  )}
+                >
+                  <span className="text-[8px] font-bold text-slate-500">
+                    {target.label}
+                  </span>
+
+                  <span className="font-mono text-[9px] font-bold text-slate-300">
+                    {target.value}
+                  </span>
+
+                  {target.hit && (
+                    <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* TP LIST */}
-        {tpList.length > 1 && (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {tpList.map((tp) => (
-              <div
-                key={tp.label}
-                className={cn(
-                  "flex items-center justify-between rounded-lg border px-2.5 py-2",
-                  tp.hit
-                    ? "border-emerald-500/20 bg-emerald-500/5"
-                    : "border-white/5 bg-white/[0.02]"
-                )}
-              >
-                <span className="text-[9px] font-semibold text-slate-500">
-                  {tp.label}
-                </span>
+        {/* ================= RISK ================= */}
+        <div className="mt-3 flex items-center justify-between">
 
-                <span className="font-mono text-[10px] font-bold text-slate-200">
-                  {tp.value}
-                </span>
-
-                {tp.hit && (
-                  <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* RISK + TIME */}
-        <div className="mt-4 flex items-center justify-between gap-2">
-
-          {signal.risk_level && (
+          {signal.risk_level ? (
             <Badge
               className={cn(
-                "border px-2.5 py-1 text-[9px] font-bold",
-                riskClass
+                "border px-2 py-1 text-[8px] font-bold",
+                riskColor
               )}
             >
               <Shield className="mr-1 h-3 w-3" />
               {signal.risk_level} Risk
             </Badge>
+          ) : (
+            <span />
           )}
 
-          <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
+          <div className="flex items-center gap-1 text-[8px] text-slate-500">
             <Clock3 className="h-3 w-3" />
 
             {format(
@@ -334,65 +369,71 @@ console.log("NEW SIGNAL CARD CODE IS RUNNING");
           </div>
         </div>
 
-        {/* PROFIT NOTE */}
+        {/* ================= PROFIT NOTE ================= */}
         {signal.profit_note && (
-          <div className="mt-3 flex gap-2 rounded-xl border border-amber-500/10 bg-amber-500/5 p-2.5">
-            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+          <div className="mt-3 flex gap-2 rounded-xl border border-amber-500/10 bg-amber-500/[0.04] p-2.5">
 
-            <p className="text-[10px] leading-relaxed text-amber-300">
+            <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />
+
+            <p className="text-[9px] leading-relaxed text-amber-300">
               {signal.profit_note}
             </p>
+
           </div>
         )}
 
-        {/* NOTE */}
+        {/* ================= NOTE ================= */}
         {signal.note && (
-          <div className="mt-3 flex gap-2 border-t border-white/5 pt-3">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
+          <div className="mt-3 flex gap-2 border-t border-white/[0.05] pt-3">
 
-            <p className="text-[10px] leading-relaxed text-slate-400">
+            <Info className="mt-0.5 h-3 w-3 shrink-0 text-slate-500" />
+
+            <p className="text-[9px] leading-relaxed text-slate-400">
               {signal.note}
             </p>
+
           </div>
         )}
 
-        {/* FOOTER */}
-        <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+        {/* ================= FOOTER ================= */}
+        <div className="mt-4 flex items-center justify-between border-t border-white/[0.05] pt-3">
 
           <div
             className={cn(
-              "flex items-center gap-1.5 text-[10px] font-bold",
+              "flex items-center gap-1.5 text-[9px] font-bold",
               isProfit
                 ? "text-emerald-400"
                 : isLoss
                 ? "text-red-400"
-                : "text-primary"
+                : "text-cyan-400"
             )}
           >
             {isProfit ? (
               <>
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                All TP Hit
+                ALL TARGETS REACHED
               </>
             ) : isLoss ? (
               <>
                 <AlertCircle className="h-3.5 w-3.5" />
-                Signal Closed
+                SIGNAL CLOSED
               </>
             ) : (
               <>
                 <Timer className="h-3.5 w-3.5" />
                 {hitCount > 0
-                  ? `${hitCount} TP Done`
-                  : "Signal Running"}
+                  ? `${hitCount} TARGET${hitCount > 1 ? "S" : ""} HIT`
+                  : "SIGNAL RUNNING"}
               </>
             )}
           </div>
 
-          <span className="text-[9px] text-slate-600">
-            Trend Is Friend
+          <span className="text-[8px] font-semibold tracking-wider text-slate-600">
+            TREND IS FRIEND
           </span>
+
         </div>
+
       </div>
     </article>
   );
