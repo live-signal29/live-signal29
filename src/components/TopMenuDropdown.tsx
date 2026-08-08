@@ -1,4 +1,11 @@
-import { MoreVertical, Share2, Star, Shield, LogOut } from "lucide-react";
+import {
+  MoreVertical,
+  Share2,
+  Star,
+  Shield,
+  LogOut,
+} from "lucide-react";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,7 +35,9 @@ export const TopMenuDropdown = () => {
   };
 
   const handleRateUs = () => {
-    toast.success("Thank you for your interest! Rating feature coming soon.");
+    toast.success(
+      "Thank you for your interest! Rating feature coming soon."
+    );
   };
 
   const handleLogout = async () => {
@@ -39,29 +49,133 @@ export const TopMenuDropdown = () => {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/50 backdrop-blur-sm border border-border/50 hover:border-border hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-md">
-          <MoreVertical className="h-4 w-4 text-foreground/70" />
+        <button
+          type="button"
+          className="
+            flex h-7 w-7 shrink-0 items-center justify-center
+            rounded-full
+            border border-border/40
+            bg-background/60
+            backdrop-blur-md
+            shadow-sm
+            transition-colors
+            hover:bg-background
+            hover:border-border/70
+            focus:outline-none
+          "
+        >
+          <MoreVertical className="h-3.5 w-3.5 text-foreground/70" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
-        className="w-[150px] rounded-xl bg-background/80 backdrop-blur-xl border border-border/50 shadow-xl shadow-black/5 p-1.5"
-        sideOffset={8}
+
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        sideOffset={5}
+        className="
+          w-[128px]
+          min-w-0
+          rounded-lg
+          border border-border/40
+          bg-background/95
+          p-1
+          shadow-lg
+          backdrop-blur-xl
+        "
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <DropdownMenuItem onClick={handleShare} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[12px] transition-all duration-200 hover:bg-primary/10 hover:text-primary hover:scale-[1.02]">
-          <Share2 className="mr-2 h-3.5 w-3.5" /> Share Link
+
+        {/* Share */}
+        <DropdownMenuItem
+          onClick={handleShare}
+          className="
+            h-6
+            min-h-0
+            cursor-pointer
+            rounded-md
+            px-2
+            py-0
+            text-[10px]
+            leading-none
+            gap-0
+            transition-colors
+            focus:bg-primary/10
+            focus:text-primary
+          "
+        >
+          <Share2 className="mr-1.5 h-3 w-3 shrink-0" />
+          <span>Share</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleRateUs} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[12px] transition-all duration-200 hover:bg-primary/10 hover:text-primary hover:scale-[1.02]">
-          <Star className="mr-2 h-3.5 w-3.5" /> Rate Us
+
+        {/* Rate */}
+        <DropdownMenuItem
+          onClick={handleRateUs}
+          className="
+            h-6
+            min-h-0
+            cursor-pointer
+            rounded-md
+            px-2
+            py-0
+            text-[10px]
+            leading-none
+            gap-0
+            transition-colors
+            focus:bg-primary/10
+            focus:text-primary
+          "
+        >
+          <Star className="mr-1.5 h-3 w-3 shrink-0" />
+          <span>Rate Us</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate("/privacy")} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[12px] transition-all duration-200 hover:bg-primary/10 hover:text-primary hover:scale-[1.02]">
-          <Shield className="mr-2 h-3.5 w-3.5" /> Privacy Policy
+
+        {/* Privacy */}
+        <DropdownMenuItem
+          onClick={() => navigate("/privacy")}
+          className="
+            h-6
+            min-h-0
+            cursor-pointer
+            rounded-md
+            px-2
+            py-0
+            text-[10px]
+            leading-none
+            gap-0
+            transition-colors
+            focus:bg-primary/10
+            focus:text-primary
+          "
+        >
+          <Shield className="mr-1.5 h-3 w-3 shrink-0" />
+          <span>Privacy</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="bg-border/30 mx-1 my-1" />
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[12px] text-destructive transition-all duration-200 hover:bg-destructive/10 hover:text-destructive hover:scale-[1.02]">
-          <LogOut className="mr-2 h-3.5 w-3.5" /> Logout
+
+        <DropdownMenuSeparator className="mx-1 my-1 h-px bg-border/30" />
+
+        {/* Logout */}
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="
+            h-6
+            min-h-0
+            cursor-pointer
+            rounded-md
+            px-2
+            py-0
+            text-[10px]
+            leading-none
+            gap-0
+            text-destructive
+            transition-colors
+            focus:bg-destructive/10
+            focus:text-destructive
+          "
+        >
+          <LogOut className="mr-1.5 h-3 w-3 shrink-0" />
+          <span>Logout</span>
         </DropdownMenuItem>
+
       </DropdownMenuContent>
     </DropdownMenu>
   );
