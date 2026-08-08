@@ -1,110 +1,111 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Shield, Clock, ArrowRight, Share2, CheckCircle2 } from "lucide-react";
-import { format, isToday, isYesterday } from "date-fns";
+import { Shield, Clock, ArrowRight } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { parseEntryPrice } from "@/hooks/useLivePrices";
 import { cn } from "@/lib/utils";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface SignalCardProps {
   signal: {
     id: string;
     pair: string;
-    type: "Buy" | "Sell";
+    type: "Buy" | "Sell" | "BUY" | "SELL";
     entry: string;
-    entry_mode?: string;
-    limit_entry_price?: number | null;
     tp1: string;
     tp2?: string;
-    tp3?: string;
-    tp4?: string;
     sl: string;
-    tp1_hit: boolean;
-    tp2_hit: boolean;
-    tp3_hit: boolean;
-    tp4_hit: boolean;
-    sl_hit?: boolean;
-    status: string;
-    signal_status?: string;
-    profit_note?: string;
     risk_level?: string;
     created_at: string;
-    category: string;
-    is_premium?: boolean;
+    category?: string;
     current_price?: string;
+    profit_note?: string;
   };
   subscriptionStatus?: string | null;
   livePrice?: number;
 }
 
-const SignalCardNew = ({ signal, subscriptionStatus, livePrice }: SignalCardProps) => {
+const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
   const navigate = useNavigate();
   const isBuy = signal.type?.toLowerCase() === "buy";
-  const currentPrice = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
+  const currentPriceNum = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
 
-  const handleShare = (platform: 'whatsapp' | 'telegram' | 'copy') => {
-    const shareUrl = `https://live-signals29.vercel.app/signal/${signal.id}`;
-    const shareText = `🔔 ${signal.type.toUpperCase()} Signal Alert!\n📊 Pair: ${signal.pair}\n💰 Entry: ${signal.entry}\n🎯 TP1: ${signal.tp1}\n⛔ SL: ${signal.sl}\n${shareUrl}`;
-
-    if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-    } else if (platform === 'telegram') {
-      window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
-    } else if (platform === 'copy') {
-      navigator.clipboard.writeText(shareText);
-      toast.success("Copied to clipboard!");
+  // Time format: "2m ago", "5m ago" etc.
+  const getTimeAgo = (dateStr: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateStr), { addSuffix: true })
+        .replace("about ", "")
+        .replace("minutes", "m")
+        .replace("minute", "m")
+        .replace("hours", "h")
+        .replace("hour", "h");
+    } catch {
+      return "just now";
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isToday(date)) return format(date, "HH:mm");
-    if (isYesterday(date)) return `Yesterday, ${format(date, "HH:mm")}`;
-    return format(date, "dd MMM, HH:mm");
+  // Dynamic Icon & Subtitle based on Pair
+  const renderPairIconAndSub = () => {
+    const pairUpper = signal.pair?.toUpperCase() || "";
+    if (pairUpper.includes("XAU") || pairUpper.includes("GOLD")) {
+      return {
+        icon: (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-amber-500/40 bg-gradient-to-b from-amber-400/20 via-amber-600/10 to-amber-950/40 text-2xl shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+            🪙
+          </div>
+        ),
+        sub: "Gold / US Dollar",
+      };
+    }
+    if (pairUpper.includes("BTC") || pairUpper.includes("BITCOIN")) {
+      return {
+        icon: (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f7931a] text-xl font-black text-white shadow-[0_0_15px_rgba(247,147,26,0.3)]">
+            ₿
+          </div>
+        ),
+        sub: "Bitcoin / US Dollar",
+      };
+    }
+    return {
+      icon: (
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-blue-500/30 bg-blue-950/40 text-xl font-bold text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.2)]">
+          🇪🇺
+        </div>
+      ),
+      sub: signal.category || "Forex / US Dollar",
+    };
   };
 
-  return (
-    <div className="relative mb-4 overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-b from-[#141625] to-[#0c0d18] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.65)] backdrop-blur-2xl transition-all duration-300">
-      
-      {/* 1. Header Row */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3.5">
-          {/* 3D Gold Coin Icon Container */}
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-amber-400/30 bg-gradient-to-b from-amber-400/20 via-amber-600/10 to-amber-950/40 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-            <span className="text-2xl drop-shadow-[0_2px_8px_rgba(251,191,36,0.6)]">🪙</span>
-          </div>
+  const pairDetails = renderPairIconAndSub();
 
+  return (
+    <div className="relative mb-3.5 w-full rounded-[22px] border border-white/[0.08] bg-[#0c0e18] p-4 text-white shadow-xl backdrop-blur-md transition-all duration-300 hover:border-white/20">
+      
+      {/* --- TOP ROW --- */}
+      <div className="grid grid-cols-12 items-center gap-2">
+        
+        {/* Left: Icon + Pair Name + Badges */}
+        <div className="col-span-5 flex items-center gap-3">
+          {pairDetails.icon}
           <div>
-            <h3 className="text-xl font-black tracking-tight text-white drop-shadow-sm">
-              {signal.pair} <span className="text-sm font-semibold text-slate-400">(Gold)</span>
+            <h3 className="text-base font-extrabold tracking-tight text-white leading-tight">
+              {signal.pair.replace("/", "")}
             </h3>
-            <p className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">
-              {signal.category || "COMMODITIES"}
+            <p className="text-[10px] font-medium text-slate-400">
+              {pairDetails.sub}
             </p>
 
-            {/* Badges */}
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-1 flex items-center gap-1.5">
               <span
                 className={cn(
-                  "rounded-full px-3.5 py-1 text-[11px] font-black tracking-wider uppercase shadow-md",
-                  isBuy 
-                    ? "bg-emerald-500 text-slate-950 shadow-emerald-500/20" 
-                    : "bg-red-500 text-white shadow-red-500/20"
+                  "rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider",
+                  isBuy ? "bg-[#10b981] text-slate-950" : "bg-[#ef4444] text-white"
                 )}
               >
-                {signal.type}
+                {signal.type.toUpperCase()}
               </span>
 
               {signal.risk_level && (
-                <span className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-[11px] font-bold text-amber-400 shadow-inner">
-                  <Shield className="h-3 w-3" />
+                <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold text-amber-400">
+                  <Shield className="h-2.5 w-2.5" />
                   {signal.risk_level} Risk
                 </span>
               )}
@@ -112,91 +113,89 @@ const SignalCardNew = ({ signal, subscriptionStatus, livePrice }: SignalCardProp
           </div>
         </div>
 
-        {/* Share & Time */}
-        <div className="flex items-center gap-2 text-slate-400">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="rounded-full p-1.5 transition-colors hover:bg-white/5 hover:text-white">
-                <Share2 className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#121422] border-white/10 text-white">
-              <DropdownMenuItem onClick={() => handleShare('whatsapp')}>WhatsApp</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('telegram')}>Telegram</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('copy')}>Copy Link</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="flex items-center gap-1 text-xs font-semibold">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{formatDate(signal.created_at)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="my-4 h-[1px] w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-      {/* 2. Prices Section */}
-      <div className="grid grid-cols-2 gap-4 px-1">
-        <div>
-          <span className="text-xs font-medium text-slate-400">Entry Price</span>
-          <p className="mt-1 text-xl font-extrabold tracking-tight text-white font-mono">
+        {/* Center: Entry Price */}
+        <div className="col-span-3 text-left pl-1">
+          <span className="text-[10px] font-medium text-slate-400 block">Entry Price</span>
+          <span className="font-mono text-sm font-bold text-white tracking-tight">
             {signal.entry}
-          </p>
+          </span>
         </div>
 
-        <div>
-          <span className="text-xs font-medium text-slate-400">Current Price</span>
-          <p
+        {/* Center-Right: Current Price */}
+        <div className="col-span-2 text-left">
+          <span className="text-[10px] font-medium text-slate-400 block">Current Price</span>
+          <span
             className={cn(
-              "mt-1 text-xl font-extrabold tracking-tight font-mono drop-shadow-sm",
-              isBuy ? "text-emerald-400" : "text-red-400"
+              "font-mono text-sm font-bold tracking-tight",
+              isBuy ? "text-[#10b981]" : "text-[#ef4444]"
             )}
           >
-            {currentPrice > 0 ? currentPrice.toFixed(2) : signal.entry}
-          </p>
+            {currentPriceNum > 0 ? currentPriceNum.toFixed(2) : signal.entry}
+          </span>
         </div>
+
+        {/* Right: Time */}
+        <div className="col-span-2 text-right">
+          <span className="text-[10px] font-medium text-slate-400 block">Time</span>
+          <div className="flex items-center justify-end gap-1 text-[11px] font-medium text-slate-300">
+            <Clock className="h-3 w-3 text-slate-400" />
+            <span>{getTimeAgo(signal.created_at)}</span>
+          </div>
+        </div>
+
       </div>
 
-      {/* 3. Targets Row & View Details Button */}
-      <div className="mt-5 flex items-center justify-between gap-2 border-t border-white/10 pt-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-bold text-red-400">
-            <span className="text-xs">SL</span>
-            <span className="font-mono text-sm text-white">{signal.sl}</span>
+      {/* Divider */}
+      <div className="my-3.5 h-[1px] w-full bg-white/[0.06]" />
+
+      {/* --- BOTTOM ROW (SL, TPs & View Details) --- */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 text-xs font-bold">
+          
+          {/* SL */}
+          <div className="flex items-center gap-1 text-[#ef4444]">
+            <span className="text-[11px] uppercase">SL</span>
+            <span className="font-mono text-slate-200">{signal.sl}</span>
           </div>
 
-          <div className="flex items-center gap-1 font-bold text-emerald-400">
-            <span className="text-xs">TP1</span>
-            <span className="font-mono text-sm">{signal.tp1}</span>
-            {signal.tp1_hit && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
+          <div className="h-3 w-[1px] bg-white/10" />
+
+          {/* TP1 */}
+          <div className="flex items-center gap-1 text-[#10b981]">
+            <span className="text-[11px] uppercase">TP1</span>
+            <span className="font-mono text-[#10b981]">{signal.tp1}</span>
           </div>
 
+          {/* TP2 */}
           {signal.tp2 && (
-            <div className="flex items-center gap-1 font-bold text-emerald-400">
-              <span className="text-xs">TP2</span>
-              <span className="font-mono text-sm">{signal.tp2}</span>
-              {signal.tp2_hit && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
-            </div>
+            <>
+              <div className="h-3 w-[1px] bg-white/10" />
+              <div className="flex items-center gap-1 text-[#10b981]">
+                <span className="text-[11px] uppercase">TP2</span>
+                <span className="font-mono text-[#10b981]">{signal.tp2}</span>
+              </div>
+            </>
           )}
+
         </div>
 
-        {/* 3D Purple Glowing Action Button */}
+        {/* Reference Exact Purple "View Details ->" Oval Button */}
         <button
           onClick={() => navigate(`/signal/${signal.id}`)}
-          className="flex items-center gap-2 rounded-full border border-purple-400/40 bg-gradient-to-r from-purple-900/60 via-purple-700/50 to-indigo-900/60 px-5 py-2.5 text-xs font-extrabold text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(168,85,247,0.5)]"
+          className="flex items-center gap-1.5 rounded-full border border-purple-500/50 bg-gradient-to-r from-purple-900/40 via-purple-900/20 to-purple-950/40 px-4 py-1.5 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all hover:bg-purple-900/60"
         >
           View Details
           <ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      {/* 4. Profit Note Banner */}
+      {/* Optional Profit Note */}
       {signal.profit_note && (
-        <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-center text-xs font-bold text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+        <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2 text-center text-[11px] font-semibold text-emerald-300">
           {signal.profit_note}
         </div>
       )}
+
     </div>
   );
 };
