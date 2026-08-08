@@ -1,10 +1,4 @@
-import {
-  MoreVertical,
-  Share2,
-  Star,
-  Shield,
-  LogOut,
-} from "lucide-react";
+import { MoreVertical, Share2, Star, Shield, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +9,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 export const TopMenuDropdown = () => {
   const navigate = useNavigate();
@@ -34,9 +27,7 @@ export const TopMenuDropdown = () => {
   };
 
   const handleRateUs = () => {
-    toast.success(
-      "Thank you for your interest! Rating feature coming soon."
-    );
+    toast.success("Thank you for your interest! Rating feature coming soon.");
   };
 
   const handleLogout = async () => {
@@ -46,89 +37,31 @@ export const TopMenuDropdown = () => {
   };
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-            "border border-border/40 bg-background/60 backdrop-blur-md shadow-sm",
-            "transition-colors hover:bg-background hover:border-border/70",
-            "focus:outline-none"
-          )}
-        >
-          <MoreVertical className="h-3.5 w-3.5 text-foreground/70" />
+        <button className="p-2 hover:bg-accent rounded-md transition-colors">
+          <MoreVertical className="h-5 w-5" />
         </button>
       </DropdownMenuTrigger>
-
-      <DropdownMenuContent
-        align="end"
-        side="bottom"
-        sideOffset={5}
-        className={cn(
-          "w-[128px] min-w-0 rounded-lg border border-border/40",
-          "bg-background/95 p-1 shadow-lg backdrop-blur-xl"
-        )}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        {/* Share */}
-        <DropdownMenuItem
-          onClick={handleShare}
-          className={cn(
-            "h-6 min-h-0 cursor-pointer rounded-md px-2 py-0",
-            "text-[10px] leading-none gap-0 transition-colors",
-            "focus:bg-primary/10 focus:text-primary"
-          )}
-        >
-          <Share2 className="mr-1.5 h-3 w-3 shrink-0" />
-          <span>Share</span>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={handleShare} className="cursor-pointer">
+          <Share2 className="mr-2 h-4 w-4" />
+          Share Link
         </DropdownMenuItem>
-
-        {/* Rate */}
-        <DropdownMenuItem
-          onClick={handleRateUs}
-          className={cn(
-            "h-6 min-h-0 cursor-pointer rounded-md px-2 py-0",
-            "text-[10px] leading-none gap-0 transition-colors",
-            "focus:bg-primary/10 focus:text-primary"
-          )}
-        >
-          <Star className="mr-1.5 h-3 w-3 shrink-0" />
-          <span>Rate Us</span>
+        <DropdownMenuItem onClick={handleRateUs} className="cursor-pointer">
+          <Star className="mr-2 h-4 w-4" />
+          Rate Us
         </DropdownMenuItem>
-
-        {/* Privacy */}
-        <DropdownMenuItem
-          onClick={() => navigate("/privacy")}
-          className={cn(
-            "h-6 min-h-0 cursor-pointer rounded-md px-2 py-0",
-            "text-[10px] leading-none gap-0 transition-colors",
-            "focus:bg-primary/10 focus:text-primary"
-          )}
-        >
-          <Shield className="mr-1.5 h-3 w-3 shrink-0" />
-          <span>Privacy</span>
+        <DropdownMenuItem onClick={() => navigate("/privacy")} className="cursor-pointer">
+          <Shield className="mr-2 h-4 w-4" />
+          Privacy Policy
         </DropdownMenuItem>
-
-        <DropdownMenuSeparator className="mx-1 my-1 h-px bg-border/30" />
-
-        {/* Logout */}
-        <DropdownMenuItem
-          onClick={handleLogout}
-          className={cn(
-            "h-6 min-h-0 cursor-pointer rounded-md px-2 py-0",
-            "text-[10px] leading-none gap-0 text-destructive",
-            "transition-colors focus:bg-destructive/10 focus:text-destructive"
-          )}
-        >
-          <LogOut className="mr-1.5 h-3 w-3 shrink-0" />
-          <span>Logout</span>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
         </DropdownMenuItem>
-
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
-
-// ✅ FIXED: Yeh line bilkul last mein add kar di hai
-export default TopMenuDropdown;
