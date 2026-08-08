@@ -1,7 +1,7 @@
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { TrendingUp, ShieldAlert, Zap, Sparkles, ArrowRight } from "lucide-react";
+import { TrendingUp, ShieldAlert, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Headline {
@@ -30,7 +30,6 @@ const HeadlineTicker = () => {
     staleTime: 30000,
   });
 
-  // Subscribe to realtime updates
   useEffect(() => {
     const channel = supabase
       .channel("headlines-realtime")
@@ -41,15 +40,11 @@ const HeadlineTicker = () => {
           schema: "public",
           table: "headlines",
         },
-        () => {
-          refetch();
-        }
+        () => refetch()
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [refetch]);
 
   if (!headline) return null;
@@ -57,83 +52,62 @@ const HeadlineTicker = () => {
   const isHighAlert = headline.headline_type === "high_alert";
 
   return (
-    <div className="w-full flex justify-center px-2 py-3">
+    <div className="w-full flex justify-center px-3 pt-2 pb-3">
       
-      {/* CYBERPUNK GLASS CARD */}
-      <div className={cn(
-        "relative w-full max-w-[340px] overflow-hidden rounded-2xl border p-[2px] transition-all duration-500 hover:scale-[1.02]",
-        isHighAlert 
-          ? "border-red-500/30 bg-gradient-to-br from-red-500/20 via-transparent to-red-500/5 shadow-[0_0_40px_rgba(239,68,68,0.15)]" 
-          : "border-blue-500/30 bg-gradient-to-br from-blue-500/20 via-transparent to-blue-500/5 shadow-[0_0_40px_rgba(59,130,246,0.15)]"
-      )}>
+      {/* ============= PREMIUM FLOATING GLASS CARD ============= */}
+      <div className="group relative w-full max-w-[360px] rounded-2xl bg-gradient-to-br from-white/90 to-white/70 dark:from-[#16182b]/90 dark:to-[#101221]/80 border border-black/5 dark:border-white/5 shadow-xl shadow-black/5 dark:shadow-black/30 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-black/10 dark:hover:shadow-black/50 hover:-translate-y-0.5">
         
-        {/* INNER GLASS BACKGROUND */}
-        <div className="relative h-[52px] w-full rounded-2xl bg-[#0a0b14]/90 backdrop-blur-xl flex items-center justify-between px-4 overflow-hidden">
+        {/* ANIMATED TOP GLOW STRIP */}
+        <div className={cn(
+          "absolute inset-x-0 top-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-transparent via-primary/50 to-transparent transition-all duration-700 group-hover:via-primary group-hover:scale-x-110",
+          isHighAlert && "from-transparent via-destructive/60 to-transparent group-hover:via-destructive"
+        )} />
+
+        {/* INNER CONTENT */}
+        <div className="relative flex items-center gap-4 p-4">
           
-          {/* ANIMATED GLOW ORB (Rotating) */}
+          {/* PREMIUM ICON BADGE */}
           <div className={cn(
-            "absolute -left-10 -top-10 h-20 w-20 rounded-full blur-2xl animate-spin-slow duration-[8s]",
-            isHighAlert ? "bg-red-500/30" : "bg-blue-500/30"
-          )} />
-
-          {/* TOP & BOTTOM NEON LINES (Scanline effect) */}
-          <div className={cn(
-            "absolute left-0 right-0 h-[1px] top-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse",
-            isHighAlert ? "via-red-400/60" : "via-blue-400/60"
-          )} />
-          <div className={cn(
-            "absolute left-0 right-0 h-[1px] bottom-0 bg-gradient-to-r from-transparent via-white/20 to-transparent",
-            isHighAlert ? "via-red-400/40" : "via-blue-400/40"
-          )} />
-
-          {/* LEFT: ICON + TEXT */}
-          <div className="flex items-center gap-3 relative z-10 flex-1 min-w-0">
-            
-            {/* DYNAMIC ICON CONTAINER */}
-            <div className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-lg backdrop-blur-sm",
-              isHighAlert 
-                ? "border-red-500/50 bg-red-500/10 shadow-red-500/20" 
-                : "border-blue-500/50 bg-blue-500/10 shadow-blue-500/20"
-            )}>
-              {isHighAlert ? (
-                <ShieldAlert className="h-4 w-4 text-red-400 animate-pulse" />
-              ) : (
-                <TrendingUp className="h-4 w-4 text-blue-400" />
-              )}
-            </div>
-
-            {/* TEXT WITH GLOW */}
-            <div className="flex-1 min-w-0 flex items-center gap-1.5">
-              {/* Animated Sparkle Icon */}
-              <Sparkles className={cn(
-                "h-3 w-3 animate-pulse",
-                isHighAlert ? "text-red-300" : "text-blue-300"
-              )} />
-              
-              <div className="truncate">
-                <span className={cn(
-                  "text-[13px] font-extrabold tracking-wide",
-                  isHighAlert 
-                    ? "bg-gradient-to-r from-red-300 to-red-100 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(239,68,68,0.4)]" 
-                    : "bg-gradient-to-r from-blue-300 to-blue-100 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]"
-                )}>
-                  {headline.text}
-                </span>
-              </div>
-            </div>
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all duration-300 group-hover:shadow-md",
+            isHighAlert 
+              ? "border-destructive/20 bg-destructive/10 dark:bg-destructive/20 group-hover:border-destructive/40" 
+              : "border-primary/20 bg-primary/10 dark:bg-primary/20 group-hover:border-primary/40"
+          )}>
+            {isHighAlert ? (
+              <ShieldAlert className="h-5 w-5 text-destructive dark:text-destructive/80" />
+            ) : (
+              <TrendingUp className="h-5 w-5 text-primary dark:text-primary/80" />
+            )}
           </div>
 
-          {/* RIGHT: ACTION BUTTON */}
-          <div className="relative z-10 shrink-0 ml-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300 group-hover:border-white/20 group-hover:shadow-lg cursor-pointer">
-              <ArrowRight className="h-3 w-3 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all duration-300" />
+          {/* TEXT CONTENT */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            {/* LABEL */}
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className={cn(
+                "text-[10px] font-bold uppercase tracking-widest",
+                isHighAlert ? "text-destructive/70 dark:text-destructive/60" : "text-primary/70 dark:text-primary/60"
+              )}>
+                {isHighAlert ? "🚨 Alert" : "📊 Market"}
+              </span>
+              <span className="h-1 w-1 rounded-full bg-current opacity-40" />
+              <span className="text-[9px] text-muted-foreground/50">Now</span>
             </div>
+
+            {/* HEADLINE TEXT */}
+            <h3 className="text-[15px] font-bold text-foreground leading-snug line-clamp-2 tracking-tight">
+              {headline.text}
+            </h3>
           </div>
 
+          {/* RIGHT ACTION BUTTON (Arrow) */}
+          <div className="shrink-0 ml-auto">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background/50 dark:bg-background/10 text-muted-foreground/50 transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary group-hover:shadow-md group-hover:scale-105">
+              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+            </div>
+          </div>
         </div>
       </div>
-
     </div>
   );
 };
