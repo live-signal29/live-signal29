@@ -52,7 +52,7 @@ const Signup = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // SAFE VALIDATION: Sirf wahi fields validate kar rahe hain jo aapke schema mein honge
+    // ✅ FIXED: SIRF 4 FIELDS VALIDATE HO RAHE HAIN (fullName, email, password, termsAccepted)
     const validation = signupSchema.safeParse({
       fullName,
       email,
@@ -92,8 +92,8 @@ const Signup = () => {
       }
 
       if (data.user) {
-        // Optional fields save karna (agar schema mein nahi hain toh bhi code crash nahi karega)
-        if (validation.data.countryCode || validation.data.phoneNumber) {
+        // Phone aur Country Code validations ke bahar hain, isliye direct update kiya
+        if (countryCode || phoneNumber) {
           await supabase.from('profiles').update({
             country_code: countryCode || null,
             phone_number: phoneNumber || null,
