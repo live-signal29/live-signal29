@@ -42,44 +42,42 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
 
   const pairUpper = signal.pair?.toUpperCase() || "";
 
-  // ===== MAGIC LOGIC: Correct Sequence-based Coloring =====
-  const getTargetColor = (targetType: "sl" | "tp1" | "tp2" | "tp3") => {
-    const note = signal.profit_note || "";
-    
-    // Rule 1: SL is ALWAYS Red, regardless of note (matches screenshot)
-    if (targetType === "sl") return "text-rose-500";
-    
-    // Rule 2: Target Sequence Logic
-    // If TP3 is hit, it means TP1 & TP2 were also hit previously. All become GREEN.
-    if (note.toLowerCase().includes("tp3")) return "text-emerald-400";
+  const renderIcon = () => {
+    if (pairUpper.includes("XAU") || pairUpper.includes("GOLD")) return "🪙";
+    if (pairUpper.includes("BTC") || pairUpper.includes("BITCOIN")) return "₿";
+    return "💶";
+  };
 
-    // If TP2 is hit, it means TP1 was also hit previously. TP1 & TP2 become GREEN.
-    if (note.toLowerCase().includes("tp2")) return "text-emerald-400";
+  // ===== EXACT SCREENSHOT COLOR LOGIC =====
+  const getColor = (target: "sl" | "tp1" | "tp2" | "tp3") => {
+    const note = signal.profit_note?.toLowerCase() || "";
 
-    // If ONLY TP1 is hit (and no TP2 mentioned), TP1 becomes GREEN.
-    if (note.toLowerCase().includes("tp1") && !note.toLowerCase().includes("tp2") && !note.toLowerCase().includes("tp3")) {
-        return "text-emerald-400";
+    // 1. SL is ALWAYS RED
+    if (target === "sl") return "text-rose-500";
+
+    // 2. TP1 is ALWAYS BLUE (Even if hit. Look at screenshot: "Breakeven after TP1" text is BLUE)
+    if (target === "tp1") return "text-blue-400";
+
+    // 3. TP2: GREEN ONLY if "TP2" is written in the status note
+    if (target === "tp2") {
+      return note.includes("tp2") ? "text-emerald-400" : "text-blue-400";
     }
 
-    // If Stop Loss was hit, NO TP is hit. Everything stays BLUE.
-    if (note.toLowerCase().includes("sl")) return "text-blue-400";
+    // 4. TP3: GREEN ONLY if "TP3" is written in the status note
+    if (target === "tp3") {
+      return note.includes("tp3") ? "text-emerald-400" : "text-blue-400";
+    }
 
-    // Default fallback (If target is not hit yet, or note is empty)
-    return "text-blue-400"; 
+    return "text-blue-400";
   };
 
-  // ===== BANNER TEXT LOGIC (Text color based on text) =====
-  const getBannerColor = () => {
-    const note = signal.profit_note || "";
-    const lowerNote = note.toLowerCase();
-
-    if (lowerNote.includes("sl hit") || lowerNote.includes("sl")) return "text-rose-400";
-    if (lowerNote.includes("tp1") || lowerNote.includes("breakeven")) return "text-blue-400";
-    return "text-emerald-300"; // Green for TP2 / TP3 hit
+  // Banner color logic matching screenshot
+  const getBannerTextColor = () => {
+    const note = signal.profit_note?.toLowerCase() || "";
+    if (note.includes("sl") || note.includes("sl hit")) return "text-rose-400";
+    if (note.includes("tp1") || note.includes("breakeven")) return "text-blue-400";
+    return "text-emerald-300"; 
   };
-
-  const bannerColorClass = getBannerColor();
-  const isSLHit = signal.profit_note?.toLowerCase().includes("sl");
 
   return (
     <div 
@@ -91,18 +89,15 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[1px] border-yellow-500/30 bg-[#0e101c] text-[14px]">
-            {pairUpper.includes("XAU") ? "🪙" : pairUpper.includes("BTC") ? "₿" : "💶"}
+            {renderIcon()}
           </div>
           <div>
-            <h3 className="text-[12px] font-bold text-white leading-tight">
-              {signal.pair.replace("/", "")}
-            </h3>
+            <h3 className="text-[12px] font-bold text-white leading-tight">{signal.pair.replace("/", "")}</h3>
             <p className="text-[9px] text-slate-400 leading-tight">
               {pairUpper.includes("XAU") ? "Gold" : pairUpper.includes("BTC") ? "Bitcoin" : "Forex"}
             </p>
           </div>
         </div>
-        
         <div className="flex items-center gap-1 text-[10px] text-slate-400">
           <Clock className="h-2.5 w-2.5" />
           <span>{getTimeAgo(signal.created_at)}</span>
@@ -123,9 +118,6 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
               <span className={cn("font-mono text-[12px] font-bold", isBuy ? "text-emerald-400" : "text-rose-400")}>
                 {currentPriceNum > 0 ? currentPriceNum.toFixed(2) : signal.entry}
               </span>
-              <span className={isBuy ? "text-emerald-400 text-[8px]" : "text-rose-400 text-[8px]"}>
-                {isBuy ? "↗" : "↘"}
-              </span>
             </div>
           </div>
         </div>
@@ -141,50 +133,40 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* ===== 3. TARGETS (NOW WITH CORRECT SEQUENCE LOGIC) ===== */}
+      {/* ===== 3. TARGETS (MATCHING SCREENSHOT EXACTLY) ===== */}
       <div className="flex items-center justify-between px-0.5 mb-2">
         <div className="flex items-center gap-3">
           
-          {/* SL - Always RED */}
+          {/* SL - ALWAYS RED */}
           <div className="flex flex-col items-start">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Stop Loss</span>
-            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("sl")}`}>
-              {signal.sl}
-            </span>
+            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("sl")}`}>{signal.sl}</span>
           </div>
 
           <div className="h-3 w-[1px] bg-white/10" />
 
-          {/* TP1 - Green if TP1, TP2 or TP3 is hit */}
+          {/* TP1 - ALWAYS BLUE (Same as screenshot) */}
           <div className="flex flex-col items-start">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Target 1</span>
-            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp1")}`}>
-              {signal.tp1}
-            </span>
+            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("tp1")}`}>{signal.tp1}</span>
           </div>
 
-          {/* TP2 - Green if TP2 or TP3 is hit */}
           {signal.tp2 && (
             <>
               <div className="h-3 w-[1px] bg-white/10" />
               <div className="flex flex-col items-start">
                 <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Target 2</span>
-                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp2")}`}>
-                  {signal.tp2}
-                </span>
+                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("tp2")}`}>{signal.tp2}</span>
               </div>
             </>
           )}
 
-          {/* TP3 - Green ONLY if TP3 is hit */}
           {signal.tp3 && (
             <>
               <div className="h-3 w-[1px] bg-white/10" />
               <div className="flex flex-col items-start">
                 <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Target 3</span>
-                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp3")}`}>
-                  {signal.tp3}
-                </span>
+                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("tp3")}`}>{signal.tp3}</span>
               </div>
             </>
           )}
@@ -193,13 +175,13 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
 
       {/* ===== 4. STATUS BANNER ===== */}
       {signal.profit_note && (
-        <div className={`flex items-center gap-2 rounded-[10px] border px-3 py-1.5 ${isSLHit ? 'border-rose-500/20 bg-rose-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
-          {isSLHit ? (
+        <div className={`flex items-center gap-2 rounded-[10px] border px-3 py-1.5 ${signal.profit_note.toLowerCase().includes("sl") ? 'border-rose-500/20 bg-rose-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
+          {signal.profit_note.toLowerCase().includes("sl") ? (
             <XCircle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
           ) : (
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           )}
-          <span className={`text-[10px] font-medium leading-tight ${bannerColorClass}`}>
+          <span className={`text-[10px] font-medium leading-tight ${getBannerTextColor()}`}>
             {signal.profit_note}
           </span>
         </div>
