@@ -9,7 +9,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
-import { BottomNavigation } from "@/components/BottomNavigation";
+import BottomNavigation from "@/components/BottomNavigation";
 // Lazy load all pages for better performance
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const SignalsDashboard = lazyWithRetry(() => import("./pages/SignalsDashboard"));
