@@ -1,37 +1,76 @@
-import { Bell, Menu } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Menu } from "lucide-react";
+import TrialBanner from "./TrialBanner";
+import AppInstallBanner from "./AppInstallBanner";
+import { SideDrawer } from "./SideDrawer";
+import { NotificationBell } from "./NotificationBell";
+import { ThemeToggle } from "./ThemeToggle";
+import { GlobalSearch } from "./GlobalSearch";
+import { FlashSaleBanner } from "./FlashSaleBanner";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
-export const HeaderSection = () => {
+const Header = () => {
+  const { subscriptionStatus } = useSubscriptionAccess();
+  const isPremium = subscriptionStatus === "premium";
+
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-[#0a0c16]">
-      {/* Left: Logo & Text */}
-      <div className="flex items-center gap-2.5">
-        {/* Placeholder for your logo image */}
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 text-white font-bold text-lg shadow-lg">
-          ↗
-        </div>
-        <div className="flex flex-col">
-          <h1 className="text-[14px] font-extrabold tracking-tight text-white leading-tight">
-            TREND IS FRIEND
-          </h1>
-          <p className="text-[8px] font-medium text-slate-400 uppercase tracking-wider leading-tight">
-            Professional Trading Signals
-          </p>
-        </div>
-      </div>
+    <>
+      {/* Reference design: keep the top area clean — max one promo strip at a time */}
+      {!isPremium ? (
+        <>
+          <FlashSaleBanner />
+          <TrialBanner />
+        </>
+      ) : (
+        <AppInstallBanner />
+      )}
 
-      {/* Right: Notification & Menu Buttons */}
-      <div className="flex items-center gap-2">
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-300">
-          <Bell className="h-4 w-4 text-white" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
-            3
-          </span>
-        </button>
-        <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-300">
-          <Menu className="h-4 w-4 text-white" />
-        </button>
-      </div>
-    </div>
+      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-2xl shadow-[0_6px_24px_-20px_hsl(var(--glow-primary)/0.9)]">
+        <div>
+          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
+
+            {/* Left: Brand */}
+            <Link to="/" className="min-w-0 flex flex-col justify-center">
+              <span className="flex items-center gap-1.5 leading-none">
+                <span className="text-xl font-extrabold tracking-tight">Live</span>
+                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-warning via-affiliate to-warning bg-clip-text text-transparent">
+                  Signals
+                </span>
+                <span
+                  className={
+                    isPremium
+                      ? "shine rounded-md bg-gradient-to-br from-warning to-affiliate px-1.5 py-0.5 text-[9px] font-bold uppercase text-warning-foreground shadow-[0_0_12px_hsl(var(--affiliate)/0.6)]"
+                      : "rounded-md border border-border/70 bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground"
+                  }
+                >
+                  {isPremium ? "Pro" : "Free"}
+                </span>
+              </span>
+              <span className="mt-1 text-[11px] font-medium leading-none text-muted-foreground">
+                · <span className="text-warning">Trend is Friend</span>
+              </span>
+            </Link>
+
+            {/* Right: Menu + Bell */}
+            <div className="flex items-center gap-1.5">
+              <div className="hidden sm:flex items-center gap-1.5">
+                <GlobalSearch />
+                <ThemeToggle />
+              </div>
+
+              <div className="icon-3d h-9 w-9">
+                <SideDrawer />
+              </div>
+
+              <div className="icon-3d h-9 w-9">
+                <NotificationBell />
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+    </>
   );
 };
+
 export default Header;
