@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
+import { LogIn, Mail, Lock, ArrowRight } from "lucide-react";
 import { loginSchema } from "@/lib/validations";
 
 const Login = () => {
@@ -14,23 +14,22 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  
-  // Get return URL + reason from query params
+
   const searchParams = new URLSearchParams(window.location.search);
-  const returnUrl = searchParams.get('returnUrl') || '/onboarding';
-  const reason = searchParams.get('reason');
+  const returnUrl = searchParams.get("returnUrl") || "/onboarding";
+  const reason = searchParams.get("reason");
 
   useEffect(() => {
-    if (reason === 'deleted') {
+    if (reason === "deleted") {
       toast.error("This email is not registered. Please sign up again.");
     }
   }, [reason]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate input
+
     const validation = loginSchema.safeParse({ email, password });
+
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
       return;
@@ -45,7 +44,6 @@ const Login = () => {
       });
 
       if (error) {
-        // Map common errors to user-friendly messages
         if (error.message.includes("Invalid login credentials")) {
           toast.error("Invalid email or password");
         } else {
@@ -57,16 +55,21 @@ const Login = () => {
       if (data.session) {
         toast.success("Login successful!");
         navigate(returnUrl);
-        
-        // Track login event asynchronously (non-blocking)
-        supabase.from('user_login_history').insert({
+
+        supabase.from("user_login_history").insert({
           user_id: data.session.user.id,
           ip_address: null,
           user_agent: navigator.userAgent,
-          device_type: /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
-          browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
-                   navigator.userAgent.includes('Firefox') ? 'Firefox' : 
-                   navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'
+          device_type: /Mobile|Android|iPhone/i.test(navigator.userAgent)
+            ? "Mobile"
+            : "Desktop",
+          browser: navigator.userAgent.includes("Chrome")
+            ? "Chrome"
+            : navigator.userAgent.includes("Firefox")
+            ? "Firefox"
+            : navigator.userAgent.includes("Safari")
+            ? "Safari"
+            : "Other",
         });
       }
     } catch (error: any) {
@@ -79,10 +82,10 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${window.location.origin}${returnUrl}`,
-        }
+        },
       });
 
       if (error) throw error;
@@ -92,83 +95,127 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden bg-background">
+
+      {/* Soft background glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-32 -left-32 h-72 w-72 rounded-full bg-primary/10 blur-[90px]" />
+        <div className="absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-accent/10 blur-[90px]" />
       </div>
-      
-      <Card className="glass-card w-full max-w-md animate-fade-in shadow-2xl border-primary/10 relative z-10 rounded-3xl">
-        <CardHeader className="text-center space-y-4 pt-8">
-          <div className="mx-auto mb-2 relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 animate-pulse"></div>
-            <div className="relative p-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 w-fit mx-auto transform group-hover:scale-110 transition-transform duration-500">
-              <LogIn className="h-10 w-10 text-primary animate-pulse" />
+
+      {/* Login Card */}
+      <Card className="relative z-10 w-full max-w-[390px] overflow-hidden rounded-[26px] border border-border/60 bg-card/90 shadow-2xl backdrop-blur-xl">
+
+        {/* Top accent */}
+        <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-primary" />
+
+        <CardHeader className="px-7 pb-3 pt-7 text-center">
+
+          {/* Small Logo */}
+          <div className="mx-auto mb-4 relative w-fit">
+            <div className="absolute inset-0 rounded-2xl bg-primary/25 blur-lg" />
+
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+              <LogIn className="h-6 w-6 text-primary" />
             </div>
           </div>
-          <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
-              Welcome Back
-            </CardTitle>
-            <p className="text-muted-foreground animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              Sign in to your account
-            </p>
-          </div>
+
+          <CardTitle className="text-[25px] font-bold tracking-tight">
+            Welcome Back
+          </CardTitle>
+
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Sign in to continue to your account
+          </p>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="john@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
-              />
+
+        <CardContent className="px-7 pb-7 pt-4">
+
+          <form onSubmit={handleLogin} className="space-y-4">
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="email"
+                className="text-xs font-medium text-foreground/80"
+              >
+                Email address
+              </Label>
+
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-11 rounded-xl border-border/70 bg-background/50 pl-10 text-sm transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
             </div>
-            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:shadow-primary/20"
-              />
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="password"
+                className="text-xs font-medium text-foreground/80"
+              >
+                Password
+              </Label>
+
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-11 rounded-xl border-border/70 bg-background/50 pl-10 text-sm transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full btn-glow relative overflow-hidden group animate-fade-in transform hover:scale-[1.02] transition-all duration-300" 
+
+            {/* Sign In */}
+            <Button
+              type="submit"
               disabled={loading}
-              style={{ animationDelay: '0.5s' }}
+              className="group h-11 w-full rounded-xl font-semibold shadow-lg shadow-primary/10 transition-all hover:-translate-y-[1px] hover:shadow-primary/20"
             >
-              <span className="relative z-10">{loading ? "Signing in..." : "Sign In"}</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              <span>
+                {loading ? "Signing in..." : "Sign In"}
+              </span>
+
+              {!loading && (
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              )}
             </Button>
 
-            <div className="relative animate-fade-in" style={{ animationDelay: '0.6s' }}>
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-              </div>
+            {/* Divider */}
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                OR
+              </span>
+              <div className="h-px flex-1 bg-border" />
             </div>
 
+            {/* Google */}
             <Button
               type="button"
               variant="outline"
-              className="w-full group hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 animate-fade-in"
               onClick={handleGoogleLogin}
-              style={{ animationDelay: '0.7s' }}
+              className="h-11 w-full rounded-xl border-border/70 bg-background/40 text-sm font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
             >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+              <svg
+                className="mr-2.5 h-[17px] w-[17px]"
+                viewBox="0 0 24 24"
+              >
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -186,15 +233,21 @@ const Login = () => {
                   fill="#EA4335"
                 />
               </svg>
-              <span className="group-hover:scale-110 transition-transform duration-300 inline-block">Sign in with Google</span>
+
+              Continue with Google
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '0.8s' }}>
+            {/* Signup */}
+            <p className="pt-1 text-center text-xs text-muted-foreground">
               Don't have an account?{" "}
-              <a href="/signup" className="text-primary hover:underline font-semibold transition-all hover:text-primary/80">
-                Sign up
+              <a
+                href="/signup"
+                className="font-semibold text-primary transition-colors hover:text-primary/80 hover:underline"
+              >
+                Create account
               </a>
             </p>
+
           </form>
         </CardContent>
       </Card>
