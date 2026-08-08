@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import Header from "@/components/Header"; // <--- YAHAN FIX KIYA HAI (Curly braces hata diye)
+import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import AdBanner from "@/components/AdBanner";
@@ -24,6 +24,9 @@ import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { StreakStatsRow } from "@/components/StreakStatsRow";
 import { LiveDashboardHeader } from "@/components/LiveDashboardHeader";
+
+
+
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -223,6 +226,8 @@ const SignalsDashboard = () => {
     setSubCategory("all");
   };
 
+  // Removed blocking loading screen - show content immediately
+
   return (
     <div 
       className="min-h-screen flex flex-col"
@@ -253,6 +258,10 @@ const SignalsDashboard = () => {
           <div className="mb-3">
             <LiveDashboardHeader />
           </div>
+
+
+
+
 
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
@@ -303,6 +312,11 @@ const SignalsDashboard = () => {
               })}
             </div>
           </div>
+
+
+
+
+          {/* Favorites Filter Button */}
 
           {/* Market Ideas View */}
           {mainCategory === "MARKET IDEAS" && (
@@ -468,6 +482,8 @@ const SignalsDashboard = () => {
           <div className="mt-3">
             <StreakStatsRow />
           </div>
+
+
 
           {/* Bottom Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
