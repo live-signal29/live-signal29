@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import Autoplay from "embla-carousel-autoplay";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
+import { cn } from "@/lib/utils";
 
 const Premium = () => {
   const [selectedCategory, setSelectedCategory] = useState("COMMODITY");
@@ -264,7 +265,11 @@ const Premium = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#080a12] text-white relative overflow-hidden">
+      {/* Background Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-purple-600/15 blur-[120px] pointer-events-none rounded-full" />
+      <div className="absolute top-[40%] right-0 w-[400px] h-[400px] bg-amber-500/10 blur-[140px] pointer-events-none rounded-full" />
+
       <SEO
         title="Premium Trading Signals Plans - TREND IS FRIEND"
         description="Choose from flexible monthly, quarterly, half-yearly, and yearly premium plans. Get unlimited trading signals for Forex, Crypto, Commodities, and Indices with up to 50% off annual plans."
@@ -274,8 +279,8 @@ const Premium = () => {
       />
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        {/* Banner Carousel - Auto-sliding with Special Offers */}
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl relative z-10 space-y-8">
+        {/* Banner Carousel */}
         <div className="mb-8">
           <Carousel 
             className="w-full max-w-5xl mx-auto"
@@ -283,93 +288,53 @@ const Premium = () => {
             opts={{ loop: true }}
           >
             <CarouselContent>
-              {/* Default Happy New Year Banner */}
+              {/* Default Banner 1 */}
               <CarouselItem>
-                <div className="relative h-48 md:h-64 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-xl flex items-center justify-center overflow-hidden">
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
+                <div className="relative h-48 md:h-64 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 border border-white/10 rounded-2xl flex items-center justify-center overflow-hidden shadow-2xl">
+                  <div className="absolute inset-0 bg-purple-500/10 backdrop-blur-3xl"></div>
                   <div className="text-center text-white p-6 relative z-10">
-                    <h2 className="text-4xl md:text-6xl font-bold mb-3 drop-shadow-lg animate-pulse">HAPPY NEW YEAR 🎊</h2>
-                    <p className="text-xl md:text-3xl font-semibold drop-shadow-md">2026 Special Offer</p>
+                    <h2 className="text-4xl md:text-6xl font-black mb-3 drop-shadow-lg tracking-tight bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">HAPPY NEW YEAR 🎊</h2>
+                    <p className="text-lg md:text-2xl font-bold text-slate-300">2026 Special Offer</p>
                   </div>
                 </div>
               </CarouselItem>
 
-              {/* Default Limited Time Offer Banner */}
+              {/* Default Banner 2 */}
               <CarouselItem>
-                <div className="relative h-48 md:h-64 bg-gradient-to-r from-yellow-500 via-red-500 to-pink-500 rounded-xl flex items-center justify-center overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/30"></div>
+                <div className="relative h-48 md:h-64 bg-gradient-to-r from-amber-950 via-purple-950 to-slate-950 border border-amber-500/30 rounded-2xl flex items-center justify-center overflow-hidden shadow-2xl">
                   <div className="text-center text-white p-6 relative z-10">
-                    <h2 className="text-3xl md:text-5xl font-bold mb-3 drop-shadow-lg">LIMITED TIME OFFER</h2>
-                    <p className="text-5xl md:text-7xl font-bold text-yellow-300 mb-3 drop-shadow-lg animate-bounce">UP TO 50% OFF</p>
-                    <p className="text-xl md:text-3xl font-semibold drop-shadow-md">TAKE PREMIUM NOW!</p>
+                    <h2 className="text-2xl md:text-4xl font-extrabold mb-2 text-amber-400">LIMITED TIME OFFER</h2>
+                    <p className="text-4xl md:text-6xl font-black text-white mb-2 tracking-tight">UP TO 50% OFF</p>
+                    <p className="text-sm md:text-lg font-semibold text-slate-300">GET VIP SIGNALS NOW!</p>
                   </div>
                 </div>
               </CarouselItem>
 
-              {/* Dynamic Special Offers from Admin Panel */}
+              {/* Dynamic Special Offers */}
               {specialOffers && specialOffers.map((offer, index) => (
                 <CarouselItem key={offer.id}>
-                  <div 
-                    className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden group ${
-                      index % 4 === 0 ? 'bg-gradient-to-br from-green-500 via-teal-500 to-blue-600' :
-                      index % 4 === 1 ? 'bg-gradient-to-br from-purple-500 via-pink-500 to-red-600' :
-                      index % 4 === 2 ? 'bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600' :
-                      'bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600'
-                    } shadow-2xl hover:shadow-3xl transition-all duration-300`}
-                  >
-                    {/* Animated Background Pattern */}
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20 animate-pulse"></div>
-                    
-                    {/* Shimmer Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]"></div>
-                    
-                    {/* Glow Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    
-                    {/* Floating Particles */}
-                    <div className="absolute top-4 left-4 w-2 h-2 bg-white/40 rounded-full animate-[float_3s_ease-in-out_infinite]"></div>
-                    <div className="absolute top-8 right-8 w-3 h-3 bg-white/30 rounded-full animate-[float_4s_ease-in-out_infinite_0.5s]"></div>
-                    <div className="absolute bottom-6 left-12 w-2 h-2 bg-white/50 rounded-full animate-[float_5s_ease-in-out_infinite_1s]"></div>
-                    <div className="absolute bottom-10 right-16 w-2 h-2 bg-white/40 rounded-full animate-[float_3.5s_ease-in-out_infinite_1.5s]"></div>
-                    
-                    {/* Sparkle Stars */}
-                    <div className="absolute top-1/4 left-1/4 text-white/60 animate-[spin_4s_linear_infinite]">✨</div>
-                    <div className="absolute top-1/3 right-1/4 text-white/50 animate-[spin_5s_linear_infinite_reverse]">⭐</div>
-                    <div className="absolute bottom-1/4 left-1/3 text-white/40 animate-[spin_6s_linear_infinite]">💫</div>
-                    
-                    {/* Content */}
-                    <div className="text-center text-white p-6 relative z-10 transform group-hover:scale-105 transition-transform duration-300">
-                      <div className="mb-4">
-                        <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30 text-xs px-3 py-1 animate-bounce">
+                  <div className="relative h-48 md:h-64 rounded-2xl border border-white/10 bg-[#0f1222]/90 backdrop-blur-2xl flex items-center justify-center overflow-hidden shadow-2xl">
+                    <div className="text-center text-white p-6 relative z-10">
+                      <div className="mb-2">
+                        <Badge className="bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs px-3 py-1 font-bold">
                           🎁 SPECIAL OFFER
                         </Badge>
                       </div>
-                      <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-2xl animate-fade-in bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
+                      <h2 className="text-3xl md:text-5xl font-black mb-2 text-white">
                         {offer.title}
                       </h2>
                       {offer.description && (
-                        <p className="text-lg md:text-2xl font-semibold drop-shadow-lg animate-fade-in backdrop-blur-sm bg-black/20 rounded-lg px-4 py-2 inline-block">
+                        <p className="text-sm md:text-xl text-slate-300 font-medium">
                           {offer.description}
                         </p>
                       )}
-                      <div className="mt-4 flex justify-center gap-2">
-                        <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
-                        <div className="w-2 h-2 bg-white rounded-full animate-ping animation-delay-200"></div>
-                        <div className="w-2 h-2 bg-white rounded-full animate-ping animation-delay-400"></div>
-                      </div>
                     </div>
-                    
-                    {/* Corner Decorations */}
-                    <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-white/30 rounded-tl-xl"></div>
-                    <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-white/30 rounded-tr-xl"></div>
-                    <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-white/30 rounded-bl-xl"></div>
-                    <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-white/30 rounded-br-xl"></div>
                   </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-2" />
-            <CarouselNext className="right-2" />
+            <CarouselPrevious className="left-2 border-white/10 bg-[#14172a] text-white hover:bg-purple-900" />
+            <CarouselNext className="right-2 border-white/10 bg-[#14172a] text-white hover:bg-purple-900" />
           </Carousel>
         </div>
 
@@ -384,30 +349,25 @@ const Premium = () => {
               <CarouselContent>
                 {activeCoupons.map((coupon) => (
                   <CarouselItem key={coupon.id}>
-                    <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <CardContent className="p-6">
+                    <Card className="border border-purple-500/30 bg-[#0f1222]/90 backdrop-blur-xl shadow-xl">
+                      <CardContent className="p-5">
                         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                           <div className="flex items-center gap-4 flex-1">
-                            <div className="bg-primary/20 p-3 rounded-full animate-pulse">
-                              <Tag className="h-6 w-6 text-primary" />
+                            <div className="bg-purple-500/20 p-3 rounded-xl text-purple-400 border border-purple-500/30">
+                              <Tag className="h-6 w-6" />
                             </div>
                             <div className="text-left">
-                              <h3 className="text-lg md:text-xl font-bold text-primary mb-1">
-                                🎉 New Discount Available!
+                              <h3 className="text-base md:text-lg font-bold text-white mb-1">
+                                🎉 Special Discount Available!
                               </h3>
-                              <p className="text-sm md:text-base text-muted-foreground">
-                                Use code <span className="font-mono font-bold text-primary text-lg px-2 py-0.5 bg-primary/10 rounded">{coupon.code}</span> for{" "}
-                                <span className="font-bold text-success">
+                              <p className="text-xs md:text-sm text-slate-300">
+                                Use code <span className="font-mono font-bold text-amber-400 px-2 py-0.5 bg-amber-500/10 rounded border border-amber-500/20">{coupon.code}</span> for{" "}
+                                <span className="font-bold text-emerald-400">
                                   {coupon.discount_type === "percentage" 
                                     ? `${coupon.discount_value}% OFF` 
                                     : `$${coupon.discount_value} OFF`}
                                 </span>
                               </p>
-                              {coupon.expiry_date && (
-                                <p className="text-xs text-muted-foreground/70 mt-1">
-                                  Valid until {new Date(coupon.expiry_date).toLocaleDateString()}
-                                </p>
-                              )}
                             </div>
                           </div>
                           <Button 
@@ -415,9 +375,9 @@ const Premium = () => {
                               setCouponCode(coupon.code);
                               applyCoupon();
                             }}
-                            className="bg-primary hover:bg-primary/90 font-semibold shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold hover:scale-[1.02] transition-transform whitespace-nowrap"
                           >
-                            Apply Now
+                            Apply Code
                           </Button>
                         </div>
                       </CardContent>
@@ -425,12 +385,6 @@ const Premium = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              {activeCoupons.length > 1 && (
-                <>
-                  <CarouselPrevious className="left-2" />
-                  <CarouselNext className="right-2" />
-                </>
-              )}
             </Carousel>
           </div>
         )}
@@ -444,38 +398,38 @@ const Premium = () => {
           />
         )}
 
-        {/* Coupon Section */}
+        {/* Coupon Input Section */}
         <div className="max-w-4xl mx-auto mb-8">
-          <Card className="border-primary/30 bg-primary/5">
+          <Card className="border border-white/10 bg-[#0f1222]/80 backdrop-blur-xl text-white">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="coupon" className="flex items-center gap-2 text-base">
-                    <Tag className="h-5 w-5 text-primary" />
-                    Have a coupon code?
+                  <Label htmlFor="coupon" className="flex items-center gap-2 text-sm font-semibold text-slate-300">
+                    <Tag className="h-4 w-4 text-purple-400" />
+                    Have a promo coupon?
                   </Label>
                   <Input
                     id="coupon"
-                    placeholder="Enter your coupon code"
+                    placeholder="ENTER COUPON CODE"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    className="border-primary/30 text-lg"
+                    className="bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 uppercase font-mono tracking-wider focus:border-purple-500"
                     disabled={validatingCoupon}
                   />
                 </div>
                 <Button 
                   onClick={applyCoupon}
                   disabled={validatingCoupon}
-                  className="sm:mt-8 bg-primary hover:bg-primary/90 font-semibold"
+                  className="sm:mt-7 bg-purple-600 hover:bg-purple-700 text-white font-bold"
                 >
                   {validatingCoupon ? "Validating..." : "Apply Coupon"}
                 </Button>
               </div>
               {appliedCoupon && (
-                <Alert className="mt-4 border-success bg-success/10">
-                  <Check className="h-4 w-4 text-success" />
-                  <AlertDescription className="flex items-center justify-between">
-                    <span className="text-success font-semibold">
+                <Alert className="mt-4 border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                  <Check className="h-4 w-4 text-emerald-400" />
+                  <AlertDescription className="flex items-center justify-between text-xs md:text-sm">
+                    <span className="font-semibold">
                       ✓ Coupon "{appliedCoupon.code}" applied! 
                       {appliedCoupon.discount_type === "percentage" ? ` ${appliedCoupon.discount_value}% ` : ` $${appliedCoupon.discount_value} `}
                       discount
@@ -484,7 +438,7 @@ const Premium = () => {
                       variant="ghost" 
                       size="sm" 
                       onClick={() => setAppliedCoupon(null)}
-                      className="h-7 text-xs text-success hover:text-success"
+                      className="h-6 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20"
                     >
                       Remove
                     </Button>
@@ -497,18 +451,18 @@ const Premium = () => {
 
         {/* Category Selector */}
         <div className="max-w-4xl mx-auto mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Choose Your Trading Category</CardTitle>
+          <Card className="border border-white/10 bg-[#0f1222]/90 text-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-white">Choose Your Trading Category</CardTitle>
             </CardHeader>
             <CardContent>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full h-12 text-lg">
+                <SelectTrigger className="w-full h-12 bg-white/[0.05] border-white/10 text-white font-bold text-base focus:border-purple-500">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#14172a] border border-white/10 text-white z-50">
                   {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat} className="text-lg">
+                    <SelectItem key={cat} value={cat} className="text-sm font-semibold hover:bg-purple-600/20">
                       {cat}
                     </SelectItem>
                   ))}
@@ -520,8 +474,8 @@ const Premium = () => {
 
         {/* Pricing Plans Carousel */}
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 gradient-text">
-            {selectedCategory} Premium Plans
+          <h2 className="text-3xl md:text-4xl font-black text-center mb-8 bg-gradient-to-r from-white via-slate-200 to-purple-400 bg-clip-text text-transparent">
+            {selectedCategory} VIP Premium Plans
           </h2>
           
           <Carousel 
@@ -548,30 +502,17 @@ const Premium = () => {
                     className="pl-3 md:pl-4 basis-[92%] sm:basis-1/2 lg:basis-1/4 flex justify-center"
                   >
                     <Card 
-                      className={`
-                        relative overflow-hidden group cursor-pointer
-                        transition-all duration-500 ease-out
-                        hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20
-                        animate-fade-in
-                        w-full max-w-[340px] sm:max-w-none min-h-[420px]
-                        ${plan.popular 
-                          ? 'border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl shadow-primary/10 ring-1 ring-primary/30' 
-                          : 'border-border/40 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20'
-                        }
-                      `}
-                      style={{ animationDelay: `${index * 100}ms` }}
+                      className={cn(
+                        "relative overflow-hidden group cursor-pointer transition-all duration-500 ease-out h-full w-full max-w-[340px] sm:max-w-none min-h-[440px] border border-white/10 bg-[#0f1222]/90 backdrop-blur-2xl text-white",
+                        "hover:scale-[1.02] hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]",
+                        plan.popular && "ring-2 ring-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.3)]"
+                      )}
                       onClick={() => handleSelectPlan(plan)}
                     >
-                      {/* Shimmer effect on hover */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
-                      
-                      {/* Glow effect */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                      
                       {/* Popular badge */}
                       {plan.popular && (
                         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
-                          <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm px-4 py-1 shadow-lg animate-pulse">
+                          <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs px-3.5 py-1 shadow-lg border border-purple-400/40">
                             ⭐ Popular
                           </Badge>
                         </div>
@@ -580,58 +521,54 @@ const Premium = () => {
                       {/* Discount badge */}
                       {plan.discount && (
                         <div className="absolute top-3 right-3 z-10">
-                          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg animate-pulse">
+                          <div className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2.5 py-1 rounded-full text-xs font-bold">
                             {plan.discount}
                           </div>
                         </div>
                       )}
                       
-                      <CardHeader className="text-center pb-4 pt-6 px-5 relative z-10">
-                        <CardTitle className="text-lg font-bold mb-3 group-hover:text-primary transition-colors">
+                      <CardHeader className="text-center pb-4 pt-7 px-5 relative z-10">
+                        <CardTitle className="text-lg font-bold text-white group-hover:text-purple-300 transition-colors">
                           {plan.name}
                         </CardTitle>
                         
-                        {/* Price display */}
-                        <div className="space-y-2">
-                          <div className="relative inline-block">
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-xl opacity-0 group-hover:opacity-30 transition-opacity" />
-                            <p className="relative text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                              ${plan.pricePerMonth}
-                            </p>
-                          </div>
-                          <p className="text-sm text-muted-foreground">/month • {plan.duration}</p>
+                        <div className="space-y-1 mt-2">
+                          <p className="text-4xl md:text-5xl font-black text-white tracking-tight font-mono">
+                            ${plan.pricePerMonth}
+                          </p>
+                          <p className="text-xs text-slate-400 font-medium">/month • {plan.duration}</p>
                         </div>
                       </CardHeader>
 
                       <CardContent className="space-y-4 px-5 pb-5 relative z-10">
                         {/* Pricing breakdown */}
-                        <div className="space-y-2.5 p-4 rounded-xl bg-muted/30 border border-border/30">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Original</span>
-                            <span className="line-through text-muted-foreground">${plan.totalPrice}</span>
+                        <div className="space-y-2 p-3.5 rounded-xl bg-white/[0.03] border border-white/10">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400 font-medium">Original</span>
+                            <span className="line-through text-slate-500">${plan.totalPrice}</span>
                           </div>
                           
                           {appliedCoupon && isPlanApplicable ? (
                             <>
-                              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                              <div className="h-px bg-white/10" />
                               <div className="flex justify-between items-center">
-                                <span className="font-bold text-base">Final</span>
-                                <span className="text-2xl font-black bg-gradient-to-r from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
+                                <span className="font-bold text-xs text-slate-300">Final</span>
+                                <span className="text-xl font-bold text-emerald-400 font-mono">
                                   ${finalPrice.toFixed(0)}
                                 </span>
                               </div>
-                              <div className="bg-emerald-500/10 rounded-lg px-3 py-1.5 border border-emerald-500/20">
-                                <p className="text-emerald-500 text-center font-bold text-sm">
+                              <div className="bg-emerald-500/10 rounded-lg px-2.5 py-1 border border-emerald-500/20">
+                                <p className="text-emerald-400 text-center font-bold text-xs">
                                   💰 Save ${savings.toFixed(0)}
                                 </p>
                               </div>
                             </>
                           ) : (
                             <>
-                              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                              <div className="h-px bg-white/10" />
                               <div className="flex justify-between items-center">
-                                <span className="font-bold text-base">Pay</span>
-                                <span className="text-2xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                                <span className="font-bold text-xs text-slate-300">Total Pay</span>
+                                <span className="text-xl font-bold text-purple-400 font-mono">
                                   ${originalPrice}
                                 </span>
                               </div>
@@ -639,10 +576,10 @@ const Premium = () => {
                           )}
 
                           {appliedCoupon && !isPlanApplicable && (
-                            <div className="bg-amber-500/10 rounded-lg px-3 py-1.5 border border-amber-500/20">
-                              <p className="text-amber-500 text-center text-sm flex items-center justify-center gap-1">
-                                <AlertCircle className="h-4 w-4" />
-                                Not applicable
+                            <div className="bg-amber-500/10 rounded-lg px-2.5 py-1 border border-amber-500/20">
+                              <p className="text-amber-400 text-center text-xs flex items-center justify-center gap-1 font-semibold">
+                                <AlertCircle className="h-3 w-3" />
+                                Coupon not applicable
                               </p>
                             </div>
                           )}
@@ -651,32 +588,22 @@ const Premium = () => {
                         {/* Features list */}
                         <div className="space-y-2">
                           {features.slice(0, 4).map((feature, idx) => (
-                            <div key={idx} className="flex items-start gap-2.5">
-                              <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-emerald-500" />
-                              </div>
-                              <span className="text-sm text-muted-foreground">{feature}</span>
+                            <div key={idx} className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                              <span className="text-xs md:text-sm text-slate-300 font-medium">{feature}</span>
                             </div>
                           ))}
                         </div>
 
                         {/* CTA Button */}
                         <Button 
-                          className="
-                            w-full h-12 font-bold text-base
-                            bg-gradient-to-r from-primary to-primary/80
-                            hover:from-primary/90 hover:to-primary/70
-                            shadow-md hover:shadow-lg hover:shadow-primary/30
-                            transition-all duration-300
-                            relative overflow-hidden
-                          " 
+                          className="w-full h-11 text-xs md:text-sm font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] transition-all mt-2" 
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSelectPlan(plan);
                           }}
                         >
-                          <span className="relative z-10">SELECT PLAN</span>
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                          SELECT PLAN
                         </Button>
                       </CardContent>
                     </Card>
@@ -684,8 +611,8 @@ const Premium = () => {
                 );
               })}
             </CarouselContent>
-            <CarouselPrevious className="hidden sm:flex" />
-            <CarouselNext className="hidden sm:flex" />
+            <CarouselPrevious className="hidden sm:flex border-white/10 bg-[#14172a] text-white hover:bg-purple-900" />
+            <CarouselNext className="hidden sm:flex border-white/10 bg-[#14172a] text-white hover:bg-purple-900" />
           </Carousel>
           
           {/* Dot indicators for mobile */}
@@ -696,18 +623,13 @@ const Premium = () => {
                 onClick={() => planCarouselApi?.scrollTo(index)}
                 className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                   currentPlanIndex === index 
-                    ? 'bg-primary scale-125' 
-                    : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                    ? 'bg-purple-500 w-6' 
+                    : 'bg-white/20 hover:bg-white/40'
                 }`}
                 aria-label={`Go to plan ${index + 1}`}
               />
             ))}
           </div>
-          
-          {/* Swipe hint for mobile */}
-          <p className="text-center text-xs text-muted-foreground mt-2 sm:hidden">
-            ← Swipe to see more plans →
-          </p>
         </div>
 
         {/* Affiliate Banner Carousel */}
@@ -717,43 +639,37 @@ const Premium = () => {
 
         {/* Payment Dialog */}
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#0f1222] border border-white/10 text-white">
             <DialogHeader>
-              <DialogTitle className="text-2xl">Complete Your Payment</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-white">Complete Your Payment</DialogTitle>
             </DialogHeader>
             
             {paymentDetails && (
-              <div className="space-y-6">
+              <div className="space-y-6 pt-2">
                 {/* Order Summary */}
-                <Card className="bg-muted/30">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Order Summary</CardTitle>
+                <Card className="bg-white/[0.03] border-white/10 text-white">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold text-purple-300">Order Summary</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
+                  <CardContent className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="font-semibold">Plan:</span>
-                      <span>{paymentDetails.plan.name} - {selectedCategory}</span>
+                      <span className="text-slate-400">Plan:</span>
+                      <span className="font-semibold text-white">{paymentDetails.plan.name} - {selectedCategory}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-semibold">Duration:</span>
-                      <span>{paymentDetails.plan.duration}</span>
+                      <span className="text-slate-400">Duration:</span>
+                      <span className="font-semibold text-white">{paymentDetails.plan.duration}</span>
                     </div>
                     {appliedCoupon && (
-                      <div className="flex justify-between text-success">
-                        <span className="font-semibold">Coupon Applied:</span>
-                        <span>{appliedCoupon.code}</span>
+                      <div className="flex justify-between text-emerald-400">
+                        <span>Coupon Applied:</span>
+                        <span className="font-bold">{appliedCoupon.code}</span>
                       </div>
                     )}
-                    <div className="border-t pt-2 mt-2">
-                      {paymentDetails.originalPrice !== paymentDetails.finalPrice && (
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Original:</span>
-                          <span className="line-through">${paymentDetails.originalPrice}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-xl font-bold text-primary">
-                        <span>Total Amount:</span>
-                        <span>${paymentDetails.finalPrice.toFixed(2)}</span>
+                    <div className="border-t border-white/10 pt-2 mt-2">
+                      <div className="flex justify-between text-base font-black text-white">
+                        <span>Total Payable Amount:</span>
+                        <span className="text-purple-400 font-mono">${paymentDetails.finalPrice.toFixed(2)}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -762,12 +678,12 @@ const Premium = () => {
                 {/* Payment Instructions */}
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-base mb-2">Step 1: Select Cryptocurrency</Label>
+                    <Label className="text-xs font-semibold text-slate-300 mb-2 block">Step 1: Select Cryptocurrency</Label>
                     <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className="h-11 bg-white/[0.05] border-white/10 text-white focus:border-purple-500">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#14172a] border border-white/10 text-white z-50">
                         {cryptoOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
@@ -778,44 +694,32 @@ const Premium = () => {
                   </div>
 
                   <div>
-                    <Label className="text-base mb-2">Step 2: Copy Wallet Address</Label>
+                    <Label className="text-xs font-semibold text-slate-300 mb-2 block">Step 2: Copy Wallet Address</Label>
                     <div className="flex gap-2">
                       <Input
                         value={cryptoAddresses[selectedCrypto]}
                         readOnly
-                        className="font-mono text-sm"
+                        className="font-mono text-xs md:text-sm bg-white/[0.05] border-white/10 text-white"
                       />
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => copyToClipboard(cryptoAddresses[selectedCrypto])}
+                        className="border-white/10 bg-white/[0.05] hover:bg-purple-600 hover:text-white shrink-0"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
 
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
+                  <Alert className="border-purple-500/30 bg-purple-500/10 text-slate-300">
+                    <AlertCircle className="h-4 w-4 text-purple-400" />
                     <AlertDescription>
-                      <div className="space-y-2 text-sm">
-                        <p className="font-semibold">Step 3: Send Payment</p>
-                        <p>Send <span className="font-bold text-primary">${paymentDetails.finalPrice.toFixed(2)}</span> worth of {cryptoOptions.find(o => o.value === selectedCrypto)?.label} to the above address.</p>
-                        <p className="font-semibold">Step 4: Contact Support</p>
-                        <p>After payment, contact our support team with your transaction ID to activate your premium subscription.</p>
+                      <div className="space-y-1 text-xs">
+                        <p className="font-bold text-white">Step 3: Send & Contact</p>
+                        <p>Send <span className="font-bold text-purple-300">${paymentDetails.finalPrice.toFixed(2)}</span> in {cryptoOptions.find(o => o.value === selectedCrypto)?.label}.</p>
+                        <p>After payment, send your transaction ID / screenshot to our WhatsApp support team for instant activation.</p>
                       </div>
-                    </AlertDescription>
-                  </Alert>
-
-                  <Alert className="border-warning bg-warning/10">
-                    <AlertCircle className="h-4 w-4 text-warning" />
-                    <AlertDescription className="text-warning">
-                      <ul className="text-sm space-y-1 list-disc list-inside">
-                        <li>Double-check the wallet address before sending</li>
-                        <li>Send only the selected cryptocurrency</li>
-                        <li>Keep your transaction ID for verification</li>
-                        <li>Activation may take 10-30 minutes after verification</li>
-                      </ul>
                     </AlertDescription>
                   </Alert>
                 </div>
