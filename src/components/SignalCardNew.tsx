@@ -1,4 +1,4 @@
-import { Clock, ArrowRight, TrendingUp, TrendingDown, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, AlertCircle, CheckCircle2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ interface SignalCardProps {
     entry: string;
     tp1: string;
     tp2?: string;
+    tp3?: string; // Added TP3 support just in case
     sl: string;
     risk_level?: string;
     created_at: string;
@@ -41,7 +42,7 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
 
   const pairUpper = signal.pair?.toUpperCase() || "";
 
-  // Custom Clean Pair Icons
+  // Clean Pair Icons
   const renderIcon = () => {
     if (pairUpper.includes("XAU") || pairUpper.includes("GOLD")) {
       return <span className="text-xl">🪙</span>;
@@ -53,7 +54,10 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
   };
 
   return (
-    <div className="relative mb-3.5 w-full rounded-[16px] bg-[#11131f] border border-white/5 p-4 text-white shadow-lg hover:border-white/10 transition-all duration-300">
+    <div 
+      onClick={() => navigate(`/signal/${signal.id}`)}
+      className="relative mb-3.5 w-full rounded-[16px] bg-[#11131f] border border-white/5 p-4 text-white shadow-lg hover:border-white/10 hover:bg-[#151725] transition-all duration-300 cursor-pointer"
+    >
       
       {/* ===== 1. HEADER (Pair + Time) ===== */}
       <div className="flex items-center justify-between mb-2.5">
@@ -140,31 +144,32 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* ===== 3. TARGETS (SL, TP1, TP2) ===== */}
-      <div className="flex items-center gap-4 justify-between mb-4 px-1">
-        <div className="flex items-center gap-6">
-          {/* SL */}
+      {/* ===== 3. TARGETS (SL, TP1, TP2, TP3) ===== */}
+      <div className="flex items-center gap-3 justify-between mb-4 px-1 flex-wrap">
+        <div className="flex items-center gap-4">
+          
+          {/* SL (RED as requested) */}
           <div className="flex flex-col items-start">
             <span className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">Stop Loss</span>
-            <span className="font-mono text-[13px] font-bold text-rose-400">
+            <span className="font-mono text-[13px] font-bold text-rose-500">
               {signal.sl}
             </span>
           </div>
 
           <div className="h-5 w-[1px] bg-white/10" />
 
-          {/* TP1 */}
+          {/* TP1 (BLUE as requested) */}
           <div className="flex flex-col items-start">
             <span className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">Target 1</span>
-            <span className="font-mono text-[13px] font-bold text-emerald-400">
+            <span className="font-mono text-[13px] font-bold text-blue-400">
               {signal.tp1}
             </span>
           </div>
 
+          {/* TP2 (GREEN) */}
           {signal.tp2 && (
             <>
               <div className="h-5 w-[1px] bg-white/10" />
-              {/* TP2 */}
               <div className="flex flex-col items-start">
                 <span className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">Target 2</span>
                 <span className="font-mono text-[13px] font-bold text-emerald-400">
@@ -173,16 +178,20 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
               </div>
             </>
           )}
-        </div>
 
-        {/* View Details Button - Minimalist */}
-        <button
-          onClick={() => navigate(`/signal/${signal.id}`)}
-          className="flex items-center gap-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-1.5 text-[11px] font-medium text-slate-300 transition-all hover:text-white"
-        >
-          Details
-          <ArrowRight className="h-3 w-3" />
-        </button>
+          {/* TP3 (GREEN - if exists) */}
+          {signal.tp3 && (
+            <>
+              <div className="h-5 w-[1px] bg-white/10" />
+              <div className="flex flex-col items-start">
+                <span className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">Target 3</span>
+                <span className="font-mono text-[13px] font-bold text-emerald-400">
+                  {signal.tp3}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ===== 4. PROFIT NOTE (If applicable) ===== */}
