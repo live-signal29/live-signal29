@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { TrendingUp, BarChart3, User, Wallet, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 
 const navItems = [
   { icon: TrendingUp, label: "Signals", path: "/" },
@@ -21,47 +22,63 @@ const hiddenRoutes = [
 
 export const BottomNavigation = () => {
   const location = useLocation();
+  const [mounted, setMounted] = useState(false);
 
   const shouldHide = hiddenRoutes.some(route =>
     location.pathname === route || location.pathname.startsWith("/admin")
   );
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (shouldHide) return null;
 
   return (
-    <div className="fixed bottom-2 left-0 right-0 z-50 flex justify-center pointer-events-none">
-      
-      {/* ULTRA SMALL & COMPACT GLASS CARD */}
-      <div className="pointer-events-auto w-[92%] max-w-[340px] rounded-[16px] border border-border/40 bg-background/85 backdrop-blur-xl shadow-lg p-1">
-        <div className="flex items-center justify-around">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path ||
-              (item.path === "/" && (location.pathname === "/signals" || location.pathname.includes("signals")));
+    <nav className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 md:hidden px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+      "transition-all duration-500 ease-out",
+      mounted ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
+    )}>
+      <div className="glow-border rounded-[22px]">
+        {/* CARD SIZE CHHOTA (max-w, px, py) */}
+        <div className="mx-auto max-w-[300px] rounded-[22px] border border-border/60 bg-background/85 backdrop-blur-2xl shadow-[0_-6px_28px_-12px_hsl(var(--glow-primary)/0.5)] px-1 py-1">
+          
+          <div className="flex items-center justify-around gap-0.5">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path ||
+                (item.path === "/" && (location.pathname === "/signals" || location.pathname.includes("signals")));
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="relative flex flex-col items-center gap-[2px] px-2 py-1.5 transition-all duration-200"
-              >
-                <div className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-md transition-all duration-200",
-                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground/60 hover:text-foreground/80"
-                )}>
-                  <item.icon className={cn("h-[13px] w-[13px]", isActive && "stroke-[2.5]")} />
-                </div>
-                <span className={cn(
-                  "text-[8px] leading-none font-medium tracking-tight",
-                  isActive ? "font-bold text-primary" : "text-muted-foreground/60"
-                )}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="relative flex flex-col items-center gap-[2px] px-1.5 py-1"
+                >
+                  <span className={cn(
+                    "icon-3d flex h-7 w-7 items-center justify-center",
+                    isActive && "icon-3d-active animate-glow-breathe"
+                  )}>
+                    <item.icon className={cn(
+                      "h-[14px] w-[14px] relative z-[1]",
+                      isActive
+                        ? "text-primary-foreground stroke-[2.4]"
+                        : "text-muted-foreground stroke-[2]"
+                    )} />
+                  </span>
+                  <span className={cn(
+                    "text-[8px] leading-none tracking-tight",
+                    isActive ? "font-bold text-primary" : "font-medium text-muted-foreground"
+                  )}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+          
         </div>
       </div>
-      
-    </div>
+    </nav>
   );
 };
