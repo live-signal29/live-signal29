@@ -73,7 +73,7 @@ const plans = [
     amount: "$1,000",
     profitSharing: "40 / 60",
     dailyReturn: "35%",
-    color: "from-emerald-500 to-teal-500",
+    color: "from-emerald-500 to-green-500",
     icon: TrendingUp,
     popular: true,
     features: [
@@ -89,7 +89,7 @@ const plans = [
     amount: "$10,000",
     profitSharing: "30 / 70",
     dailyReturn: "25%",
-    color: "from-purple-500 to-indigo-500",
+    color: "from-purple-500 to-violet-500",
     icon: Crown,
     features: [
       "VIP Trading Mode",
@@ -104,7 +104,7 @@ const plans = [
     amount: "$50,000",
     profitSharing: "20 / 80",
     dailyReturn: "16%",
-    color: "from-amber-500 to-rose-500",
+    color: "from-amber-500 to-orange-500",
     icon: Star,
     features: [
       "Institutional Grade Strategy",
@@ -233,42 +233,38 @@ const AccountManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#080a12] text-white relative overflow-hidden">
-      {/* Background Decorative Glow Effects */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-purple-600/15 blur-[120px] pointer-events-none rounded-full" />
-      <div className="absolute top-[30%] right-0 w-[400px] h-[400px] bg-amber-500/10 blur-[140px] pointer-events-none rounded-full" />
-
+    <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-8 space-y-16 relative z-10">
+      <main className="container mx-auto px-4 py-8 space-y-16">
         {/* Hero Section */}
         <section className="text-center py-12 space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm font-medium mb-4 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-            <Zap className="h-4 w-4 text-purple-400" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+            <Zap className="h-4 w-4" />
             Professional Account Management
           </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-            <span className="bg-gradient-to-r from-white via-slate-200 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+            <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
               Account Management Service
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto font-medium">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Managed by Professional Traders — Safe, Transparent & Result-Focused.
           </p>
         </section>
 
         {/* Trading Strategy */}
         <section className="max-w-3xl mx-auto text-center">
-          <Card className="border border-white/10 bg-[#0f1222]/80 backdrop-blur-xl shadow-2xl">
+          <Card className="border-border/50 bg-gradient-to-br from-muted/30 to-muted/10">
             <CardContent className="p-8">
               <div className="flex justify-center mb-4">
-                <div className="p-3.5 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/20 to-amber-950/40 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
-                  <BarChart3 className="h-8 w-8" />
+                <div className="p-3 rounded-xl bg-primary/10">
+                  <BarChart3 className="h-8 w-8 text-primary" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-3">Our Trading Strategy</h2>
-              <p className="text-slate-300 leading-relaxed text-sm md:text-base">
-                We trade using a <span className="text-amber-400 font-bold">hybrid system: AI-based signals + manual chart analysis</span>. 
+              <h2 className="text-2xl font-bold mb-4">Our Trading Strategy</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                We trade using a <span className="text-foreground font-semibold">hybrid system: AI-based signals + manual chart analysis</span>. 
                 Our strategy focuses on low-risk entries, strong risk management, and high-probability setups 
                 to ensure stable daily growth.
               </p>
@@ -279,8 +275,8 @@ const AccountManagement = () => {
         {/* Account Plans */}
         <section className="space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-white mb-2">Choose Your Plan</h2>
-            <p className="text-slate-400 text-sm">Select the account size that fits your investment goals</p>
+            <h2 className="text-3xl font-bold mb-2">Choose Your Plan</h2>
+            <p className="text-muted-foreground">Select the account size that fits your investment goals</p>
           </div>
           
           <Carousel
@@ -304,19 +300,30 @@ const AccountManagement = () => {
                   <CarouselItem key={index} className="pl-3 md:pl-4 basis-[95%] sm:basis-[55%] lg:basis-1/3 flex justify-center">
                     <Card 
                       className={cn(
-                        "relative overflow-hidden border border-white/10 transition-all duration-500 group cursor-pointer h-full w-full max-w-[380px] min-h-[440px]",
-                        "hover:scale-[1.02] hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]",
-                        "bg-[#0f1222]/90 backdrop-blur-2xl text-white",
-                        plan.popular && "ring-2 ring-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.3)]"
+                        "relative overflow-hidden border-border/40 transition-all duration-500 group cursor-pointer h-full w-full max-w-[380px] min-h-[440px]",
+                        "hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20",
+                        "bg-gradient-to-br from-background via-background to-muted/20",
+                        "animate-fade-in",
+                        plan.popular && "ring-2 ring-primary shadow-lg shadow-primary/10"
                       )}
+                      style={{ animationDelay: `${index * 100}ms` }}
                       onClick={() => {
                         setFormData(prev => ({ ...prev, account_size: plan.amount }));
                         document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
                       }}
                     >
+                      {/* Shimmer effect on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                      
+                      {/* Glow effect */}
+                      <div className={cn(
+                        "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
+                        `bg-gradient-to-br ${plan.color}`
+                      )} style={{ opacity: 0.1 }} />
+                      
                       {plan.popular && (
                         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
-                          <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs px-3.5 py-1 shadow-lg border border-purple-400/40">
+                          <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs px-3 py-0.5 shadow-lg animate-pulse">
                             ⭐ Popular
                           </Badge>
                         </div>
@@ -324,47 +331,51 @@ const AccountManagement = () => {
                       
                       <CardHeader className="pb-4 pt-6 px-5">
                         <div className={cn(
-                          "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg border border-white/20",
+                          "w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg",
                           plan.color
                         )}>
                           <Icon className="h-7 w-7 text-white" />
                         </div>
-                        <CardTitle className="text-lg font-bold text-white group-hover:text-purple-300 transition-colors">{plan.title}</CardTitle>
-                        <div className="relative inline-block mt-1">
-                          <span className="text-4xl font-black text-white font-mono tracking-tight">
+                        <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{plan.title}</CardTitle>
+                        <div className="relative inline-block">
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-xl opacity-0 group-hover:opacity-30 transition-opacity" />
+                          <span className="relative text-4xl font-black bg-gradient-to-r from-foreground to-foreground/70 group-hover:from-primary group-hover:to-primary/70 bg-clip-text text-transparent transition-all">
                             {plan.amount}
                           </span>
                         </div>
                       </CardHeader>
                       
                       <CardContent className="space-y-4 px-5 pb-5">
-                        <div className="space-y-2.5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div className="space-y-2.5 p-4 rounded-xl bg-muted/30 border border-border/30">
                           <div className="flex justify-between text-sm">
-                            <span className="text-slate-400 font-medium">Profit Share</span>
-                            <span className="font-bold text-purple-400">{plan.profitSharing}</span>
+                            <span className="text-muted-foreground">Profit</span>
+                            <span className="font-bold text-primary">{plan.profitSharing}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-slate-400 font-medium">Est. Daily</span>
-                            <span className="font-bold text-emerald-400">{plan.dailyReturn}</span>
+                            <span className="text-muted-foreground">Daily</span>
+                            <span className="font-bold text-emerald-500">{plan.dailyReturn}</span>
                           </div>
                         </div>
                         
-                        <ul className="space-y-2.5">
+                        <ul className="space-y-2">
                           {plan.features.slice(0, 4).map((feature, i) => (
-                            <li key={i} className="flex items-start gap-2 text-xs md:text-sm">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                              <span className="text-slate-300 font-medium">{feature}</span>
+                            <li key={i} className="flex items-start gap-2 text-sm">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground line-clamp-1">{feature}</span>
                             </li>
                           ))}
                         </ul>
                         
                         <Button 
                           className={cn(
-                            "w-full h-12 text-sm font-bold mt-2 rounded-xl transition-all duration-300",
-                            "bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] hover:scale-[1.01]"
+                            "w-full h-12 text-sm font-bold relative overflow-hidden",
+                            "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
+                            "shadow-md hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
                           )}
+                          variant={plan.popular ? "default" : "outline"}
                         >
-                          Select Plan
+                          <span className="relative z-10">Select Plan</span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         </Button>
                       </CardContent>
                     </Card>
@@ -372,8 +383,8 @@ const AccountManagement = () => {
                 );
               })}
             </CarouselContent>
-            <CarouselPrevious className="hidden md:flex -left-4 border-white/10 bg-[#14172a] text-white hover:bg-purple-900" />
-            <CarouselNext className="hidden md:flex -right-4 border-white/10 bg-[#14172a] text-white hover:bg-purple-900" />
+            <CarouselPrevious className="hidden md:flex -left-4" />
+            <CarouselNext className="hidden md:flex -right-4" />
           </Carousel>
           
           {/* Dot indicators */}
@@ -384,8 +395,8 @@ const AccountManagement = () => {
                 className={cn(
                   "w-2.5 h-2.5 rounded-full transition-all duration-300",
                   current === index 
-                    ? "bg-purple-500 w-6" 
-                    : "bg-white/20 hover:bg-white/40"
+                    ? "bg-primary w-6" 
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
                 )}
                 onClick={() => carouselApi?.scrollTo(index)}
               />
@@ -396,25 +407,25 @@ const AccountManagement = () => {
         {/* How It Works */}
         <section className="space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-white mb-2">How It Works</h2>
-            <p className="text-slate-400 text-sm">Simple 3-step process to get started</p>
+            <h2 className="text-3xl font-bold mb-2">How It Works</h2>
+            <p className="text-muted-foreground">Simple 3-step process to get started</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {steps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <Card key={index} className="border border-white/10 bg-[#0f1222]/80 backdrop-blur-xl text-center p-6 text-white shadow-xl hover:border-purple-500/40 transition-all">
+                <Card key={index} className="border-border/50 text-center p-6 hover:shadow-lg transition-shadow">
                   <div className="relative mx-auto mb-4">
-                    <div className="w-16 h-16 rounded-full border border-purple-500/30 bg-purple-500/10 flex items-center justify-center mx-auto text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
-                      <Icon className="h-8 w-8" />
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                      <Icon className="h-8 w-8 text-primary" />
                     </div>
-                    <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-purple-600 text-white font-black flex items-center justify-center text-xs shadow-md">
+                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-sm">
                       {index + 1}
                     </div>
                   </div>
-                  <h3 className="text-lg font-bold mb-2 text-white">{step.title}</h3>
-                  <p className="text-xs md:text-sm text-slate-400 font-medium">{step.description}</p>
+                  <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
                 </Card>
               );
             })}
@@ -424,98 +435,98 @@ const AccountManagement = () => {
         {/* Apply Now Form */}
         <section id="apply-form" className="max-w-2xl mx-auto space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-white mb-2">Apply Now</h2>
-            <p className="text-slate-400 text-sm">Fill in your details and we'll contact you shortly</p>
+            <h2 className="text-3xl font-bold mb-2">Apply Now</h2>
+            <p className="text-muted-foreground">Fill in your details and we'll contact you shortly</p>
           </div>
           
-          <Card className="border border-white/10 bg-[#0f1222]/95 backdrop-blur-2xl shadow-2xl text-white">
-            <CardContent className="p-6 md:p-8">
+          <Card className="border-border/50">
+            <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-slate-300 font-semibold text-xs">Full Name</Label>
+                    <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
                       placeholder="Your full name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className={cn("bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500", errors.name && "border-red-500")}
+                      className={errors.name ? "border-destructive" : ""}
                     />
-                    {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
+                    {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="whatsapp" className="text-slate-300 font-semibold text-xs">WhatsApp Number</Label>
+                    <Label htmlFor="whatsapp">WhatsApp Number</Label>
                     <Input
                       id="whatsapp"
                       placeholder="+92300..."
                       value={formData.whatsapp}
                       onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                      className={cn("bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500", errors.whatsapp && "border-red-500")}
+                      className={errors.whatsapp ? "border-destructive" : ""}
                     />
-                    {errors.whatsapp && <p className="text-xs text-red-400">{errors.whatsapp}</p>}
+                    {errors.whatsapp && <p className="text-xs text-destructive">{errors.whatsapp}</p>}
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-slate-300 font-semibold text-xs">Email Address</Label>
+                  <Label htmlFor="email">Email Address</Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="your@email.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className={cn("bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500", errors.email && "border-red-500")}
+                    className={errors.email ? "border-destructive" : ""}
                   />
-                  {errors.email && <p className="text-xs text-red-400">{errors.email}</p>}
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="broker" className="text-slate-300 font-semibold text-xs">Preferred Broker</Label>
+                    <Label htmlFor="broker">Preferred Broker</Label>
                     <Input
                       id="broker"
                       placeholder="e.g., Exness, XM, IC Markets"
                       value={formData.preferred_broker}
                       onChange={(e) => setFormData({ ...formData, preferred_broker: e.target.value })}
-                      className={cn("bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500", errors.preferred_broker && "border-red-500")}
+                      className={errors.preferred_broker ? "border-destructive" : ""}
                     />
-                    {errors.preferred_broker && <p className="text-xs text-red-400">{errors.preferred_broker}</p>}
+                    {errors.preferred_broker && <p className="text-xs text-destructive">{errors.preferred_broker}</p>}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="platform_type" className="text-slate-300 font-semibold text-xs">Platform Type</Label>
+                    <Label htmlFor="platform_type">Platform Type</Label>
                     <Select
                       value={formData.platform_type}
                       onValueChange={(value) => setFormData({ ...formData, platform_type: value })}
                     >
-                      <SelectTrigger className={cn("bg-white/[0.05] border-white/10 text-white focus:border-purple-500", errors.platform_type && "border-red-500")}>
+                      <SelectTrigger className={errors.platform_type ? "border-destructive" : ""}>
                         <SelectValue placeholder="Select platform" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#14172a] border border-white/10 text-white z-50">
+                      <SelectContent className="bg-background border border-border z-50">
                         <SelectItem value="MT4">MT4</SelectItem>
                         <SelectItem value="MT5">MT5</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.platform_type && <p className="text-xs text-red-400">{errors.platform_type}</p>}
+                    {errors.platform_type && <p className="text-xs text-destructive">{errors.platform_type}</p>}
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="broker_server" className="text-slate-300 font-semibold text-xs">Broker Server</Label>
+                  <Label htmlFor="broker_server">Broker Server</Label>
                   <Input
                     id="broker_server"
                     placeholder="e.g., server3-mt5@broker"
                     value={formData.broker_server}
                     onChange={(e) => setFormData({ ...formData, broker_server: e.target.value })}
-                    className={cn("bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500", errors.broker_server && "border-red-500")}
+                    className={errors.broker_server ? "border-destructive" : ""}
                   />
-                  {errors.broker_server && <p className="text-xs text-red-400">{errors.broker_server}</p>}
+                  {errors.broker_server && <p className="text-xs text-destructive">{errors.broker_server}</p>}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="trading_login" className="text-slate-300 font-semibold text-xs">Trading Account Login</Label>
+                    <Label htmlFor="trading_login">Trading Account Login</Label>
                     <Input
                       id="trading_login"
                       placeholder="e.g., 8373738"
@@ -524,50 +535,45 @@ const AccountManagement = () => {
                         const value = e.target.value.replace(/\D/g, '');
                         setFormData({ ...formData, trading_login: value });
                       }}
-                      className={cn("bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500", errors.trading_login && "border-red-500")}
+                      className={errors.trading_login ? "border-destructive" : ""}
                     />
-                    {errors.trading_login && <p className="text-xs text-red-400">{errors.trading_login}</p>}
+                    {errors.trading_login && <p className="text-xs text-destructive">{errors.trading_login}</p>}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="trading_password" className="text-slate-300 font-semibold text-xs">Trading Account Password</Label>
+                    <Label htmlFor="trading_password">Trading Account Password</Label>
                     <Input
                       id="trading_password"
                       type="password"
                       placeholder="Your trading password"
                       value={formData.trading_password}
                       onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
-                      className={cn("bg-white/[0.05] border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500", errors.trading_password && "border-red-500")}
+                      className={errors.trading_password ? "border-destructive" : ""}
                     />
-                    {errors.trading_password && <p className="text-xs text-red-400">{errors.trading_password}</p>}
+                    {errors.trading_password && <p className="text-xs text-destructive">{errors.trading_password}</p>}
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="account_size" className="text-slate-300 font-semibold text-xs">Account Size</Label>
+                  <Label htmlFor="account_size">Account Size</Label>
                   <Select
                     value={formData.account_size}
                     onValueChange={(value) => setFormData({ ...formData, account_size: value })}
                   >
-                    <SelectTrigger className={cn("bg-white/[0.05] border-white/10 text-white focus:border-purple-500", errors.account_size && "border-red-500")}>
+                    <SelectTrigger className={errors.account_size ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select account size" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#14172a] border border-white/10 text-white z-50">
+                    <SelectContent className="bg-background border border-border z-50">
                       <SelectItem value="$100">$100</SelectItem>
                       <SelectItem value="$1,000">$1,000</SelectItem>
                       <SelectItem value="$10,000">$10,000</SelectItem>
                       <SelectItem value="$50,000">$50,000</SelectItem>
                     </SelectContent>
                   </Select>
-                  {errors.account_size && <p className="text-xs text-red-400">{errors.account_size}</p>}
+                  {errors.account_size && <p className="text-xs text-destructive">{errors.account_size}</p>}
                 </div>
                 
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 text-sm font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] transition-all mt-4" 
-                  size="lg" 
-                  disabled={isSubmitting}
-                >
+                <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>Submitting...</>
                   ) : (
@@ -585,45 +591,45 @@ const AccountManagement = () => {
         {/* Live Performance */}
         <section className="space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-white mb-2">Live Performance</h2>
-            <p className="text-slate-400 text-sm">Track our verified trading results</p>
+            <h2 className="text-3xl font-bold mb-2">Live Performance</h2>
+            <p className="text-muted-foreground">Track our verified trading results</p>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border border-white/10 bg-[#0f1222]/80 p-4 text-center">
-              <div className="text-3xl font-black text-emerald-400">98%</div>
-              <div className="text-xs font-semibold text-slate-400 mt-1">Win Rate</div>
+            <Card className="border-border/50 p-4 text-center">
+              <div className="text-3xl font-bold text-emerald-500">98%</div>
+              <div className="text-sm text-muted-foreground">Win Rate</div>
             </Card>
-            <Card className="border border-white/10 bg-[#0f1222]/80 p-4 text-center">
-              <div className="text-3xl font-black text-purple-400">500+</div>
-              <div className="text-xs font-semibold text-slate-400 mt-1">Active Clients</div>
+            <Card className="border-border/50 p-4 text-center">
+              <div className="text-3xl font-bold text-primary">500+</div>
+              <div className="text-sm text-muted-foreground">Active Clients</div>
             </Card>
-            <Card className="border border-white/10 bg-[#0f1222]/80 p-4 text-center">
-              <div className="text-3xl font-black text-amber-400">$2M+</div>
-              <div className="text-xs font-semibold text-slate-400 mt-1">Total Managed</div>
+            <Card className="border-border/50 p-4 text-center">
+              <div className="text-3xl font-bold text-amber-500">$2M+</div>
+              <div className="text-sm text-muted-foreground">Total Managed</div>
             </Card>
-            <Card className="border border-white/10 bg-[#0f1222]/80 p-4 text-center">
-              <div className="text-3xl font-black text-indigo-400">3+ Years</div>
-              <div className="text-xs font-semibold text-slate-400 mt-1">Experience</div>
+            <Card className="border-border/50 p-4 text-center">
+              <div className="text-3xl font-bold text-purple-500">3+ Years</div>
+              <div className="text-sm text-muted-foreground">Experience</div>
             </Card>
           </div>
           
           {performanceData && performanceData.length > 0 && (
-            <Card className="border border-white/10 bg-[#0f1222]/80 overflow-hidden text-white">
-              <CardHeader className="bg-white/[0.02] border-b border-white/10">
-                <CardTitle className="text-base font-bold text-white">Recent Performance</CardTitle>
+            <Card className="border-border/50 overflow-hidden">
+              <CardHeader className="bg-muted/30">
+                <CardTitle className="text-lg">Recent Performance</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-border/50">
                   {performanceData.map((item: any) => (
                     <div key={item.id} className="flex items-center justify-between p-4">
                       <div>
-                        <div className="font-semibold text-sm text-white">{new Date(item.date).toLocaleDateString()}</div>
-                        <div className="text-xs text-slate-400">{item.period}</div>
+                        <div className="font-medium">{new Date(item.date).toLocaleDateString()}</div>
+                        <div className="text-sm text-muted-foreground">{item.period}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono font-bold text-emerald-400">+{item.profit_percentage}%</div>
-                        <div className="text-xs text-slate-400">
+                        <div className="font-semibold text-emerald-500">+{item.profit_percentage}%</div>
+                        <div className="text-sm text-muted-foreground">
                           {item.winning_trades}/{item.total_trades} trades
                         </div>
                       </div>
@@ -636,33 +642,33 @@ const AccountManagement = () => {
         </section>
 
         {/* Trust Indicators */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 py-8 border-t border-white/10">
-          <div className="flex items-center gap-3 p-3">
-            <Shield className="h-7 w-7 text-purple-400 shrink-0" />
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 py-8">
+          <div className="flex items-center gap-3 p-4">
+            <Shield className="h-8 w-8 text-primary shrink-0" />
             <div>
-              <div className="font-bold text-xs text-white">Secure Funds</div>
-              <div className="text-[11px] text-slate-400">100% Protected</div>
+              <div className="font-semibold text-sm">Secure Funds</div>
+              <div className="text-xs text-muted-foreground">100% Protected</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3">
-            <Clock className="h-7 w-7 text-purple-400 shrink-0" />
+          <div className="flex items-center gap-3 p-4">
+            <Clock className="h-8 w-8 text-primary shrink-0" />
             <div>
-              <div className="font-bold text-xs text-white">24/7 Support</div>
-              <div className="text-[11px] text-slate-400">Always Available</div>
+              <div className="font-semibold text-sm">24/7 Support</div>
+              <div className="text-xs text-muted-foreground">Always Available</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3">
-            <MessageCircle className="h-7 w-7 text-purple-400 shrink-0" />
+          <div className="flex items-center gap-3 p-4">
+            <MessageCircle className="h-8 w-8 text-primary shrink-0" />
             <div>
-              <div className="font-bold text-xs text-white">WhatsApp Updates</div>
-              <div className="text-[11px] text-slate-400">Daily Reports</div>
+              <div className="font-semibold text-sm">WhatsApp Updates</div>
+              <div className="text-xs text-muted-foreground">Daily Reports</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3">
-            <FileText className="h-7 w-7 text-purple-400 shrink-0" />
+          <div className="flex items-center gap-3 p-4">
+            <FileText className="h-8 w-8 text-primary shrink-0" />
             <div>
-              <div className="font-bold text-xs text-white">Full Transparency</div>
-              <div className="text-[11px] text-slate-400">Verified Results</div>
+              <div className="font-semibold text-sm">Full Transparency</div>
+              <div className="text-xs text-muted-foreground">Verified Results</div>
             </div>
           </div>
         </section>
