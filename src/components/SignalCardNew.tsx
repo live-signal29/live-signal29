@@ -48,22 +48,22 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
     return "💶";
   };
 
-  // ===== EXACT SCREENSHOT COLOR LOGIC =====
-  const getColor = (target: "sl" | "tp1" | "tp2" | "tp3") => {
+  // ===== SIMPLE & STRAIGHT COLOR LOGIC =====
+  const getTargetColor = (target: "sl" | "tp1" | "tp2" | "tp3") => {
     const note = signal.profit_note?.toLowerCase() || "";
 
-    // 1. SL is ALWAYS RED
+    // 1. SL is ALWAYS Red
     if (target === "sl") return "text-rose-500";
 
-    // 2. TP1 is ALWAYS BLUE (Even if hit. Look at screenshot: "Breakeven after TP1" text is BLUE)
+    // 2. TP1 is ALWAYS Blue (even if hit. Matches screenshot)
     if (target === "tp1") return "text-blue-400";
 
-    // 3. TP2: GREEN ONLY if "TP2" is written in the status note
+    // 3. TP2 is Green ONLY IF "TP2" is mentioned. Otherwise Blue.
     if (target === "tp2") {
       return note.includes("tp2") ? "text-emerald-400" : "text-blue-400";
     }
 
-    // 4. TP3: GREEN ONLY if "TP3" is written in the status note
+    // 4. TP3 is Green ONLY IF "TP3" is mentioned. Otherwise Blue.
     if (target === "tp3") {
       return note.includes("tp3") ? "text-emerald-400" : "text-blue-400";
     }
@@ -71,12 +71,12 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
     return "text-blue-400";
   };
 
-  // Banner color logic matching screenshot
-  const getBannerTextColor = () => {
+  // Banner text color
+  const getBannerColor = () => {
     const note = signal.profit_note?.toLowerCase() || "";
-    if (note.includes("sl") || note.includes("sl hit")) return "text-rose-400";
+    if (note.includes("sl")) return "text-rose-400";
     if (note.includes("tp1") || note.includes("breakeven")) return "text-blue-400";
-    return "text-emerald-300"; 
+    return "text-emerald-300";
   };
 
   return (
@@ -104,25 +104,32 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* ===== 2. PRICES ===== */}
+      {/* ===== 2. PRICES (Fixed Layout: Entry -> Current -> Badge) ===== */}
       <div className="flex items-center justify-between rounded-[10px] bg-white/[0.02] border border-white/5 px-2.5 py-2 mb-2">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
+          
+          {/* ENTRY (Left) */}
           <div className="flex flex-col">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Entry</span>
-            <span className="font-mono text-[12px] font-bold text-white">{signal.entry}</span>
+            <span className="font-mono text-[12px] font-bold text-white mt-0.5">{signal.entry}</span>
           </div>
+
           <span className="text-slate-600 text-[8px] mt-1.5">→</span>
+
+          {/* CURRENT (Middle, now SMALLER size as requested) */}
           <div className="flex flex-col">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Current</span>
-            <div className="flex items-center gap-1">
-              <span className={cn("font-mono text-[12px] font-bold", isBuy ? "text-emerald-400" : "text-rose-400")}>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className={cn("font-mono text-[10px] font-bold", isBuy ? "text-emerald-400" : "text-rose-400")}>
                 {currentPriceNum > 0 ? currentPriceNum.toFixed(2) : signal.entry}
               </span>
             </div>
           </div>
         </div>
+
+        {/* BADGES (Right side - where "Current" used to be) */}
         <div className="flex flex-col items-end gap-0.5">
-          <span className={cn("rounded-full px-2 py-[0.5px] text-[7px] font-bold uppercase", isBuy ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")}>
+          <span className={cn("rounded-full px-2.5 py-[0.5px] text-[7px] font-bold uppercase", isBuy ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")}>
             {signal.type.toUpperCase()}
           </span>
           {signal.risk_level && (
@@ -133,40 +140,42 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* ===== 3. TARGETS (MATCHING SCREENSHOT EXACTLY) ===== */}
+      {/* ===== 3. TARGETS (TP Logic 100% Fixed now) ===== */}
       <div className="flex items-center justify-between px-0.5 mb-2">
         <div className="flex items-center gap-3">
           
-          {/* SL - ALWAYS RED */}
+          {/* SL (ALWAYS RED) */}
           <div className="flex flex-col items-start">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Stop Loss</span>
-            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("sl")}`}>{signal.sl}</span>
+            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("sl")}`}>{signal.sl}</span>
           </div>
 
           <div className="h-3 w-[1px] bg-white/10" />
 
-          {/* TP1 - ALWAYS BLUE (Same as screenshot) */}
+          {/* TP1 (ALWAYS BLUE) */}
           <div className="flex flex-col items-start">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Target 1</span>
-            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("tp1")}`}>{signal.tp1}</span>
+            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp1")}`}>{signal.tp1}</span>
           </div>
 
+          {/* TP2 (GREEN ONLY if note says "TP2") */}
           {signal.tp2 && (
             <>
               <div className="h-3 w-[1px] bg-white/10" />
               <div className="flex flex-col items-start">
                 <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Target 2</span>
-                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("tp2")}`}>{signal.tp2}</span>
+                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp2")}`}>{signal.tp2}</span>
               </div>
             </>
           )}
 
+          {/* TP3 (GREEN ONLY if note says "TP3") */}
           {signal.tp3 && (
             <>
               <div className="h-3 w-[1px] bg-white/10" />
               <div className="flex flex-col items-start">
                 <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Target 3</span>
-                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getColor("tp3")}`}>{signal.tp3}</span>
+                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp3")}`}>{signal.tp3}</span>
               </div>
             </>
           )}
@@ -181,7 +190,7 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
           ) : (
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           )}
-          <span className={`text-[10px] font-medium leading-tight ${getBannerTextColor()}`}>
+          <span className={`text-[10px] font-medium leading-tight ${getBannerColor()}`}>
             {signal.profit_note}
           </span>
         </div>
