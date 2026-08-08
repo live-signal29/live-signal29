@@ -34,3 +34,4 @@ export const HeaderSection = () => {
     </div>
   );
 };
+export default Header;
