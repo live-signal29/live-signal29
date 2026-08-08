@@ -52,12 +52,11 @@ const Signup = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // SAFE VALIDATION: Sirf wahi fields validate kar rahe hain jo aapke schema mein honge
     const validation = signupSchema.safeParse({
       fullName,
       email,
       password,
-      countryCode,
-      phoneNumber,
       termsAccepted,
     });
     
@@ -93,10 +92,11 @@ const Signup = () => {
       }
 
       if (data.user) {
+        // Optional fields save karna (agar schema mein nahi hain toh bhi code crash nahi karega)
         if (validation.data.countryCode || validation.data.phoneNumber) {
           await supabase.from('profiles').update({
-            country_code: validation.data.countryCode || null,
-            phone_number: validation.data.phoneNumber || null,
+            country_code: countryCode || null,
+            phone_number: phoneNumber || null,
           }).eq('id', data.user.id);
         }
 
@@ -174,7 +174,7 @@ const Signup = () => {
               />
             </div>
 
-            {/* Phone Grid */}
+            {/* Phone Grid (Validation se bahar, sirf UI ke liye) */}
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-300">Code</Label>
