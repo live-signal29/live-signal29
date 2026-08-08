@@ -1,4 +1,4 @@
-import { Clock, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2, XCircle, Dot } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -42,40 +42,45 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
 
   const pairUpper = signal.pair?.toUpperCase() || "";
 
-  // ===== MAGIC LOGIC: Correct Sequence-based Coloring =====
+  // ===== STATUS LOGIC (Active, Closed, Breakeven) =====
+  const note = signal.profit_note?.toLowerCase() || "";
+  
+  let statusText = "Running";
+  let statusColor = "text-blue-500 dark:text-blue-400"; // Active/Running/Open = BLUE
+
+  if (note.includes("sl") || note.includes("tp")) {
+    statusText = "Closed";
+    statusColor = "text-white"; // Closed = WHITE
+  } else if (note.includes("breakeven")) {
+    statusText = "Breakeven";
+    statusColor = "text-white"; // Breakeven = WHITE
+  }
+
+  // ===== TARGET COLOR LOGIC =====
   const getTargetColor = (targetType: "sl" | "tp1" | "tp2" | "tp3") => {
-    const note = signal.profit_note || "";
-    
-    // Rule 1: SL is ALWAYS Red
     if (targetType === "sl") return "text-rose-500 dark:text-rose-500";
     
-    // Rule 2: Target Sequence Logic
-    if (note.toLowerCase().includes("tp3")) return "text-emerald-500 dark:text-emerald-400";
-    if (note.toLowerCase().includes("tp2")) return "text-emerald-500 dark:text-emerald-400";
+    if (note.includes("tp3")) return "text-emerald-500 dark:text-emerald-400";
+    if (note.includes("tp2")) return "text-emerald-500 dark:text-emerald-400";
     
-    if (note.toLowerCase().includes("tp1") && !note.toLowerCase().includes("tp2") && !note.toLowerCase().includes("tp3")) {
+    if (note.includes("tp1") && !note.includes("tp2") && !note.includes("tp3")) {
         return "text-emerald-500 dark:text-emerald-400";
     }
 
-    // Stop Loss hit: Dark mode me Blue-400, Light mode me Blue-600 (taaki read ho sake)
-    if (note.toLowerCase().includes("sl")) return "text-blue-600 dark:text-blue-400";
-
-    // Default (Not hit yet)
+    if (note.includes("sl")) return "text-blue-600 dark:text-blue-400";
     return "text-blue-600 dark:text-blue-400"; 
   };
 
-  // ===== BANNER TEXT LOGIC (Text color based on text) =====
+  // ===== BANNER COLOR LOGIC =====
   const getBannerColor = () => {
-    const note = signal.profit_note || "";
-    const lowerNote = note.toLowerCase();
-
+    const lowerNote = note;
     if (lowerNote.includes("sl hit") || lowerNote.includes("sl")) return "text-rose-600 dark:text-rose-400";
     if (lowerNote.includes("tp1") || lowerNote.includes("breakeven")) return "text-blue-600 dark:text-blue-400";
     return "text-emerald-600 dark:text-emerald-300"; 
   };
 
   const bannerColorClass = getBannerColor();
-  const isSLHit = signal.profit_note?.toLowerCase().includes("sl");
+  const isSLHit = note.includes("sl");
 
   return (
     <div 
@@ -83,14 +88,26 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
       className="relative mb-2.5 w-full rounded-[14px] bg-card border border-border/50 p-3.5 text-foreground shadow-md hover:border-border transition-all duration-300 cursor-pointer"
     >
       
-      {/* ===== 1. HEADER ===== */}
+      {/* ===== 1. HEADER (With Status PILL ABOVE ICON) ===== */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          {/* Icon Border adjusted for Light Mode */}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[1px] border-yellow-500/40 bg-background/50 text-[14px]">
-            {pairUpper.includes("XAU") ? "🪙" : pairUpper.includes("BTC") ? "₿" : "💶"}
+          
+          {/* LEFT SIDE: STATUS + ICON VERTICAL STACK */}
+          <div className="flex flex-col items-center justify-center gap-[2px] shrink-0 relative -mt-3.5">
+            
+            {/* STATUS BADGE (Fix on top of icon) */}
+            <span className={`text-[7px] font-bold uppercase tracking-wider ${statusColor} leading-none whitespace-nowrap`}>
+              {statusText}
+            </span>
+
+            {/* SMALL ICON */}
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[1px] border-yellow-500/40 bg-background/50 text-[12px]">
+              {pairUpper.includes("XAU") ? "🪙" : pairUpper.includes("BTC") ? "₿" : "💶"}
+            </div>
           </div>
-          <div>
+
+          {/* PAIR NAME & SUBTITLE */}
+          <div className="flex flex-col pt-1">
             <h3 className="text-[12px] font-bold text-foreground leading-tight">
               {signal.pair.replace("/", "")}
             </h3>
@@ -100,7 +117,8 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
           </div>
         </div>
         
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        {/* TIME */}
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground pt-1">
           <Clock className="h-2.5 w-2.5" />
           <span>{getTimeAgo(signal.created_at)}</span>
         </div>
