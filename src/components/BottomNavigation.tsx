@@ -8,7 +8,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const navItems = [
   { icon: TrendingUp, label: "Signals", path: "/" },
@@ -18,7 +18,6 @@ const navItems = [
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
-// Routes where bottom navigation should be hidden
 const hiddenRoutes = [
   "/login",
   "/signup",
@@ -27,40 +26,52 @@ const hiddenRoutes = [
   "/onboarding",
 ];
 
-const BottomNavigation = () => {
+export const BottomNavigation = () => {
   const location = useLocation();
 
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initial mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Automatically hide after 10 seconds
+  // Hide navigation after 10 seconds
   useEffect(() => {
     if (!mounted) return;
 
     setIsVisible(true);
 
-    const timer = setTimeout(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+
+    hideTimerRef.current = setTimeout(() => {
       setIsVisible(false);
     }, 10000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+    };
   }, [location.pathname, mounted]);
 
-  // Open navigation again
-  const openNavigation = useCallback(() => {
+  // Re-open navigation from arrow
+  const openNavigation = () => {
     setIsVisible(true);
 
-    const timer = setTimeout(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+
+    hideTimerRef.current = setTimeout(() => {
       setIsVisible(false);
     }, 10000);
-
-    return () => clearTimeout(timer);
-  }, []);
+  };
 
   const shouldHide = hiddenRoutes.some(
     (route) =>
@@ -79,20 +90,21 @@ const BottomNavigation = () => {
           onClick={openNavigation}
           aria-label="Open navigation"
           className={cn(
-            "fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-2 z-[60]",
+            "fixed bottom-[max(0.7rem,env(safe-area-inset-bottom))] left-2 z-[60]",
             "flex h-7 w-7 items-center justify-center",
             "rounded-full border border-border/60",
             "bg-background/90 backdrop-blur-xl",
             "shadow-[0_4px_18px_-6px_hsl(var(--glow-primary)/0.6)]",
-            "transition-all duration-300 active:scale-90",
-            "text-muted-foreground hover:text-foreground"
+            "text-muted-foreground",
+            "transition-all duration-300",
+            "active:scale-90 hover:text-foreground"
           )}
         >
           <ChevronUp className="h-3.5 w-3.5" />
         </button>
       )}
 
-      {/* Bottom navigation */}
+      {/* Bottom Navigation */}
       <nav
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 md:hidden",
@@ -133,6 +145,7 @@ const BottomNavigation = () => {
                         "active:scale-90"
                       )}
                     >
+                      {/* Icon */}
                       <span
                         className={cn(
                           "icon-3d h-7 w-7",
@@ -151,6 +164,7 @@ const BottomNavigation = () => {
                         />
                       </span>
 
+                      {/* Label */}
                       <span
                         className={cn(
                           "text-[8px] leading-none tracking-tight",
@@ -178,5 +192,6 @@ const BottomNavigation = () => {
     </>
   );
 };
+
 
 export default BottomNavigation;
