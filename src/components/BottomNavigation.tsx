@@ -79,3 +79,6 @@ export const BottomNavigation = () => {
     </nav>
   );
 };
+
+
+export default bottomnavigation ;
