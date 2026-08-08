@@ -1,4 +1,4 @@
-import { Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ interface SignalCardProps {
     entry: string;
     tp1: string;
     tp2?: string;
-    tp3?: string; // Added TP3 Support
+    tp3?: string;
     sl: string;
     risk_level?: string;
     created_at: string;
@@ -42,26 +42,45 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
 
   const pairUpper = signal.pair?.toUpperCase() || "";
 
-  // ===== DYNAMIC COLOR LOGIC =====
+  // ===== 1. DYNAMIC COLOR LOGIC FOR TARGET NUMBERS (SL, TP1, TP2, TP3) =====
   const getTargetColor = (targetType: "sl" | "tp1" | "tp2" | "tp3") => {
     const note = signal.profit_note || "";
     
-    // 1. Rule: If SL is hit in note -> SL Red, ALL TPs Blue
-    if (targetType === "sl" && note.toLowerCase().includes("sl")) return "text-rose-500";
+    // SL is ALWAYS Red, regardless of note (unless you want it dynamic too, but keeping it fixed Red)
+    if (targetType === "sl") return "text-rose-500";
     
-    // 2. Rule: If "TP1" is in note -> TP1 Green, Others Blue (including SL stays blue)
-    if (targetType === "tp1" && note.toLowerCase().includes("tp1")) return "text-emerald-400"; // Green
-    
-    // 3. Rule: If "TP2" is in note -> TP2 Green, Others Blue
-    if (targetType === "tp2" && note.toLowerCase().includes("tp2")) return "text-emerald-400"; // Green
-    
-    // 4. Rule: If "TP3" is in note -> TP3 Green, Others Blue
-    if (targetType === "tp3" && note.toLowerCase().includes("tp3")) return "text-emerald-400"; // Green
+    // If TP1 is mentioned in note -> TP1 Green (Hit), others Blue
+    if (targetType === "tp1" && note.toLowerCase().includes("tp1")) return "text-emerald-400";
+    if (targetType === "tp1") return "text-blue-400"; // Default Blue
 
-    // 5. Default: All TPs Blue, SL Blue
-    if (targetType === "sl") return "text-blue-400"; 
-    return "text-blue-400"; 
+    // If TP2 is mentioned in note -> TP2 Green (Hit), others Blue
+    if (targetType === "tp2" && note.toLowerCase().includes("tp2")) return "text-emerald-400";
+    if (targetType === "tp2") return "text-blue-400"; // Default Blue
+
+    // If TP3 is mentioned in note -> TP3 Green (Hit), others Blue
+    if (targetType === "tp3" && note.toLowerCase().includes("tp3")) return "text-emerald-400";
+    if (targetType === "tp3") return "text-blue-400"; // Default Blue
+
+    return "text-blue-400"; // Fallback Blue
   };
+
+  // ===== 2. DYNAMIC COLOR LOGIC FOR STATUS BANNER TEXT =====
+  const getBannerColor = () => {
+    const note = signal.profit_note || "";
+    const lowerNote = note.toLowerCase();
+
+    // SL hit messages -> RED
+    if (lowerNote.includes("sl hit") || lowerNote.includes("sl")) return "text-rose-400";
+    
+    // TP1 hit or Breakeven after TP1 -> BLUE
+    if (lowerNote.includes("tp1") || lowerNote.includes("breakeven")) return "text-blue-400";
+    
+    // TP2 / TP3 hit -> GREEN
+    return "text-emerald-300";
+  };
+
+  const bannerColorClass = getBannerColor();
+  const isSLHit = signal.profit_note?.toLowerCase().includes("sl");
 
   return (
     <div 
@@ -123,11 +142,11 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* ===== 3. TARGETS (DYNAMIC COLORS: SL RED | ALL TPs DEFAULT BLUE | HIT TP = GREEN) ===== */}
+      {/* ===== 3. TARGETS (Colors based on getTargetColor) ===== */}
       <div className="flex items-center justify-between px-0.5 mb-2">
         <div className="flex items-center gap-3">
           
-          {/* SL - Dynamic */}
+          {/* SL - Always RED */}
           <div className="flex flex-col items-start">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Stop Loss</span>
             <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("sl")}`}>
@@ -137,7 +156,7 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
 
           <div className="h-3 w-[1px] bg-white/10" />
 
-          {/* TP1 - Dynamic */}
+          {/* TP1 - Blue (Default) / Green (If hit) */}
           <div className="flex flex-col items-start">
             <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500">Target 1</span>
             <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp1")}`}>
@@ -145,7 +164,6 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
             </span>
           </div>
 
-          {/* TP2 - Dynamic */}
           {signal.tp2 && (
             <>
               <div className="h-3 w-[1px] bg-white/10" />
@@ -158,7 +176,6 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
             </>
           )}
 
-          {/* TP3 - Dynamic (NEW ADDED) */}
           {signal.tp3 && (
             <>
               <div className="h-3 w-[1px] bg-white/10" />
@@ -173,11 +190,18 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* ===== 4. STATUS BANNER (Dynamic Icon & Text) ===== */}
+      {/* ===== 4. STATUS BANNER (Dynamic Text Color as requested) ===== */}
       {signal.profit_note && (
-        <div className="flex items-center gap-2 rounded-[10px] border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5">
-          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-          <span className="text-[10px] font-medium text-emerald-300 leading-tight">
+        <div className={`flex items-center gap-2 rounded-[10px] border px-3 py-1.5 ${isSLHit ? 'border-rose-500/20 bg-rose-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
+          {/* Dynamic Icon based on SL Hit or not */}
+          {isSLHit ? (
+            <XCircle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+          ) : (
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+          )}
+          
+          {/* Dynamic Text Color */}
+          <span className={`text-[10px] font-medium leading-tight ${bannerColorClass}`}>
             {signal.profit_note}
           </span>
         </div>
