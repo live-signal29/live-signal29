@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -18,10 +19,15 @@ import {
   TrendingUp,
   BarChart3,
   Target,
+  Clock,
+  ShieldCheck,
+  LineChart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
+  const [activeCategory, setActiveCategory] = useState("All");
+
   const { data: signals, isLoading } = useQuery({
     queryKey: ["latest-signals"],
     queryFn: async () => {
@@ -37,6 +43,8 @@ const Index = () => {
     },
   });
 
+  const categories = ["All", "Gold", "Forex", "Crypto", "Indices", "Deriv"];
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -45,8 +53,13 @@ const Index = () => {
     ],
   };
 
+  const filteredSignals = signals?.filter((signal) => {
+    if (activeCategory === "All") return true;
+    return signal.category?.toLowerCase() === activeCategory.toLowerCase();
+  });
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#070914] text-white">
+    <div className="min-h-screen flex flex-col bg-[#05070e] text-white selection:bg-purple-500 selection:text-white">
 
       <SEO
         title="TREND IS FRIEND - Live Trading Signals | Forex, Crypto, Commodities & Indices"
@@ -60,293 +73,169 @@ const Index = () => {
 
       <main className="flex-1">
 
-        {/* HERO */}
-        <section className="relative overflow-hidden px-4 pt-7 pb-5">
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-80 w-80 rounded-full bg-purple-600/10 blur-3xl" />
+        {/* HERO SECTION WITH CANDLESTICK GRAPH BACKDROP */}
+        <section className="relative overflow-hidden px-4 pt-6 pb-4">
+          {/* Subtle Ambient Glows */}
+          <div className="absolute top-0 right-1/4 h-64 w-64 rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
+          <div className="absolute top-10 left-10 h-64 w-64 rounded-full bg-purple-600/10 blur-[120px] pointer-events-none" />
 
           <div className="relative mx-auto max-w-7xl">
 
-            <div className="flex items-center justify-between mb-5">
+            {/* Title & Subtitle */}
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-gray-500">
-                  Professional Trading
-                </p>
-
-                <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-5xl">
-                  Live{" "}
-                  <span className="bg-gradient-to-r from-orange-400 via-yellow-400 to-pink-500 bg-clip-text text-transparent">
-                    Signals
+                <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
+                  LIVE{" "}
+                  <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-300 bg-clip-text text-transparent">
+                    SIGNALS
                   </span>
                 </h1>
 
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
-                  <span className="text-sm text-gray-400">
-                    Real-time trading opportunities
-                  </span>
-                </div>
-              </div>
-
-              <div className="hidden h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] sm:flex">
-                <Activity className="h-7 w-7 text-cyan-400" />
-              </div>
-            </div>
-
-            {/* LIVE MARKET PANEL */}
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#101426] to-[#080b18] p-5 shadow-2xl">
-
-              <div className="absolute right-0 top-0 h-full w-1/2 bg-gradient-to-l from-cyan-500/[0.05] to-transparent" />
-
-              <div className="relative">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-bold text-green-400">
-                    ● LIVE
-                  </span>
-
-                  <span className="text-xs text-gray-500">
-                    Market monitoring
-                  </span>
-                </div>
-
-                <h2 className="mt-4 max-w-xl text-3xl font-black leading-tight sm:text-5xl">
-                  Real-time trading
-                  <br />
-                  <span className="text-gray-400">
-                    opportunities
-                  </span>
-                </h2>
-
-                <p className="mt-3 max-w-md text-sm text-gray-500">
-                  Follow the latest published signals and market setups from
-                  your dashboard.
+                <p className="mt-1 text-xs sm:text-sm font-medium text-slate-400">
+                  Real-time trading opportunities across all markets
                 </p>
+
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                    LIVE
+                  </span>
+                </div>
+              </div>
+
+              {/* Decorative Chart Accent */}
+              <div className="hidden sm:flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-xl">
+                <LineChart className="h-8 w-8 text-amber-400" />
               </div>
             </div>
+
           </div>
         </section>
 
-        {/* CATEGORY BAR */}
-        <section className="px-4 pb-5">
-          <div className="mx-auto max-w-7xl overflow-x-auto">
-            <div className="flex min-w-max gap-3 pb-1">
-
-              <button
-                type="button"
-                className="rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 px-7 py-3 font-bold text-black shadow-lg shadow-purple-500/20"
-              >
-                All
-              </button>
-
-              <button
-                type="button"
-                className="rounded-full border border-white/10 bg-[#111527] px-6 py-3 font-semibold text-gray-300"
-              >
-                Gold
-              </button>
-
-              <button
-                type="button"
-                className="rounded-full border border-white/10 bg-[#111527] px-6 py-3 font-semibold text-gray-300"
-              >
-                Forex
-              </button>
-
-              <button
-                type="button"
-                className="rounded-full border border-white/10 bg-[#111527] px-6 py-3 font-semibold text-gray-300"
-              >
-                Crypto
-              </button>
-
-              <button
-                type="button"
-                className="rounded-full border border-white/10 bg-[#111527] px-6 py-3 font-semibold text-gray-300"
-              >
-                Indices
-              </button>
-
-              <button
-                type="button"
-                className="rounded-full border border-white/10 bg-[#111527] px-6 py-3 font-semibold text-gray-300"
-              >
-                Deriv
-              </button>
-
-            </div>
-          </div>
-        </section>
-
-        {/* REAL DATABASE STATUS */}
+        {/* CATEGORY FILTER PILLS */}
         <section className="px-4 pb-6">
+          <div className="mx-auto max-w-7xl overflow-x-auto no-scrollbar">
+            <div className="flex min-w-max gap-2.5 pb-2">
+              {categories.map((cat) => {
+                const isActive = activeCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    type="button"
+                    className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-all duration-300 ${
+                      isActive
+                        ? "bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25 border border-purple-400/30"
+                        : "border border-white/[0.08] bg-[#0d111d] text-slate-400 hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* STATS OVERVIEW BAR (Image Matching) */}
+        <section className="px-4 pb-8">
           <div className="mx-auto max-w-7xl">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-
-              <div className="rounded-3xl border border-white/10 bg-[#101426] p-5">
-                <Activity className="mb-3 h-6 w-6 text-green-400" />
-
-                <p className="text-2xl font-black">
-                  {isLoading ? "..." : signals?.length ?? 0}
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  Published signals loaded
-                </p>
+              {/* Win Rate */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 rounded-2xl border border-white/[0.08] bg-[#0c0f18]/80 p-3.5 sm:p-5 backdrop-blur-md">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Target className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-lg sm:text-2xl font-black text-white">85%+</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-400">Win Rate</p>
+                </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-[#101426] p-5">
-                <Zap className="mb-3 h-6 w-6 text-cyan-400" />
-
-                <p className="text-lg font-black">
-                  Live Data
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  From your existing signal database
-                </p>
+              {/* Signals Count */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 rounded-2xl border border-white/[0.08] bg-[#0c0f18]/80 p-3.5 sm:p-5 backdrop-blur-md">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-lg sm:text-2xl font-black text-white">500+</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-400">Signals/Month</p>
+                </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-[#101426] p-5">
-                <Target className="mb-3 h-6 w-6 text-purple-400" />
-
-                <p className="text-lg font-black">
-                  Published
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  Only published signals are displayed
-                </p>
+              {/* Live Updates */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 rounded-2xl border border-white/[0.08] bg-[#0c0f18]/80 p-3.5 sm:p-5 backdrop-blur-md">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-lg sm:text-2xl font-black text-white">24/7</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-400">Live Updates</p>
+                </div>
               </div>
 
             </div>
           </div>
         </section>
 
-        {/* SIGNALS */}
-        <section className="px-4 pb-9">
+        {/* SIGNALS CARDS SECTION */}
+        <section className="px-4 pb-10">
           <div className="mx-auto max-w-7xl">
 
-            <div className="mb-5 flex items-end justify-between">
-
+            {/* Header Title */}
+            <div className="mb-5 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
-
-                  <h2 className="text-2xl font-black">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                  <h2 className="text-lg sm:text-xl font-extrabold tracking-wide text-white uppercase">
                     Live Signals
                   </h2>
                 </div>
-
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-0.5 text-xs text-slate-400">
                   Latest published trading opportunities
                 </p>
               </div>
 
               <Link
                 to="/signals"
-                className="flex items-center gap-1 text-sm font-bold text-purple-400"
+                className="flex items-center gap-1 text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors"
               >
                 View All
                 <ChevronRight className="h-4 w-4" />
               </Link>
-
             </div>
 
+            {/* Signals Content */}
             {isLoading ? (
-
               <div className="flex items-center justify-center py-20">
-                <div className="rounded-3xl border border-white/10 bg-[#101426] p-8 text-center">
-
-                  <Loader2 className="mx-auto h-9 w-9 animate-spin text-cyan-400" />
-
-                  <p className="mt-4 text-sm text-gray-400">
-                    Loading signals...
-                  </p>
-
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0c0f18] p-8 text-center">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-purple-400" />
+                  <p className="mt-3 text-xs text-slate-400">Loading live signals...</p>
                 </div>
               </div>
-
-            ) : signals && signals.length > 0 ? (
-
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-
-                {signals.map((signal) => (
-                  <div
-                    key={signal.id}
-                    className="overflow-hidden rounded-3xl border border-white/10 bg-[#101426] shadow-xl shadow-black/30 transition-all duration-300 hover:-translate-y-1 hover:border-purple-500/30"
-                  >
-                    <SignalCard signal={signal as any} />
-                  </div>
+            ) : filteredSignals && filteredSignals.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filteredSignals.map((signal) => (
+                  <SignalCard key={signal.id} signal={signal as any} />
                 ))}
-
               </div>
-
             ) : (
-
-              <div className="rounded-3xl border border-white/10 bg-[#101426] px-6 py-16 text-center">
-
-                <BarChart3 className="mx-auto h-10 w-10 text-gray-600" />
-
-                <h3 className="mt-4 text-lg font-bold">
-                  No published signals
-                </h3>
-
-                <p className="mt-2 text-sm text-gray-500">
-                  There are currently no published signals available.
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0c0f18] px-6 py-14 text-center">
+                <BarChart3 className="mx-auto h-10 w-10 text-slate-600" />
+                <h3 className="mt-3 text-base font-bold text-white">No signals found</h3>
+                <p className="mt-1 text-xs text-slate-400">
+                  There are currently no signals available for "{activeCategory}".
                 </p>
-
               </div>
-
             )}
 
+            {/* Affiliate Banner */}
             {signals && signals.length > 0 && (
-              <div className="mt-6">
+              <div className="mt-8">
                 <ExnessAffiliateBanner />
               </div>
             )}
-
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section className="px-4 pb-10">
-          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 sm:grid-cols-3">
-
-            <div className="rounded-3xl border border-white/10 bg-[#101426] p-5">
-              <TrendingUp className="mb-4 h-6 w-6 text-green-400" />
-
-              <h3 className="font-bold">
-                Live Opportunities
-              </h3>
-
-              <p className="mt-2 text-sm text-gray-500">
-                View currently published trading setups.
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-[#101426] p-5">
-              <BarChart3 className="mb-4 h-6 w-6 text-cyan-400" />
-
-              <h3 className="font-bold">
-                Market Analysis
-              </h3>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Follow the analysis attached to your signals.
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-[#101426] p-5">
-              <Target className="mb-4 h-6 w-6 text-purple-400" />
-
-              <h3 className="font-bold">
-                Clear Setups
-              </h3>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Entry, targets and risk information remain inside each signal.
-              </p>
-            </div>
 
           </div>
         </section>
