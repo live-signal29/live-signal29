@@ -1,32 +1,104 @@
-export const LiveSignalBanner = () => {
-  return (
-    <div className="relative mx-4 mt-2 overflow-hidden rounded-[20px] border border-white/5 bg-[#0e101c] p-5 shadow-xl">
-      
-      {/* Left: Text Content */}
-      <div className="relative z-10 flex flex-col gap-2 max-w-[55%]">
-        <h2 className="text-[28px] font-black leading-tight tracking-tight">
-          <span className="text-white">LIVE </span>
-          <span className="text-yellow-500">SIGNALS</span>
-        </h2>
-        <p className="text-[13px] text-slate-300 leading-snug">
-          Real-time trading opportunities across all markets
-        </p>
-        <div className="mt-1 flex w-fit items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-1 border border-emerald-500/20">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Live</span>
-        </div>
-      </div>
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AlertTriangle, Megaphone } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-      {/* Right: Chart Image (Replace src with your chart image) */}
-      <div className="absolute right-0 top-0 h-full w-[55%]">
-        <img 
-          src="/path-to-your-chart-image.png" 
-          alt="Live Chart" 
-          className="h-full w-full object-cover object-right opacity-80"
-        />
-        {/* Dark gradient fade so text is readable over the chart */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0e101c] via-[#0e101c]/50 to-transparent" />
+interface Headline {
+  id: string;
+  text: string;
+  headline_type: "normal" | "high_alert";
+  is_active: boolean;
+  created_at: string;
+}
+
+// Function to render headline text with first word in red
+const renderHeadlineText = (text: string, isHighAlert: boolean) => {
+  const words = text.split(" ");
+  if (words.length === 0) return null;
+  
+  const firstWord = words[0];
+  const restOfText = words.slice(1).join(" ");
+  
+  return (
+    <span className={cn("text-sm", isHighAlert && "font-semibold")}>
+      <span className="text-destructive font-bold">{firstWord}</span>
+      {restOfText && <span className="text-foreground/80"> {restOfText}</span>}
+    </span>
+  );
+};
+
+const HeadlineTicker = () => {
+  const { data: headline, refetch } = useQuery({
+    queryKey: ["active-headline"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("headlines")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      return data as Headline | null;
+    },
+    staleTime: 30000,
+  });
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    const channel = supabase
+      .channel("headlines-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "headlines",
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  if (!headline) return null;
+
+  const isHighAlert = headline.headline_type === "high_alert";
+
+  const HeadlineContent = () => (
+    <div className="flex items-center gap-3 whitespace-nowrap px-6">
+      {isHighAlert ? (
+        <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 animate-pulse" />
+      ) : (
+        <Megaphone className="h-4 w-4 text-primary flex-shrink-0" />
+      )}
+      {renderHeadlineText(headline.text, isHighAlert)}
+    </div>
+  );
+
+  return (
+    <div
+      className={cn(
+        "w-full overflow-hidden py-2.5",
+        isHighAlert
+          ? "bg-destructive/5 dark:bg-destructive/10 border-y border-destructive/20"
+          : "bg-muted/50 dark:bg-muted/30 border-y border-border/50"
+      )}
+    >
+      <div className="flex items-center animate-ticker">
+        <HeadlineContent />
+        <HeadlineContent />
+        <HeadlineContent />
       </div>
     </div>
   );
 };
+
+export default HeadlineTicker;
