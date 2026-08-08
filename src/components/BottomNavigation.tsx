@@ -11,7 +11,6 @@ const navItems = [
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
-// Routes where bottom navigation should be hidden
 const hiddenRoutes = [
   "/login",
   "/signup",
@@ -23,22 +22,22 @@ const hiddenRoutes = [
 export const BottomNavigation = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const shouldHide = hiddenRoutes.some(route =>
     location.pathname === route || location.pathname.startsWith("/admin")
   );
 
-  // ===== AUTO HIDE LOGIC (15 Seconds) =====
-  const resetTimer = () => {
-    // Pehle purane timer ko saaf karo
+  // Safest way to schedule auto-hide
+  const scheduleAutoHide = () => {
+    // Clear any existing timer first
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
     
+    // Only set timer if menu is open
     if (isOpen) {
-      // Timer set karo
       timerRef.current = setTimeout(() => {
         setIsOpen(false);
         timerRef.current = null;
@@ -46,29 +45,10 @@ export const BottomNavigation = () => {
     }
   };
 
-  const handleToggle = () => {
-    // Toggle logic
-    setIsOpen(!isOpen);
-    
-    // Agar open kar rahe ho, timer shuru karo
-    if (!isOpen) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setIsOpen(false);
-        timerRef.current = null;
-      }, 15000);
-    } else {
-      // Agar close kar rahe ho, timer band karo
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-  };
-
-  // Reset timer whenever the menu stays open due to interaction
+  // When isOpen changes, handle the timer
   useEffect(() => {
-    resetTimer();
+    scheduleAutoHide();
+    // Cleanup on unmount or when isOpen changes
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -77,12 +57,25 @@ export const BottomNavigation = () => {
     };
   }, [isOpen]);
 
+  const handleToggle = () => {
+    // Just toggle the state. The useEffect above will handle the timer logic automatically!
+    setIsOpen(!isOpen);
+  };
+
+  const handleNavClick = () => {
+    setIsOpen(false);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
   if (shouldHide) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center pb-2 pointer-events-none">
       
-      {/* ===== TOGGLE BUTTON (Center, floating above) ===== */}
+      {/* ===== TOGGLE BUTTON ===== */}
       <button
         onClick={handleToggle}
         className={cn(
@@ -114,13 +107,7 @@ export const BottomNavigation = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={() => {
-                    setIsOpen(false);
-                    if (timerRef.current) {
-                      clearTimeout(timerRef.current);
-                      timerRef.current = null;
-                    }
-                  }}
+                  onClick={handleNavClick}
                   className="relative flex flex-col items-center gap-0.5 px-2 py-1"
                 >
                   <span className={cn(
