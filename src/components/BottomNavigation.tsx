@@ -41,10 +41,8 @@ export const BottomNavigation = () => {
       mounted ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
     )}>
       <div className="glow-border rounded-[22px]">
-        {/* CARD SIZE CHHOTA (max-w, px, py) */}
-        <div className="mx-auto max-w-[300px] rounded-[22px] border border-border/60 bg-background/85 backdrop-blur-2xl shadow-[0_-6px_28px_-12px_hsl(var(--glow-primary)/0.5)] px-1 py-1">
-          
-          <div className="flex items-center justify-around gap-0.5">
+        <div className="rounded-[22px] border border-border/60 bg-background/85 backdrop-blur-2xl shadow-[0_-6px_28px_-12px_hsl(var(--glow-primary)/0.5)]">
+          <div className="flex items-center justify-around px-1.5 py-1.5">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path ||
                 (item.path === "/" && (location.pathname === "/signals" || location.pathname.includes("signals")));
@@ -53,21 +51,21 @@ export const BottomNavigation = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className="relative flex flex-col items-center gap-[2px] px-1.5 py-1"
+                  className="relative flex flex-col items-center gap-1 px-2.5 py-0.5"
                 >
                   <span className={cn(
-                    "icon-3d flex h-7 w-7 items-center justify-center",
+                    "icon-3d h-9 w-9",
                     isActive && "icon-3d-active animate-glow-breathe"
                   )}>
                     <item.icon className={cn(
-                      "h-[14px] w-[14px] relative z-[1]",
+                      "h-[18px] w-[18px] relative z-[1]",
                       isActive
                         ? "text-primary-foreground stroke-[2.4]"
                         : "text-muted-foreground stroke-[2]"
                     )} />
                   </span>
                   <span className={cn(
-                    "text-[8px] leading-none tracking-tight",
+                    "text-[9px] leading-none tracking-tight",
                     isActive ? "font-bold text-primary" : "font-medium text-muted-foreground"
                   )}>
                     {item.label}
@@ -76,7 +74,6 @@ export const BottomNavigation = () => {
               );
             })}
           </div>
-          
         </div>
       </div>
     </nav>
