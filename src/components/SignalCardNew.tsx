@@ -18,14 +18,19 @@ interface SignalCardProps {
     category?: string;
     current_price?: string;
     profit_note?: string;
+    signal_status?: string;
   };
   livePrice?: number;
 }
 
 const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
   const navigate = useNavigate();
+
   const isBuy = signal.type?.toLowerCase() === "buy";
-  const currentPriceNum = livePrice || (signal.current_price ? parseFloat(signal.current_price) : 0);
+
+  const currentPriceNum =
+    livePrice ||
+    (signal.current_price ? parseFloat(signal.current_price) : 0);
 
   const getTimeAgo = (dateStr: string) => {
     try {
@@ -41,138 +46,303 @@ const SignalCardNew = ({ signal, livePrice }: SignalCardProps) => {
   };
 
   const pairUpper = signal.pair?.toUpperCase() || "";
-  const note = signal.profit_note || ""; // REMOVED toLowerCase() to fix detection
+  const note = signal.profit_note || "";
 
-  // ===== STATUS LOGIC =====
-  let statusText = "Running";
-  let statusColor = "text-blue-500 dark:text-blue-400"; 
+  // ===== ACTUAL SIGNAL STATUS =====
+  const getSignalStatus = () => {
+    const status = signal.signal_status?.toUpperCase();
 
-  if (note.includes("SL") || note.includes("TP") || note.includes("Breakeven")) {
-    statusText = "Closed";
-    statusColor = "text-white"; 
-  }
+    if (status === "CLOSE" || status === "CLOSED") return "CLOSED";
+    if (status === "OPEN") return "OPEN";
+    if (status === "ACTIVE") return "ACTIVE";
+    if (status === "RUNNING") return "RUNNING";
 
-  // ===== TARGET COLOR LOGIC (Case sensitive fix) =====
-  const getTargetColor = (targetType: "sl" | "tp1" | "tp2" | "tp3") => {
-    if (targetType === "sl") return "text-rose-500 dark:text-rose-500";
-    if (note.includes("TP3")) return "text-emerald-500 dark:text-emerald-400";
-    if (note.includes("TP2")) return "text-emerald-500 dark:text-emerald-400";
-    if (note.includes("TP1") && !note.includes("TP2") && !note.includes("TP3")) {
-        return "text-emerald-500 dark:text-emerald-400";
+    if (note.includes("SL") || note.includes("TP") || note.includes("Breakeven")) {
+      return "CLOSED";
     }
-    if (note.includes("SL")) return "text-blue-600 dark:text-blue-400";
-    return "text-blue-600 dark:text-blue-400"; 
+
+    return "RUNNING";
+  };
+
+  const statusText = getSignalStatus();
+
+  const getStatusColor = () => {
+    switch (statusText) {
+      case "CLOSED":
+        return "text-rose-500 dark:text-rose-400";
+      case "OPEN":
+        return "text-emerald-500 dark:text-emerald-400";
+      case "ACTIVE":
+        return "text-blue-500 dark:text-blue-400";
+      default:
+        return "text-blue-500 dark:text-blue-400";
+    }
+  };
+
+  // ===== TARGET COLOR LOGIC =====
+  const getTargetColor = (
+    targetType: "sl" | "tp1" | "tp2" | "tp3"
+  ) => {
+    if (targetType === "sl")
+      return "text-rose-500 dark:text-rose-500";
+
+    if (note.includes("TP3"))
+      return "text-emerald-500 dark:text-emerald-400";
+
+    if (note.includes("TP2"))
+      return "text-emerald-500 dark:text-emerald-400";
+
+    if (
+      note.includes("TP1") &&
+      !note.includes("TP2") &&
+      !note.includes("TP3")
+    ) {
+      return "text-emerald-500 dark:text-emerald-400";
+    }
+
+    if (note.includes("SL"))
+      return "text-blue-600 dark:text-blue-400";
+
+    return "text-blue-600 dark:text-blue-400";
   };
 
   // ===== BANNER COLOR LOGIC =====
   const getBannerColor = () => {
-    if (note.includes("SL")) return "text-rose-600 dark:text-rose-400";
-    if (note.includes("TP1") || note.includes("Breakeven")) return "text-blue-600 dark:text-blue-400";
-    return "text-emerald-600 dark:text-emerald-300"; 
+    if (note.includes("SL"))
+      return "text-rose-600 dark:text-rose-400";
+
+    if (note.includes("TP1") || note.includes("Breakeven"))
+      return "text-blue-600 dark:text-blue-400";
+
+    return "text-emerald-600 dark:text-emerald-300";
   };
 
   const bannerColorClass = getBannerColor();
   const isSLHit = note.includes("SL");
 
   return (
-    <div 
+    <div
       onClick={() => navigate(`/signal/${signal.id}`)}
-      className="relative mb-2.5 w-full rounded-[14px] bg-card border border-border/50 p-3.5 text-foreground shadow-md hover:border-border transition-all duration-300 cursor-pointer"
+      className="relative mb-2 w-full rounded-[12px] bg-card border border-border/50 p-2.5 text-foreground shadow-sm hover:border-border transition-all duration-300 cursor-pointer"
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-center justify-center gap-[2px] shrink-0 relative -mt-3.5">
-            <span className={`text-[7px] font-bold uppercase tracking-wider ${statusColor} leading-none whitespace-nowrap`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-1.5">
+
+        {/* Pair + tiny status */}
+        <div className="flex items-center gap-1.5">
+
+          <div className="flex flex-col items-center justify-center shrink-0">
+            {/* Tiny status above icon */}
+            <span
+              className={cn(
+                "text-[5.5px] font-bold uppercase tracking-[0.04em] leading-none mb-[2px]",
+                getStatusColor()
+              )}
+            >
               {statusText}
             </span>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[1px] border-yellow-500/40 bg-background/50 text-[12px]">
-              {pairUpper.includes("XAU") ? "🪙" : pairUpper.includes("BTC") ? "₿" : "💶"}
+
+            {/* Icon */}
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-yellow-500/40 bg-background/50 text-[10px]">
+              {pairUpper.includes("XAU")
+                ? "🪙"
+                : pairUpper.includes("BTC")
+                ? "₿"
+                : "💶"}
             </div>
           </div>
-          <div className="flex flex-col pt-1">
-            <h3 className="text-[12px] font-bold text-foreground leading-tight">{signal.pair.replace("/", "")}</h3>
-            <p className="text-[9px] text-muted-foreground leading-tight">
-              {pairUpper.includes("XAU") ? "Gold" : pairUpper.includes("BTC") ? "Bitcoin" : "Forex"}
+
+          <div className="flex flex-col pt-0.5">
+            <h3 className="text-[10.5px] font-bold text-foreground leading-tight">
+              {signal.pair.replace("/", "")}
+            </h3>
+
+            <p className="text-[8px] text-muted-foreground leading-tight">
+              {pairUpper.includes("XAU")
+                ? "Gold"
+                : pairUpper.includes("BTC")
+                ? "Bitcoin"
+                : "Forex"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground pt-1">
+
+        {/* Time */}
+        <div className="flex items-center gap-1 text-[8.5px] text-muted-foreground pt-0.5">
           <Clock className="h-2.5 w-2.5" />
           <span>{getTimeAgo(signal.created_at)}</span>
         </div>
       </div>
 
       {/* Prices */}
-      <div className="flex items-center justify-between rounded-[10px] bg-muted/30 border border-border/50 px-2.5 py-2 mb-2">
-        <div className="flex items-center gap-2.5">
-          <div className="flex flex-col">
-            <span className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground/70">Entry</span>
-            <span className="font-mono text-[12px] font-bold text-foreground">{signal.entry}</span>
-          </div>
-          <span className="text-muted-foreground/50 text-[8px] mt-1.5">→</span>
-          <div className="flex flex-col">
-            <span className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground/70">Current</span>
-            <div className="flex items-center gap-1">
-              <span className={cn("font-mono text-[12px] font-bold", isBuy ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400")}>
-                {currentPriceNum > 0 ? currentPriceNum.toFixed(2) : signal.entry}
-              </span>
-            </div>
-          </div>
+      <div className="flex items-center justify-between rounded-[9px] bg-muted/30 border border-border/50 px-2 py-1.5 mb-1.5">
+
+        {/* Entry */}
+        <div className="flex flex-col">
+          <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            Entry
+          </span>
+
+          <span className="font-mono text-[10.5px] font-bold text-foreground">
+            {signal.entry}
+          </span>
         </div>
+
+        {/* Current — slightly centered */}
+        <div className="flex flex-col items-center mx-auto">
+          <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            Current
+          </span>
+
+          <span
+            className={cn(
+              "font-mono text-[11px] font-bold",
+              isBuy
+                ? "text-emerald-500 dark:text-emerald-400"
+                : "text-rose-500 dark:text-rose-400"
+            )}
+          >
+            {currentPriceNum > 0
+              ? currentPriceNum.toFixed(2)
+              : signal.entry}
+          </span>
+        </div>
+
+        {/* Type + Risk */}
         <div className="flex flex-col items-end gap-0.5">
-          <span className={cn("rounded-full px-2 py-[0.5px] text-[7px] font-bold uppercase", isBuy ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300" : "bg-rose-500/20 text-rose-600 dark:text-rose-300")}>
+          <span
+            className={cn(
+              "rounded-full px-1.5 py-[0.5px] text-[6.5px] font-bold uppercase",
+              isBuy
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300"
+                : "bg-rose-500/20 text-rose-600 dark:text-rose-300"
+            )}
+          >
             {signal.type.toUpperCase()}
           </span>
+
           {signal.risk_level && (
-            <span className={cn("flex items-center gap-0.5 text-[7px] font-medium", signal.risk_level === "High" ? "text-rose-500 dark:text-rose-400" : signal.risk_level === "Medium" ? "text-amber-500 dark:text-amber-400" : "text-emerald-500 dark:text-emerald-400")}>
-              <AlertCircle className="h-2 w-2" /> {signal.risk_level}
+            <span
+              className={cn(
+                "flex items-center gap-0.5 text-[6.5px] font-medium",
+                signal.risk_level === "High"
+                  ? "text-rose-500 dark:text-rose-400"
+                  : signal.risk_level === "Medium"
+                  ? "text-amber-500 dark:text-amber-400"
+                  : "text-emerald-500 dark:text-emerald-400"
+              )}
+            >
+              <AlertCircle className="h-2 w-2" />
+              {signal.risk_level}
             </span>
           )}
         </div>
       </div>
 
       {/* Targets */}
-      <div className="flex items-center justify-between px-0.5 mb-2">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-0.5 mb-1.5">
+        <div className="flex items-center gap-2.5">
+
+          {/* SL */}
           <div className="flex flex-col items-start">
-            <span className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground/70">Stop Loss</span>
-            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("sl")}`}>{signal.sl}</span>
+            <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              Stop Loss
+            </span>
+
+            <span
+              className={`font-mono text-[10px] font-bold mt-0.5 ${getTargetColor(
+                "sl"
+              )}`}
+            >
+              {signal.sl}
+            </span>
           </div>
+
           <div className="h-3 w-[1px] bg-border/50" />
+
+          {/* TP1 */}
           <div className="flex flex-col items-start">
-            <span className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground/70">Target 1</span>
-            <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp1")}`}>{signal.tp1}</span>
+            <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              Target 1
+            </span>
+
+            <span
+              className={`font-mono text-[10px] font-bold mt-0.5 ${getTargetColor(
+                "tp1"
+              )}`}
+            >
+              {signal.tp1}
+            </span>
           </div>
+
+          {/* TP2 */}
           {signal.tp2 && (
             <>
               <div className="h-3 w-[1px] bg-border/50" />
+
               <div className="flex flex-col items-start">
-                <span className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground/70">Target 2</span>
-                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp2")}`}>{signal.tp2}</span>
+                <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                  Target 2
+                </span>
+
+                <span
+                  className={`font-mono text-[10px] font-bold mt-0.5 ${getTargetColor(
+                    "tp2"
+                  )}`}
+                >
+                  {signal.tp2}
+                </span>
               </div>
             </>
           )}
+
+          {/* TP3 */}
           {signal.tp3 && (
             <>
               <div className="h-3 w-[1px] bg-border/50" />
+
               <div className="flex flex-col items-start">
-                <span className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground/70">Target 3</span>
-                <span className={`font-mono text-[11px] font-bold mt-0.5 ${getTargetColor("tp3")}`}>{signal.tp3}</span>
+                <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                  Target 3
+                </span>
+
+                <span
+                  className={`font-mono text-[10px] font-bold mt-0.5 ${getTargetColor(
+                    "tp3"
+                  )}`}
+                >
+                  {signal.tp3}
+                </span>
               </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Status Banner */}
+      {/* Existing profit/status note — unchanged */}
       {signal.profit_note && (
-        <div className={`flex items-center gap-2 rounded-[10px] border px-3 py-1.5 ${isSLHit ? 'border-rose-500/30 bg-rose-500/10' : 'border-emerald-500/30 bg-emerald-500/10'}`}>
-          {isSLHit ? (
-            <XCircle className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400 shrink-0" />
-          ) : (
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
+        <div
+          className={cn(
+            "flex items-center gap-1.5 rounded-[8px] border px-2.5 py-1",
+            isSLHit
+              ? "border-rose-500/30 bg-rose-500/10"
+              : "border-emerald-500/30 bg-emerald-500/10"
           )}
-          <span className={`text-[10px] font-medium leading-tight ${bannerColorClass}`}>{signal.profit_note}</span>
+        >
+          {isSLHit ? (
+            <XCircle className="h-3 w-3 text-rose-500 dark:text-rose-400 shrink-0" />
+          ) : (
+            <CheckCircle2 className="h-3 w-3 text-emerald-500 dark:text-emerald-400 shrink-0" />
+          )}
+
+          <span
+            className={cn(
+              "text-[9px] font-medium leading-tight",
+              bannerColorClass
+            )}
+          >
+            {signal.profit_note}
+          </span>
         </div>
       )}
     </div>
