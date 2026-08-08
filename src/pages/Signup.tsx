@@ -3,6 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { signupSchema } from "@/lib/validations";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  User,
+  Mail,
+  Phone,
+  Lock,
+  Gift,
+  UserPlus,
+  ArrowRight,
+} from "lucide-react";
 
 const Signup = () => {
   const [fullName, setFullName] = useState("");
@@ -12,24 +24,24 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
-  
+
   const searchParams = new URLSearchParams(window.location.search);
-  const returnUrl = searchParams.get('returnUrl') || '/onboarding';
-  const refCode = searchParams.get('ref') || '';
+  const returnUrl = searchParams.get("returnUrl") || "/onboarding";
+  const refCode = searchParams.get("ref") || "";
   const [referralCode, setReferralCode] = useState(refCode);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // ✅ FIX: Sirf 4 fields validate hongi (Phone/Code ko validation se hata diya)
+
     const validation = signupSchema.safeParse({
       fullName,
       email,
       password,
       termsAccepted,
     });
-    
+
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
       return;
@@ -46,34 +58,54 @@ const Signup = () => {
           data: {
             full_name: validation.data.fullName,
             terms_accepted: validation.data.termsAccepted,
-            referred_by_code: referralCode ? referralCode.trim().toUpperCase() : undefined,
-          }
-        }
+            referred_by_code: referralCode
+              ? referralCode.trim().toUpperCase()
+              : undefined,
+          },
+        },
       });
 
       if (error) {
         const msg = (error.message || "").toLowerCase();
-        if (msg.includes("already registered") || msg.includes("user already")) {
-          toast.error("This email is already registered. Please sign in instead.");
+
+        if (
+          msg.includes("already registered") ||
+          msg.includes("user already")
+        ) {
+          toast.error(
+            "This email is already registered. Please sign in instead."
+          );
         } else {
           toast.error(error.message || "Signup failed. Please try again.");
         }
+
         return;
       }
 
       if (data.user) {
         if (countryCode || phoneNumber) {
-          await supabase.from('profiles').update({
-            country_code: countryCode || null,
-            phone_number: phoneNumber || null,
-          }).eq('id', data.user.id);
+          await supabase
+            .from("profiles")
+            .update({
+              country_code: countryCode || null,
+              phone_number: phoneNumber || null,
+            })
+            .eq("id", data.user.id);
         }
+
         if (data.session) {
           toast.success("Account created! Welcome aboard 🎉");
           navigate(returnUrl);
         } else {
           toast.success("Account created! Please confirm your email.");
-          navigate(`/login${returnUrl !== '/onboarding' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
+
+          navigate(
+            `/login${
+              returnUrl !== "/onboarding"
+                ? `?returnUrl=${encodeURIComponent(returnUrl)}`
+                : ""
+            }`
+          );
         }
       }
     } catch (error: any) {
@@ -84,126 +116,195 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-gray-950">
-      <div className="w-full max-w-md mx-auto">
-        
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-cyan-500 mb-2">
-            Create Account
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Join VIP Gold Signals today
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-6 relative overflow-hidden bg-background">
 
-        <form onSubmit={handleSignup} className="space-y-4">
-          
-          {/* Full Name */}
-          <div>
-            <Input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="John Doe"
-              required
-              className="h-12 bg-gray-50 border-gray-200 rounded-xl text-base"
-            />
+      {/* Soft background glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-32 -left-32 h-72 w-72 rounded-full bg-primary/10 blur-[90px]" />
+        <div className="absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-accent/10 blur-[90px]" />
+      </div>
+
+      {/* Signup Card */}
+      <div className="relative z-10 w-full max-w-[400px]">
+
+        <div className="overflow-hidden rounded-[26px] border border-border/60 bg-card/90 shadow-2xl backdrop-blur-xl">
+
+          {/* Top accent */}
+          <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-primary" />
+
+          {/* Header */}
+          <div className="px-7 pt-6 pb-3 text-center">
+
+            <div className="mx-auto mb-3 relative w-fit">
+              <div className="absolute inset-0 rounded-2xl bg-primary/25 blur-lg" />
+
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+                <UserPlus className="h-5.5 w-5.5 text-primary" />
+              </div>
+            </div>
+
+            <h1 className="text-[24px] font-bold tracking-tight">
+              Create Account
+            </h1>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              Join VIP Gold Signals today
+            </p>
           </div>
 
-          {/* Email */}
-          <div>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              required
-              className="h-12 bg-gray-50 border-gray-200 rounded-xl text-base"
-            />
-          </div>
+          {/* Form */}
+          <form
+            onSubmit={handleSignup}
+            className="space-y-3.5 px-7 pb-6 pt-4"
+          >
 
-          {/* Phone Grid */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-1">
+            {/* Full Name */}
+            <div className="relative">
+              <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
               <Input
-                value={countryCode}
-                onChange={(e) => setCountryCode(e.target.value)}
-                placeholder="+1"
-                className="h-12 bg-gray-50 border-gray-200 rounded-xl text-base"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Full name"
+                required
+                className="h-10.5 rounded-xl border-border/70 bg-background/50 pl-10 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
               />
             </div>
-            <div className="col-span-2">
+
+            {/* Email */}
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                required
+                className="h-10.5 rounded-xl border-border/70 bg-background/50 pl-10 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
+
+            {/* Phone */}
+            <div className="flex gap-2.5">
+              <div className="relative w-[92px] shrink-0">
+                <Phone className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  placeholder="+1"
+                  className="h-10.5 rounded-xl border-border/70 bg-background/50 pl-8 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+
               <Input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="1234567890"
-                className="h-12 bg-gray-50 border-gray-200 rounded-xl text-base"
+                placeholder="Phone number"
+                className="h-10.5 rounded-xl border-border/70 bg-background/50 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
               />
             </div>
-          </div>
 
-          {/* Password */}
-          <div>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="h-12 bg-gray-50 border-gray-200 rounded-xl text-base"
-            />
-          </div>
+            {/* Password */}
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
-          {/* Referral */}
-          <div className="text-center">
-            <p className="text-xs text-gray-500 mb-1">(optional, +3 free days for friend)</p>
-            <Input
-              value={referralCode}
-              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-              placeholder="ABC12345"
-              maxLength={12}
-              className="h-12 bg-gray-50 border-gray-200 rounded-xl text-base uppercase tracking-wider font-mono"
-            />
-          </div>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create password"
+                required
+                className="h-10.5 rounded-xl border-border/70 bg-background/50 pl-10 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
 
-          {/* Terms */}
-          <div className="flex items-start space-x-3 pt-2">
-            <Checkbox
-              id="terms"
-              checked={termsAccepted}
-              onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-              className="mt-1 border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-            />
-            <label htmlFor="terms" className="text-sm text-gray-700 leading-relaxed">
-              I agree to the{" "}
-              <a href="/terms" className="text-blue-600 hover:underline font-medium">
-                Terms & Conditions
-              </a>{" "}
-              and{" "}
-              <a href="/privacy" className="text-blue-600 hover:underline font-medium">
-                Privacy Policy
+            {/* Referral */}
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-2.5">
+              <div className="mb-1.5 flex items-center gap-2">
+                <Gift className="h-3.5 w-3.5 text-primary" />
+
+                <span className="text-[11px] font-medium text-foreground/80">
+                  Referral code
+                </span>
+
+                <span className="text-[10px] text-muted-foreground">
+                  Optional · +3 free days
+                </span>
+              </div>
+
+              <Input
+                value={referralCode}
+                onChange={(e) =>
+                  setReferralCode(e.target.value.toUpperCase())
+                }
+                placeholder="ABC12345"
+                maxLength={12}
+                className="h-9.5 rounded-lg border-border/60 bg-background/60 text-xs uppercase tracking-wider font-mono"
+              />
+            </div>
+
+            {/* Terms */}
+            <div className="flex items-start gap-2.5 pt-0.5">
+              <Checkbox
+                id="terms"
+                checked={termsAccepted}
+                onCheckedChange={(checked) =>
+                  setTermsAccepted(checked === true)
+                }
+                className="mt-0.5 h-4 w-4 rounded border-border"
+              />
+
+              <label
+                htmlFor="terms"
+                className="text-[11px] leading-[17px] text-muted-foreground cursor-pointer"
+              >
+                I agree to the{" "}
+                <a
+                  href="/terms"
+                  className="font-medium text-primary hover:underline"
+                >
+                  Terms & Conditions
+                </a>{" "}
+                and{" "}
+                <a
+                  href="/privacy"
+                  className="font-medium text-primary hover:underline"
+                >
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="group h-10.5 w-full rounded-xl font-semibold shadow-lg shadow-primary/10 transition-all hover:-translate-y-[1px] hover:shadow-primary/20"
+            >
+              <span>
+                {loading ? "Creating Account..." : "Create Account"}
+              </span>
+
+              {!loading && (
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              )}
+            </Button>
+
+            {/* Login */}
+            <p className="pt-0.5 text-center text-xs text-muted-foreground">
+              Already have an account?{" "}
+              <a
+                href="/login"
+                className="font-semibold text-primary hover:text-primary/80 hover:underline"
+              >
+                Sign in
               </a>
-            </label>
-          </div>
-
-          {/* Submit Button */}
-          <Button 
-            type="submit" 
-            className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold text-base rounded-xl transition-all duration-300 shadow-md shadow-blue-500/20" 
-            disabled={loading}
-          >
-            {loading ? "Creating Account..." : "Sign Up"}
-          </Button>
-
-          {/* Footer */}
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Already have an account?{" "}
-            <a href="/login" className="text-blue-600 hover:underline font-medium">
-              Sign in
-            </a>
-          </p>
-        </form>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );
