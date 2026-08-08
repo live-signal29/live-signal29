@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const TopMenuDropdown = () => {
+export const TopMenuDrawer = () => {
   const navigate = useNavigate();
 
   const handleShare = () => {
@@ -51,8 +51,10 @@ export const TopMenuDropdown = () => {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
+          aria-label="Open menu"
           className="
-            flex h-7 w-7 shrink-0 items-center justify-center
+            flex h-7 w-7 shrink-0
+            items-center justify-center
             rounded-full
             border border-border/40
             bg-background/60
@@ -84,21 +86,16 @@ export const TopMenuDropdown = () => {
         "
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-
-        {/* Share */}
         <DropdownMenuItem
           onClick={handleShare}
           className="
-            h-6
-            min-h-0
+            h-6 min-h-0
             cursor-pointer
             rounded-md
-            px-2
-            py-0
+            px-2 py-0
             text-[10px]
             leading-none
             gap-0
-            transition-colors
             focus:bg-primary/10
             focus:text-primary
           "
@@ -107,20 +104,16 @@ export const TopMenuDropdown = () => {
           <span>Share</span>
         </DropdownMenuItem>
 
-        {/* Rate */}
         <DropdownMenuItem
           onClick={handleRateUs}
           className="
-            h-6
-            min-h-0
+            h-6 min-h-0
             cursor-pointer
             rounded-md
-            px-2
-            py-0
+            px-2 py-0
             text-[10px]
             leading-none
             gap-0
-            transition-colors
             focus:bg-primary/10
             focus:text-primary
           "
@@ -129,20 +122,16 @@ export const TopMenuDropdown = () => {
           <span>Rate Us</span>
         </DropdownMenuItem>
 
-        {/* Privacy */}
         <DropdownMenuItem
           onClick={() => navigate("/privacy")}
           className="
-            h-6
-            min-h-0
+            h-6 min-h-0
             cursor-pointer
             rounded-md
-            px-2
-            py-0
+            px-2 py-0
             text-[10px]
             leading-none
             gap-0
-            transition-colors
             focus:bg-primary/10
             focus:text-primary
           "
@@ -153,21 +142,17 @@ export const TopMenuDropdown = () => {
 
         <DropdownMenuSeparator className="mx-1 my-1 h-px bg-border/30" />
 
-        {/* Logout */}
         <DropdownMenuItem
           onClick={handleLogout}
           className="
-            h-6
-            min-h-0
+            h-6 min-h-0
             cursor-pointer
             rounded-md
-            px-2
-            py-0
+            px-2 py-0
             text-[10px]
             leading-none
             gap-0
             text-destructive
-            transition-colors
             focus:bg-destructive/10
             focus:text-destructive
           "
@@ -175,7 +160,6 @@ export const TopMenuDropdown = () => {
           <LogOut className="mr-1.5 h-3 w-3 shrink-0" />
           <span>Logout</span>
         </DropdownMenuItem>
-
       </DropdownMenuContent>
     </DropdownMenu>
   );
