@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
-import { TrendingUp, BarChart3, User, Wallet, ClipboardList } from "lucide-react";
+import { TrendingUp, BarChart3, User, Wallet, ClipboardList, ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const navItems = [
   { icon: TrendingUp, label: "Signals", path: "/" },
@@ -11,71 +11,104 @@ const navItems = [
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
-// Routes where bottom navigation should be hidden
 const hiddenRoutes = [
-  "/login",
-  "/signup",
-  "/admin/login",
-  "/admin/dashboard",
-  "/onboarding",
+  "/login", "/signup", "/admin/login", "/admin/dashboard", "/onboarding",
 ];
 
 export const BottomNavigation = () => {
   const location = useLocation();
-  const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const shouldHide = hiddenRoutes.some(route =>
     location.pathname === route || location.pathname.startsWith("/admin")
   );
 
+  // ===== AUTO HIDE LOGIC (15 Seconds) =====
+  const resetTimer = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (isOpen) {
+      timerRef.current = setTimeout(() => {
+        setIsOpen(false);
+      }, 15000); // 15 seconds
+    }
+  };
+
+  const handleToggle = () => {
+    setIsOpen(!isOpen);
+    // If opening, start the timer. If closing, clear the timer.
+    if (!isOpen) {
+      timerRef.current = setTimeout(() => {
+        setIsOpen(false);
+      }, 15000);
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    }
+  };
+
+  // Reset timer whenever the menu stays open due to interaction
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    resetTimer();
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [isOpen]);
 
   if (shouldHide) return null;
 
   return (
-    <nav className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 md:hidden px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
-      "transition-all duration-500 ease-out",
-      mounted ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
-    )}>
-      <div className="glow-border rounded-[22px]">
-        <div className="rounded-[22px] border border-border/60 bg-background/85 backdrop-blur-2xl shadow-[0_-6px_28px_-12px_hsl(var(--glow-primary)/0.5)]">
-          <div className="flex items-center justify-around px-1.5 py-1.5">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path ||
-                (item.path === "/" && (location.pathname === "/signals" || location.pathname.includes("signals")));
+    <div className="fixed left-3 top-1/2 -translate-y-1/2 z-50 flex items-center gap-2">
+      
+      {/* ===== MAIN MENU PILL (Left Side) ===== */}
+      <div
+        className={cn(
+          "bg-background/90 backdrop-blur-xl border border-border/40 shadow-xl transition-all duration-500 ease-in-out rounded-2xl p-1.5 flex flex-col gap-1",
+          isOpen ? "opacity-100 translate-x-0 scale-100" : "opacity-0 -translate-x-20 scale-95 pointer-events-none"
+        )}
+      >
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path ||
+            (item.path === "/" && (location.pathname === "/signals" || location.pathname.includes("signals")));
 
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className="relative flex flex-col items-center gap-1 px-2.5 py-0.5"
-                >
-                  <span className={cn(
-                    "icon-3d h-9 w-9",
-                    isActive && "icon-3d-active animate-glow-breathe"
-                  )}>
-                    <item.icon className={cn(
-                      "h-[18px] w-[18px] relative z-[1]",
-                      isActive
-                        ? "text-primary-foreground stroke-[2.4]"
-                        : "text-muted-foreground stroke-[2]"
-                    )} />
-                  </span>
-                  <span className={cn(
-                    "text-[9px] leading-none tracking-tight",
-                    isActive ? "font-bold text-primary" : "font-medium text-muted-foreground"
-                  )}>
-                    {item.label}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => {
+                setIsOpen(false);
+                if (timerRef.current) clearTimeout(timerRef.current);
+              }}
+              className={cn(
+                "relative flex flex-row items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-300",
+                isActive 
+                  ? "bg-primary/10 text-primary shadow-sm" 
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              )}
+            >
+              <item.icon className={cn("h-[14px] w-[14px] stroke-[2]", isActive && "stroke-[2.4]")} />
+              <span className={cn("text-[10px] font-medium leading-none whitespace-nowrap", isActive ? "font-bold" : "font-medium")}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
       </div>
-    </nav>
+
+      {/* ===== TOGGLE BUTTON (Always Visible on Left) ===== */}
+      <button
+        onClick={handleToggle}
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/80 backdrop-blur-md border border-border/40 shadow-md transition-all duration-300 hover:scale-105 hover:border-primary/30",
+          isOpen && "border-primary/30 bg-primary/10 text-primary"
+        )}
+        title={isOpen ? "Close Menu" : "Open Menu"}
+      >
+        {isOpen ? (
+          <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
+        ) : (
+          <ChevronRight className="h-4 w-4 stroke-[2.5]" />
+        )}
+      </button>
+    </div>
   );
 };
