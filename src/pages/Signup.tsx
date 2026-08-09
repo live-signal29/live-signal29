@@ -142,7 +142,7 @@ const Signup = () => {
           <form onSubmit={handleSignup} className="space-y-4">
             {/* Full Name */}
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
               <Input
                 id="fullName"
                 type="text"
@@ -150,13 +150,13 @@ const Signup = () => {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="transition-all duration-300 focus:scale-[1.01]"
+                className="text-white bg-background/50 border-border focus:border-primary placeholder:text-muted-foreground/50 transition-all duration-300 focus:scale-[1.01]"
               />
             </div>
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -164,26 +164,26 @@ const Signup = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="transition-all duration-300 focus:scale-[1.01]"
+                className="text-white bg-background/50 border-border focus:border-primary placeholder:text-muted-foreground/50 transition-all duration-300 focus:scale-[1.01]"
               />
             </div>
 
             {/* Referral Code (Optional) */}
             <div className="space-y-2">
-              <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+              <Label htmlFor="referralCode" className="text-foreground">Referral Code (Optional)</Label>
               <Input
                 id="referralCode"
                 type="text"
                 placeholder="REF123"
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value)}
-                className="transition-all duration-300 focus:scale-[1.01]"
+                className="text-white bg-background/50 border-border focus:border-primary placeholder:text-muted-foreground/50 transition-all duration-300 focus:scale-[1.01]"
               />
             </div>
 
             {/* Password Field + Eye Toggle + Strength Meter */}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-foreground">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -192,12 +192,12 @@ const Signup = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pr-10 transition-all duration-300 focus:scale-[1.01]"
+                  className="text-white bg-background/50 border-border focus:border-primary placeholder:text-muted-foreground/50 pr-10 transition-all duration-300 focus:scale-[1.01]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
