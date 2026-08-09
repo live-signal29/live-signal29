@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import Header from "@/components/Header";
@@ -78,6 +78,14 @@ const Premium = () => {
   const [planCarouselApi, setPlanCarouselApi] = useState<CarouselApi>();
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 
+  // Autoplay Plugin Reference (Build Fix)
+  const autoplayPlugin = useRef(
+    (Autoplay as any)({ delay: 3000, stopOnInteraction: true })
+  );
+  const couponAutoplayPlugin = useRef(
+    (Autoplay as any)({ delay: 4000, stopOnInteraction: true })
+  );
+
   /* =====================================================
      PLAN CAROUSEL
   ====================================================== */
@@ -102,11 +110,6 @@ const Premium = () => {
       planCarouselApi.off("select", onSelect);
     };
   }, [planCarouselApi]);
-
-  const autoplayPlugin = Autoplay({
-    delay: 3000,
-    stopOnInteraction: true,
-  });
 
   /* =====================================================
      SEO
@@ -142,13 +145,12 @@ const Premium = () => {
   const categories = ["FOREX", "COMMODITY", "INDEX", "CRYPTO"];
 
   /* =====================================================
-     SPECIAL OFFERS (FIXED HERE)
+     SPECIAL OFFERS
   ====================================================== */
   const { data: specialOffers } = useQuery({
     queryKey: ["special-offers-carousel"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("special_offers")
+      const { data, error } = await (supabase.from("special_offers" as any) as any)
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
@@ -158,16 +160,14 @@ const Premium = () => {
         return [];
       }
 
-      return data || [];
+      return (data || []) as any[];
     },
   });
 
-  // FIX: Using .limit(1) and getting the first row instead of .single()
   const { data: activeOffer } = useQuery({
     queryKey: ["active-special-offer"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("special_offers")
+      const { data, error } = await (supabase.from("special_offers" as any) as any)
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
@@ -178,18 +178,17 @@ const Premium = () => {
         return null;
       }
 
-      return data && data.length > 0 ? data[0] : null;
+      return data && data.length > 0 ? (data[0] as any) : null;
     },
   });
 
   /* =====================================================
-     ACTIVE COUPONS (FIXED HERE)
+     ACTIVE COUPONS
   ====================================================== */
   const { data: activeCoupons } = useQuery({
     queryKey: ["active-coupons-banner"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("coupons")
+      const { data, error } = await (supabase.from("coupons" as any) as any)
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
@@ -199,7 +198,7 @@ const Premium = () => {
         return [];
       }
 
-      const validCoupons = (data || []).filter((coupon) => {
+      const validCoupons = ((data || []) as any[]).filter((coupon) => {
         if (!coupon.expiry_date) return true;
         return new Date(coupon.expiry_date) > new Date();
       });
@@ -272,8 +271,7 @@ const Premium = () => {
     setValidatingCoupon(true);
 
     try {
-      const { data: coupons, error } = await supabase
-        .from("coupons")
+      const { data: coupons, error } = await (supabase.from("coupons" as any) as any)
         .select("*")
         .eq("code", upperCode)
         .eq("is_active", true)
@@ -414,7 +412,7 @@ const Premium = () => {
         return;
       }
 
-      const { error } = await supabase.from("payment_submissions").insert({
+      const { error } = await (supabase.from("payment_submissions" as any) as any).insert({
         user_id: user.id,
         plan_name: paymentDetails.plan.name,
         category: selectedCategory,
@@ -458,7 +456,7 @@ const Premium = () => {
         <div className="mb-8">
           <Carousel
             className="w-full max-w-5xl mx-auto"
-            plugins={[autoplayPlugin]}
+            plugins={[autoplayPlugin.current]}
             opts={{ loop: true }}
           >
             <CarouselContent>
@@ -492,8 +490,8 @@ const Premium = () => {
                 </div>
               </CarouselItem>
 
-              {specialOffers?.map((offer, index) => (
-                <CarouselItem key={offer.id}>
+              {specialOffers?.map((offer: any, index: number) => (
+                <CarouselItem key={offer.id || index}>
                   <div
                     className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
                       index % 4 === 0
@@ -533,16 +531,11 @@ const Premium = () => {
           <div className="max-w-5xl mx-auto mb-8">
             <Carousel
               className="w-full"
-              plugins={[
-                Autoplay({
-                  delay: 4000,
-                  stopOnInteraction: true,
-                }),
-              ]}
+              plugins={[couponAutoplayPlugin.current]}
               opts={{ loop: true }}
             >
               <CarouselContent>
-                {activeCoupons.map((coupon) => (
+                {activeCoupons.map((coupon: any) => (
                   <CarouselItem key={coupon.id}>
                     <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-background to-primary/5 shadow-lg">
                       <CardContent className="p-6">
