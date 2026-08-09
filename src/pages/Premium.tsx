@@ -60,7 +60,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import Autoplay from "embla-carousel-autoplay";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 
@@ -75,12 +74,29 @@ const Premium = () => {
   const [transactionId, setTransactionId] = useState("");
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+
+  const [bannerApi, setBannerApi] = useState<CarouselApi>();
+  const [couponApi, setCouponApi] = useState<CarouselApi>();
   const [planCarouselApi, setPlanCarouselApi] = useState<CarouselApi>();
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 
-  /* =====================================================
-     PLAN CAROUSEL
-  ====================================================== */
+  /* Auto Play logic without plugin dependency */
+  useEffect(() => {
+    if (!bannerApi) return;
+    const timer = setInterval(() => {
+      bannerApi.scrollNext();
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [bannerApi]);
+
+  useEffect(() => {
+    if (!couponApi) return;
+    const timer = setInterval(() => {
+      couponApi.scrollNext();
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [couponApi]);
+
   useEffect(() => {
     if (!planCarouselApi) return;
 
@@ -91,35 +107,23 @@ const Premium = () => {
     planCarouselApi.on("select", onSelect);
     onSelect();
 
-    const isMobile = window.innerWidth < 640;
-    if (isMobile) {
-      setTimeout(() => {
-        planCarouselApi.scrollTo(1, false);
-      }, 100);
-    }
-
     return () => {
       planCarouselApi.off("select", onSelect);
     };
   }, [planCarouselApi]);
 
-  /* =====================================================
-     SEO
-  ====================================================== */
+  /* SEO */
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
       getProductStructuredData("Premium Trading Signals", 180, "USD"),
       getBreadcrumbStructuredData([
-        { name: "Home", url: "https://yourdomain.com" },
-        { name: "Premium Plans", url: "https://yourdomain.com/premium" },
+        { name: "Home", url: "https://livesignals29.online" },
+        { name: "Premium Plans", url: "https://livesignals29.online/premium" },
       ]),
     ],
   };
 
-  /* =====================================================
-     CRYPTO PAYMENT
-  ====================================================== */
   const cryptoAddresses: Record<string, string> = {
     USDT_TRC20: "TEeeH4G5uKcW41UXkLC7DDq9da8DPr7vH3",
     BTC: "1MFC63PWiPGWG1Z852t7oJ3pX8hGZYtPAU",
@@ -136,9 +140,6 @@ const Premium = () => {
 
   const categories = ["FOREX", "COMMODITY", "INDEX", "CRYPTO"];
 
-  /* =====================================================
-     SPECIAL OFFERS
-  ====================================================== */
   const { data: specialOffers } = useQuery({
     queryKey: ["special-offers-carousel"],
     queryFn: async () => {
@@ -174,9 +175,6 @@ const Premium = () => {
     },
   });
 
-  /* =====================================================
-     ACTIVE COUPONS
-  ====================================================== */
   const { data: activeCoupons } = useQuery({
     queryKey: ["active-coupons-banner"],
     queryFn: async () => {
@@ -188,21 +186,16 @@ const Premium = () => {
 
         if (error) return [];
 
-        const validCoupons = ((data || []) as any[]).filter((coupon) => {
+        return ((data || []) as any[]).filter((coupon) => {
           if (!coupon.expiry_date) return true;
           return new Date(coupon.expiry_date) > new Date();
         });
-
-        return validCoupons;
       } catch {
         return [];
       }
     },
   });
 
-  /* =====================================================
-     PLANS
-  ====================================================== */
   const plans = [
     {
       name: "Monthly",
@@ -250,9 +243,6 @@ const Premium = () => {
     "Customer support",
   ];
 
-  /* =====================================================
-     COUPON
-  ====================================================== */
   const applyCoupon = async (codeOverride?: string) => {
     const upperCode = (codeOverride ?? couponCode).toUpperCase().trim();
 
@@ -278,39 +268,17 @@ const Premium = () => {
         return;
       }
 
-      if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
-        setAppliedCoupon(null);
-        toast.error("This coupon has expired");
-        return;
-      }
-
-      if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
-        setAppliedCoupon(null);
-        toast.error("This coupon has reached its usage limit");
-        return;
-      }
-
       setCouponCode(coupon.code);
       setAppliedCoupon(coupon);
 
-      toast.success(
-        `Coupon applied! ${
-          coupon.discount_type === "percentage"
-            ? coupon.discount_value + "%"
-            : "$" + coupon.discount_value
-        } discount`
-      );
+      toast.success("Coupon applied!");
     } catch (error) {
-      console.error("Coupon validation error:", error);
       toast.error("Failed to validate coupon");
     } finally {
       setValidatingCoupon(false);
     }
   };
 
-  /* =====================================================
-     FINAL PRICE
-  ====================================================== */
   const calculateFinalPrice = (basePrice: number, planName: string) => {
     if (!appliedCoupon) return basePrice;
 
@@ -333,9 +301,6 @@ const Premium = () => {
     return Math.max(0, basePrice - Number(appliedCoupon.discount_value));
   };
 
-  /* =====================================================
-     SELECT PLAN
-  ====================================================== */
   const handleSelectPlan = async (plan: any) => {
     const {
       data: { user },
@@ -360,9 +325,6 @@ const Premium = () => {
     setShowPaymentDialog(true);
   };
 
-  /* =====================================================
-     COPY WALLET
-  ====================================================== */
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -372,19 +334,11 @@ const Premium = () => {
     }
   };
 
-  /* =====================================================
-     SUBMIT PAYMENT
-  ====================================================== */
   const handleSubmitPayment = async () => {
     const txId = transactionId.trim();
 
     if (!txId) {
       toast.error("Please enter your transaction ID");
-      return;
-    }
-
-    if (txId.length < 6) {
-      toast.error("Please enter a valid transaction ID");
       return;
     }
 
@@ -423,10 +377,7 @@ const Premium = () => {
       setPaymentSubmitted(true);
       toast.success("Payment submitted successfully!");
     } catch (error: any) {
-      console.error("Payment submission error:", error);
-      toast.error(
-        error?.message || "Failed to submit payment. Please try again."
-      );
+      toast.error(error?.message || "Failed to submit payment");
     } finally {
       setSubmittingPayment(false);
     }
@@ -436,26 +387,25 @@ const Premium = () => {
     <div className="min-h-screen flex flex-col">
       <SEO
         title="Premium Trading Signals Plans - TREND IS FRIEND"
-        description="Choose from flexible monthly, quarterly, half-yearly, and yearly premium plans. Get premium trading signals for Forex, Crypto, Commodities, and Indices."
-        keywords="premium trading signals, subscription plans, forex signals subscription, crypto signals premium, trading signals pricing"
-        url="https://yourdomain.com/premium"
+        description="Choose from flexible monthly, quarterly, half-yearly, and yearly premium plans."
+        keywords="premium trading signals, subscription plans"
+        url="https://livesignals29.online/premium"
         structuredData={structuredData}
       />
 
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        {/* OFFER BANNER */}
+        {/* BANNER CAROUSEL */}
         <div className="mb-8">
           <Carousel
             className="w-full max-w-5xl mx-auto"
-            plugins={[(Autoplay as any)({ delay: 3000, stopOnInteraction: true })]}
+            setApi={setBannerApi}
             opts={{ loop: true }}
           >
             <CarouselContent>
               <CarouselItem>
                 <div className="relative h-48 md:h-64 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-xl flex items-center justify-center overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20" />
                   <div className="text-center text-white p-6 relative z-10">
                     <h2 className="text-4xl md:text-6xl font-bold mb-3 drop-shadow-lg">
                       HAPPY NEW YEAR 🎊
@@ -476,39 +426,20 @@ const Premium = () => {
                     <p className="text-5xl md:text-7xl font-bold text-yellow-300 mb-3">
                       UP TO 50% OFF
                     </p>
-                    <p className="text-xl md:text-3xl font-semibold">
-                      TAKE PREMIUM NOW!
-                    </p>
                   </div>
                 </div>
               </CarouselItem>
 
               {specialOffers?.map((offer: any, index: number) => (
                 <CarouselItem key={offer.id || index}>
-                  <div
-                    className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
-                      index % 4 === 0
-                        ? "bg-gradient-to-br from-green-500 via-teal-500 to-blue-600"
-                        : index % 4 === 1
-                        ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-600"
-                        : index % 4 === 2
-                        ? "bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600"
-                        : "bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600"
-                    }`}
-                  >
-                    <div className="absolute inset-0 bg-black/10" />
+                  <div className="relative h-48 md:h-64 bg-gradient-to-br from-green-500 via-teal-500 to-blue-600 rounded-xl flex items-center justify-center overflow-hidden">
                     <div className="text-center text-white p-6 relative z-10">
-                      <Badge className="mb-4 bg-white/20 backdrop-blur-sm text-white border-white/30">
+                      <Badge className="mb-4 bg-white/20 text-white">
                         🎁 SPECIAL OFFER
                       </Badge>
-                      <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-lg">
+                      <h2 className="text-3xl md:text-6xl font-extrabold mb-3">
                         {offer.title}
                       </h2>
-                      {offer.description && (
-                        <p className="text-lg md:text-2xl font-semibold">
-                          {offer.description}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </CarouselItem>
@@ -522,53 +453,26 @@ const Premium = () => {
         {/* COUPON BANNER */}
         {activeCoupons && activeCoupons.length > 0 && (
           <div className="max-w-5xl mx-auto mb-8">
-            <Carousel
-              className="w-full"
-              plugins={[(Autoplay as any)({ delay: 4000, stopOnInteraction: true })]}
-              opts={{ loop: true }}
-            >
+            <Carousel className="w-full" setApi={setCouponApi} opts={{ loop: true }}>
               <CarouselContent>
                 {activeCoupons.map((coupon: any) => (
                   <CarouselItem key={coupon.id}>
-                    <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-background to-primary/5 shadow-lg">
+                    <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-background to-primary/5">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                           <div className="flex items-center gap-4 flex-1">
-                            <div className="bg-primary/20 p-3 rounded-full">
-                              <Tag className="h-6 w-6 text-primary" />
-                            </div>
-                            <div className="text-left">
-                              <h3 className="text-lg md:text-xl font-bold text-primary mb-1">
-                                🎉 New Discount Available!
+                            <Tag className="h-6 w-6 text-primary" />
+                            <div>
+                              <h3 className="text-lg font-bold text-primary">
+                                🎉 Discount Available!
                               </h3>
-                              <p className="text-sm md:text-base text-muted-foreground">
-                                Use code{" "}
-                                <span className="font-mono font-bold text-primary text-lg px-2 py-0.5 bg-primary/10 rounded">
-                                  {coupon.code}
-                                </span>{" "}
-                                for{" "}
-                                <span className="font-bold text-emerald-500">
-                                  {coupon.discount_type === "percentage"
-                                    ? `${coupon.discount_value}% OFF`
-                                    : `$${coupon.discount_value} OFF`}
-                                </span>
+                              <p className="text-sm">
+                                Code: <span className="font-bold">{coupon.code}</span>
                               </p>
-                              {coupon.expiry_date && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Valid until{" "}
-                                  {new Date(
-                                    coupon.expiry_date
-                                  ).toLocaleDateString()}
-                                </p>
-                              )}
                             </div>
                           </div>
-                          <Button
-                            onClick={() => applyCoupon(coupon.code)}
-                            disabled={validatingCoupon}
-                            className="bg-primary hover:bg-primary/90 font-semibold shadow-md whitespace-nowrap"
-                          >
-                            {validatingCoupon ? "Applying..." : "Apply Now"}
+                          <Button onClick={() => applyCoupon(coupon.code)}>
+                            Apply Now
                           </Button>
                         </div>
                       </CardContent>
@@ -576,12 +480,6 @@ const Premium = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              {activeCoupons.length > 1 && (
-                <>
-                  <CarouselPrevious className="left-2" />
-                  <CarouselNext className="right-2" />
-                </>
-              )}
             </Carousel>
           </div>
         )}
@@ -601,30 +499,16 @@ const Premium = () => {
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 space-y-2">
-                  <Label
-                    htmlFor="coupon"
-                    className="flex items-center gap-2 text-base"
-                  >
-                    <Tag className="h-5 w-5 text-primary" />
-                    Have a coupon code?
-                  </Label>
+                  <Label htmlFor="coupon">Have a coupon code?</Label>
                   <Input
                     id="coupon"
-                    placeholder="Enter your coupon code"
+                    placeholder="Enter coupon"
                     value={couponCode}
-                    onChange={(e) =>
-                      setCouponCode(e.target.value.toUpperCase())
-                    }
-                    className="border-primary/30 text-lg"
-                    disabled={validatingCoupon}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   />
                 </div>
-                <Button
-                  onClick={() => applyCoupon()}
-                  disabled={validatingCoupon}
-                  className="sm:mt-8 bg-primary hover:bg-primary/90 font-semibold"
-                >
-                  {validatingCoupon ? "Validating..." : "Apply Coupon"}
+                <Button onClick={() => applyCoupon()} className="sm:mt-8">
+                  Apply Coupon
                 </Button>
               </div>
 
@@ -632,13 +516,7 @@ const Premium = () => {
                 <Alert className="mt-4 border-emerald-500 bg-emerald-500/10">
                   <Check className="h-4 w-4 text-emerald-500" />
                   <AlertDescription className="flex items-center justify-between">
-                    <span className="text-emerald-500 font-semibold">
-                      ✓ Coupon "{appliedCoupon.code}" applied!{" "}
-                      {appliedCoupon.discount_type === "percentage"
-                        ? `${appliedCoupon.discount_value}% `
-                        : `$${appliedCoupon.discount_value} `}
-                      discount
-                    </span>
+                    <span>Coupon "{appliedCoupon.code}" applied!</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -646,7 +524,6 @@ const Premium = () => {
                         setAppliedCoupon(null);
                         setCouponCode("");
                       }}
-                      className="h-7 text-xs text-emerald-500"
                     >
                       Remove
                     </Button>
@@ -661,26 +538,17 @@ const Premium = () => {
         <div className="max-w-4xl mx-auto mb-8">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">
-                Choose Your Trading Category
-              </CardTitle>
+              <CardTitle>Choose Category</CardTitle>
             </CardHeader>
             <CardContent>
-              <Select
-                value={selectedCategory}
-                onValueChange={setSelectedCategory}
-              >
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="w-full h-12 text-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem
-                      key={category}
-                      value={category}
-                      className="text-lg"
-                    >
-                      {category}
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -691,154 +559,45 @@ const Premium = () => {
 
         {/* PRICING */}
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 gradient-text">
-            {selectedCategory} Premium Plans
+          <h2 className="text-3xl font-bold text-center mb-8">
+            {selectedCategory} Plans
           </h2>
 
-          <Carousel
-            className="w-full"
-            opts={{
-              align: "center",
-              loop: true,
-            }}
-            setApi={setPlanCarouselApi}
-          >
+          <Carousel className="w-full" setApi={setPlanCarouselApi} opts={{ loop: true }}>
             <CarouselContent className="-ml-2 md:-ml-4">
               {plans.map((plan) => {
                 const originalPrice = plan.payOnly;
-                const finalPrice = calculateFinalPrice(
-                  originalPrice,
-                  plan.name
-                );
-                const savings = originalPrice - finalPrice;
-                const isPlanApplicable =
-                  !appliedCoupon ||
-                  !appliedCoupon.applicable_plans ||
-                  appliedCoupon.applicable_plans.length === 0 ||
-                  appliedCoupon.applicable_plans.includes(plan.name);
+                const finalPrice = calculateFinalPrice(originalPrice, plan.name);
 
                 return (
                   <CarouselItem
                     key={plan.name}
-                    className="pl-3 md:pl-4 basis-[92%] sm:basis-1/2 lg:basis-1/4 flex justify-center"
+                    className="pl-3 md:pl-4 basis-[90%] sm:basis-1/2 lg:basis-1/4"
                   >
                     <Card
-                      className={`
-                        relative overflow-hidden group cursor-pointer
-                        transition-all duration-500
-                        hover:scale-[1.02] hover:shadow-2xl
-                        w-full max-w-[340px] sm:max-w-none min-h-[420px]
-                        ${
-                          plan.popular
-                            ? "border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl ring-1 ring-primary/30"
-                            : "border-border/40 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20"
-                        }
-                      `}
+                      className="cursor-pointer hover:shadow-xl transition-all"
                       onClick={() => handleSelectPlan(plan)}
                     >
-                      {plan.popular && (
-                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
-                          <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm px-4 py-1">
-                            ⭐ Popular
-                          </Badge>
-                        </div>
-                      )}
-
-                      {plan.discount && (
-                        <div className="absolute top-3 right-3 z-10">
-                          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg">
-                            {plan.discount}
-                          </div>
-                        </div>
-                      )}
-
-                      <CardHeader className="text-center pb-4 pt-8 px-5">
-                        <CardTitle className="text-lg font-bold mb-3">
-                          {plan.name}
-                        </CardTitle>
-                        <div className="space-y-2">
-                          <p className="text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                            ${plan.pricePerMonth}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            /month • {plan.duration}
-                          </p>
-                        </div>
+                      <CardHeader className="text-center">
+                        <CardTitle>{plan.name}</CardTitle>
+                        <p className="text-4xl font-extrabold">${plan.pricePerMonth}</p>
+                        <p className="text-xs text-muted-foreground">/{plan.duration}</p>
                       </CardHeader>
-
-                      <CardContent className="space-y-4 px-5 pb-5">
-                        <div className="space-y-2.5 p-4 rounded-xl bg-muted/30 border">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">
-                              Original
-                            </span>
-                            <span className="line-through text-muted-foreground">
-                              ${plan.totalPrice}
-                            </span>
-                          </div>
-
-                          <div className="h-px bg-border" />
-
-                          {appliedCoupon && isPlanApplicable ? (
-                            <>
-                              <div className="flex justify-between items-center">
-                                <span className="font-bold text-base">
-                                  Final
-                                </span>
-                                <span className="text-2xl font-black text-emerald-500">
-                                  ${finalPrice.toFixed(0)}
-                                </span>
-                              </div>
-                              <div className="bg-emerald-500/10 rounded-lg px-3 py-1.5 border border-emerald-500/20">
-                                <p className="text-emerald-500 text-center font-bold text-sm">
-                                  💰 Save ${savings.toFixed(0)}
-                                </p>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-base">Pay</span>
-                              <span className="text-2xl font-black text-primary">
-                                ${originalPrice}
-                              </span>
-                            </div>
-                          )}
-
-                          {appliedCoupon && !isPlanApplicable && (
-                            <div className="bg-amber-500/10 rounded-lg px-3 py-1.5 border border-amber-500/20">
-                              <p className="text-amber-500 text-center text-sm flex items-center justify-center gap-1">
-                                <AlertCircle className="h-4 w-4" />
-                                Not applicable
-                              </p>
-                            </div>
-                          )}
+                      <CardContent className="space-y-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span>Total</span>
+                          <span className="font-bold text-lg">${finalPrice}</span>
                         </div>
 
-                        <div className="space-y-2">
-                          {features.slice(0, 4).map((feature, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-start gap-2.5"
-                            >
-                              <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-emerald-500" />
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                {feature}
-                              </span>
-                            </div>
+                        <div className="space-y-1">
+                          {features.map((f, i) => (
+                            <p key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Check className="h-3 w-3 text-emerald-500" /> {f}
+                            </p>
                           ))}
                         </div>
 
-                        <Button
-                          className="w-full h-12 font-bold text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleSelectPlan(plan);
-                          }}
-                        >
-                          SELECT PLAN
-                        </Button>
+                        <Button className="w-full">Select Plan</Button>
                       </CardContent>
                     </Card>
                   </CarouselItem>
@@ -848,26 +607,6 @@ const Premium = () => {
             <CarouselPrevious className="hidden sm:flex" />
             <CarouselNext className="hidden sm:flex" />
           </Carousel>
-
-          {/* MOBILE DOTS */}
-          <div className="flex justify-center gap-2 mt-4 sm:hidden">
-            {plans.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => planCarouselApi?.scrollTo(index)}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  currentPlanIndex === index
-                    ? "bg-primary scale-125"
-                    : "bg-muted-foreground/30"
-                }`}
-                aria-label={`Go to plan ${index + 1}`}
-              />
-            ))}
-          </div>
-
-          <p className="text-center text-xs text-muted-foreground mt-2 sm:hidden">
-            ← Swipe to see more plans →
-          </p>
         </div>
 
         {/* AFFILIATE */}
@@ -876,96 +615,31 @@ const Premium = () => {
         </div>
 
         {/* PAYMENT DIALOG */}
-        <Dialog
-          open={showPaymentDialog}
-          onOpenChange={(open) => {
-            setShowPaymentDialog(open);
-            if (!open) {
-              setTransactionId("");
-              setPaymentSubmitted(false);
-              setSubmittingPayment(false);
-            }
-          }}
-        >
-          <DialogContent className="max-w-lg w-[calc(100%-24px)] max-h-[92vh] overflow-y-auto rounded-2xl p-0">
-            <div className="px-5 pt-5 pb-4 border-b bg-gradient-to-r from-primary/10 via-background to-primary/5">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  Complete Payment
-                </DialogTitle>
-              </DialogHeader>
-              <p className="text-sm text-muted-foreground mt-1">
-                Secure your premium subscription
-              </p>
-            </div>
+        <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Complete Payment</DialogTitle>
+            </DialogHeader>
 
             {paymentDetails && !paymentSubmitted && (
-              <div className="p-5 space-y-4">
-                <div className="rounded-xl border bg-muted/30 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Selected Plan
-                      </p>
-                      <p className="font-bold text-base">
-                        {paymentDetails.plan.name} Premium
-                      </p>
-                    </div>
-                    <Badge className="bg-primary/10 text-primary border-primary/20">
-                      {selectedCategory}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Duration</p>
-                      <p className="font-medium">
-                        {paymentDetails.plan.duration}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      {paymentDetails.originalPrice !==
-                        paymentDetails.finalPrice && (
-                        <p className="text-xs text-muted-foreground line-through">
-                          ${paymentDetails.originalPrice.toFixed(2)}
-                        </p>
-                      )}
-                      <p className="text-2xl font-black text-primary">
-                        ${paymentDetails.finalPrice.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {appliedCoupon && (
-                    <div className="mt-3 pt-3 border-t text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                      <Check className="h-3.5 w-3.5" />
-                      Coupon {appliedCoupon.code} applied
-                    </div>
-                  )}
+              <div className="space-y-4 pt-2">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="font-bold">{paymentDetails.plan.name} Plan</p>
+                  <p className="text-xl font-black text-primary">
+                    ${paymentDetails.finalPrice}
+                  </p>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                      1
-                    </div>
-                    <Label className="font-semibold">
-                      Choose Payment Method
-                    </Label>
-                  </div>
-
-                  <Select
-                    value={selectedCrypto}
-                    onValueChange={setSelectedCrypto}
-                  >
-                    <SelectTrigger className="h-11 rounded-xl">
+                  <Label>Crypto Method</Label>
+                  <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {cryptoOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
+                      {cryptoOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -973,174 +647,45 @@ const Premium = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                      2
-                    </div>
-                    <Label className="font-semibold">Send Payment</Label>
-                  </div>
-
-                  <div className="rounded-xl border bg-muted/20 p-3">
-                    <div className="flex gap-2">
-                      <Input
-                        value={cryptoAddresses[selectedCrypto]}
-                        readOnly
-                        className="font-mono text-xs h-11 bg-background"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-11 w-11 shrink-0 rounded-xl"
-                        onClick={() =>
-                          copyToClipboard(cryptoAddresses[selectedCrypto])
-                        }
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-sm text-muted-foreground">
-                        Amount to send
-                      </span>
-                      <span className="text-lg font-bold text-emerald-600">
-                        ${paymentDetails.finalPrice.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Send only{" "}
-                      <span className="font-semibold">
-                        {
-                          cryptoOptions.find(
-                            (option) => option.value === selectedCrypto
-                          )?.label
-                        }
-                      </span>{" "}
-                      to the address above.
-                    </p>
+                  <Label>Wallet Address</Label>
+                  <div className="flex gap-2">
+                    <Input value={cryptoAddresses[selectedCrypto]} readOnly />
+                    <Button
+                      variant="outline"
+                      onClick={() => copyToClipboard(cryptoAddresses[selectedCrypto])}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                      3
-                    </div>
-                    <Label
-                      htmlFor="transaction-id"
-                      className="font-semibold"
-                    >
-                      Transaction ID
-                    </Label>
-                  </div>
-
+                  <Label>Transaction ID (TxID)</Label>
                   <Input
-                    id="transaction-id"
-                    placeholder="Paste your transaction / TxID"
+                    placeholder="Enter TxID"
                     value={transactionId}
-                    onChange={(event) =>
-                      setTransactionId(event.target.value.trimStart())
-                    }
-                    className="h-11 rounded-xl font-mono text-sm"
-                    disabled={submittingPayment}
+                    onChange={(e) => setTransactionId(e.target.value)}
                   />
-
-                  <p className="text-xs text-muted-foreground">
-                    After sending the payment, paste the transaction ID here.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/10 p-3">
-                  <div className="flex gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                    <div className="text-xs text-amber-700 dark:text-amber-400">
-                      <p className="font-semibold mb-1">Important</p>
-                      <p>
-                        Double-check the wallet address before sending.
-                        Premium access will be activated after payment
-                        verification.
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
                 <Button
-                  type="button"
+                  className="w-full"
                   onClick={handleSubmitPayment}
-                  disabled={submittingPayment || !transactionId.trim()}
-                  className="w-full h-12 rounded-xl font-bold text-base shadow-lg"
+                  disabled={submittingPayment || !transactionId}
                 >
-                  {submittingPayment ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Submitting Payment...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-5 w-5 mr-2" />
-                      I've Sent Payment — Submit
-                    </>
-                  )}
+                  {submittingPayment ? "Submitting..." : "Submit Payment"}
                 </Button>
-
-                <p className="text-center text-[11px] text-muted-foreground">
-                  Your payment will be manually verified by our team.
-                </p>
               </div>
             )}
 
             {paymentSubmitted && (
-              <div className="p-6 text-center">
-                <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-9 w-9 text-emerald-500" />
-                </div>
-
-                <h3 className="text-xl font-bold mb-2">Payment Submitted</h3>
-
-                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Your transaction has been submitted successfully. Our team will
-                  verify your payment and activate your premium subscription.
+              <div className="text-center py-6 space-y-3">
+                <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
+                <h3 className="text-lg font-bold">Payment Submitted!</h3>
+                <p className="text-sm text-muted-foreground">
+                  Verification usually takes a few minutes.
                 </p>
-
-                <div className="mt-5 rounded-xl border bg-muted/30 p-4 text-left">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Plan</span>
-                    <span className="font-semibold">
-                      {paymentDetails?.plan.name}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Amount</span>
-                    <span className="font-bold text-primary">
-                      ${paymentDetails?.finalPrice.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Status</span>
-                    <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-                      Pending Verification
-                    </Badge>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full mt-5 h-11 rounded-xl"
-                  onClick={() => {
-                    setShowPaymentDialog(false);
-                    setTransactionId("");
-                    setPaymentSubmitted(false);
-                  }}
-                >
-                  Done
-                </Button>
-
-                <p className="text-[11px] text-muted-foreground mt-3">
-                  Please keep your transaction ID until verification is complete.
-                </p>
+                <Button onClick={() => setShowPaymentDialog(false)}>Close</Button>
               </div>
             )}
           </DialogContent>
