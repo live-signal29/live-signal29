@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Download, X } from "lucide-react";
+import { Download, X, Smartphone } from "lucide-react";
 import { Button } from "./ui/button";
 
 const AppInstallBanner = () => {
@@ -66,28 +66,41 @@ const AppInstallBanner = () => {
   if (!showBanner) return null;
 
   return (
-    <div className={`bg-gradient-to-r from-primary/90 to-primary/70 text-white border-b border-primary/30 transition-all duration-300 ${
-      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full'
-    }`}>
-      <div className="container mx-auto px-4 py-2">
-        <div className="flex items-center justify-center gap-2 text-sm">
-          <Download className="h-4 w-4 animate-bounce" />
-          <span className="font-medium">📱 Install TREND IS FRIEND App</span>
-          <Button
-            onClick={handleDownload}
-            size="sm"
-            variant="secondary"
-            className="bg-white text-primary hover:bg-white/90 hover:scale-105 transition-transform font-semibold text-xs h-7 px-3 ml-2"
-          >
-            Download APK
-          </Button>
-          <button
-            onClick={handleManualDismiss}
-            className="p-1 hover:bg-white/20 hover:rotate-90 rounded-full transition-all duration-200 ml-1"
-            aria-label="Close banner"
-          >
-            <X className="h-3 w-3" />
-          </button>
+    <div
+      className={`fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-primary/95 via-primary to-accent/90 text-primary-foreground border-b border-primary/20 shadow-md backdrop-blur-md transition-all duration-300 ease-in-out ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full"
+      }`}
+    >
+      <div className="container mx-auto px-3 py-1.5">
+        <div className="flex items-center justify-between sm:justify-center gap-2 text-xs">
+          {/* App Title & Icon */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Smartphone className="h-3.5 w-3.5 text-accent-foreground shrink-0 animate-pulse" />
+            <span className="font-semibold tracking-wide truncate">
+              TREND IS FRIEND App
+            </span>
+          </div>
+
+          {/* Action Area */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              onClick={handleDownload}
+              size="sm"
+              variant="secondary"
+              className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-[11px] h-6 px-2.5 rounded-full shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-1"
+            >
+              <Download className="h-3 w-3" />
+              <span>Download APK</span>
+            </Button>
+
+            <button
+              onClick={handleManualDismiss}
+              className="p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors duration-200 text-primary-foreground/80 hover:text-primary-foreground"
+              aria-label="Close banner"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
