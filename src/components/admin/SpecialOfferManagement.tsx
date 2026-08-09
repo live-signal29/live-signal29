@@ -145,7 +145,7 @@ const SpecialOfferManagement = () => {
               <div>
                 <Label>Offer Title *</Label>
                 <Input
-                  placeholder="Happy New Year 🎊 Special Offer"
+                  placeholder="HAPPY NEW YEAR 🎊"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
@@ -154,10 +154,10 @@ const SpecialOfferManagement = () => {
               <div>
                 <Label>Description</Label>
                 <Textarea
-                  placeholder="Limited time offer - Ends soon!"
+                  placeholder="2027 Special Offer"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
+                  rows={2}
                 />
               </div>
               <div>
@@ -228,6 +228,7 @@ const SpecialOfferManagement = () => {
                           {offer.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </div>
+                    </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
