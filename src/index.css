@@ -3,101 +3,87 @@
 @tailwind utilities;
 
 /* =========================================================
-   CLEAN MODERN FINTECH UI SYSTEM
-   Light Mode: Crisp Clean Slate & Soft Blue Accent
-   Dark Mode : Deep Slate Navy (TradingView Style)
+   ULTRA-MODERN FINTECH TERMINAL SYSTEM
+   Light: Clean Crystal + Cobalt Violet Gradients
+   Dark : Obsidian Black-Blue + Cyber Emerald Accents
    ========================================================= */
 
 @layer base {
   /* ================= LIGHT THEME ================= */
   :root {
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    --background: 220 25% 97%;
+    --foreground: 224 71% 4%;
 
-    --card: 0 0% 100%;                  /* Solid Clean White Cards */
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 224 71% 4%;
 
-    /* Primary — Premium Electric Indigo/Blue */
-    --primary: 226 84% 58%;
+    /* Primary — Deep Cobalt Blue */
+    --primary: 231 84% 56%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary — Soft Slate */
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary — Cyber Emerald */
+    --secondary: 160 84% 39%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14% 94%;
-    --muted-foreground: 215 16% 45%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 226 84% 58%;
+    --accent: 262 83% 58%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 346 84% 61%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 89%;
-    --input: 220 13% 89%;
-    --ring: 226 84% 58%;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 231 84% 56%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
 
-    /* Status Colors */
-    --success: 158 75% 38%;
+    /* Trading Colors */
+    --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 10%;
-
-    --buy: 158 75% 38%;
+    --buy: 160 84% 39%;
     --sell: 346 84% 61%;
-
-    --glass-bg: 0 0% 100%;
-    --glass-border: 220 13% 89%;
   }
 
-  /* ================= DARK THEME ================= */
+  /* ================= DARK THEME (Obsidian Emerald) ================= */
   .dark {
-    --background: 222 47% 8%;            /* Dark Navy Base */
-    --foreground: 210 40% 98%;
+    --background: 224 35% 6%;             /* Deep Midnight #090C10 */
+    --foreground: 210 20% 98%;
 
-    --card: 222 38% 13%;                 /* Dark Navy Card */
-    --card-foreground: 210 40% 98%;
+    --card: 222 30% 11%;                  /* Sleek Obsidian Surface */
+    --card-foreground: 210 20% 98%;
 
-    --popover: 222 38% 13%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 30% 11%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 226 84% 64%;
-    --primary-foreground: 222 47% 8%;
+    --primary: 160 84% 45%;               /* Neon Mint Accent */
+    --primary-foreground: 224 35% 6%;
 
-    --secondary: 222 25% 20%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 231 84% 64%;             /* Electric Indigo */
+    --secondary-foreground: 224 35% 6%;
 
-    --muted: 222 25% 20%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 223 20% 18%;
+    --muted-foreground: 217 10% 65%;
 
-    --accent: 226 84% 64%;
-    --accent-foreground: 222 47% 8%;
+    --accent: 262 83% 65%;
+    --accent-foreground: 224 35% 6%;
 
     --destructive: 346 84% 65%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 210 20% 98%;
 
-    --border: 222 25% 22%;
-    --input: 222 25% 22%;
-    --ring: 226 84% 64%;
+    --border: 222 20% 18%;
+    --input: 222 20% 18%;
+    --ring: 160 84% 45%;
 
-    --success: 158 75% 45%;
-    --success-foreground: 222 47% 8%;
-
-    --warning: 38 92% 58%;
-    --warning-foreground: 222 47% 8%;
-
-    --buy: 158 75% 45%;
+    --success: 160 84% 45%;
+    --success-foreground: 224 35% 6%;
+    --buy: 160 84% 45%;
     --sell: 346 84% 65%;
-
-    --glass-bg: 222 38% 13%;
-    --glass-border: 222 25% 22%;
   }
 }
 
@@ -107,30 +93,31 @@
   }
 
   body {
-    @apply bg-background text-foreground min-h-screen transition-colors duration-200;
+    @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
   }
 }
 
 @layer components {
-  /* Fast Clean Card */
-  .glass-card, .signal-card {
-    background-color: hsl(var(--card));
+  /* Ultra Modern Card Component */
+  .modern-card {
+    background: hsl(var(--card));
     color: hsl(var(--card-foreground));
     border: 1px solid hsl(var(--border));
-    @apply rounded-2xl p-4 shadow-sm transition-all duration-200;
+    @apply rounded-3xl p-5 shadow-lg transition-all duration-200;
   }
 
-  .badge-buy {
-    @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold;
+  /* Modern Gradient Button */
+  .btn-modern {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    color: #ffffff;
+    @apply rounded-2xl font-semibold px-6 py-3 shadow-md hover:opacity-95 active:scale-[0.98] transition-all;
   }
 
-  .badge-sell {
-    @apply bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-semibold;
-  }
-
-  .btn-primary {
-    background-color: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-    @apply rounded-xl font-medium transition-opacity hover:opacity-90;
+  /* Input fix for low-contrast text */
+  .modern-input {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    @apply rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all;
   }
 }
