@@ -3,52 +3,48 @@
 @tailwind utilities;
 
 /* =========================================================
-   MODERN GRADIENT FINTECH UI SYSTEM
-   Performance-Optimized + Slate Violet/Cyan Gradients
+   FAST MODERN GRADIENT FINTECH UI
+   Light Theme: Sapphire Blue & Cyan Gradient
+   Dark Theme : Deep Navy Dark Blue
    ========================================================= */
 
 @layer base {
+  /* ================= LIGHT THEME (Sapphire & Cyan Gradient) ================= */
   :root {
-    /* ================= LIGHT THEME ================= */
-
-    --background: 220 25% 97%;
-    --foreground: 222 28% 12%;
+    --background: 215 30% 97%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 28% 12%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 28% 12%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Primary — Modern Electric Blue / Violet Gradient Base */
-    --primary: 235 85% 62%;
+    /* Primary — Electric Sapphire Blue */
+    --primary: 224 82% 56%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 260 90% 66%;
+    --primary-glow: 217 91% 60%;
 
-    /* Secondary — Cyan Gradient Accent */
-    --secondary: 190 90% 48%;
+    /* Secondary — Cyber Cyan */
+    --secondary: 191 91% 44%;
     --secondary-foreground: 0 0% 100%;
 
-    /* Muted surfaces */
-    --muted: 220 18% 94%;
-    --muted-foreground: 222 12% 45%;
+    --muted: 215 20% 93%;
+    --muted-foreground: 215 16% 47%;
 
-    /* Accent */
-    --accent: 260 85% 62%;
+    --accent: 191 91% 44%;
     --accent-foreground: 0 0% 100%;
 
-    /* Status */
     --destructive: 346 84% 61%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders */
-    --border: 220 16% 88%;
-    --input: 220 16% 88%;
-    --ring: 235 85% 62%;
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 224 82% 56%;
 
     --radius: 1rem;
 
-    /* Trading colors */
+    /* Trading Status Colors */
     --success: 158 75% 40%;
     --success-foreground: 0 0% 100%;
     --success-deep: 158 80% 32%;
@@ -59,95 +55,83 @@
     --buy: 158 75% 40%;
     --sell: 346 84% 61%;
 
-    --affiliate: 260 85% 62%;
+    --affiliate: 224 82% 56%;
     --affiliate-foreground: 0 0% 100%;
 
-    /* Background Gradients */
-    --gradient-start: 220 30% 98%;
-    --gradient-mid: 225 25% 96%;
-    --gradient-end: 235 30% 94%;
+    /* Light Gradient Background */
+    --gradient-start: 214 45% 98%;
+    --gradient-mid: 217 40% 95%;
+    --gradient-end: 222 35% 92%;
 
-    /* Fast Lightweight Glass Effects */
-    --glass-bg: 0 0% 100% / 0.92;
-    --glass-border: 220 20% 85% / 0.5;
+    --glass-bg: 0 0% 100% / 0.94;
+    --glass-border: 214 30% 85% / 0.5;
 
-    /* Glow */
-    --glow-primary: 235 85% 62%;
-    --glow-accent: 190 90% 48%;
+    --glow-primary: 224 82% 56%;
+    --glow-accent: 191 91% 44%;
     --glow-strength: 0.20;
   }
 
+  /* ================= DARK THEME (Deep Navy Blue) ================= */
   .dark {
-    /* ================= DARK THEME (Cyan/Violet Cyber Gradient) ================= */
+    --background: 222 47% 7%;            /* Deep Navy Black/Blue */
+    --foreground: 210 40% 98%;
 
-    --background: 224 32% 8%;
-    --foreground: 220 20% 96%;
+    --card: 222 41% 12%;                 /* Navy Dark Card */
+    --card-foreground: 210 40% 98%;
 
-    --card: 224 25% 12%;
-    --card-foreground: 220 20% 96%;
+    --popover: 222 41% 12%;
+    --popover-foreground: 210 40% 98%;
 
-    --popover: 224 25% 12%;
-    --popover-foreground: 220 20% 96%;
+    --primary: 217 91% 60%;              /* Glowing Electric Blue */
+    --primary-foreground: 222 47% 7%;
+    --primary-glow: 191 91% 55%;
 
-    /* Primary */
-    --primary: 235 85% 65%;
-    --primary-foreground: 224 32% 8%;
-    --primary-glow: 260 90% 70%;
+    --secondary: 191 91% 55%;            /* Neon Cyan Accent */
+    --secondary-foreground: 222 47% 7%;
 
-    /* Secondary */
-    --secondary: 190 90% 52%;
-    --secondary-foreground: 224 32% 8%;
+    --muted: 222 30% 18%;
+    --muted-foreground: 215 20% 65%;
 
-    /* Muted */
-    --muted: 224 20% 18%;
-    --muted-foreground: 220 14% 68%;
+    --accent: 191 91% 55%;
+    --accent-foreground: 222 47% 7%;
 
-    /* Accent */
-    --accent: 260 85% 65%;
-    --accent-foreground: 224 32% 8%;
-
-    /* Status */
     --destructive: 346 84% 65%;
-    --destructive-foreground: 220 20% 98%;
+    --destructive-foreground: 210 40% 98%;
 
-    /* Borders */
-    --border: 224 20% 22%;
-    --input: 224 20% 22%;
-    --ring: 235 85% 65%;
+    --border: 222 30% 20%;
+    --input: 222 30% 20%;
+    --ring: 217 91% 60%;
 
-    /* Trading colors */
     --success: 158 75% 45%;
-    --success-foreground: 224 32% 8%;
+    --success-foreground: 222 47% 7%;
     --success-deep: 158 80% 50%;
 
     --warning: 38 92% 58%;
-    --warning-foreground: 224 32% 8%;
+    --warning-foreground: 222 47% 7%;
 
     --buy: 158 75% 45%;
     --sell: 346 84% 65%;
 
-    --affiliate: 260 85% 65%;
-    --affiliate-foreground: 224 32% 8%;
+    --affiliate: 217 91% 60%;
+    --affiliate-foreground: 222 47% 7%;
 
-    /* Gradient */
-    --gradient-start: 224 35% 6%;
-    --gradient-mid: 228 30% 9%;
-    --gradient-end: 235 32% 12%;
+    /* Deep Navy Dark Gradient */
+    --gradient-start: 222 47% 6%;
+    --gradient-mid: 224 40% 9%;
+    --gradient-end: 226 35% 13%;
 
-    /* Fast Lightweight Glass Effects */
-    --glass-bg: 224 25% 13% / 0.90;
-    --glass-border: 224 30% 30% / 0.40;
+    --glass-bg: 222 41% 12% / 0.92;
+    --glass-border: 222 30% 25% / 0.5;
 
-    /* Glow */
-    --glow-primary: 235 85% 65%;
-    --glow-accent: 190 90% 52%;
+    --glow-primary: 217 91% 60%;
+    --glow-accent: 191 91% 55%;
     --glow-strength: 0.35;
   }
 }
 
 
 /* =========================================================
-   GLOBAL BASE (Lightweight GPU Rendering)
+   GLOBAL BASE (Lightweight Fast Rendering)
    ========================================================= */
 
 @layer base {
@@ -190,19 +174,18 @@
 
 
 /* =========================================================
-   FAST CORE COMPONENTS (No Lag / Heavy Blurs)
+   FAST UI COMPONENTS
    ========================================================= */
 
 @layer components {
 
-  /* Optimized Glass Card for Speed */
+  /* Fast Glass Card (No Heavy Blurs = Zero Lag) */
   .glass-card {
     background: hsl(var(--glass-bg));
 
     border: 1px solid hsl(var(--glass-border));
 
-    box-shadow:
-      0 4px 20px -8px hsl(var(--primary) / 0.12);
+    box-shadow: 0 4px 18px -6px hsl(var(--primary) / 0.12);
 
     transition: transform 150ms ease, box-shadow 150ms ease;
   }
@@ -263,29 +246,16 @@
     @apply bg-destructive/10 text-destructive inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold;
   }
 
-  /* Modern Gradient Text */
+  /* Sapphire/Cyan Gradient Text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent;
 
     background-size: 200% auto;
 
     animation: shimmer 4s linear infinite;
   }
 
-  /* Premium Card */
-  .premium-card {
-    @apply rounded-2xl border bg-card;
-
-    border-color: hsl(var(--border));
-
-    background: linear-gradient(
-      135deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--primary) / 0.05) 100%
-    );
-  }
-
-  /* Modern Gradient Glowing Icons */
+  /* Modern Gradient Glowing Buttons & Icons */
   .icon-3d {
     @apply relative flex items-center justify-center rounded-[14px] shrink-0;
 
@@ -304,7 +274,7 @@
     background: linear-gradient(
       135deg,
       hsl(var(--secondary)) 0%,
-      hsl(var(--accent)) 100%
+      hsl(var(--primary)) 100%
     );
 
     box-shadow: 0 6px 18px hsl(var(--secondary) / 0.4);
@@ -316,7 +286,7 @@
     background: linear-gradient(
       135deg,
       hsl(var(--primary)) 0%,
-      hsl(var(--accent)) 100%
+      hsl(var(--secondary)) 100%
     );
 
     color: #ffffff;
@@ -337,7 +307,7 @@
 
 
 /* =========================================================
-   UTILITIES & ANIMATIONS
+   ANIMATIONS
    ========================================================= */
 
 @layer utilities {
