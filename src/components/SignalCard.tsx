@@ -1,12 +1,9 @@
-import { Badge } from "@/components/ui/badge";
 import {
-  TrendingUp,
-  TrendingDown,
   Shield,
   Clock,
   ArrowRight,
-  CheckCircle2,
-  AlertCircle
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -44,14 +41,14 @@ const SignalCard = ({ signal, onViewDetails }: SignalCardProps) => {
 
   const riskColor =
     signal.risk_level?.toLowerCase() === "low"
-      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
       : signal.risk_level?.toLowerCase() === "high"
-      ? "bg-red-500/10 border-red-500/30 text-red-400"
-      : "bg-amber-500/10 border-amber-500/30 text-amber-400";
+      ? "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400"
+      : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400";
 
-  // Symbol Icons Placeholder
+  // Symbol Icons Badge
   const getSymbolIcon = (pair: string) => {
-    if (pair.includes("XAU") || pair.includes("GOLD")) return "🪙";
+    if (pair.includes("XAU") || pair.includes("GOLD")) return "Au";
     if (pair.includes("BTC") || pair.includes("ETH")) return "₿";
     if (pair.includes("EUR") || pair.includes("USD") || pair.includes("GBP")) return "💱";
     return "📈";
@@ -60,27 +57,36 @@ const SignalCard = ({ signal, onViewDetails }: SignalCardProps) => {
   return (
     <article
       className={cn(
-        "relative w-full overflow-hidden rounded-2xl",
-        "border border-white/[0.08] bg-[#0c0f17]/90 backdrop-blur-xl",
-        "p-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)]",
-        "transition-all duration-300 hover:border-white/20 hover:shadow-[0_15px_40px_rgba(0,0,0,0.7)]"
+        "relative w-full overflow-hidden rounded-2xl transition-all duration-300 p-4 sm:p-5",
+        // LIGHT MODE
+        "bg-white border border-slate-200/80 shadow-md shadow-slate-200/50 text-slate-900",
+        // DARK MODE
+        "dark:bg-slate-900/90 dark:border-slate-800 dark:text-white dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)]",
+        "hover:border-amber-500/40 dark:hover:border-amber-500/40 backdrop-blur-xl"
       )}
     >
       {/* Top Header: Pair Info & Badge */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
-          {/* 3D Icon Container */}
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-600/5 border border-amber-500/20 text-2xl shadow-inner">
+          {/* Symbol Container */}
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/90 to-amber-600 border border-amber-500/30 text-amber-950 font-black text-base shadow-sm shrink-0">
             {getSymbolIcon(signal.pair)}
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-extrabold tracking-wide text-white">
+              <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
                 {signal.pair}
               </h3>
+
+              {/* Status Indicator */}
+              <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {signal.status || "LIVE"}
+              </span>
             </div>
-            <p className="text-[11px] font-medium text-slate-400">
+
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
               {signal.category || "Forex / Market"}
             </p>
 
@@ -88,19 +94,20 @@ const SignalCard = ({ signal, onViewDetails }: SignalCardProps) => {
             <div className="mt-1.5 flex items-center gap-1.5">
               <span
                 className={cn(
-                  "rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider",
+                  "flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm",
                   isBuy
                     ? "bg-emerald-500 text-slate-950"
                     : "bg-red-500 text-white"
                 )}
               >
+                {isBuy ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                 {signal.type}
               </span>
 
               {signal.risk_level && (
                 <span
                   className={cn(
-                    "flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold",
+                    "flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold",
                     riskColor
                   )}
                 >
@@ -112,8 +119,8 @@ const SignalCard = ({ signal, onViewDetails }: SignalCardProps) => {
           </div>
         </div>
 
-        {/* Time Stamp */}
-        <div className="flex items-center gap-1 text-[11px] text-slate-400">
+        {/* Right Corner: Time Stamp */}
+        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
           <Clock className="h-3 w-3" />
           <span>
             {format(new Date(signal.created_at), "HH:mm")}
@@ -121,21 +128,37 @@ const SignalCard = ({ signal, onViewDetails }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* Middle Grid: Entry & Current Price */}
-      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-white/[0.06] pt-3">
+      {/* Middle Grid: Entry & Current Price + Mini Sparkline Chart */}
+      <div className="mt-4 grid grid-cols-3 gap-2 items-center border-t border-slate-200/70 dark:border-slate-800/80 pt-3">
+        {/* Entry Price */}
         <div>
-          <span className="text-[11px] font-medium text-slate-400">Entry Price</span>
-          <p className="mt-0.5 font-mono text-base font-bold tracking-tight text-white">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Entry</span>
+          <p className="mt-0.5 font-mono text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
             {signal.entry}
           </p>
         </div>
 
-        <div>
-          <span className="text-[11px] font-medium text-slate-400">Current Price</span>
+        {/* Mini Sparkline Chart SVG */}
+        <div className="h-9 w-full flex items-center justify-center px-1">
+          <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30">
+            <path
+              d={isBuy ? "M 0 22 Q 20 8, 40 18 T 80 5 T 100 2" : "M 0 5 Q 20 22, 40 12 T 80 20 T 100 28"}
+              fill="none"
+              stroke={isBuy ? "#10b981" : "#ef4444"}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        {/* Current Price */}
+        <div className="text-right">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Current</span>
           <p
             className={cn(
-              "mt-0.5 font-mono text-base font-bold tracking-tight",
-              isBuy ? "text-emerald-400" : "text-red-400"
+              "mt-0.5 font-mono text-sm sm:text-base font-extrabold tracking-tight",
+              isBuy ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
             )}
           >
             {signal.current_price || signal.entry}
@@ -143,35 +166,37 @@ const SignalCard = ({ signal, onViewDetails }: SignalCardProps) => {
         </div>
       </div>
 
-      {/* Targets Grid: SL, TP1, TP2 */}
-      <div className="mt-4 border-t border-white/[0.06] pt-3">
-        <div className="flex items-center justify-between gap-2">
-          {/* SL */}
-          <div className="flex items-center gap-1 text-xs font-semibold text-red-400">
-            <span>SL</span>
-            <span className="font-mono text-white">{signal.sl}</span>
-          </div>
-
-          {/* TP1 */}
-          <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
-            <span>TP1</span>
-            <span className="font-mono text-emerald-400">{signal.tp1}</span>
-          </div>
-
-          {/* TP2 */}
-          {signal.tp2 && (
-            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
-              <span>TP2</span>
-              <span className="font-mono text-emerald-400">{signal.tp2}</span>
+      {/* Targets & Action Row: SL, TP1, TP2 & Button */}
+      <div className="mt-4 border-t border-slate-200/70 dark:border-slate-800/80 pt-3">
+        <div className="flex items-center justify-between gap-1 flex-wrap">
+          <div className="flex items-center gap-3">
+            {/* SL */}
+            <div className="flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400">
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400">SL:</span>
+              <span className="font-mono text-slate-900 dark:text-slate-200">{signal.sl}</span>
             </div>
-          )}
+
+            {/* TP1 */}
+            <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400">TP1:</span>
+              <span className="font-mono">{signal.tp1}</span>
+            </div>
+
+            {/* TP2 */}
+            {signal.tp2 && (
+              <div className="hidden sm:flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400">TP2:</span>
+                <span className="font-mono">{signal.tp2}</span>
+              </div>
+            )}
+          </div>
 
           {/* View Details Button */}
           <button
             onClick={() => onViewDetails && onViewDetails(signal.id)}
-            className="flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-600/15 px-3 py-1.5 text-xs font-bold text-purple-300 transition-all hover:bg-purple-600 hover:text-white"
+            className="flex items-center gap-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border border-amber-500/30 px-3 py-1.5 text-xs font-extrabold text-amber-700 dark:text-amber-400 transition-all active:scale-95 ml-auto"
           >
-            View Details
+            Details
             <ArrowRight className="h-3 w-3" />
           </button>
         </div>
