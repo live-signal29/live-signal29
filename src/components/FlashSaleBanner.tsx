@@ -34,3 +34,4 @@ export function FlashSaleBanner() {
     </div>
   );
 }
+export default FlashSaleBanner;
