@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import Header from "@/components/Header";
@@ -78,14 +78,6 @@ const Premium = () => {
   const [planCarouselApi, setPlanCarouselApi] = useState<CarouselApi>();
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 
-  // Autoplay Plugin Reference (Build Fix)
-  const autoplayPlugin = useRef(
-    (Autoplay as any)({ delay: 3000, stopOnInteraction: true })
-  );
-  const couponAutoplayPlugin = useRef(
-    (Autoplay as any)({ delay: 4000, stopOnInteraction: true })
-  );
-
   /* =====================================================
      PLAN CAROUSEL
   ====================================================== */
@@ -150,35 +142,35 @@ const Premium = () => {
   const { data: specialOffers } = useQuery({
     queryKey: ["special-offers-carousel"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("special_offers" as any) as any)
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      try {
+        const { data, error } = await (supabase.from("special_offers" as any) as any)
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Special offers error:", error);
+        if (error) return [];
+        return (data || []) as any[];
+      } catch {
         return [];
       }
-
-      return (data || []) as any[];
     },
   });
 
   const { data: activeOffer } = useQuery({
     queryKey: ["active-special-offer"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("special_offers" as any) as any)
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      try {
+        const { data, error } = await (supabase.from("special_offers" as any) as any)
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-      if (error) {
-        console.error("Active offer fetch error:", error);
+        if (error) return null;
+        return data && data.length > 0 ? (data[0] as any) : null;
+      } catch {
         return null;
       }
-
-      return data && data.length > 0 ? (data[0] as any) : null;
     },
   });
 
@@ -188,22 +180,23 @@ const Premium = () => {
   const { data: activeCoupons } = useQuery({
     queryKey: ["active-coupons-banner"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("coupons" as any) as any)
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      try {
+        const { data, error } = await (supabase.from("coupons" as any) as any)
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Coupons error:", error);
+        if (error) return [];
+
+        const validCoupons = ((data || []) as any[]).filter((coupon) => {
+          if (!coupon.expiry_date) return true;
+          return new Date(coupon.expiry_date) > new Date();
+        });
+
+        return validCoupons;
+      } catch {
         return [];
       }
-
-      const validCoupons = ((data || []) as any[]).filter((coupon) => {
-        if (!coupon.expiry_date) return true;
-        return new Date(coupon.expiry_date) > new Date();
-      });
-
-      return validCoupons;
     },
   });
 
@@ -456,7 +449,7 @@ const Premium = () => {
         <div className="mb-8">
           <Carousel
             className="w-full max-w-5xl mx-auto"
-            plugins={[autoplayPlugin.current]}
+            plugins={[(Autoplay as any)({ delay: 3000, stopOnInteraction: true })]}
             opts={{ loop: true }}
           >
             <CarouselContent>
@@ -531,7 +524,7 @@ const Premium = () => {
           <div className="max-w-5xl mx-auto mb-8">
             <Carousel
               className="w-full"
-              plugins={[couponAutoplayPlugin.current]}
+              plugins={[(Autoplay as any)({ delay: 4000, stopOnInteraction: true })]}
               opts={{ loop: true }}
             >
               <CarouselContent>
