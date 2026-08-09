@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import SEO from "@/components/SEO";
+
 import {
   getProductStructuredData,
   getBreadcrumbStructuredData,
@@ -157,7 +159,7 @@ const Premium = () => {
   };
 
   /* =====================================================
-     CRYPTO PAYMENT CONFIGURATION
+     CRYPTO PAYMENT
   ====================================================== */
 
   const cryptoAddresses: Record<string, string> = {
@@ -216,7 +218,10 @@ const Premium = () => {
           ascending: false,
         });
 
-      if (error) return [];
+      if (error) {
+        console.error(error);
+        return [];
+      }
 
       return data || [];
     },
@@ -254,16 +259,21 @@ const Premium = () => {
           ascending: false,
         });
 
-      if (error) return [];
+      if (error) {
+        console.error(error);
+        return [];
+      }
 
-      const validCoupons = data.filter((coupon) => {
-        if (!coupon.expiry_date) return true;
+      const validCoupons = (data || []).filter(
+        (coupon) => {
+          if (!coupon.expiry_date) return true;
 
-        return (
-          new Date(coupon.expiry_date) >
-          new Date()
-        );
-      });
+          return (
+            new Date(coupon.expiry_date) >
+            new Date()
+          );
+        }
+      );
 
       return validCoupons;
     },
@@ -322,11 +332,19 @@ const Premium = () => {
 
   /* =====================================================
      COUPON
+     IMPORTANT:
+     Function accepts optional code so banner Apply Now
+     works immediately without React state delay.
   ====================================================== */
 
-  const applyCoupon = async () => {
-    const upperCode =
-      couponCode.toUpperCase().trim();
+  const applyCoupon = async (
+    codeOverride?: string
+  ) => {
+    const upperCode = (
+      codeOverride ?? couponCode
+    )
+      .toUpperCase()
+      .trim();
 
     if (!upperCode) {
       toast.error("Please enter a coupon code");
@@ -345,9 +363,12 @@ const Premium = () => {
           .single();
 
       if (error || !coupon) {
+        setAppliedCoupon(null);
+
         toast.error(
           "Invalid or expired coupon code"
         );
+
         return;
       }
 
@@ -356,9 +377,12 @@ const Premium = () => {
         new Date(coupon.expiry_date) <
           new Date()
       ) {
+        setAppliedCoupon(null);
+
         toast.error(
           "This coupon has expired"
         );
+
         return;
       }
 
@@ -367,12 +391,16 @@ const Premium = () => {
         coupon.usage_count >=
           coupon.usage_limit
       ) {
+        setAppliedCoupon(null);
+
         toast.error(
           "This coupon has reached its usage limit"
         );
+
         return;
       }
 
+      setCouponCode(coupon.code);
       setAppliedCoupon(coupon);
 
       toast.success(
@@ -383,7 +411,12 @@ const Premium = () => {
             : "$" + coupon.discount_value
         } discount`
       );
-    } catch {
+    } catch (error) {
+      console.error(
+        "Coupon validation error:",
+        error
+      );
+
       toast.error(
         "Failed to validate coupon"
       );
@@ -392,11 +425,17 @@ const Premium = () => {
     }
   };
 
+  /* =====================================================
+     FINAL PRICE
+  ====================================================== */
+
   const calculateFinalPrice = (
     basePrice: number,
     planName: string
   ) => {
-    if (!appliedCoupon) return basePrice;
+    if (!appliedCoupon) {
+      return basePrice;
+    }
 
     if (
       appliedCoupon.applicable_plans &&
@@ -416,23 +455,28 @@ const Premium = () => {
       appliedCoupon.discount_type ===
       "percentage"
     ) {
-      return (
+      return Math.max(
+        0,
         basePrice -
-        (basePrice *
-          appliedCoupon.discount_value) /
-          100
+          (basePrice *
+            Number(
+              appliedCoupon.discount_value
+            )) /
+            100
       );
     }
 
     return Math.max(
       0,
       basePrice -
-        appliedCoupon.discount_value
+        Number(
+          appliedCoupon.discount_value
+        )
     );
   };
 
   /* =====================================================
-     OPEN PAYMENT DIALOG
+     SELECT PLAN
   ====================================================== */
 
   const handleSelectPlan = async (
@@ -443,9 +487,7 @@ const Premium = () => {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      toast.error(
-        "Please login first"
-      );
+      toast.error("Please login first");
       return;
     }
 
@@ -468,7 +510,7 @@ const Premium = () => {
   };
 
   /* =====================================================
-     COPY WALLET ADDRESS
+     COPY WALLET
   ====================================================== */
 
   const copyToClipboard = async (
@@ -526,9 +568,7 @@ const Premium = () => {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error(
-          "Please login first"
-        );
+        toast.error("Please login first");
         return;
       }
 
@@ -600,8 +640,8 @@ const Premium = () => {
 
       <SEO
         title="Premium Trading Signals Plans - TREND IS FRIEND"
-        description="Choose from flexible monthly, quarterly, half-yearly, and yearly premium plans. Get unlimited trading signals for Forex, Crypto, Commodities, and Indices with up to 50% off annual plans."
-        keywords="premium trading signals, subscription plans, forex signals subscription, crypto signals premium, trading signals pricing, annual trading plans"
+        description="Choose from flexible monthly, quarterly, half-yearly, and yearly premium plans. Get premium trading signals for Forex, Crypto, Commodities, and Indices."
+        keywords="premium trading signals, subscription plans, forex signals subscription, crypto signals premium, trading signals pricing"
         url="https://yourdomain.com/premium"
         structuredData={structuredData}
       />
@@ -611,7 +651,7 @@ const Premium = () => {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
 
         {/* =====================================================
-            BANNER CAROUSEL
+            OFFER BANNER
         ====================================================== */}
 
         <div className="mb-8">
@@ -624,21 +664,19 @@ const Premium = () => {
 
             <CarouselContent>
 
-              {/* HAPPY NEW YEAR */}
-
               <CarouselItem>
 
                 <div className="relative h-48 md:h-64 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-xl flex items-center justify-center overflow-hidden">
 
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20" />
 
                   <div className="text-center text-white p-6 relative z-10">
 
-                    <h2 className="text-4xl md:text-6xl font-bold mb-3 drop-shadow-lg animate-pulse">
+                    <h2 className="text-4xl md:text-6xl font-bold mb-3 drop-shadow-lg">
                       HAPPY NEW YEAR 🎊
                     </h2>
 
-                    <p className="text-xl md:text-3xl font-semibold drop-shadow-md">
+                    <p className="text-xl md:text-3xl font-semibold">
                       2026 Special Offer
                     </p>
 
@@ -648,25 +686,21 @@ const Premium = () => {
 
               </CarouselItem>
 
-              {/* LIMITED OFFER */}
-
               <CarouselItem>
 
                 <div className="relative h-48 md:h-64 bg-gradient-to-r from-yellow-500 via-red-500 to-pink-500 rounded-xl flex items-center justify-center overflow-hidden">
 
-                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/30" />
-
                   <div className="text-center text-white p-6 relative z-10">
 
-                    <h2 className="text-3xl md:text-5xl font-bold mb-3 drop-shadow-lg">
+                    <h2 className="text-3xl md:text-5xl font-bold mb-3">
                       LIMITED TIME OFFER
                     </h2>
 
-                    <p className="text-5xl md:text-7xl font-bold text-yellow-300 mb-3 drop-shadow-lg animate-bounce">
+                    <p className="text-5xl md:text-7xl font-bold text-yellow-300 mb-3">
                       UP TO 50% OFF
                     </p>
 
-                    <p className="text-xl md:text-3xl font-semibold drop-shadow-md">
+                    <p className="text-xl md:text-3xl font-semibold">
                       TAKE PREMIUM NOW!
                     </p>
 
@@ -676,95 +710,49 @@ const Premium = () => {
 
               </CarouselItem>
 
-              {/* DYNAMIC OFFERS */}
+              {specialOffers?.map(
+                (offer, index) => (
+                  <CarouselItem
+                    key={offer.id}
+                  >
 
-              {specialOffers &&
-                specialOffers.map(
-                  (offer, index) => (
-                    <CarouselItem
-                      key={offer.id}
+                    <div
+                      className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
+                        index % 4 === 0
+                          ? "bg-gradient-to-br from-green-500 via-teal-500 to-blue-600"
+                          : index % 4 === 1
+                          ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-600"
+                          : index % 4 === 2
+                          ? "bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600"
+                          : "bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600"
+                      }`}
                     >
 
-                      <div
-                        className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden group ${
-                          index % 4 === 0
-                            ? "bg-gradient-to-br from-green-500 via-teal-500 to-blue-600"
-                            : index % 4 === 1
-                            ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-600"
-                            : index % 4 === 2
-                            ? "bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600"
-                            : "bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600"
-                        } shadow-2xl hover:shadow-3xl transition-all duration-300`}
-                      >
+                      <div className="absolute inset-0 bg-black/10" />
 
-                        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20 animate-pulse" />
+                      <div className="text-center text-white p-6 relative z-10">
 
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]" />
+                        <Badge className="mb-4 bg-white/20 backdrop-blur-sm text-white border-white/30">
+                          🎁 SPECIAL OFFER
+                        </Badge>
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-lg">
+                          {offer.title}
+                        </h2>
 
-                        <div className="absolute top-4 left-4 w-2 h-2 bg-white/40 rounded-full animate-[float_3s_ease-in-out_infinite]" />
-
-                        <div className="absolute top-8 right-8 w-3 h-3 bg-white/30 rounded-full animate-[float_4s_ease-in-out_infinite_0.5s]" />
-
-                        <div className="absolute bottom-6 left-12 w-2 h-2 bg-white/50 rounded-full animate-[float_5s_ease-in-out_infinite_1s]" />
-
-                        <div className="absolute bottom-10 right-16 w-2 h-2 bg-white/40 rounded-full animate-[float_3.5s_ease-in-out_infinite_1.5s]" />
-
-                        <div className="absolute top-1/4 left-1/4 text-white/60 animate-[spin_4s_linear_infinite]">
-                          ✨
-                        </div>
-
-                        <div className="absolute top-1/3 right-1/4 text-white/50 animate-[spin_5s_linear_infinite_reverse]">
-                          ⭐
-                        </div>
-
-                        <div className="absolute bottom-1/4 left-1/3 text-white/40 animate-[spin_6s_linear_infinite]">
-                          💫
-                        </div>
-
-                        <div className="text-center text-white p-6 relative z-10 transform group-hover:scale-105 transition-transform duration-300">
-
-                          <div className="mb-4">
-
-                            <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30 text-xs px-3 py-1 animate-bounce">
-                              🎁 SPECIAL OFFER
-                            </Badge>
-
-                          </div>
-
-                          <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-2xl animate-fade-in bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
-                            {offer.title}
-                          </h2>
-
-                          {offer.description && (
-                            <p className="text-lg md:text-2xl font-semibold drop-shadow-lg animate-fade-in backdrop-blur-sm bg-black/20 rounded-lg px-4 py-2 inline-block">
-                              {offer.description}
-                            </p>
-                          )}
-
-                          <div className="mt-4 flex justify-center gap-2">
-
-                            <div className="w-2 h-2 bg-white rounded-full animate-ping" />
-
-                            <div className="w-2 h-2 bg-white rounded-full animate-ping animation-delay-200" />
-
-                            <div className="w-2 h-2 bg-white rounded-full animate-ping animation-delay-400" />
-
-                          </div>
-
-                        </div>
-
-                        <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-white/30 rounded-tl-xl" />
-                        <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-white/30 rounded-tr-xl" />
-                        <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-white/30 rounded-bl-xl" />
-                        <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-white/30 rounded-br-xl" />
+                        {offer.description && (
+                          <p className="text-lg md:text-2xl font-semibold">
+                            {offer.description}
+                          </p>
+                        )}
 
                       </div>
 
-                    </CarouselItem>
-                  )
-                )}
+                    </div>
+
+                  </CarouselItem>
+                )
+              )}
 
             </CarouselContent>
 
@@ -776,7 +764,7 @@ const Premium = () => {
         </div>
 
         {/* =====================================================
-            ACTIVE COUPONS
+            COUPON BANNER
         ====================================================== */}
 
         {activeCoupons &&
@@ -804,7 +792,7 @@ const Premium = () => {
                         key={coupon.id}
                       >
 
-                        <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-background to-primary/5 shadow-lg">
 
                           <CardContent className="p-6">
 
@@ -812,7 +800,7 @@ const Premium = () => {
 
                               <div className="flex items-center gap-4 flex-1">
 
-                                <div className="bg-primary/20 p-3 rounded-full animate-pulse">
+                                <div className="bg-primary/20 p-3 rounded-full">
                                   <Tag className="h-6 w-6 text-primary" />
                                 </div>
 
@@ -832,7 +820,7 @@ const Premium = () => {
 
                                     for{" "}
 
-                                    <span className="font-bold text-success">
+                                    <span className="font-bold text-emerald-500">
 
                                       {coupon.discount_type ===
                                       "percentage"
@@ -844,7 +832,7 @@ const Premium = () => {
                                   </p>
 
                                   {coupon.expiry_date && (
-                                    <p className="text-xs text-muted-foreground/70 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       Valid until{" "}
                                       {new Date(
                                         coupon.expiry_date
@@ -856,16 +844,22 @@ const Premium = () => {
 
                               </div>
 
+                              {/* FIXED APPLY BUTTON */}
+
                               <Button
-                                onClick={() => {
-                                  setCouponCode(
+                                onClick={() =>
+                                  applyCoupon(
                                     coupon.code
-                                  );
-                                  applyCoupon();
-                                }}
-                                className="bg-primary hover:bg-primary/90 font-semibold shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                                  )
+                                }
+                                disabled={
+                                  validatingCoupon
+                                }
+                                className="bg-primary hover:bg-primary/90 font-semibold shadow-md whitespace-nowrap"
                               >
-                                Apply Now
+                                {validatingCoupon
+                                  ? "Applying..."
+                                  : "Apply Now"}
                               </Button>
 
                             </div>
@@ -892,7 +886,6 @@ const Premium = () => {
               </Carousel>
 
             </div>
-
           )}
 
         {/* =====================================================
@@ -915,7 +908,7 @@ const Premium = () => {
         )}
 
         {/* =====================================================
-            COUPON SECTION
+            COUPON INPUT
         ====================================================== */}
 
         <div className="max-w-4xl mx-auto mb-8">
@@ -933,6 +926,7 @@ const Premium = () => {
                     className="flex items-center gap-2 text-base"
                   >
                     <Tag className="h-5 w-5 text-primary" />
+
                     Have a coupon code?
                   </Label>
 
@@ -954,7 +948,9 @@ const Premium = () => {
                 </div>
 
                 <Button
-                  onClick={applyCoupon}
+                  onClick={() =>
+                    applyCoupon()
+                  }
                   disabled={
                     validatingCoupon
                   }
@@ -969,13 +965,13 @@ const Premium = () => {
 
               {appliedCoupon && (
 
-                <Alert className="mt-4 border-success bg-success/10">
+                <Alert className="mt-4 border-emerald-500 bg-emerald-500/10">
 
-                  <Check className="h-4 w-4 text-success" />
+                  <Check className="h-4 w-4 text-emerald-500" />
 
                   <AlertDescription className="flex items-center justify-between">
 
-                    <span className="text-success font-semibold">
+                    <span className="text-emerald-500 font-semibold">
 
                       ✓ Coupon "
                       {appliedCoupon.code}"
@@ -993,12 +989,13 @@ const Premium = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
+                      onClick={() => {
                         setAppliedCoupon(
                           null
-                        )
-                      }
-                      className="h-7 text-xs text-success hover:text-success"
+                        );
+                        setCouponCode("");
+                      }}
+                      className="h-7 text-xs text-emerald-500"
                     >
                       Remove
                     </Button>
@@ -1006,7 +1003,6 @@ const Premium = () => {
                   </AlertDescription>
 
                 </Alert>
-
               )}
 
             </CardContent>
@@ -1047,14 +1043,14 @@ const Premium = () => {
                 <SelectContent>
 
                   {categories.map(
-                    (cat) => (
+                    (category) => (
 
                       <SelectItem
-                        key={cat}
-                        value={cat}
+                        key={category}
+                        value={category}
                         className="text-lg"
                       >
-                        {cat}
+                        {category}
                       </SelectItem>
 
                     )
@@ -1071,7 +1067,7 @@ const Premium = () => {
         </div>
 
         {/* =====================================================
-            PRICING PLANS
+            PRICING
         ====================================================== */}
 
         <div className="max-w-7xl mx-auto">
@@ -1127,20 +1123,15 @@ const Premium = () => {
                       <Card
                         className={`
                           relative overflow-hidden group cursor-pointer
-                          transition-all duration-500 ease-out
-                          hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20
-                          animate-fade-in
+                          transition-all duration-500
+                          hover:scale-[1.02] hover:shadow-2xl
                           w-full max-w-[340px] sm:max-w-none min-h-[420px]
                           ${
                             plan.popular
-                              ? "border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl shadow-primary/10 ring-1 ring-primary/30"
+                              ? "border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl ring-1 ring-primary/30"
                               : "border-border/40 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20"
                           }
                         `}
-                        style={{
-                          animationDelay:
-                            `${index * 100}ms`,
-                        }}
                         onClick={() =>
                           handleSelectPlan(
                             plan
@@ -1148,14 +1139,11 @@ const Premium = () => {
                         }
                       >
 
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
-
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
                         {plan.popular && (
-                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
 
-                            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm px-4 py-1 shadow-lg animate-pulse">
+                          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+
+                            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm px-4 py-1">
                               ⭐ Popular
                             </Badge>
 
@@ -1163,32 +1151,27 @@ const Premium = () => {
                         )}
 
                         {plan.discount && (
+
                           <div className="absolute top-3 right-3 z-10">
 
-                            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg animate-pulse">
+                            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg">
                               {plan.discount}
                             </div>
 
                           </div>
                         )}
 
-                        <CardHeader className="text-center pb-4 pt-6 px-5 relative z-10">
+                        <CardHeader className="text-center pb-4 pt-8 px-5">
 
-                          <CardTitle className="text-lg font-bold mb-3 group-hover:text-primary transition-colors">
+                          <CardTitle className="text-lg font-bold mb-3">
                             {plan.name}
                           </CardTitle>
 
                           <div className="space-y-2">
 
-                            <div className="relative inline-block">
-
-                              <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/50 blur-xl opacity-0 group-hover:opacity-30 transition-opacity" />
-
-                              <p className="relative text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                                ${plan.pricePerMonth}
-                              </p>
-
-                            </div>
+                            <p className="text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                              ${plan.pricePerMonth}
+                            </p>
 
                             <p className="text-sm text-muted-foreground">
                               /month • {plan.duration}
@@ -1198,9 +1181,9 @@ const Premium = () => {
 
                         </CardHeader>
 
-                        <CardContent className="space-y-4 px-5 pb-5 relative z-10">
+                        <CardContent className="space-y-4 px-5 pb-5">
 
-                          <div className="space-y-2.5 p-4 rounded-xl bg-muted/30 border border-border/30">
+                          <div className="space-y-2.5 p-4 rounded-xl bg-muted/30 border">
 
                             <div className="flex justify-between items-center text-sm">
 
@@ -1214,11 +1197,12 @@ const Premium = () => {
 
                             </div>
 
+                            <div className="h-px bg-border" />
+
                             {appliedCoupon &&
                             isPlanApplicable ? (
-                              <>
 
-                                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                              <>
 
                                 <div className="flex justify-between items-center">
 
@@ -1226,8 +1210,11 @@ const Premium = () => {
                                     Final
                                   </span>
 
-                                  <span className="text-2xl font-black bg-gradient-to-r from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
-                                    ${finalPrice.toFixed(0)}
+                                  <span className="text-2xl font-black text-emerald-500">
+                                    $
+                                    {finalPrice.toFixed(
+                                      0
+                                    )}
                                   </span>
 
                                 </div>
@@ -1244,24 +1231,23 @@ const Premium = () => {
                                 </div>
 
                               </>
+
                             ) : (
-                              <>
 
-                                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                              <div className="flex justify-between items-center">
 
-                                <div className="flex justify-between items-center">
+                                <span className="font-bold text-base">
+                                  Pay
+                                </span>
 
-                                  <span className="font-bold text-base">
-                                    Pay
-                                  </span>
+                                <span className="text-2xl font-black text-primary">
+                                  $
+                                  {
+                                    originalPrice
+                                  }
+                                </span>
 
-                                  <span className="text-2xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                                    ${originalPrice}
-                                  </span>
-
-                                </div>
-
-                              </>
+                              </div>
                             )}
 
                             {appliedCoupon &&
@@ -1278,7 +1264,6 @@ const Premium = () => {
                                   </p>
 
                                 </div>
-
                               )}
 
                           </div>
@@ -1309,35 +1294,22 @@ const Premium = () => {
                                     </span>
 
                                   </div>
-
                                 )
                               )}
 
                           </div>
 
                           <Button
-                            className="
-                              w-full h-12 font-bold text-base
-                              bg-gradient-to-r from-primary to-primary/80
-                              hover:from-primary/90 hover:to-primary/70
-                              shadow-md hover:shadow-lg hover:shadow-primary/30
-                              transition-all duration-300
-                              relative overflow-hidden
-                            "
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            className="w-full h-12 font-bold text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md"
+                            onClick={(event) => {
+                              event.stopPropagation();
+
                               handleSelectPlan(
                                 plan
                               );
                             }}
                           >
-
-                            <span className="relative z-10">
-                              SELECT PLAN
-                            </span>
-
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-
+                            SELECT PLAN
                           </Button>
 
                         </CardContent>
@@ -1345,7 +1317,6 @@ const Premium = () => {
                       </Card>
 
                     </CarouselItem>
-
                   );
                 }
               )}
@@ -1371,11 +1342,11 @@ const Premium = () => {
                       index
                     )
                   }
-                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
                     currentPlanIndex ===
                     index
                       ? "bg-primary scale-125"
-                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      : "bg-muted-foreground/30"
                   }`}
                   aria-label={`Go to plan ${
                     index + 1
@@ -1394,17 +1365,17 @@ const Premium = () => {
         </div>
 
         {/* =====================================================
-            AFFILIATE BANNER
+            AFFILIATE
         ====================================================== */}
 
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto mt-8">
 
           <AffiliateBannerCarousel />
 
         </div>
 
         {/* =====================================================
-            PROFESSIONAL PAYMENT DIALOG
+            PAYMENT DIALOG
         ====================================================== */}
 
         <Dialog
@@ -1424,9 +1395,7 @@ const Premium = () => {
 
           <DialogContent className="max-w-lg w-[calc(100%-24px)] max-h-[92vh] overflow-y-auto rounded-2xl p-0">
 
-            {/* =================================================
-                PAYMENT HEADER
-            ================================================= */}
+            {/* HEADER */}
 
             <div className="px-5 pt-5 pb-4 border-b bg-gradient-to-r from-primary/10 via-background to-primary/5">
 
@@ -1448,16 +1417,14 @@ const Premium = () => {
 
             </div>
 
-            {/* =================================================
-                PAYMENT FORM
-            ================================================= */}
+            {/* PAYMENT FORM */}
 
             {paymentDetails &&
               !paymentSubmitted && (
 
                 <div className="p-5 space-y-4">
 
-                  {/* ORDER SUMMARY */}
+                  {/* ORDER */}
 
                   <div className="rounded-xl border bg-muted/30 p-4">
 
@@ -1513,7 +1480,6 @@ const Premium = () => {
                               2
                             )}
                           </p>
-
                         )}
 
                         <p className="text-2xl font-black text-primary">
@@ -1538,14 +1504,11 @@ const Premium = () => {
                         applied
 
                       </div>
-
                     )}
 
                   </div>
 
-                  {/* =================================================
-                      STEP 1 — PAYMENT METHOD
-                  ================================================= */}
+                  {/* STEP 1 */}
 
                   <div className="space-y-2">
 
@@ -1597,9 +1560,7 @@ const Premium = () => {
 
                   </div>
 
-                  {/* =================================================
-                      STEP 2 — SEND PAYMENT
-                  ================================================= */}
+                  {/* STEP 2 */}
 
                   <div className="space-y-2">
 
@@ -1616,8 +1577,6 @@ const Premium = () => {
                     </div>
 
                     <div className="rounded-xl border bg-muted/20 p-3">
-
-                      {/* WALLET ADDRESS */}
 
                       <div className="flex gap-2">
 
@@ -1651,8 +1610,6 @@ const Premium = () => {
 
                       </div>
 
-                      {/* AMOUNT */}
-
                       <div className="flex items-center justify-between mt-3">
 
                         <span className="text-sm text-muted-foreground">
@@ -1673,16 +1630,13 @@ const Premium = () => {
                         Send only{" "}
 
                         <span className="font-semibold">
-
                           {
                             cryptoOptions.find(
-                              (o) =>
-                                o.value ===
+                              (option) =>
+                                option.value ===
                                 selectedCrypto
                             )?.label
-
                           }
-
                         </span>{" "}
 
                         to the address above.
@@ -1693,9 +1647,7 @@ const Premium = () => {
 
                   </div>
 
-                  {/* =================================================
-                      STEP 3 — TRANSACTION ID
-                  ================================================= */}
+                  {/* STEP 3 */}
 
                   <div className="space-y-2">
 
@@ -1720,9 +1672,9 @@ const Premium = () => {
                       value={
                         transactionId
                       }
-                      onChange={(e) =>
+                      onChange={(event) =>
                         setTransactionId(
-                          e.target.value.trimStart()
+                          event.target.value.trimStart()
                         )
                       }
                       className="h-11 rounded-xl font-mono text-sm"
@@ -1738,9 +1690,7 @@ const Premium = () => {
 
                   </div>
 
-                  {/* =================================================
-                      SECURITY NOTICE
-                  ================================================= */}
+                  {/* SECURITY */}
 
                   <div className="rounded-xl border border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/10 p-3">
 
@@ -1768,9 +1718,7 @@ const Premium = () => {
 
                   </div>
 
-                  {/* =================================================
-                      SUBMIT PAYMENT
-                  ================================================= */}
+                  {/* SUBMIT */}
 
                   <Button
                     type="button"
@@ -1810,12 +1758,9 @@ const Premium = () => {
                   </p>
 
                 </div>
-
               )}
 
-            {/* =====================================================
-                PAYMENT SUBMITTED SUCCESS STATE
-            ====================================================== */}
+            {/* SUCCESS */}
 
             {paymentSubmitted && (
 
@@ -1894,13 +1839,8 @@ const Premium = () => {
                       false
                     );
 
-                    setTransactionId(
-                      ""
-                    );
-
-                    setPaymentSubmitted(
-                      false
-                    );
+                    setTransactionId("");
+                    setPaymentSubmitted(false);
 
                   }}
                 >
@@ -1913,7 +1853,6 @@ const Premium = () => {
                 </p>
 
               </div>
-
             )}
 
           </DialogContent>
