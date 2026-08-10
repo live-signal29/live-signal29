@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-// LAZY LOADING FOR HEAVY TAB COMPONENTS (Loads only when tab is clicked)
+// LAZY LOADING FOR HEAVY TAB COMPONENTS
 const SignalForm = lazy(() => import("@/components/admin/SignalForm"));
 const SignalsList = lazy(() => import("@/components/admin/SignalsList"));
 const ChartAnalysisForm = lazy(() => import("@/components/admin/ChartAnalysisForm"));
@@ -20,7 +20,6 @@ const UserActivityDashboard = lazy(() => import("@/components/admin/UserActivity
 const AccountApplications = lazy(() => import("@/components/admin/AccountApplications"));
 const PerformanceManagement = lazy(() => import("@/components/admin/PerformanceManagement"));
 const HeadlinesManagement = lazy(() => import("@/components/admin/HeadlinesManagement"));
-const MT5ConnectionSettings = lazy(() => import("@/components/admin/MT5ConnectionSettings"));
 
 // Tab Loading Fallback Component
 const TabLoader = () => (
@@ -73,7 +72,7 @@ const AdminDashboard = () => {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         navigate("/admin/login");
       }
@@ -115,7 +114,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-11 h-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 h-auto">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="ideas" className="text-xs sm:text-sm py-2">Ideas</TabsTrigger>
             <TabsTrigger value="headlines" className="text-xs sm:text-sm py-2">Headlines</TabsTrigger>
@@ -126,14 +125,9 @@ const AdminDashboard = () => {
             <TabsTrigger value="offers" className="text-xs sm:text-sm py-2">Offers</TabsTrigger>
             <TabsTrigger value="user-activity" className="text-xs sm:text-sm py-2">Analytics</TabsTrigger>
             <TabsTrigger value="activity" className="text-xs sm:text-sm py-2">Activity</TabsTrigger>
-            <TabsTrigger value="integrations" className="text-xs sm:text-sm py-2">MT5</TabsTrigger>
           </TabsList>
 
           <Suspense fallback={<TabLoader />}>
-            <TabsContent value="integrations" className="space-y-4">
-              <MT5ConnectionSettings />
-            </TabsContent>
-
             <TabsContent value="signals" className="space-y-4">
               <Card>
                 <CardHeader>
