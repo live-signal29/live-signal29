@@ -134,52 +134,6 @@ const SignalsDashboard = () => {
     },
   ]);
 
-  const subCategoryOptions: Record<string, string[]> = {
-    FOREX: [
-      "EUR/USD",
-      "GBP/USD",
-      "USD/JPY",
-      "CHF/JPY",
-      "CAD/JPY",
-      "AUD/USD",
-      "NZD/USD",
-      "USD/CAD",
-      "USD/CHF",
-    ],
-
-    COMMODITIES: [
-      "XAU/USD (Gold)",
-      "XAG/USD (Silver)",
-      "Oil - Crude",
-      "Oil - Brent",
-      "Natural Gas",
-      "US30",
-      "NASDAQ",
-      "S&P500",
-      "DAX",
-      "FTSE100",
-      "Nikkei",
-    ],
-
-    CRYPTO: [
-      "BTC/USD",
-      "ETH/USD",
-      "XRP/USD",
-      "LTC/USD",
-      "ADA/USD",
-      "SOL/USD",
-    ],
-
-    "DERIV/BINARY": [
-      "BOOM 1000",
-      "BOOM 500",
-      "CRASH 1000",
-      "CRASH 500",
-      "VOL 75",
-      "VOL 100",
-    ],
-  };
-
   // Infinite query for signals
   const {
     data: signalsData,
@@ -380,10 +334,17 @@ const SignalsDashboard = () => {
     setLightboxOpen(true);
   };
 
-  const handleCategoryChange = (
-    category: string
-  ) => {
-    setMainCategory(category);
+  const handleCategoryChangeFromHeader = (cat: string) => {
+    const upperCat = cat.toUpperCase();
+    if (upperCat === "GOLD" || upperCat === "ALL") {
+      setMainCategory("COMMODITIES");
+    } else if (upperCat === "DERIV") {
+      setMainCategory("DERIV/BINARY");
+    } else if (upperCat === "IDEAS") {
+      setMainCategory("MARKET IDEAS");
+    } else {
+      setMainCategory(upperCat);
+    }
     setSubCategory("all");
   };
 
@@ -401,7 +362,11 @@ const SignalsDashboard = () => {
         structuredData={breadcrumbData}
       />
 
-      <Header />
+      {/* Connected Header with sync callback */}
+      <Header
+        activeCategory={mainCategory}
+        onCategoryChange={handleCategoryChangeFromHeader}
+      />
 
       <HeadlineTicker />
 
@@ -428,93 +393,8 @@ const SignalsDashboard = () => {
             </div>
           )}
 
-          {/* Main Dashboard */}
+          {/* Main Dashboard Content */}
           <>
-
-            {/* Category Tabs */}
-            <div className="mb-3">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-
-                {[
-                  {
-                    key: "COMMODITIES",
-                    label: "Gold",
-                  },
-                  {
-                    key: "FOREX",
-                    label: "Forex",
-                  },
-                  {
-                    key: "CRYPTO",
-                    label: "Crypto",
-                  },
-                  {
-                    key: "DERIV/BINARY",
-                    label: "Deriv",
-                  },
-                  {
-                    key: "MARKET IDEAS",
-                    label: "Ideas",
-                  },
-                ].map((category, i) => {
-                  const isActive =
-                    mainCategory ===
-                    category.key;
-
-                  const signalCount =
-                    isActive &&
-                    mainCategory !==
-                      "MARKET IDEAS"
-                      ? signals?.length
-                      : undefined;
-
-                  const isGold =
-                    category.key ===
-                    "COMMODITIES";
-
-                  return (
-                    <button
-                      key={category.key}
-                      onClick={() =>
-                        handleCategoryChange(
-                          category.key
-                        )
-                      }
-                      className={cn(
-                        "animate-rise-in flex-shrink-0 rounded-full border px-4 py-1.5 text-[11.5px] font-bold whitespace-nowrap",
-                        "transition-all duration-200 active:scale-95",
-
-                        i === 1 &&
-                          "stagger-1",
-
-                        i === 2 &&
-                          "stagger-2",
-
-                        i === 3 &&
-                          "stagger-3",
-
-                        i === 4 &&
-                          "stagger-4",
-
-                        isActive
-                          ? isGold
-                            ? "border-transparent text-warning-foreground bg-gradient-to-br from-warning to-affiliate shadow-[0_6px_18px_-6px_hsl(var(--affiliate)/0.7),0_0_18px_hsl(var(--affiliate)/0.45)]"
-                            : "border-transparent text-primary-foreground bg-gradient-to-br from-primary via-primary-glow to-accent shadow-[0_6px_18px_-6px_hsl(var(--glow-primary)/0.8),0_0_18px_hsl(var(--glow-primary)/0.45)]"
-                          : "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
-                      )}
-                    >
-                      {category.label}
-
-                      {signalCount !==
-                        undefined &&
-                        signalCount > 0 &&
-                        ` ${signalCount}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Market Ideas */}
             {mainCategory ===
               "MARKET IDEAS" && (
