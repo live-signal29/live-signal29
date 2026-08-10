@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
-import { startOfDay, formatDistanceToNow } from "date-fns";
+import { startOfDay, format } from "date-fns"; // 'formatDistanceToNow' replace with 'format'
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
@@ -32,6 +32,16 @@ const CATEGORIES = [
   "DERIV/BINARY",
   "MARKET IDEAS",
 ];
+
+// Helper Function: Formats time to Real Time 12-Hour format (e.g. 05:02 PM)
+const formatExactRealTime = (dateString: string | Date | null | undefined) => {
+  if (!dateString) return "";
+  try {
+    return format(new Date(dateString), "hh:mm a");
+  } catch (error) {
+    return "";
+  }
+};
 
 const SignalsDashboard = () => {
   const {
@@ -241,7 +251,7 @@ const SignalsDashboard = () => {
 
           <TrialExpiredPopup open={showTrialExpiredPopup} onClose={() => setShowTrialExpiredPopup(false)} />
 
-          {/* ✅ Category Tabs - Simple Design with Active Indicator & Live Dot Badge */}
+          {/* Category Tabs */}
           <div className="mb-4">
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
               {categoryTabs.map((tab) => {
@@ -261,10 +271,8 @@ const SignalsDashboard = () => {
                         : "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    {/* Tab Label */}
                     <span>{tab.label}</span>
 
-                    {/* Live Dot Badge - shows when there are OPEN/ACTIVE signals */}
                     {hasActiveSignals && (
                       <span className="relative flex h-2.5 w-2.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -272,7 +280,6 @@ const SignalsDashboard = () => {
                       </span>
                     )}
 
-                    {/* Active Indicator - Bottom Line */}
                     {isActive && (
                       <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary"></span>
                     )}
@@ -289,7 +296,7 @@ const SignalsDashboard = () => {
             </div>
           )}
 
-          {/* ✅ Subcategory Filter */}
+          {/* Subcategory Filter */}
           {mainCategory !== "MARKET IDEAS" && subCategoryOptions[mainCategory] && (
             <div className="mb-4">
               <select
@@ -318,7 +325,9 @@ const SignalsDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {chartAnalysis?.map((analysis, index) => {
                     const hasImage = !!analysis.image_url && String(analysis.image_url).trim() !== "";
-                    const timeAgo = formatDistanceToNow(new Date(analysis.created_at), { addSuffix: true });
+                    
+                    // Exact real-time format for Market Ideas (e.g. 05:02 PM)
+                    const displayTime = formatExactRealTime(analysis.created_at);
 
                     return (
                       <Card key={analysis.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300">
@@ -346,7 +355,7 @@ const SignalsDashboard = () => {
                         )}
                         <CardHeader className="pb-2">
                           {analysis.title && <CardTitle className="text-lg group-hover:text-primary transition-colors">{analysis.title}</CardTitle>}
-                          <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                          <p className="text-xs text-muted-foreground">{displayTime}</p>
                         </CardHeader>
                         {analysis.description && (
                           <CardContent className="pt-0 pb-2">
