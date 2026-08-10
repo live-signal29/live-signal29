@@ -26,7 +26,6 @@ type MenuItem = {
   badge?: string;
 };
 
-
 const MenuRow = memo(
   ({ item, active, onNavigate }: { item: MenuItem; active: boolean; onNavigate: () => void }) => {
     const Icon = item.icon;
@@ -35,30 +34,32 @@ const MenuRow = memo(
         to={item.path}
         onClick={onNavigate}
         className={cn(
-          "group flex items-center gap-3 h-[52px] px-2.5 rounded-xl",
-          "transition-all duration-200 will-change-transform",
+          "group flex items-center gap-2.5 h-9 px-2 rounded-lg",
+          "transition-all duration-200 ease-out active:scale-[0.98]",
           active
-            ? "bg-primary/10 text-primary shadow-[0_6px_20px_-12px_hsl(var(--glow-primary)/0.9)]"
-            : "text-foreground/85 hover:bg-accent/10 active:bg-accent/20"
+            ? "bg-primary/10 text-primary shadow-[0_2px_10px_-4px_hsl(var(--glow-primary)/0.5)] font-semibold"
+            : "text-foreground/80 hover:bg-accent/50 hover:text-foreground hover:translate-x-0.5"
         )}
       >
-        <span className={cn("icon-3d h-9 w-9", active && "icon-3d-active")}>
+        <span className="flex items-center justify-center shrink-0">
           <Icon
             className={cn(
-              "h-[19px] w-[19px] relative z-[1] stroke-[2]",
-              active ? "text-primary-foreground" : item.tint
+              "h-4 w-4 transition-transform duration-200 group-hover:scale-110",
+              active ? "text-primary stroke-[2.5]" : item.tint
             )}
           />
         </span>
-        <span className={cn("text-sm tracking-tight truncate", active ? "font-semibold" : "font-medium")}>
+        <span className="text-xs tracking-tight truncate">
           {item.label}
         </span>
         {item.badge && (
-          <span className="ml-auto px-1.5 py-0.5 rounded-md bg-primary/15 text-primary text-[9px] font-bold uppercase shrink-0">
+          <span className="ml-auto px-1.5 py-0.2 rounded bg-primary/15 text-primary text-[8px] font-bold uppercase shrink-0">
             {item.badge}
           </span>
         )}
-        {active && <span className={cn("h-5 w-1 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--glow-primary))] shrink-0", !item.badge && "ml-auto")} />}
+        {active && (
+          <span className={cn("h-4 w-1 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--glow-primary))] shrink-0", !item.badge && "ml-auto")} />
+        )}
       </Link>
     );
   }
@@ -74,8 +75,6 @@ export const SideDrawer = () => {
   const location = useLocation();
   const { t } = useTranslation();
 
-  // Lock the page behind the drawer without touching touch-action inside it,
-  // so the menu list keeps native 60 FPS scrolling and never triggers pull-to-refresh.
   useEffect(() => {
     if (!open) return;
 
@@ -91,7 +90,6 @@ export const SideDrawer = () => {
     body.style.overscrollBehaviorY = "none";
     body.style.overflow = "hidden";
 
-    // Restore scroll position of the menu list when reopening.
     const scroller = menuScrollRef.current;
     if (scroller) scroller.scrollTop = scrollPos.current;
 
@@ -169,7 +167,6 @@ export const SideDrawer = () => {
     [t]
   );
 
-
   return (
     <Sheet
       open={open}
@@ -181,49 +178,49 @@ export const SideDrawer = () => {
       <SheetTrigger asChild>
         <button
           aria-label="Open menu"
-          className="p-2 rounded-lg hover:bg-accent transition-colors duration-200 active:scale-95"
+          className="p-1.5 rounded-lg hover:bg-accent transition-colors duration-200 active:scale-95"
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-5 w-5" />
         </button>
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="w-[286px] sm:w-[320px] p-0 border-r border-border/60 shadow-2xl flex flex-col h-dvh max-h-dvh overflow-hidden"
+        className="w-[230px] max-w-[75vw] p-0 border-r border-border/40 shadow-2xl flex flex-col h-dvh max-h-dvh overflow-hidden bg-background/95 backdrop-blur-md transition-all duration-300 [&>button]:hidden"
       >
-        <div className="flex flex-col h-full min-h-0 bg-background">
-          {/* Sticky header */}
-          <div className="shrink-0 flex items-center gap-3 px-4 py-3.5 border-b border-border/60 bg-background/95 backdrop-blur-md">
+        <div className="flex flex-col h-full min-h-0">
+          {/* Header */}
+          <div className="shrink-0 flex items-center gap-2.5 px-3 py-2.5 border-b border-border/40 bg-background/80">
             <div className="relative shrink-0">
               <img
                 src={trendFriendLogo}
                 alt="Trend is Friend logo"
-                width={44}
-                height={44}
+                width={32}
+                height={32}
                 loading="eager"
                 decoding="async"
-                className="w-11 h-11 rounded-xl ring-1 ring-primary/20 shadow-md shadow-primary/20"
+                className="w-8 h-8 rounded-lg ring-1 ring-primary/20 shadow-sm"
               />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-background" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-[15px] font-bold tracking-tight truncate">TREND IS FRIEND</h2>
-              <p className="text-[11px] text-muted-foreground truncate">Live Trading Signals</p>
+              <h2 className="text-xs font-bold tracking-tight truncate leading-tight">TREND IS FRIEND</h2>
+              <p className="text-[10px] text-muted-foreground truncate leading-tight">Live Trading Signals</p>
             </div>
             <ThemeToggle />
           </div>
 
-          {/* Scrollable menu */}
+          {/* Menu Items */}
           <nav
             ref={menuScrollRef}
             onScroll={rememberScroll}
-            className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-2.5 py-2.5 space-y-1"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-2 py-1.5 space-y-0.5"
           >
             {menuGroups.map((group) => (
               <div key={group.title} className="pb-1">
-                <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                <p className="px-2 pt-2 pb-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
                   {group.title}
                 </p>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {group.items.map((item) => (
                     <MenuRow
                       key={item.path + item.label}
@@ -236,64 +233,63 @@ export const SideDrawer = () => {
               </div>
             ))}
 
-            <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            <p className="px-2 pt-2 pb-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Other
             </p>
 
-
             <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
-              <CollapsibleTrigger className="w-full h-[50px] px-3 rounded-xl flex items-center gap-3 text-foreground/85 hover:bg-accent/60 transition-colors duration-200">
-                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted/60 shrink-0">
-                  <Smartphone className="h-[22px] w-[22px] text-cyan-500" />
+              <CollapsibleTrigger className="w-full h-8 px-2 rounded-lg flex items-center gap-2.5 text-foreground/80 hover:bg-accent/50 transition-colors duration-200">
+                <span className="flex items-center justify-center shrink-0">
+                  <Smartphone className="h-4 w-4 text-cyan-500" />
                 </span>
-                <span className="text-sm font-medium">Other Apps</span>
+                <span className="text-xs font-medium">Other Apps</span>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 ml-auto transition-transform duration-200",
+                    "h-3.5 w-3.5 ml-auto transition-transform duration-200 text-muted-foreground",
                     otherAppsOpen && "rotate-180"
                   )}
                 />
               </CollapsibleTrigger>
               <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                <div className="ml-6 my-1 space-y-0.5 border-l border-border/60 pl-3">
+                <div className="ml-4 my-0.5 space-y-0.5 border-l border-border/40 pl-2">
                   <a
                     href="http://cryptoincome.vercel.app"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={closeDrawer}
-                    className="flex items-center justify-between py-2.5 px-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 group"
+                    className="flex items-center justify-between py-1.5 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors duration-200 group"
                   >
                     <span>Crypto Investment</span>
-                    <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                    <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100" />
                   </a>
                   <a
                     href="https://one.exnessonelink.com/a/vtkbbmje"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={closeDrawer}
-                    className="flex items-center justify-between py-2.5 px-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 group"
+                    className="flex items-center justify-between py-1.5 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors duration-200 group"
                   >
                     <span>Open Forex Account</span>
-                    <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                    <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100" />
                   </a>
                 </div>
               </CollapsibleContent>
             </Collapsible>
           </nav>
 
-          {/* Sticky footer */}
-          <div className="shrink-0 px-3 py-3 border-t border-border/60 bg-background/95 backdrop-blur-md space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
+          {/* Footer */}
+          <div className="shrink-0 px-2.5 py-2 border-t border-border/40 bg-background/80 space-y-2">
+            <div className="flex items-center justify-between gap-1">
               <LanguageSwitcher />
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[10px] text-muted-foreground">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />v{APP_VERSION}
               </span>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-destructive text-destructive-foreground shadow-md shadow-destructive/20 transition-colors duration-200 hover:bg-destructive/90 active:scale-[0.99]"
+              className="w-full h-8 rounded-lg font-medium text-xs flex items-center justify-center gap-2 bg-destructive text-destructive-foreground shadow-sm transition-all duration-200 hover:bg-destructive/90 active:scale-[0.98]"
             >
-              <LogOut className="h-[18px] w-[18px]" />
+              <LogOut className="h-3.5 w-3.5" />
               Logout
             </button>
           </div>
