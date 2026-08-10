@@ -7,32 +7,15 @@ import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Loader2,
-  TrendingUp,
-  Coins,
-  Bitcoin,
-  BarChart3,
-  LineChart,
-  Maximize2,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Loader2, Maximize2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
-import { cn } from "@/lib/utils";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
-import {
-  startOfDay,
-  formatDistanceToNow,
-} from "date-fns";
+import { startOfDay, formatDistanceToNow } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
@@ -64,11 +47,10 @@ const SignalsDashboard = () => {
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
-
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  // Swipe gesture to change categories on mobile
+  // Mobile swipe gesture to switch categories
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -76,32 +58,15 @@ const SignalsDashboard = () => {
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
-      if (
-        touchStartX.current === null ||
-        touchStartY.current === null
-      ) {
-        return;
-      }
-
-      const deltaX =
-        e.changedTouches[0].clientX - touchStartX.current;
-
-      const deltaY =
-        e.changedTouches[0].clientY - touchStartY.current;
-
+      if (touchStartX.current === null || touchStartY.current === null) return;
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const deltaY = e.changedTouches[0].clientY - touchStartY.current;
       touchStartX.current = null;
       touchStartY.current = null;
 
-      if (
-        Math.abs(deltaX) > 80 &&
-        Math.abs(deltaX) > Math.abs(deltaY) * 1.5
-      ) {
+      if (Math.abs(deltaX) > 80 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
         const currentIndex = CATEGORIES.indexOf(mainCategory);
-
-        if (
-          deltaX < 0 &&
-          currentIndex < CATEGORIES.length - 1
-        ) {
+        if (deltaX < 0 && currentIndex < CATEGORIES.length - 1) {
           setMainCategory(CATEGORIES[currentIndex + 1]);
           setSubCategory("all");
         } else if (deltaX > 0 && currentIndex > 0) {
@@ -113,28 +78,21 @@ const SignalsDashboard = () => {
     [mainCategory]
   );
 
-  // Trial expired popup
   useEffect(() => {
-    if (
-      trialExpired &&
-      subscriptionStatus === "free_trial"
-    ) {
+    if (trialExpired && subscriptionStatus === "free_trial") {
       setShowTrialExpiredPopup(true);
     }
   }, [trialExpired, subscriptionStatus]);
 
   const breadcrumbData = getBreadcrumbStructuredData([
-    {
-      name: "Home",
-      url: "https://yourdomain.com",
-    },
+    { name: "Home", url: "https://yourdomain.com" },
     {
       name: "Live Signals Dashboard",
       url: "https://yourdomain.com/signals-dashboard",
     },
   ]);
 
-  // Infinite query for signals
+  // Infinite query for signals using RPC function
   const {
     data: signalsData,
     isLoading,
@@ -143,80 +101,61 @@ const SignalsDashboard = () => {
     isFetchingNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: [
-      "signals-infinite",
-      mainCategory,
-      subCategory,
-    ],
-
+    queryKey: ["signals-infinite", mainCategory, subCategory],
     queryFn: async ({ pageParam = 0 }) => {
-      const { data, error } = await supabase.rpc(
-        "get_signals_filtered",
-        {
+      try {
+        const { data, error } = await supabase.rpc("get_signals_filtered", {
           p_main_category: mainCategory,
           p_sub_category: subCategory || "all",
           p_limit: SIGNALS_PER_PAGE,
           p_offset: pageParam * SIGNALS_PER_PAGE,
+        });
+
+        if (error) {
+          console.error("RPC Error:", error);
+          return { data: [], nextPage: undefined };
         }
-      );
 
-      if (error) {
-        throw error;
+        return {
+          data: Array.isArray(data) ? data : [],
+          nextPage:
+            (data?.length || 0) === SIGNALS_PER_PAGE
+              ? pageParam + 1
+              : undefined,
+        };
+      } catch (err) {
+        console.error("Query Exception:", err);
+        return { data: [], nextPage: undefined };
       }
-
-      return {
-        data: data || [],
-        nextPage:
-          (data?.length || 0) === SIGNALS_PER_PAGE
-            ? pageParam + 1
-            : undefined,
-      };
     },
-
-    getNextPageParam: (lastPage) =>
-      lastPage.nextPage,
-
+    getNextPageParam: (lastPage) => lastPage?.nextPage,
     initialPageParam: 0,
-
     enabled: mainCategory !== "MARKET IDEAS",
-
     staleTime: 60000,
   });
 
-  // All signals
   const allSignals =
-    signalsData?.pages.flatMap(
-      (page) => page.data
-    ) || [];
+    signalsData?.pages?.flatMap((page) => page?.data || []) || [];
 
-  // Expired trial filtering
   const signals =
     trialExpired && trialEndDate
       ? allSignals.filter(
           (signal) =>
-            new Date(signal.created_at) <= trialEndDate
+            signal?.created_at && new Date(signal.created_at) <= trialEndDate
         )
       : allSignals;
 
-  // Unique open signal pairs
-  const openSignalPairs = signals
-    .filter(
-      (signal) => signal.signal_status !== "CLOSE"
-    )
-    .map((signal) => signal.pair)
-    .filter(
-      (pair, index, arr) =>
-        arr.indexOf(pair) === index
-    );
+  const openSignalPairs = (signals || [])
+    .filter((s) => s && s.signal_status !== "CLOSE")
+    .map((s) => s?.pair)
+    .filter((pair): pair is string => Boolean(pair))
+    .filter((pair, index, arr) => arr.indexOf(pair) === index);
 
-  // Live prices
-  const { prices: livePrices } =
-    useLivePricesFetch(
-      openSignalPairs,
-      openSignalPairs.length > 0
-    );
+  const { prices: livePrices = {} } = useLivePricesFetch(
+    openSignalPairs,
+    openSignalPairs.length > 0
+  );
 
-  // Realtime subscription
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const channel = supabase
@@ -239,93 +178,54 @@ const SignalsDashboard = () => {
       };
     }, 3000);
 
-    return () => {
-      clearTimeout(timeoutId);
-    };
+    return () => clearTimeout(timeoutId);
   }, [refetch]);
 
-  // Infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          hasNextPage &&
-          !isFetchingNextPage
-        ) {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
           fetchNextPage();
         }
       },
-      {
-        threshold: 0.1,
-      }
+      { threshold: 0.1 }
     );
 
     if (loadMoreRef.current) {
       observer.observe(loadMoreRef.current);
     }
 
-    return () => {
-      observer.disconnect();
-    };
-  }, [
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  ]);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Chart analysis + market ideas
-  const {
-    data: chartAnalysis,
-    isLoading: isLoadingCharts,
-  } = useQuery({
+  const { data: chartAnalysis = [], isLoading: isLoadingCharts } = useQuery({
     queryKey: ["chart-analysis-and-ideas"],
-
     queryFn: async () => {
-      const [charts, ideas] =
-        await Promise.all([
-          supabase
-            .from("chart_analysis")
-            .select("*")
-            .eq("published", true)
-            .order("created_at", {
-              ascending: false,
-            })
-            .limit(30),
-
-          supabase
-            .from("market_ideas")
-            .select("*")
-            .eq("published", true)
-            .order("created_at", {
-              ascending: false,
-            })
-            .limit(30),
-        ]);
-
-      if (charts.error) {
-        throw charts.error;
-      }
-
-      if (ideas.error) {
-        throw ideas.error;
-      }
+      const [charts, ideas] = await Promise.all([
+        supabase
+          .from("chart_analysis")
+          .select("*")
+          .eq("published", true)
+          .order("created_at", { ascending: false })
+          .limit(30),
+        supabase
+          .from("market_ideas")
+          .select("*")
+          .eq("published", true)
+          .order("created_at", { ascending: false })
+          .limit(30),
+      ]);
 
       const merged = [
         ...(charts.data || []),
         ...(ideas.data || []),
       ].sort(
         (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-
       return merged;
     },
-
-    enabled:
-      mainCategory === "MARKET IDEAS",
-
+    enabled: mainCategory === "MARKET IDEAS",
     staleTime: 120000,
   });
 
@@ -334,17 +234,8 @@ const SignalsDashboard = () => {
     setLightboxOpen(true);
   };
 
-  const handleCategoryChangeFromHeader = (cat: string) => {
-    const upperCat = cat.toUpperCase();
-    if (upperCat === "GOLD" || upperCat === "ALL") {
-      setMainCategory("COMMODITIES");
-    } else if (upperCat === "DERIV") {
-      setMainCategory("DERIV/BINARY");
-    } else if (upperCat === "IDEAS") {
-      setMainCategory("MARKET IDEAS");
-    } else {
-      setMainCategory(upperCat);
-    }
+  const handleCategoryChangeFromHeader = (catKey: string) => {
+    setMainCategory(catKey);
     setSubCategory("all");
   };
 
@@ -356,13 +247,13 @@ const SignalsDashboard = () => {
     >
       <SEO
         title="Live Signals Dashboard - Real-time Trading Signals"
-        description="Access real-time trading signals for Forex, Crypto, Commodities, and Indices. Get instant notifications, professional analysis, and high-accuracy signals."
-        keywords="live signals dashboard, trading signals, forex signals live, crypto signals real-time, commodities trading, indices signals"
+        description="Access real-time trading signals for Forex, Crypto, Commodities, and Indices."
+        keywords="live signals dashboard, trading signals, forex signals live, crypto signals real-time"
         url="https://yourdomain.com/signals-dashboard"
         structuredData={breadcrumbData}
       />
 
-      {/* Connected Header with sync callback */}
+      {/* Header with category change listener */}
       <Header
         activeCategory={mainCategory}
         onCategoryChange={handleCategoryChangeFromHeader}
@@ -372,329 +263,208 @@ const SignalsDashboard = () => {
 
       <main className="flex-1">
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
-
-          {/* Trial Expired Popup */}
           <TrialExpiredPopup
             open={showTrialExpiredPopup}
-            onClose={() =>
-              setShowTrialExpiredPopup(false)
-            }
+            onClose={() => setShowTrialExpiredPopup(false)}
           />
 
-          {/* Live Dashboard Header */}
           <div className="mb-3">
             <LiveDashboardHeader />
           </div>
 
-          {/* Top Ad */}
           {subscriptionStatus !== "premium" && (
             <div className="mb-4">
               <AdBanner />
             </div>
           )}
 
-          {/* Main Dashboard Content */}
-          <>
-            {/* Market Ideas */}
-            {mainCategory ===
-              "MARKET IDEAS" && (
-              <>
-                {isLoadingCharts ? (
-                  <div className="flex justify-center items-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Market Ideas View */}
+          {mainCategory === "MARKET IDEAS" && (
+            <>
+              {isLoadingCharts ? (
+                <div className="flex justify-center items-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {chartAnalysis?.map((analysis, index) => {
+                    const hasImage =
+                      !!analysis?.image_url &&
+                      String(analysis.image_url).trim() !== "";
+                    const timeAgo = analysis?.created_at
+                      ? formatDistanceToNow(new Date(analysis.created_at), {
+                          addSuffix: true,
+                        })
+                      : "";
 
-                    {chartAnalysis?.map(
-                      (analysis, index) => {
-                        const hasImage =
-                          !!analysis.image_url &&
-                          String(
-                            analysis.image_url
-                          ).trim() !== "";
-
-                        const timeAgo =
-                          formatDistanceToNow(
-                            new Date(
-                              analysis.created_at
-                            ),
-                            {
-                              addSuffix: true,
-                            }
-                          );
-
-                        return (
-                          <Card
-                            key={analysis.id}
-                            className="group overflow-hidden hover:shadow-xl transition-all duration-300"
+                    return (
+                      <Card
+                        key={analysis.id || index}
+                        className="group overflow-hidden hover:shadow-xl transition-all duration-300"
+                      >
+                        {hasImage && (
+                          <div
+                            className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
+                            onClick={() => openLightbox(index)}
                           >
-                            {hasImage && (
-                              <div
-                                className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
-                                onClick={() =>
-                                  openLightbox(
-                                    index
-                                  )
-                                }
+                            <img
+                              src={analysis.image_url}
+                              alt={analysis.title || "Trading idea chart"}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/15 transition-colors duration-300 flex items-center justify-center">
+                              <Button
+                                size="icon"
+                                variant="secondary"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                               >
-                                <img
-                                  src={
-                                    analysis.image_url
-                                  }
-                                  alt={
-                                    analysis.title ||
-                                    "Trading idea chart"
-                                  }
-                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                  loading="lazy"
-                                />
+                                <Maximize2 className="h-5 w-5 text-foreground" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
-                                <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/15 transition-colors duration-300 flex items-center justify-center">
-                                  <Button
-                                    size="icon"
-                                    variant="secondary"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/90 hover:bg-background"
-                                  >
-                                    <Maximize2 className="h-5 w-5 text-foreground" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
+                        <CardHeader className="pb-2">
+                          {analysis.title && (
+                            <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                              {analysis.title}
+                            </CardTitle>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {timeAgo}
+                          </p>
+                        </CardHeader>
 
-                            <CardHeader className="pb-2">
-                              {analysis.title && (
-                                <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                                  {analysis.title}
-                                </CardTitle>
-                              )}
+                        {analysis.description && (
+                          <CardContent className="pt-0 pb-2">
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {analysis.description}
+                            </p>
+                          </CardContent>
+                        )}
 
-                              <p className="text-xs text-muted-foreground">
-                                {timeAgo}
-                              </p>
-                            </CardHeader>
+                        <CardContent className="pt-2 border-t border-border/50">
+                          <ChartReactions chartId={analysis.id} />
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
 
-                            {analysis.description && (
-                              <CardContent className="pt-0 pb-2">
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {
-                                    analysis.description
-                                  }
-                                </p>
-                              </CardContent>
-                            )}
+              {chartAnalysis && chartAnalysis.length > 0 && (
+                <ChartLightbox
+                  isOpen={lightboxOpen}
+                  onClose={() => setLightboxOpen(false)}
+                  charts={chartAnalysis}
+                  initialIndex={selectedChartIndex}
+                />
+              )}
 
-                            <CardContent className="pt-2 border-t border-border/50">
-                              <ChartReactions
-                                chartId={
-                                  analysis.id
-                                }
-                              />
-                            </CardContent>
-                          </Card>
-                        );
-                      }
-                    )}
+              {!isLoadingCharts &&
+                (!chartAnalysis || chartAnalysis.length === 0) && (
+                  <div className="text-center py-20">
+                    <p className="text-muted-foreground text-lg">
+                      No chart analysis available
+                    </p>
                   </div>
                 )}
+            </>
+          )}
 
-                {/* Chart Lightbox */}
-                {chartAnalysis &&
-                  chartAnalysis.length >
-                    0 && (
-                    <ChartLightbox
-                      isOpen={
-                        lightboxOpen
-                      }
-                      onClose={() =>
-                        setLightboxOpen(
-                          false
-                        )
-                      }
-                      charts={
-                        chartAnalysis
-                      }
-                      initialIndex={
-                        selectedChartIndex
-                      }
-                    />
-                  )}
+          {/* Signals View */}
+          {mainCategory !== "MARKET IDEAS" && (
+            <>
+              {isLoading ? (
+                <SignalsSkeleton />
+              ) : (
+                <div className="space-y-6">
+                  {signals && signals.length > 0
+                    ? (() => {
+                        const groupedSignals: Record<
+                          string,
+                          typeof signals
+                        > = {};
 
-                {!isLoadingCharts &&
-                  chartAnalysis?.length ===
-                    0 && (
-                    <div className="text-center py-20">
-                      <p className="text-muted-foreground text-lg">
-                        No chart analysis available
-                      </p>
-                    </div>
-                  )}
-              </>
-            )}
+                        signals.forEach((signal) => {
+                          if (!signal?.created_at) return;
+                          const date = startOfDay(
+                            new Date(signal.created_at)
+                          ).toISOString();
 
-            {/* Signals */}
-            {mainCategory !==
-              "MARKET IDEAS" && (
-              <>
-                {isLoading ? (
-                  <SignalsSkeleton />
-                ) : (
-                  <div className="space-y-6">
-
-                    {signals &&
-                      signals.length > 0 &&
-                      (() => {
-                        const filteredSignals =
-                          signals;
-
-                        const groupedSignals: {
-                          [key: string]: typeof filteredSignals;
-                        } = {};
-
-                        filteredSignals.forEach(
-                          (signal) => {
-                            const date =
-                              startOfDay(
-                                new Date(
-                                  signal.created_at
-                                )
-                              ).toISOString();
-
-                            if (
-                              !groupedSignals[
-                                date
-                              ]
-                            ) {
-                              groupedSignals[
-                                date
-                              ] = [];
-                            }
-
-                            groupedSignals[
-                              date
-                            ].push(signal);
+                          if (!groupedSignals[date]) {
+                            groupedSignals[date] = [];
                           }
-                        );
+                          groupedSignals[date].push(signal);
+                        });
 
-                        const dateEntries =
-                          Object.entries(
-                            groupedSignals
-                          );
-
-                        return dateEntries.map(
-                          ([
-                            date,
-                            daySignals,
-                          ]) => (
-                            <div
-                              key={date}
-                            >
-                              <div className="space-y-3">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-
-                                  {daySignals.map(
-                                    (
-                                      signal,
-                                      i
-                                    ) => (
-                                      <React.Fragment
-                                        key={
-                                          signal.id
-                                        }
-                                      >
-                                        <SignalCardNew
-                                          signal={
-                                            signal as any
-                                          }
-                                          hasAccess={
-                                            hasAccess
-                                          }
-                                          subscriptionStatus={
-                                            subscriptionStatus
-                                          }
-                                          livePrice={
-                                            livePrices[
-                                              signal
-                                                .pair
-                                            ]
-                                              ? parseFloat(
-                                                  livePrices[
-                                                    signal
-                                                      .pair
-                                                  ]
-                                                )
-                                              : undefined
-                                          }
-                                        />
-
-                                        {(i + 1) %
-                                          3 ===
-                                          0 && (
-                                          <div className="md:col-span-2">
-                                            <AffiliateBannerCarousel />
-                                          </div>
-                                        )}
-                                      </React.Fragment>
-                                    )
-                                  )}
-                                </div>
+                        return Object.entries(groupedSignals).map(
+                          ([date, daySignals]) => (
+                            <div key={date} className="space-y-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                                {daySignals.map((signal, i) => (
+                                  <React.Fragment key={signal.id || i}>
+                                    <SignalCardNew
+                                      signal={signal as any}
+                                      hasAccess={hasAccess}
+                                      subscriptionStatus={subscriptionStatus}
+                                      livePrice={
+                                        signal?.pair && livePrices[signal.pair]
+                                          ? parseFloat(livePrices[signal.pair])
+                                          : undefined
+                                      }
+                                    />
+                                    {(i + 1) % 3 === 0 && (
+                                      <div className="md:col-span-2">
+                                        <AffiliateBannerCarousel />
+                                      </div>
+                                    )}
+                                  </React.Fragment>
+                                ))}
                               </div>
                             </div>
                           )
                         );
-                      })()}
+                      })()
+                    : null}
 
-                    {/* Infinite Scroll */}
-                    <div
-                      ref={loadMoreRef}
-                      className="py-8 flex justify-center"
-                    >
-                      {isFetchingNextPage && (
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      )}
-
-                      {!hasNextPage &&
-                        signals.length >
-                          0 && (
-                          <p className="text-muted-foreground text-sm">
-                            All signals loaded
-                          </p>
-                        )}
-                    </div>
-                  </div>
-                )}
-
-                {!isLoading &&
-                  signals?.length ===
-                    0 && (
-                    <div className="text-center py-20">
-                      <p className="text-muted-foreground text-lg">
-                        No signals found
+                  <div ref={loadMoreRef} className="py-8 flex justify-center">
+                    {isFetchingNextPage && (
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    )}
+                    {!hasNextPage && signals.length > 0 && (
+                      <p className="text-muted-foreground text-sm">
+                        All signals loaded
                       </p>
-                    </div>
-                  )}
-              </>
-            )}
+                    )}
+                  </div>
+                </div>
+              )}
 
-            {/* Stats */}
-            <div className="mt-3">
-              <StreakStatsRow />
+              {!isLoading && (!signals || signals.length === 0) && (
+                <div className="text-center py-20">
+                  <p className="text-muted-foreground text-lg">
+                    No signals found
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="mt-3">
+            <StreakStatsRow />
+          </div>
+
+          {subscriptionStatus !== "premium" && (
+            <div className="mt-6">
+              <AdBanner />
             </div>
-
-            {/* Bottom Ad */}
-            {subscriptionStatus !==
-              "premium" && (
-              <div className="mt-6">
-                <AdBanner />
-              </div>
-            )}
-
-          </>
+          )}
         </div>
       </main>
 
       <ExnessPopup />
-
       <Footer />
     </div>
   );
