@@ -12,10 +12,7 @@ import {
 } from "lucide-react";
 import {
   format,
-  isToday,
-  isYesterday,
   differenceInHours,
-  differenceInMinutes,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -94,7 +91,7 @@ const SignalCardNew = ({
   const confettiFiredRef = useRef(false);
   const initialTP3StateRef = useRef(!!signal.tp3_hit);
 
-  // Refresh relative time every 30 seconds
+  // Refresh component state if needed
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -182,15 +179,6 @@ const SignalCardNew = ({
    * ============================================================
    * TIME LOGIC
    * ============================================================
-   *
-   * Pending:
-   *   created_at
-   *
-   * Activated / Running:
-   *   activated_at
-   *
-   * Closed:
-   *   created_at fallback
    */
 
   const signalTime =
@@ -304,14 +292,6 @@ const SignalCardNew = ({
    * ============================================================
    * TP / SL PRICE LOGIC
    * ============================================================
-   *
-   * BUY:
-   *   TP = current >= target
-   *   SL = current <= SL
-   *
-   * SELL:
-   *   TP = current <= target
-   *   SL = current >= SL
    */
 
   const hasTPReached = (
@@ -397,12 +377,6 @@ const SignalCardNew = ({
           ? parseEntryPrice(signal.sl)
           : 0;
 
-      /*
-       * --------------------------------------------------------
-       * TP1
-       * --------------------------------------------------------
-       */
-
       if (
         !signal.tp1_hit &&
         tp1Price > 0 &&
@@ -413,20 +387,12 @@ const SignalCardNew = ({
       ) {
         updates.tp1_hit = true;
 
-        // Move SL to actual entry.
-        // Limit orders use limit_entry_price.
         updates.sl =
           String(entryPrice);
 
         updates.profit_note =
           "TP 1 Hit ✅ SL moved to B.E";
       }
-
-      /*
-       * --------------------------------------------------------
-       * TP2
-       * --------------------------------------------------------
-       */
 
       if (
         !signal.tp2_hit &&
@@ -442,12 +408,6 @@ const SignalCardNew = ({
           "TP 2 Hit ✅ More Profit Secured 💰";
       }
 
-      /*
-       * --------------------------------------------------------
-       * TP3
-       * --------------------------------------------------------
-       */
-
       if (
         !signal.tp3_hit &&
         tp3Price > 0 &&
@@ -461,22 +421,11 @@ const SignalCardNew = ({
         updates.profit_note =
           "TP 3 Hit 🎊 Maximum Profit Secured ✅";
 
-        /*
-         * If TP4 exists, TP3 is NOT final.
-         * Signal remains open for TP4.
-         */
-
         if (!signal.tp4) {
           updates.signal_status =
             "close";
         }
       }
-
-      /*
-       * --------------------------------------------------------
-       * TP4
-       * --------------------------------------------------------
-       */
 
       if (
         !signal.tp4_hit &&
@@ -494,14 +443,6 @@ const SignalCardNew = ({
         updates.profit_note =
           "TP 4 Final Target Hit 🎊 Maximum Profit Secured ✅";
       }
-
-      /*
-       * --------------------------------------------------------
-       * BREAK EVEN
-       * --------------------------------------------------------
-       *
-       * Only after TP1.
-       */
 
       const effectiveTP1Hit =
         !!signal.tp1_hit ||
@@ -545,14 +486,6 @@ const SignalCardNew = ({
           "Signal Closed at Breakeven after TP1 ✅";
       }
 
-      /*
-       * --------------------------------------------------------
-       * ORIGINAL SL
-       * --------------------------------------------------------
-       *
-       * Only check original SL before TP1.
-       */
-
       const effectiveTP1 =
         !!signal.tp1_hit ||
         !!updates.tp1_hit;
@@ -574,12 +507,6 @@ const SignalCardNew = ({
         updates.profit_note =
           "SL Hit ❌ - Staying patient for a better entry.";
       }
-
-      /*
-       * --------------------------------------------------------
-       * DATABASE UPDATE
-       * --------------------------------------------------------
-       */
 
       if (
         !cancelled &&
@@ -686,7 +613,7 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * TIME
+   * TIME (UPDATED: FIXED REAL TIME)
    * ============================================================
    */
 
@@ -694,47 +621,22 @@ const SignalCardNew = ({
     dateString: string
   ) => {
     try {
-      const date =
-        new Date(dateString);
+      if (!dateString) return "Just now";
 
-      const now =
-        new Date();
+      const date = new Date(dateString);
 
-      const diffMinutes =
-        Math.max(
-          0,
-          differenceInMinutes(
-            now,
-            date
-          )
-        );
-
-      if (diffMinutes < 1) {
-        return "Just now";
+      // Jab Signal Closed ho, to "Closed at 05:20 PM" show karega
+      if (
+        isClosed ||
+        signal.sl_hit ||
+        signal.tp4_hit ||
+        (!signal.tp4 && signal.tp3_hit)
+      ) {
+        return `Closed at ${format(date, "hh:mm a")}`;
       }
 
-      if (diffMinutes < 60) {
-        return `${diffMinutes}m ago`;
-      }
-
-      if (isToday(date)) {
-        return `Today, ${format(
-          date,
-          "hh:mm a"
-        )}`;
-      }
-
-      if (isYesterday(date)) {
-        return `Yesterday, ${format(
-          date,
-          "hh:mm a"
-        )}`;
-      }
-
-      return format(
-        date,
-        "dd MMM, hh:mm a"
-      );
+      // Live / Open signals ke liye exact real time format (e.g., 05:02 PM)
+      return format(date, "hh:mm a");
     } catch {
       return "Just now";
     }
@@ -809,10 +711,6 @@ const SignalCardNew = ({
       | "tp3"
       | "tp4"
   ) => {
-    /*
-     * SL
-     */
-
     if (targetType === "sl") {
       const slMovedToBE =
         !!signal.tp1_hit ||
@@ -829,10 +727,6 @@ const SignalCardNew = ({
 
       return "text-rose-500 dark:text-rose-400";
     }
-
-    /*
-     * Every TP gets its OWN color.
-     */
 
     const hitMap = {
       tp1: !!signal.tp1_hit,
