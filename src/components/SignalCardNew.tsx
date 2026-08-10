@@ -74,21 +74,21 @@ const SignalCardNew = ({
   const confettiFiredRef = useRef<boolean>(false);
   const initialTP3StateRef = useRef<boolean>(!!signal.tp3_hit);
   
-  // ✅ Real Time State for Time
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // ✅ REAL TIME STATE - har minute update
+  const [, forceUpdate] = useState(0);
 
-  // ✅ Update time every minute
+  // ✅ Har 60 second me component re-render karo
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000); // Update every 60 seconds
+      forceUpdate(prev => prev + 1);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
 
   // Lifecycle calculations
   const lifecycle = (signal.signal_status || signal.status || 'open').toLowerCase();
-  const isNewSignal = differenceInHours(new Date(signal.created_at), new Date()) < 24 && lifecycle !== 'close';
+  const isNewSignal = differenceInHours(new Date(), new Date(signal.created_at)) < 24 && lifecycle !== 'close';
   const isPending = lifecycle === 'pending';
   const isOpen = lifecycle === 'open' || lifecycle === 'running' || lifecycle === 'active';
   const isClosed = lifecycle === 'close' || lifecycle === 'closed';
@@ -248,26 +248,17 @@ const SignalCardNew = ({
     }
   };
 
-  // ✅ Real Time Time Formatter - "X mins ago" style
+  // ✅ REAL TIME TIME FORMAT
   const formatRealTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      const now = currentTime;
+      const now = new Date();
       const diffMinutes = differenceInMinutes(now, date);
       
-      // If less than 1 minute ago
       if (diffMinutes < 1) return "Just now";
-      
-      // If less than 60 minutes ago
       if (diffMinutes < 60) return `${diffMinutes}m ago`;
-      
-      // If today
       if (isToday(date)) return `Today, ${format(date, "hh:mm a")}`;
-      
-      // If yesterday
       if (isYesterday(date)) return `Yesterday, ${format(date, "hh:mm a")}`;
-      
-      // Older
       return format(date, "dd MMM, hh:mm a");
     } catch {
       return "Just now";
@@ -361,7 +352,7 @@ const SignalCardNew = ({
             {statusText}
           </span>
 
-          {/* ✅ Real Time Time Display */}
+          {/* ✅ REAL TIME TIME DISPLAY */}
           <div className="flex items-center gap-0.5 text-[7.5px] text-muted-foreground">
             <Clock className="h-2.5 w-2.5" />
             <span>{formatRealTime(signal.created_at)}</span>
