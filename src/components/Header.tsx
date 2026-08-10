@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import TrialBanner from "./TrialBanner";
 import AppInstallBanner from "./AppInstallBanner";
@@ -28,6 +28,7 @@ const CATEGORY_LIST = [
   { id: "Crypto", label: "CRYPTO" },
   { id: "Indices", label: "INDICES" },
   { id: "Deriv", label: "DERIV" },
+  { id: "Ideas", label: "IDEAS" },
 ];
 
 const Header = ({
@@ -38,9 +39,6 @@ const Header = ({
   const { subscriptionStatus } = useSubscriptionAccess();
   const isPremium = subscriptionStatus === "premium";
 
-  const [localCategory, setLocalCategory] = useState(activeCategory);
-  const currentCategory = onCategoryChange ? activeCategory : localCategory;
-
   // Real Dynamic Active/Open Signals Count Logic
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {
@@ -50,11 +48,11 @@ const Header = ({
       Crypto: 0,
       Indices: 0,
       Deriv: 0,
+      Ideas: 0,
     };
 
     if (Array.isArray(signals)) {
       signals.forEach((sig) => {
-        // Sirf Open ya Active status signals count honge
         const isLive =
           !sig.status ||
           sig.status.toUpperCase() === "OPEN" ||
@@ -62,9 +60,9 @@ const Header = ({
 
         if (isLive && sig.category) {
           counts.All += 1;
+          const rawCat = sig.category.trim();
           const formattedCat =
-            sig.category.charAt(0).toUpperCase() +
-            sig.category.slice(1).toLowerCase();
+            rawCat.charAt(0).toUpperCase() + rawCat.slice(1).toLowerCase();
 
           if (counts[formattedCat] !== undefined) {
             counts[formattedCat] += 1;
@@ -77,7 +75,6 @@ const Header = ({
   }, [signals]);
 
   const handleSelect = (catId: string) => {
-    setLocalCategory(catId);
     if (onCategoryChange) {
       onCategoryChange(catId);
     }
@@ -85,7 +82,6 @@ const Header = ({
 
   return (
     <>
-      {/* Promo area */}
       {!isPremium ? (
         <>
           <FlashSaleBanner />
@@ -95,10 +91,8 @@ const Header = ({
         <AppInstallBanner />
       )}
 
-      {/* Modern Sticky Glassmorphic Header */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/85 backdrop-blur-xl transition-colors duration-300">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-3 sm:px-4">
-          {/* Brand Logo & Status */}
           <Link to="/" className="min-w-0 flex flex-col justify-center group">
             <div className="flex items-center gap-1.5 leading-none">
               <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -109,7 +103,6 @@ const Header = ({
                 Signals
               </span>
 
-              {/* Status Badge */}
               <span
                 className={
                   isPremium
@@ -127,7 +120,6 @@ const Header = ({
             </span>
           </Link>
 
-          {/* Right controls */}
           <div className="flex shrink-0 items-center gap-2">
             <div className="hidden items-center gap-2 sm:flex">
               <GlobalSearch />
@@ -146,11 +138,11 @@ const Header = ({
           </div>
         </div>
 
-        {/* Integrated Category Bar in Header */}
+        {/* Dynamic Connected Category Bar */}
         <div className="flex items-center overflow-x-auto no-scrollbar border-t border-slate-200/60 dark:border-slate-800/60 px-2 bg-white dark:bg-slate-950">
           {CATEGORY_LIST.map((cat) => {
             const isActive =
-              currentCategory.toLowerCase() === cat.id.toLowerCase();
+              (activeCategory || "All").toLowerCase() === cat.id.toLowerCase();
             const openCount = categoryCounts[cat.id] || 0;
 
             return (
