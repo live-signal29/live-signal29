@@ -24,21 +24,25 @@ const Signup = () => {
   const refCode = searchParams.get('ref') || '';
   const [referralCode, setReferralCode] = useState(refCode);
 
+  // Check common weak sequences (like 123, password, admin, etc.)
+  const isCommonPattern = /(123|password|admin|qwerty|azazi|aziz)/i.test(password);
+
   // Live Password Validation Rules
   const passwordRules = [
     { label: "At least 8 characters", valid: password.length >= 8 },
     { label: "Contains a number (0-9)", valid: /\d/.test(password) },
     { label: "Contains special character (@$!%*?&)", valid: /[@$!%*?&]/.test(password) },
-    { label: "Uppercase & Lowercase letter", valid: /[a-z]/.test(password) && /[A-Z]/.test(password) }
+    { label: "Uppercase & Lowercase letter", valid: /[a-z]/.test(password) && /[A-Z]/.test(password) },
+    { label: "Avoid common phrases (e.g. 123, admin)", valid: !isCommonPattern && password.length > 0 }
   ];
 
-  // Calculate Strength Score (0 to 4)
+  // Calculate Strength Score (0 to 5)
   const strengthScore = passwordRules.filter((r) => r.valid).length;
 
   const getStrengthLabel = () => {
-    if (strengthScore === 0) return { text: "Too Weak", color: "bg-destructive", textColor: "text-destructive" };
-    if (strengthScore <= 2) return { text: "Weak", color: "bg-orange-500", textColor: "text-orange-500" };
-    if (strengthScore === 3) return { text: "Medium", color: "bg-yellow-500", textColor: "text-yellow-500" };
+    if (strengthScore <= 1) return { text: "Too Weak", color: "bg-destructive", textColor: "text-destructive" };
+    if (strengthScore <= 3) return { text: "Weak / Medium", color: "bg-orange-500", textColor: "text-orange-500" };
+    if (strengthScore === 4) return { text: "Good", color: "bg-yellow-500", textColor: "text-yellow-500" };
     return { text: "Strong", color: "bg-emerald-500", textColor: "text-emerald-500" };
   };
 
@@ -75,8 +79,11 @@ const Signup = () => {
 
       if (error) {
         const msg = (error.message || "").toLowerCase();
+        
         if (msg.includes("already registered")) {
           toast.error("This email is already registered. Please sign in instead.");
+        } else if (msg.includes("weak") || msg.includes("easy to guess") || msg.includes("pwned")) {
+          toast.error("This password is too easy to guess. Please choose a unique password (e.g., mixing unusual words).");
         } else {
           toast.error(error.message || "Signup failed. Please try again.");
         }
@@ -92,7 +99,7 @@ const Signup = () => {
           navigate(`/login${returnUrl !== '/onboarding' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
         }
       }
-    } catch (error: any) {
+    } catch {
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -215,7 +222,7 @@ const Signup = () => {
                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${getStrengthLabel().color}`}
-                      style={{ width: `${(strengthScore / 4) * 100}%` }}
+                      style={{ width: `${(strengthScore / 5) * 100}%` }}
                     ></div>
                   </div>
 
