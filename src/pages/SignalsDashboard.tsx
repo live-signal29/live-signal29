@@ -23,10 +23,6 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { StreakStatsRow } from "@/components/StreakStatsRow";
-import { LiveDashboardHeader } from "@/components/LiveDashboardHeader";
-
-
-
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -43,6 +39,19 @@ const SignalsDashboard = () => {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
+  // Listen for category changes from Header
+  useEffect(() => {
+    const handleCategoryChange = (event: CustomEvent) => {
+      setMainCategory(event.detail.category);
+      setSubCategory("all");
+    };
+
+    window.addEventListener('categoryChange', handleCategoryChange as EventListener);
+    return () => {
+      window.removeEventListener('categoryChange', handleCategoryChange as EventListener);
+    };
+  }, []);
+
   // Swipe gesture to change categories on mobile
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -56,15 +65,12 @@ const SignalsDashboard = () => {
     touchStartX.current = null;
     touchStartY.current = null;
 
-    // Only trigger if horizontal swipe is dominant and > 80px
     if (Math.abs(deltaX) > 80 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
       const currentIndex = CATEGORIES.indexOf(mainCategory);
       if (deltaX < 0 && currentIndex < CATEGORIES.length - 1) {
-        // Swipe left → next category
         setMainCategory(CATEGORIES[currentIndex + 1]);
         setSubCategory("all");
       } else if (deltaX > 0 && currentIndex > 0) {
-        // Swipe right → previous category
         setMainCategory(CATEGORIES[currentIndex - 1]);
         setSubCategory("all");
       }
@@ -226,8 +232,6 @@ const SignalsDashboard = () => {
     setSubCategory("all");
   };
 
-  // Removed blocking loading screen - show content immediately
-
   return (
     <div 
       className="min-h-screen flex flex-col"
@@ -241,6 +245,7 @@ const SignalsDashboard = () => {
         url="https://yourdomain.com/signals-dashboard"
         structuredData={breadcrumbData}
       />
+      
       <Header />
       
       {/* Headline Ticker - below header */}
@@ -254,15 +259,6 @@ const SignalsDashboard = () => {
             onClose={() => setShowTrialExpiredPopup(false)} 
           />
 
-          {/* Compact live gold banner + real-time stats */}
-          <div className="mb-3">
-            <LiveDashboardHeader />
-          </div>
-
-
-
-
-
           {/* Top Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
             <div className="mb-4">
@@ -273,50 +269,24 @@ const SignalsDashboard = () => {
           {/* Main Dashboard Content - always accessible */}
           <>
 
-           {/* Main Category Tabs — 3D glowing pills */}
-          <div className="mb-3">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              {[
-                { key: "COMMODITIES", label: "Gold" },
-                { key: "FOREX", label: "Forex" },
-                { key: "CRYPTO", label: "Crypto" },
-                { key: "DERIV/BINARY", label: "Deriv" },
-                { key: "MARKET IDEAS", label: "Ideas" },
-              ].map((category, i) => {
-                const isActive = mainCategory === category.key;
-                const signalCount =
-                  isActive && mainCategory !== "MARKET IDEAS" ? signals?.length : undefined;
-                const isGold = category.key === "COMMODITIES";
-                return (
-                  <button
-                    key={category.key}
-                    onClick={() => handleCategoryChange(category.key)}
-                    className={cn(
-                      "animate-rise-in flex-shrink-0 rounded-full border px-4 py-1.5 text-[11.5px] font-bold whitespace-nowrap",
-                      "transition-all duration-200 active:scale-95",
-                      i === 1 && "stagger-1",
-                      i === 2 && "stagger-2",
-                      i === 3 && "stagger-3",
-                      i === 4 && "stagger-4",
-                      isActive
-                        ? isGold
-                          ? "border-transparent text-warning-foreground bg-gradient-to-br from-warning to-affiliate shadow-[0_6px_18px_-6px_hsl(var(--affiliate)/0.7),0_0_18px_hsl(var(--affiliate)/0.45)]"
-                          : "border-transparent text-primary-foreground bg-gradient-to-br from-primary via-primary-glow to-accent shadow-[0_6px_18px_-6px_hsl(var(--glow-primary)/0.8),0_0_18px_hsl(var(--glow-primary)/0.45)]"
-                        : "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
-                    )}
-                  >
-                    {category.label}
-                    {signalCount !== undefined && signalCount > 0 && ` ${signalCount}`}
-                  </button>
-                );
-              })}
+          {/* Subcategory Filter - Only for non-Ideas categories */}
+          {mainCategory !== "MARKET IDEAS" && subCategoryOptions[mainCategory] && (
+            <div className="mb-4">
+              <Select value={subCategory} onValueChange={setSubCategory}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="All Pairs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pairs</SelectItem>
+                  {subCategoryOptions[mainCategory].map((pair) => (
+                    <SelectItem key={pair} value={pair}>
+                      {pair}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-
-
-
-
-          {/* Favorites Filter Button */}
+          )}
 
           {/* Market Ideas View */}
           {mainCategory === "MARKET IDEAS" && (
@@ -482,8 +452,6 @@ const SignalsDashboard = () => {
           <div className="mt-3">
             <StreakStatsRow />
           </div>
-
-
 
           {/* Bottom Ad Banner - Only for non-premium users */}
           {subscriptionStatus !== 'premium' && (
