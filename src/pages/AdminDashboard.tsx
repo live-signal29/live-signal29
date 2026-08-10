@@ -1,55 +1,74 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Plus } from "lucide-react";
+import { LogOut, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import SignalForm from "@/components/admin/SignalForm";
-import SignalsList from "@/components/admin/SignalsList";
-import ChartAnalysisForm from "@/components/admin/ChartAnalysisForm";
-import ChartAnalysisList from "@/components/admin/ChartAnalysisList";
-import UserManagement from "@/components/admin/UserManagement";
-import ActivityLog from "@/components/admin/ActivityLog";
-import CouponManagement from "@/components/admin/CouponManagement";
-import SpecialOfferManagement from "@/components/admin/SpecialOfferManagement";
-import UserActivityDashboard from "@/components/admin/UserActivityDashboard";
-import AccountApplications from "@/components/admin/AccountApplications";
-import PerformanceManagement from "@/components/admin/PerformanceManagement";
-import HeadlinesManagement from "@/components/admin/HeadlinesManagement";
-import MT5ConnectionSettings from "@/components/admin/MT5ConnectionSettings";
+
+// LAZY LOADING FOR HEAVY TAB COMPONENTS (Loads only when tab is clicked)
+const SignalForm = lazy(() => import("@/components/admin/SignalForm"));
+const SignalsList = lazy(() => import("@/components/admin/SignalsList"));
+const ChartAnalysisForm = lazy(() => import("@/components/admin/ChartAnalysisForm"));
+const ChartAnalysisList = lazy(() => import("@/components/admin/ChartAnalysisList"));
+const UserManagement = lazy(() => import("@/components/admin/UserManagement"));
+const ActivityLog = lazy(() => import("@/components/admin/ActivityLog"));
+const CouponManagement = lazy(() => import("@/components/admin/CouponManagement"));
+const SpecialOfferManagement = lazy(() => import("@/components/admin/SpecialOfferManagement"));
+const UserActivityDashboard = lazy(() => import("@/components/admin/UserActivityDashboard"));
+const AccountApplications = lazy(() => import("@/components/admin/AccountApplications"));
+const PerformanceManagement = lazy(() => import("@/components/admin/PerformanceManagement"));
+const HeadlinesManagement = lazy(() => import("@/components/admin/HeadlinesManagement"));
+const MT5ConnectionSettings = lazy(() => import("@/components/admin/MT5ConnectionSettings"));
+
+// Tab Loading Fallback Component
+const TabLoader = () => (
+  <div className="flex h-32 w-full items-center justify-center">
+    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+  </div>
+);
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [showSignalForm, setShowSignalForm] = useState(false);
   const [showChartForm, setShowChartForm] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/admin/login");
-        return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          if (mounted) navigate("/admin/login");
+          return;
+        }
+
+        // Check if user has admin role
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (!roles) {
+          toast.error("Access denied. Admin privileges required.");
+          await supabase.auth.signOut();
+          if (mounted) navigate("/admin/login");
+          return;
+        }
+
+        if (mounted) {
+          setUser(session.user);
+          setLoading(false);
+        }
+      } catch {
+        if (mounted) setLoading(false);
       }
-
-      // Check if user has admin role
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('role', 'admin')
-        .single();
-
-      if (!roles) {
-        toast.error("Access denied. Admin privileges required.");
-        await supabase.auth.signOut();
-        navigate("/admin/login");
-        return;
-      }
-
-      setUser(session.user);
     };
 
     checkAuth();
@@ -58,16 +77,26 @@ const AdminDashboard = () => {
       if (event === "SIGNED_OUT") {
         navigate("/admin/login");
       }
-      setUser(session?.user || null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!user) return null;
 
@@ -100,82 +129,83 @@ const AdminDashboard = () => {
             <TabsTrigger value="integrations" className="text-xs sm:text-sm py-2">MT5</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="integrations" className="space-y-4">
-            <MT5ConnectionSettings />
-          </TabsContent>
+          <Suspense fallback={<TabLoader />}>
+            <TabsContent value="integrations" className="space-y-4">
+              <MT5ConnectionSettings />
+            </TabsContent>
 
+            <TabsContent value="signals" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                    <CardTitle className="text-base sm:text-lg">Manage Signals</CardTitle>
+                    <Button onClick={() => setShowSignalForm(!showSignalForm)} className="text-xs sm:text-sm h-8 sm:h-9">
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      {showSignalForm ? "Hide" : "Add"}
+                    </Button>
+                  </div>
+                </CardHeader>
+                {showSignalForm && (
+                  <CardContent>
+                    <SignalForm onSuccess={() => setShowSignalForm(false)} />
+                  </CardContent>
+                )}
+              </Card>
+              <SignalsList />
+            </TabsContent>
 
-          <TabsContent value="signals" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                  <CardTitle className="text-base sm:text-lg">Manage Signals</CardTitle>
-                  <Button onClick={() => setShowSignalForm(!showSignalForm)} className="text-xs sm:text-sm h-8 sm:h-9">
-                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    {showSignalForm ? "Hide" : "Add"}
-                  </Button>
-                </div>
-              </CardHeader>
-              {showSignalForm && (
-                <CardContent>
-                  <SignalForm onSuccess={() => setShowSignalForm(false)} />
-                </CardContent>
-              )}
-            </Card>
-            <SignalsList />
-          </TabsContent>
+            <TabsContent value="ideas" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                    <CardTitle className="text-base sm:text-lg">Ideas</CardTitle>
+                    <Button onClick={() => setShowChartForm(!showChartForm)} className="text-xs sm:text-sm h-8 sm:h-9">
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      {showChartForm ? "Hide" : "Add"}
+                    </Button>
+                  </div>
+                </CardHeader>
+                {showChartForm && (
+                  <CardContent>
+                    <ChartAnalysisForm onSuccess={() => setShowChartForm(false)} />
+                  </CardContent>
+                )}
+              </Card>
+              <ChartAnalysisList />
+            </TabsContent>
 
-          <TabsContent value="ideas" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                  <CardTitle className="text-base sm:text-lg">Ideas</CardTitle>
-                  <Button onClick={() => setShowChartForm(!showChartForm)} className="text-xs sm:text-sm h-8 sm:h-9">
-                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    {showChartForm ? "Hide" : "Add"}
-                  </Button>
-                </div>
-              </CardHeader>
-              {showChartForm && (
-                <CardContent>
-                  <ChartAnalysisForm onSuccess={() => setShowChartForm(false)} />
-                </CardContent>
-              )}
-            </Card>
-            <ChartAnalysisList />
-          </TabsContent>
+            <TabsContent value="headlines" className="space-y-4">
+              <HeadlinesManagement />
+            </TabsContent>
 
-          <TabsContent value="headlines" className="space-y-4">
-            <HeadlinesManagement />
-          </TabsContent>
+            <TabsContent value="users" className="space-y-4">
+              <UserManagement />
+            </TabsContent>
 
-          <TabsContent value="users" className="space-y-4">
-            <UserManagement />
-          </TabsContent>
+            <TabsContent value="accounts" className="space-y-4">
+              <AccountApplications />
+            </TabsContent>
 
-          <TabsContent value="accounts" className="space-y-4">
-            <AccountApplications />
-          </TabsContent>
+            <TabsContent value="performance" className="space-y-4">
+              <PerformanceManagement />
+            </TabsContent>
 
-          <TabsContent value="performance" className="space-y-4">
-            <PerformanceManagement />
-          </TabsContent>
+            <TabsContent value="coupons" className="space-y-4">
+              <CouponManagement />
+            </TabsContent>
 
-          <TabsContent value="coupons" className="space-y-4">
-            <CouponManagement />
-          </TabsContent>
+            <TabsContent value="offers" className="space-y-4">
+              <SpecialOfferManagement />
+            </TabsContent>
 
-          <TabsContent value="offers" className="space-y-4">
-            <SpecialOfferManagement />
-          </TabsContent>
+            <TabsContent value="user-activity" className="space-y-4">
+              <UserActivityDashboard />
+            </TabsContent>
 
-          <TabsContent value="user-activity" className="space-y-4">
-            <UserActivityDashboard />
-          </TabsContent>
-
-          <TabsContent value="activity" className="space-y-4">
-            <ActivityLog />
-          </TabsContent>
+            <TabsContent value="activity" className="space-y-4">
+              <ActivityLog />
+            </TabsContent>
+          </Suspense>
         </Tabs>
       </div>
     </div>
