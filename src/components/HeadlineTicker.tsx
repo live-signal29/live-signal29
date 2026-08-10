@@ -1,7 +1,7 @@
 import React from "react";
 
-const HeadLineticker = () => {
+const HeadlineTicker = () => {
   return <></>;
 };
 
-export default HeadlineTicker ;
+export default HeadlineTicker;
