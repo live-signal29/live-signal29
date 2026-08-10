@@ -19,8 +19,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import { useNotifications } from "@/hooks/useNotifications";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns"; // 'formatDistanceToNow' ki jagah 'format' import kiya hai
 import { cn } from "@/lib/utils";
+
+// Helper function: Exact time format (e.g., 05:02 PM)
+const formatExactTime = (dateString: string | Date) => {
+  if (!dateString) return "";
+  try {
+    return format(new Date(dateString), "hh:mm a");
+  } catch (error) {
+    return "";
+  }
+};
 
 export const NotificationBell = () => {
   const {
@@ -354,12 +364,11 @@ export const NotificationBell = () => {
                   {popupNotification.message}
                 </p>
 
+                {/* EXACT TIME DISPLAY (e.g. 05:02 PM) */}
                 <p className="mt-2 text-[10px] text-muted-foreground/70">
-                  {formatDistanceToNow(
-                    new Date(popupNotification.created_at),
-                    {
-                      addSuffix: true,
-                    }
+                  {formatExactTime(
+                    (popupNotification as any).updated_at ||
+                      popupNotification.created_at
                   )}
                 </p>
               </div>
@@ -519,14 +528,11 @@ export const NotificationBell = () => {
                             {notification.message}
                           </p>
 
+                          {/* EXACT TIME DISPLAY (e.g. 05:02 PM) */}
                           <p className="mt-2 text-xs text-muted-foreground/70">
-                            {formatDistanceToNow(
-                              new Date(
+                            {formatExactTime(
+                              (notification as any).updated_at ||
                                 notification.created_at
-                              ),
-                              {
-                                addSuffix: true,
-                              }
                             )}
                           </p>
                         </div>
