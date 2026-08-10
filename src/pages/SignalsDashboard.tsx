@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
+import { cn } from "@/lib/utils";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
@@ -50,18 +51,11 @@ const SignalsDashboard = () => {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  // Listen for category changes from Header
-  useEffect(() => {
-    const handleCategoryChange = (event: CustomEvent) => {
-      setMainCategory(event.detail.category);
-      setSubCategory("all");
-    };
-
-    window.addEventListener('categoryChange', handleCategoryChange as EventListener);
-    return () => {
-      window.removeEventListener('categoryChange', handleCategoryChange as EventListener);
-    };
-  }, []);
+  // Handle category change
+  const handleCategoryChange = (category: string) => {
+    setMainCategory(category);
+    setSubCategory("all");
+  };
 
   // Swipe gesture to change categories on mobile
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -146,6 +140,14 @@ const SignalsDashboard = () => {
     ? allSignals.filter((signal) => new Date(signal.created_at) <= trialEndDate)
     : allSignals;
 
+  // Count open/active signals per category
+  const getActiveSignalsCount = (category: string) => {
+    if (category === "MARKET IDEAS") return 0;
+    return signals?.filter(
+      (signal) => signal.main_category === category && signal.signal_status !== "CLOSE"
+    ).length || 0;
+  };
+
   const openSignalPairs = signals
     .filter((signal) => signal.signal_status !== "CLOSE")
     .map((signal) => signal.pair)
@@ -211,6 +213,15 @@ const SignalsDashboard = () => {
     setLightboxOpen(true);
   };
 
+  // Category tabs config
+  const categoryTabs = [
+    { key: "COMMODITIES", label: "Gold" },
+    { key: "FOREX", label: "Forex" },
+    { key: "CRYPTO", label: "Crypto" },
+    { key: "DERIV/BINARY", label: "Deriv" },
+    { key: "MARKET IDEAS", label: "Ideas" },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <SEO
@@ -221,7 +232,6 @@ const SignalsDashboard = () => {
         structuredData={breadcrumbData}
       />
 
-      {/* ✅ SIRF HEADER COMPONENT - isme Header apna header aur category tabs dikhayega */}
       <Header />
 
       <HeadlineTicker />
@@ -231,6 +241,47 @@ const SignalsDashboard = () => {
 
           <TrialExpiredPopup open={showTrialExpiredPopup} onClose={() => setShowTrialExpiredPopup(false)} />
 
+          {/* ✅ Category Tabs - Simple Design with Active Indicator & Live Dot Badge */}
+          <div className="mb-4">
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+              {categoryTabs.map((tab) => {
+                const isActive = mainCategory === tab.key;
+                const activeCount = getActiveSignalsCount(tab.key);
+                const hasActiveSignals = activeCount > 0;
+
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => handleCategoryChange(tab.key)}
+                    className={cn(
+                      "relative flex items-center gap-1.5 px-4 py-1.5 text-xs sm:text-sm font-semibold rounded-full whitespace-nowrap transition-all duration-200",
+                      "border-2",
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary shadow-sm"
+                        : "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {/* Tab Label */}
+                    <span>{tab.label}</span>
+
+                    {/* Live Dot Badge - shows when there are OPEN/ACTIVE signals */}
+                    {hasActiveSignals && (
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                      </span>
+                    )}
+
+                    {/* Active Indicator - Bottom Line */}
+                    {isActive && (
+                      <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary"></span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Top Ad */}
           {subscriptionStatus !== "premium" && (
             <div className="mb-4">
@@ -238,7 +289,7 @@ const SignalsDashboard = () => {
             </div>
           )}
 
-          {/* ✅ Subcategory Filter - Only for non-Ideas categories */}
+          {/* ✅ Subcategory Filter */}
           {mainCategory !== "MARKET IDEAS" && subCategoryOptions[mainCategory] && (
             <div className="mb-4">
               <select
