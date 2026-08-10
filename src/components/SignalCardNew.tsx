@@ -10,7 +10,7 @@ import {
   Copy, 
   Send 
 } from "lucide-react";
-import { format, isToday, isYesterday, differenceInHours, differenceInMinutes } from "date-fns";
+import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -73,18 +73,6 @@ const SignalCardNew = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const confettiFiredRef = useRef<boolean>(false);
   const initialTP3StateRef = useRef<boolean>(!!signal.tp3_hit);
-  
-  // ✅ REAL TIME STATE - har minute update
-  const [, forceUpdate] = useState(0);
-
-  // ✅ Har 60 second me component re-render karo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      forceUpdate(prev => prev + 1);
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Lifecycle calculations
   const lifecycle = (signal.signal_status || signal.status || 'open').toLowerCase();
@@ -248,15 +236,10 @@ const SignalCardNew = ({
     }
   };
 
-  // ✅ REAL TIME TIME FORMAT
-  const formatRealTime = (dateString: string) => {
+  // Time Formatter
+  const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      const now = new Date();
-      const diffMinutes = differenceInMinutes(now, date);
-      
-      if (diffMinutes < 1) return "Just now";
-      if (diffMinutes < 60) return `${diffMinutes}m ago`;
       if (isToday(date)) return `Today, ${format(date, "hh:mm a")}`;
       if (isYesterday(date)) return `Yesterday, ${format(date, "hh:mm a")}`;
       return format(date, "dd MMM, hh:mm a");
@@ -352,10 +335,9 @@ const SignalCardNew = ({
             {statusText}
           </span>
 
-          {/* ✅ REAL TIME TIME DISPLAY */}
           <div className="flex items-center gap-0.5 text-[7.5px] text-muted-foreground">
             <Clock className="h-2.5 w-2.5" />
-            <span>{formatRealTime(signal.created_at)}</span>
+            <span>{formatDate(signal.created_at)}</span>
           </div>
 
           {/* Share Button */}
