@@ -17,12 +17,14 @@ import {
   differenceInHours,
   differenceInMinutes,
 } from "date-fns";
-import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
-import { parseEntryPrice, calculateRunningPL } from "@/hooks/useLivePrices";
+import {
+  parseEntryPrice,
+  calculateRunningPL,
+} from "@/hooks/useLivePrices";
 
 import {
   DropdownMenu,
@@ -87,13 +89,12 @@ const SignalCardNew = ({
   subscriptionStatus,
   livePrice,
 }: SignalCardProps) => {
-  const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
 
   const confettiFiredRef = useRef(false);
   const initialTP3StateRef = useRef(!!signal.tp3_hit);
 
-  // Force clock refresh
+  // Refresh relative time every 30 seconds
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -116,8 +117,7 @@ const SignalCardNew = ({
     "open"
   ).toLowerCase();
 
-  const isPending =
-    lifecycle === "pending";
+  const isPending = lifecycle === "pending";
 
   const isClosed =
     lifecycle === "close" ||
@@ -151,6 +151,12 @@ const SignalCardNew = ({
   const isBuy =
     signal.type?.toLowerCase() === "buy";
 
+  /*
+   * ============================================================
+   * CURRENT PRICE
+   * ============================================================
+   */
+
   const currentPriceNum =
     typeof livePrice === "number" && livePrice > 0
       ? livePrice
@@ -174,26 +180,23 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * REAL SIGNAL TIME
+   * TIME LOGIC
+   * ============================================================
    *
-   * Pending signal:
+   * Pending:
    *   created_at
    *
-   * Activated/running signal:
+   * Activated / Running:
    *   activated_at
    *
-   * Closed signal:
+   * Closed:
    *   created_at fallback
-   * ============================================================
    */
 
   const signalTime =
-    isOpen &&
-    signal.activated_at
+    isOpen && signal.activated_at
       ? signal.activated_at
       : signal.created_at;
-
-  const signalDate = new Date(signalTime);
 
   /*
    * ============================================================
@@ -268,7 +271,10 @@ const SignalCardNew = ({
     confetti({
       particleCount: 100,
       spread: 70,
-      origin: { x, y },
+      origin: {
+        x,
+        y,
+      },
       colors: [
         "#10b981",
         "#22c55e",
@@ -296,16 +302,16 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * PRICE TARGET HELPERS
+   * TP / SL PRICE LOGIC
    * ============================================================
    *
    * BUY:
-   *   TP = price >= target
-   *   SL = price <= target
+   *   TP = current >= target
+   *   SL = current <= SL
    *
    * SELL:
-   *   TP = price <= target
-   *   SL = price >= target
+   *   TP = current <= target
+   *   SL = current >= SL
    */
 
   const hasTPReached = (
@@ -397,11 +403,8 @@ const SignalCardNew = ({
        * --------------------------------------------------------
        */
 
-      let tp1Hit =
-        !!signal.tp1_hit;
-
       if (
-        !tp1Hit &&
+        !signal.tp1_hit &&
         tp1Price > 0 &&
         hasTPReached(
           currentPriceNum,
@@ -410,19 +413,13 @@ const SignalCardNew = ({
       ) {
         updates.tp1_hit = true;
 
-        /*
-         * IMPORTANT:
-         * Move SL to ACTUAL entry price.
-         * For limit orders this is limit_entry_price.
-         */
-
+        // Move SL to actual entry.
+        // Limit orders use limit_entry_price.
         updates.sl =
           String(entryPrice);
 
         updates.profit_note =
           "TP 1 Hit ✅ SL moved to B.E";
-
-        tp1Hit = true;
       }
 
       /*
@@ -431,11 +428,8 @@ const SignalCardNew = ({
        * --------------------------------------------------------
        */
 
-      let tp2Hit =
-        !!signal.tp2_hit;
-
       if (
-        !tp2Hit &&
+        !signal.tp2_hit &&
         tp2Price > 0 &&
         hasTPReached(
           currentPriceNum,
@@ -446,8 +440,6 @@ const SignalCardNew = ({
 
         updates.profit_note =
           "TP 2 Hit ✅ More Profit Secured 💰";
-
-        tp2Hit = true;
       }
 
       /*
@@ -456,11 +448,8 @@ const SignalCardNew = ({
        * --------------------------------------------------------
        */
 
-      let tp3Hit =
-        !!signal.tp3_hit;
-
       if (
-        !tp3Hit &&
+        !signal.tp3_hit &&
         tp3Price > 0 &&
         hasTPReached(
           currentPriceNum,
@@ -473,17 +462,14 @@ const SignalCardNew = ({
           "TP 3 Hit 🎊 Maximum Profit Secured ✅";
 
         /*
-         * Only close automatically when TP3
-         * is the final configured target.
-         *
-         * If TP4 exists, TP4 remains active.
+         * If TP4 exists, TP3 is NOT final.
+         * Signal remains open for TP4.
          */
 
         if (!signal.tp4) {
-          updates.signal_status = "close";
+          updates.signal_status =
+            "close";
         }
-
-        tp3Hit = true;
       }
 
       /*
@@ -502,7 +488,8 @@ const SignalCardNew = ({
       ) {
         updates.tp4_hit = true;
 
-        updates.signal_status = "close";
+        updates.signal_status =
+          "close";
 
         updates.profit_note =
           "TP 4 Final Target Hit 🎊 Maximum Profit Secured ✅";
@@ -511,15 +498,9 @@ const SignalCardNew = ({
       /*
        * --------------------------------------------------------
        * BREAK EVEN
-       *
-       * Only activate AFTER TP1.
-       *
-       * IMPORTANT:
-       * Don't use 0.1% tolerance because for XAUUSD
-       * it can be unnecessarily large.
-       *
-       * Use a small instrument-independent tolerance.
        * --------------------------------------------------------
+       *
+       * Only after TP1.
        */
 
       const effectiveTP1Hit =
@@ -534,22 +515,16 @@ const SignalCardNew = ({
           : slPrice;
 
       const breakEvenTolerance =
-        isBuy
-          ? Math.max(entryPrice * 0.0001, 0.01)
-          : Math.max(entryPrice * 0.0001, 0.01);
+        Math.max(
+          entryPrice * 0.0001,
+          0.01
+        );
 
       const atBreakEven =
         Math.abs(
           currentPriceNum -
             entryPrice
         ) <= breakEvenTolerance;
-
-      /*
-       * Only close at B.E. if:
-       * - TP1 was hit
-       * - current price returns to entry
-       * - current SL is actually at entry
-       */
 
       if (
         effectiveTP1Hit &&
@@ -572,22 +547,18 @@ const SignalCardNew = ({
 
       /*
        * --------------------------------------------------------
-       * SL
-       *
-       * NEVER check original SL after TP1,
-       * because TP1 has already moved SL to B.E.
+       * ORIGINAL SL
        * --------------------------------------------------------
+       *
+       * Only check original SL before TP1.
        */
-
-      const effectiveSLHit =
-        !!signal.sl_hit;
 
       const effectiveTP1 =
         !!signal.tp1_hit ||
         !!updates.tp1_hit;
 
       if (
-        !effectiveSLHit &&
+        !signal.sl_hit &&
         !effectiveTP1 &&
         slPrice > 0 &&
         hasSLReached(
@@ -605,7 +576,9 @@ const SignalCardNew = ({
       }
 
       /*
-       * Don't update database unnecessarily.
+       * --------------------------------------------------------
+       * DATABASE UPDATE
+       * --------------------------------------------------------
        */
 
       if (
@@ -674,7 +647,9 @@ const SignalCardNew = ({
           `⛔ SL: ${signal.sl}\n\n` +
           `View full signal details: ${shareUrl}`;
 
-    if (platform === "whatsapp") {
+    if (
+      platform === "whatsapp"
+    ) {
       window.open(
         `https://wa.me/?text=${encodeURIComponent(
           shareText
@@ -683,7 +658,9 @@ const SignalCardNew = ({
       );
     }
 
-    if (platform === "telegram") {
+    if (
+      platform === "telegram"
+    ) {
       window.open(
         `https://t.me/share/url?url=${encodeURIComponent(
           shareUrl
@@ -694,7 +671,9 @@ const SignalCardNew = ({
       );
     }
 
-    if (platform === "copy") {
+    if (
+      platform === "copy"
+    ) {
       navigator.clipboard.writeText(
         shareText
       );
@@ -707,7 +686,7 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * TIME FORMAT
+   * TIME
    * ============================================================
    */
 
@@ -784,7 +763,8 @@ const SignalCardNew = ({
 
     if (
       signal.tp4_hit ||
-      (!signal.tp4 && signal.tp3_hit)
+      (!signal.tp4 &&
+        signal.tp3_hit)
     ) {
       return "CLOSED";
     }
@@ -817,18 +797,7 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * INDIVIDUAL TP / SL COLOR
-   *
-   * IMPORTANT:
-   * Every target has its OWN state.
-   *
-   * SL:
-   *   red normally
-   *   amber if moved to B.E.
-   *
-   * TP:
-   *   green only when THAT specific TP is hit
-   *   blue when pending
+   * TP / SL COLORS
    * ============================================================
    */
 
@@ -840,9 +809,13 @@ const SignalCardNew = ({
       | "tp3"
       | "tp4"
   ) => {
+    /*
+     * SL
+     */
+
     if (targetType === "sl") {
       const slMovedToBE =
-        signal.tp1_hit ||
+        !!signal.tp1_hit ||
         noteUpper.includes(
           "BREAKEVEN"
         ) ||
@@ -854,12 +827,12 @@ const SignalCardNew = ({
         return "text-amber-500 dark:text-amber-400";
       }
 
-      if (signal.sl_hit) {
-        return "text-rose-500 dark:text-rose-400";
-      }
-
       return "text-rose-500 dark:text-rose-400";
     }
+
+    /*
+     * Every TP gets its OWN color.
+     */
 
     const hitMap = {
       tp1: !!signal.tp1_hit,
@@ -875,22 +848,25 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * NOTE TYPE
-   *
-   * Don't use note.includes("SL")
-   * because "SL moved to B.E." is NOT an SL hit.
+   * PROFIT NOTE COLOR
    * ============================================================
    */
 
   const isSLHit =
     !!signal.sl_hit ||
-    /\bSL\s+HIT\b/i.test(note);
+    /\bSL\s+HIT\b/i.test(
+      note
+    );
 
   const isBreakEven =
     !isSLHit &&
     (
-      /BREAKEVEN/i.test(note) ||
-      /B\.E/i.test(note)
+      /BREAKEVEN/i.test(
+        note
+      ) ||
+      /B\.E/i.test(
+        note
+      )
     );
 
   const isTPHit =
@@ -959,16 +935,11 @@ const SignalCardNew = ({
   return (
     <div
       ref={cardRef}
-      onClick={() =>
-        isLocked
-          ? navigate("/premium")
-          : navigate(
-              `/signal/${signal.id}`
-            )
-      }
-      className="relative mb-2 w-full rounded-[12px] bg-card border border-border/50 p-2.5 text-foreground shadow-sm hover:border-border hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden"
+      className="relative mb-2 w-full rounded-[12px] bg-card border border-border/50 p-2.5 text-foreground shadow-sm hover:border-border hover:shadow-md transition-all duration-300 overflow-hidden"
     >
-      {/* HEADER */}
+      {/* ======================================================
+          HEADER
+          ====================================================== */}
 
       <div className="flex items-center justify-between mb-1.5">
 
@@ -1023,6 +994,8 @@ const SignalCardNew = ({
 
         <div className="flex items-center gap-1.5 shrink-0">
 
+          {/* STATUS */}
+
           <span
             className={cn(
               "inline-flex items-center rounded-full border px-1.5 py-[2px] text-[6px] font-bold uppercase tracking-wide leading-none",
@@ -1065,7 +1038,10 @@ const SignalCardNew = ({
                 e.stopPropagation()
               }
             >
-              <button className="p-1 rounded-full hover:bg-muted/60 text-muted-foreground transition-colors">
+              <button
+                type="button"
+                className="p-1 rounded-full hover:bg-muted/60 text-muted-foreground transition-colors"
+              >
                 <Share2 className="h-3 w-3" />
               </button>
             </DropdownMenuTrigger>
@@ -1117,7 +1093,9 @@ const SignalCardNew = ({
         </div>
       </div>
 
-      {/* PREMIUM LOCK */}
+      {/* ======================================================
+          PREMIUM LOCKED VIEW
+          ====================================================== */}
 
       {isLocked ? (
         <div className="flex flex-col items-center justify-center gap-1.5 py-4 bg-muted/20 rounded-[9px] border border-dashed border-border/60">
@@ -1131,7 +1109,9 @@ const SignalCardNew = ({
         </div>
       ) : (
         <>
-          {/* PRICES */}
+          {/* ==================================================
+              PRICES
+              ================================================== */}
 
           <div className="flex items-center justify-between rounded-[9px] bg-muted/30 border border-border/50 px-2 py-1.5 mb-1.5">
 
@@ -1191,14 +1171,18 @@ const SignalCardNew = ({
                 <span
                   className={cn(
                     "font-mono text-[8px] font-bold",
-                    runningPL >= 0
+                    runningPL > 0
                       ? "text-emerald-500"
-                      : "text-rose-500"
+                      : runningPL < 0
+                        ? "text-rose-500"
+                        : "text-muted-foreground"
                   )}
                 >
-                  {runningPL >= 0
+                  {runningPL > 0
                     ? `+${runningPL.toFixed(1)} pips`
-                    : `${runningPL.toFixed(1)} pips`}
+                    : runningPL < 0
+                      ? `${runningPL.toFixed(1)} pips`
+                      : "0.0 pips"}
                 </span>
               ) : (
                 signal.risk_level && (
@@ -1221,7 +1205,9 @@ const SignalCardNew = ({
             </div>
           </div>
 
-          {/* TARGETS */}
+          {/* ==================================================
+              TARGETS
+              ================================================== */}
 
           <div className="flex items-center justify-between px-0.5 mb-1.5 overflow-x-auto">
 
@@ -1355,7 +1341,9 @@ const SignalCardNew = ({
             </div>
           </div>
 
-          {/* PROFIT / STATUS NOTE */}
+          {/* ==================================================
+              PROFIT / STATUS NOTE
+              ================================================== */}
 
           {signal.profit_note && (
             <div
@@ -1392,6 +1380,7 @@ const SignalCardNew = ({
 
             </div>
           )}
+
         </>
       )}
     </div>
