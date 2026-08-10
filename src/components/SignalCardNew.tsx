@@ -10,7 +10,7 @@ import {
   Copy, 
   Send 
 } from "lucide-react";
-import { format, isToday, isYesterday, differenceInMinutes } from "date-fns";
+import { format, isToday, isYesterday, differenceInHours, differenceInMinutes } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -74,21 +74,21 @@ const SignalCardNew = ({
   const confettiFiredRef = useRef<boolean>(false);
   const initialTP3StateRef = useRef<boolean>(!!signal.tp3_hit);
   
-  // ✅ REAL TIME STATE - har minute update
-  const [, forceUpdate] = useState(0);
+  // ✅ Real Time State for Time
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // ✅ Har 60 second me component re-render karo
+  // ✅ Update time every minute
   useEffect(() => {
     const interval = setInterval(() => {
-      forceUpdate(prev => prev + 1);
-    }, 60000); // 60 seconds
+      setCurrentTime(new Date());
+    }, 60000); // Update every 60 seconds
 
     return () => clearInterval(interval);
   }, []);
 
   // Lifecycle calculations
   const lifecycle = (signal.signal_status || signal.status || 'open').toLowerCase();
-  const isNewSignal = differenceInMinutes(new Date(), new Date(signal.created_at)) < 60 && lifecycle !== 'close';
+  const isNewSignal = differenceInHours(new Date(signal.created_at), new Date()) < 24 && lifecycle !== 'close';
   const isPending = lifecycle === 'pending';
   const isOpen = lifecycle === 'open' || lifecycle === 'running' || lifecycle === 'active';
   const isClosed = lifecycle === 'close' || lifecycle === 'closed';
@@ -248,23 +248,23 @@ const SignalCardNew = ({
     }
   };
 
-  // ✅ REAL TIME TIME FORMAT - "X mins ago" style
+  // ✅ Real Time Time Formatter - "X mins ago" style
   const formatRealTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      const now = new Date();
+      const now = currentTime;
       const diffMinutes = differenceInMinutes(now, date);
       
-      // < 1 minute
+      // If less than 1 minute ago
       if (diffMinutes < 1) return "Just now";
       
-      // < 60 minutes
+      // If less than 60 minutes ago
       if (diffMinutes < 60) return `${diffMinutes}m ago`;
       
-      // < 24 hours (Today)
+      // If today
       if (isToday(date)) return `Today, ${format(date, "hh:mm a")}`;
       
-      // Yesterday
+      // If yesterday
       if (isYesterday(date)) return `Yesterday, ${format(date, "hh:mm a")}`;
       
       // Older
@@ -361,7 +361,7 @@ const SignalCardNew = ({
             {statusText}
           </span>
 
-          {/* ✅ REAL TIME TIME DISPLAY - har 1 minute update */}
+          {/* ✅ Real Time Time Display */}
           <div className="flex items-center gap-0.5 text-[7.5px] text-muted-foreground">
             <Clock className="h-2.5 w-2.5" />
             <span>{formatRealTime(signal.created_at)}</span>
