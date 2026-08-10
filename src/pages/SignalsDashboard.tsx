@@ -238,7 +238,7 @@ const SignalsDashboard = () => {
             </div>
           )}
 
-          {/* Subcategory Filter */}
+          {/* ✅ Subcategory Filter - Only for non-Ideas categories */}
           {mainCategory !== "MARKET IDEAS" && subCategoryOptions[mainCategory] && (
             <div className="mb-4">
               <select
