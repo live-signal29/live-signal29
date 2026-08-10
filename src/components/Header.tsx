@@ -1,178 +1,172 @@
-import { useMemo } from "react";
-import { Link } from "react-router-dom";
-import TrialBanner from "./TrialBanner";
-import AppInstallBanner from "./AppInstallBanner";
-import { SideDrawer } from "./SideDrawer";
-import { NotificationBell } from "./NotificationBell";
-import { ThemeToggle } from "./ThemeToggle";
-import { GlobalSearch } from "./GlobalSearch";
-import { FlashSaleBanner } from "./FlashSaleBanner";
-import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
-
-interface Signal {
-  id?: string;
-  category?: string;
-  status?: string;
-}
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  TrendingUp,
+  Coins,
+  Bitcoin,
+  BarChart3,
+  LineChart,
+  Crown,
+  User,
+  Menu,
+  X,
+  ShieldCheck,
+  Zap,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import ProfileDrawer from "@/components/ProfileDrawer";
 
 interface HeaderProps {
-  signals?: Signal[];
   activeCategory?: string;
   onCategoryChange?: (category: string) => void;
 }
 
-const CATEGORY_LIST = [
-  { id: "All", label: "ALL" },
-  { id: "Gold", label: "GOLD" },
-  { id: "Forex", label: "FOREX" },
-  { id: "Crypto", label: "CRYPTO" },
-  { id: "Indices", label: "INDICES" },
-  { id: "Deriv", label: "DERIV" },
-  { id: "Ideas", label: "IDEAS" },
+// Fixed 5 Core Categories (Removed 'ALL' to avoid RPC query crash)
+const NAV_CATEGORIES = [
+  { id: "COMMODITIES", label: "Gold", icon: TrendingUp },
+  { id: "FOREX", label: "Forex", icon: Coins },
+  { id: "CRYPTO", label: "Crypto", icon: Bitcoin },
+  { id: "DERIV/BINARY", label: "Deriv", icon: BarChart3 },
+  { id: "MARKET IDEAS", label: "Ideas", icon: LineChart },
 ];
 
-const Header = ({
-  signals = [],
-  activeCategory = "All",
+const Header: React.FC<HeaderProps> = ({
+  activeCategory = "COMMODITIES",
   onCategoryChange,
-}: HeaderProps) => {
-  const { subscriptionStatus } = useSubscriptionAccess();
-  const isPremium = subscriptionStatus === "premium";
+}) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Real Dynamic Active/Open Signals Count Logic
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      All: 0,
-      Gold: 0,
-      Forex: 0,
-      Crypto: 0,
-      Indices: 0,
-      Deriv: 0,
-      Ideas: 0,
-    };
+  const isHomePage = location.pathname === "/" || location.pathname === "/signals-dashboard";
 
-    if (Array.isArray(signals)) {
-      signals.forEach((sig) => {
-        const isLive =
-          !sig.status ||
-          sig.status.toUpperCase() === "OPEN" ||
-          sig.status.toUpperCase() === "ACTIVE";
-
-        if (isLive && sig.category) {
-          counts.All += 1;
-          const rawCat = sig.category.trim();
-          const formattedCat =
-            rawCat.charAt(0).toUpperCase() + rawCat.slice(1).toLowerCase();
-
-          if (counts[formattedCat] !== undefined) {
-            counts[formattedCat] += 1;
-          }
-        }
-      });
-    }
-
-    return counts;
-  }, [signals]);
-
-  const handleSelect = (catId: string) => {
+  const handleCategoryClick = (catId: string) => {
     if (onCategoryChange) {
       onCategoryChange(catId);
     }
+    if (!isHomePage) {
+      navigate("/");
+    }
+    setMobileMenuOpen(false);
   };
 
   return (
     <>
-      {!isPremium ? (
-        <>
-          <FlashSaleBanner />
-          <TrialBanner />
-        </>
-      ) : (
-        <AppInstallBanner />
-      )}
-
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/85 backdrop-blur-xl transition-colors duration-300">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-3 sm:px-4">
-          <Link to="/" className="min-w-0 flex flex-col justify-center group">
-            <div className="flex items-center gap-1.5 leading-none">
-              <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                Live
-              </span>
-
-              <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 bg-clip-text text-xl font-black tracking-tight text-transparent">
-                Signals
-              </span>
-
-              <span
-                className={
-                  isPremium
-                    ? "rounded-md bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[9px] font-black uppercase text-slate-950 shadow-sm shadow-amber-500/20"
-                    : "rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-500 dark:text-slate-400"
-                }
-              >
-                {isPremium ? "PRO" : "FREE"}
-              </span>
+      <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-2 sm:px-4 max-w-7xl flex h-14 items-center justify-between">
+          
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg sm:text-xl">
+            <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
+              <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-
-            <span className="mt-1 text-[10px] font-semibold leading-none tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-amber-500 inline-block animate-pulse"></span>
-              Trend is Friend
+            <span className="bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
+              Trend Is Friend
             </span>
           </Link>
 
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="hidden items-center gap-2 sm:flex">
-              <GlobalSearch />
-              <ThemeToggle />
-            </div>
+          {/* Category Tabs (Desktop) */}
+          <nav className="hidden md:flex items-center space-x-1 bg-muted/50 p-1 rounded-xl border border-border/50">
+            {NAV_CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isActive =
+                activeCategory.toUpperCase() === cat.id.toUpperCase() ||
+                (cat.id === "COMMODITIES" && activeCategory.toUpperCase() === "GOLD");
 
-            <div className="flex items-center gap-1">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-                <SideDrawer />
-              </div>
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200",
+                    isActive
+                      ? "bg-background text-primary shadow-sm border border-border/40 font-semibold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-                <NotificationBell />
-              </div>
-            </div>
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/pricing")}
+              className="hidden sm:flex border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 gap-1 text-xs"
+            >
+              <Crown className="h-3.5 w-3.5 text-amber-500" />
+              <span>VIP Plans</span>
+            </Button>
+
+            {user ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setProfileOpen(true)}
+                className="rounded-full border border-border/60 hover:bg-accent"
+              >
+                <User className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => navigate("/auth")}
+                className="text-xs"
+              >
+                Login
+              </Button>
+            )}
+
+            {/* Mobile Menu Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
 
-        {/* Dynamic Connected Category Bar */}
-        <div className="flex items-center overflow-x-auto no-scrollbar border-t border-slate-200/60 dark:border-slate-800/60 px-2 bg-white dark:bg-slate-950">
-          {CATEGORY_LIST.map((cat) => {
+        {/* Category Navigation (Mobile Horizontal Bar) */}
+        <div className="md:hidden overflow-x-auto no-scrollbar border-t border-border/40 bg-muted/30 px-2 py-1.5 flex items-center gap-1.5">
+          {NAV_CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
             const isActive =
-              (activeCategory || "All").toLowerCase() === cat.id.toLowerCase();
-            const openCount = categoryCounts[cat.id] || 0;
+              activeCategory.toUpperCase() === cat.id.toUpperCase() ||
+              (cat.id === "COMMODITIES" && activeCategory.toUpperCase() === "GOLD");
 
             return (
               <button
                 key={cat.id}
-                onClick={() => handleSelect(cat.id)}
-                type="button"
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold uppercase whitespace-nowrap transition-all duration-200 border-b-2 ${
+                onClick={() => handleCategoryClick(cat.id)}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap shrink-0 transition-all",
                   isActive
-                    ? "text-emerald-600 dark:text-emerald-400 border-emerald-500"
-                    : "text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-800 dark:hover:text-slate-200"
-                }`}
-              >
-                <span>{cat.label}</span>
-                {openCount > 0 && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                      isActive
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                    }`}
-                  >
-                    {openCount}
-                  </span>
+                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                    : "bg-background/80 text-muted-foreground border border-border/40 hover:text-foreground"
                 )}
+              >
+                <Icon className="h-3 w-3" />
+                <span>{cat.label}</span>
               </button>
             );
           })}
         </div>
       </header>
+
+      {/* User Profile Drawer */}
+      <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );
 };
