@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,19 +11,17 @@ import {
   User,
   Menu,
   X,
-  ShieldCheck,
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import ProfileDrawer from "@/components/ProfileDrawer";
 
-interface HeaderProps {
+export interface HeaderProps {
   activeCategory?: string;
   onCategoryChange?: (category: string) => void;
 }
 
-// Fixed 5 Core Categories (Removed 'ALL' to avoid RPC query crash)
 const NAV_CATEGORIES = [
   { id: "COMMODITIES", label: "Gold", icon: TrendingUp },
   { id: "FOREX", label: "Forex", icon: Coins },
@@ -38,11 +36,30 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+
+  const [user, setUser] = useState<any>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const isHomePage = location.pathname === "/" || location.pathname === "/signals-dashboard";
+  // Direct Supabase User Listener (No AuthContext Dependency)
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const isHomePage =
+    location.pathname === "/" || location.pathname === "/signals-dashboard";
 
   const handleCategoryClick = (catId: string) => {
     if (onCategoryChange) {
@@ -58,9 +75,11 @@ const Header: React.FC<HeaderProps> = ({
     <>
       <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-2 sm:px-4 max-w-7xl flex h-14 items-center justify-between">
-          
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg sm:text-xl">
+          <Link
+            to="/"
+            className="flex items-center gap-2 font-bold text-lg sm:text-xl"
+          >
             <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
               <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
@@ -75,7 +94,8 @@ const Header: React.FC<HeaderProps> = ({
               const Icon = cat.icon;
               const isActive =
                 activeCategory.toUpperCase() === cat.id.toUpperCase() ||
-                (cat.id === "COMMODITIES" && activeCategory.toUpperCase() === "GOLD");
+                (cat.id === "COMMODITIES" &&
+                  activeCategory.toUpperCase() === "GOLD");
 
               return (
                 <button
@@ -133,7 +153,11 @@ const Header: React.FC<HeaderProps> = ({
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </Button>
           </div>
         </div>
@@ -144,7 +168,8 @@ const Header: React.FC<HeaderProps> = ({
             const Icon = cat.icon;
             const isActive =
               activeCategory.toUpperCase() === cat.id.toUpperCase() ||
-              (cat.id === "COMMODITIES" && activeCategory.toUpperCase() === "GOLD");
+              (cat.id === "COMMODITIES" &&
+                activeCategory.toUpperCase() === "GOLD");
 
             return (
               <button
