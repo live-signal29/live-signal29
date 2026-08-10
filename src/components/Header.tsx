@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Menu } from "lucide-react";
 import TrialBanner from "./TrialBanner";
 import AppInstallBanner from "./AppInstallBanner";
 import { SideDrawer } from "./SideDrawer";
@@ -8,23 +7,14 @@ import { ThemeToggle } from "./ThemeToggle";
 import { GlobalSearch } from "./GlobalSearch";
 import { FlashSaleBanner } from "./FlashSaleBanner";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
-import { cn } from "@/lib/utils";
 
 const Header = () => {
   const { subscriptionStatus } = useSubscriptionAccess();
   const isPremium = subscriptionStatus === "premium";
 
-  const CATEGORIES = [
-    { key: "COMMODITIES", label: "Gold" },
-    { key: "FOREX", label: "Forex" },
-    { key: "CRYPTO", label: "Crypto" },
-    { key: "DERIV/BINARY", label: "Deriv" },
-    { key: "MARKET IDEAS", label: "Ideas" },
-  ];
-
   return (
     <>
-      {/* Promo strips */}
+      {/* Promo area */}
       {!isPremium ? (
         <>
           <FlashSaleBanner />
@@ -34,74 +24,62 @@ const Header = () => {
         <AppInstallBanner />
       )}
 
-      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-2xl shadow-[0_6px_24px_-20px_hsl(var(--glow-primary)/0.9)]">
-        <div>
-          {/* Top Header Row */}
-          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
-            {/* Left: Brand */}
-            <Link to="/" className="min-w-0 flex flex-col justify-center">
-              <span className="flex items-center gap-1.5 leading-none">
-                <span className="text-xl font-extrabold tracking-tight">Live</span>
-                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-warning via-affiliate to-warning bg-clip-text text-transparent">
-                  Signals
-                </span>
-                <span
-                  className={
-                    isPremium
-                      ? "shine rounded-md bg-gradient-to-br from-warning to-affiliate px-1.5 py-0.5 text-[9px] font-bold uppercase text-warning-foreground shadow-[0_0_12px_hsl(var(--affiliate)/0.6)]"
-                      : "rounded-md border border-border/70 bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground"
-                  }
-                >
-                  {isPremium ? "Pro" : "Free"}
-                </span>
-              </span>
-              <span className="mt-1 text-[11px] font-medium leading-none text-muted-foreground">
-                · <span className="text-warning">Trend is Friend</span>
-              </span>
-            </Link>
+      {/* Modern Sticky Glassmorphic Header */}
+      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/85 backdrop-blur-xl transition-colors duration-300">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-3 sm:px-4">
 
-            {/* Right: Menu + Bell */}
-            <div className="flex items-center gap-1.5">
-              <div className="hidden sm:flex items-center gap-1.5">
-                <GlobalSearch />
-                <ThemeToggle />
-              </div>
+          {/* Brand Logo & Status */}
+          <Link
+            to="/"
+            className="min-w-0 flex flex-col justify-center group"
+          >
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                Live
+              </span>
 
-              <div className="icon-3d h-9 w-9">
+              <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 bg-clip-text text-xl font-black tracking-tight text-transparent">
+                Signals
+              </span>
+
+              {/* Status Badge */}
+              <span
+                className={
+                  isPremium
+                    ? "rounded-md bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[9px] font-black uppercase text-slate-950 shadow-sm shadow-amber-500/20"
+                    : "rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-500 dark:text-slate-400"
+                }
+              >
+                {isPremium ? "PRO" : "FREE"}
+              </span>
+            </div>
+
+            <span className="mt-1 text-[10px] font-semibold leading-none tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-amber-500 inline-block animate-pulse"></span>
+              Trend is Friend
+            </span>
+          </Link>
+
+          {/* Right controls */}
+          <div className="flex shrink-0 items-center gap-2">
+
+            {/* Desktop controls */}
+            <div className="hidden items-center gap-2 sm:flex">
+              <GlobalSearch />
+              <ThemeToggle />
+            </div>
+
+            {/* Mobile / Universal Quick Actions */}
+            <div className="flex items-center gap-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
                 <SideDrawer />
               </div>
 
-              <div className="icon-3d h-9 w-9">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
                 <NotificationBell />
               </div>
             </div>
-          </div>
 
-          {/* 👇 Category Tabs - Below Header */}
-          <div className="border-t border-border/30 bg-muted/20 px-3 sm:px-4">
-            <div className="mx-auto max-w-7xl flex gap-2 overflow-x-auto scrollbar-hide py-2">
-              {CATEGORIES.map((category, i) => {
-                const isGold = category.key === "COMMODITIES";
-                return (
-                  <button
-                    key={category.key}
-                    onClick={() => {
-                      // This will trigger category change in dashboard
-                      window.dispatchEvent(new CustomEvent('categoryChange', { 
-                        detail: { category: category.key } 
-                      }));
-                    }}
-                    className={cn(
-                      "flex-shrink-0 rounded-full border px-4 py-1.5 text-[11.5px] font-bold whitespace-nowrap",
-                      "transition-all duration-200 active:scale-95",
-                      "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
-                    )}
-                  >
-                    {category.label}
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
       </header>
