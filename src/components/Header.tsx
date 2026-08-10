@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import TrialBanner from "./TrialBanner";
 import AppInstallBanner from "./AppInstallBanner";
@@ -13,6 +13,16 @@ import { cn } from "@/lib/utils";
 const Header = () => {
   const { subscriptionStatus } = useSubscriptionAccess();
   const isPremium = subscriptionStatus === "premium";
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Detect scroll for transparent effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <>
@@ -25,18 +35,29 @@ const Header = () => {
         <AppInstallBanner />
       )}
 
-      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur-2xl shadow-md">
+      <header
+        className={cn(
+          "sticky top-0 z-40 w-full border-b transition-all duration-300",
+          isScrolled
+            ? "border-border/30 bg-background/80 backdrop-blur-xl shadow-lg"
+            : "border-border/50 bg-background/95 backdrop-blur-2xl shadow-md"
+        )}
+      >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
           
           {/* Brand Logo */}
           <Link to="/" className="min-w-0 flex flex-col justify-center shrink-0">
             <span className="flex items-center gap-1.5 leading-none">
-              <span className="text-lg sm:text-xl font-black tracking-tight text-foreground">
+              {/* Live - Gradient Text */}
+              <span className="text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
                 Live
               </span>
-              <span className="text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
+              
+              {/* Signals - Golden Gradient */}
+              <span className="text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
                 Signals
               </span>
+              
               <span
                 className={
                   isPremium
@@ -47,8 +68,13 @@ const Header = () => {
                 {isPremium ? "Pro" : "Free"}
               </span>
             </span>
-            <span className="mt-1 text-[10px] sm:text-[11px] font-semibold leading-none text-muted-foreground">
-              · <span className="text-amber-500 font-bold">Trend is Friend</span>
+            
+            {/* Trend is Friend - Gradient with pulse */}
+            <span className="mt-1 text-[10px] sm:text-[11px] font-semibold leading-none flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 animate-pulse"></span>
+              <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent font-bold">
+                Trend is Friend
+              </span>
             </span>
           </Link>
 
