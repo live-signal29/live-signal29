@@ -38,7 +38,6 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { StreakStatsRow } from "@/components/StreakStatsRow";
-import { LiveDashboardHeader } from "@/components/LiveDashboardHeader";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -416,10 +415,7 @@ const SignalsDashboard = () => {
             }
           />
 
-          {/* Live Dashboard Header */}
-          <div className="mb-3">
-            <LiveDashboardHeader />
-          </div>
+          {/* ✅ REMOVED: <LiveDashboardHeader /> */}
 
           {/* Top Ad */}
           {subscriptionStatus !== "premium" && (
@@ -431,89 +427,89 @@ const SignalsDashboard = () => {
           {/* Main Dashboard */}
           <>
 
-            {/* Category Tabs */}
-            <div className="mb-3">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {/* ✅ Category Tabs - ONLY HERE */}
+          <div className="mb-3">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
 
-                {[
-                  {
-                    key: "COMMODITIES",
-                    label: "Gold",
-                  },
-                  {
-                    key: "FOREX",
-                    label: "Forex",
-                  },
-                  {
-                    key: "CRYPTO",
-                    label: "Crypto",
-                  },
-                  {
-                    key: "DERIV/BINARY",
-                    label: "Deriv",
-                  },
-                  {
-                    key: "MARKET IDEAS",
-                    label: "Ideas",
-                  },
-                ].map((category, i) => {
-                  const isActive =
-                    mainCategory ===
-                    category.key;
+              {[
+                {
+                  key: "COMMODITIES",
+                  label: "Gold",
+                },
+                {
+                  key: "FOREX",
+                  label: "Forex",
+                },
+                {
+                  key: "CRYPTO",
+                  label: "Crypto",
+                },
+                {
+                  key: "DERIV/BINARY",
+                  label: "Deriv",
+                },
+                {
+                  key: "MARKET IDEAS",
+                  label: "Ideas",
+                },
+              ].map((category, i) => {
+                const isActive =
+                  mainCategory ===
+                  category.key;
 
-                  const signalCount =
-                    isActive &&
-                    mainCategory !==
-                      "MARKET IDEAS"
-                      ? signals?.length
-                      : undefined;
+                const signalCount =
+                  isActive &&
+                  mainCategory !==
+                    "MARKET IDEAS"
+                    ? signals?.length
+                    : undefined;
 
-                  const isGold =
-                    category.key ===
-                    "COMMODITIES";
+                const isGold =
+                  category.key ===
+                  "COMMODITIES";
 
-                  return (
-                    <button
-                      key={category.key}
-                      onClick={() =>
-                        handleCategoryChange(
-                          category.key
-                        )
-                      }
-                      className={cn(
-                        "animate-rise-in flex-shrink-0 rounded-full border px-4 py-1.5 text-[11.5px] font-bold whitespace-nowrap",
-                        "transition-all duration-200 active:scale-95",
+                return (
+                  <button
+                    key={category.key}
+                    onClick={() =>
+                      handleCategoryChange(
+                        category.key
+                      )
+                    }
+                    className={cn(
+                      "animate-rise-in flex-shrink-0 rounded-full border px-4 py-1.5 text-[11.5px] font-bold whitespace-nowrap",
+                      "transition-all duration-200 active:scale-95",
 
-                        i === 1 &&
-                          "stagger-1",
+                      i === 1 &&
+                        "stagger-1",
 
-                        i === 2 &&
-                          "stagger-2",
+                      i === 2 &&
+                        "stagger-2",
 
-                        i === 3 &&
-                          "stagger-3",
+                      i === 3 &&
+                        "stagger-3",
 
-                        i === 4 &&
-                          "stagger-4",
+                      i === 4 &&
+                        "stagger-4",
 
-                        isActive
-                          ? isGold
-                            ? "border-transparent text-warning-foreground bg-gradient-to-br from-warning to-affiliate shadow-[0_6px_18px_-6px_hsl(var(--affiliate)/0.7),0_0_18px_hsl(var(--affiliate)/0.45)]"
-                            : "border-transparent text-primary-foreground bg-gradient-to-br from-primary via-primary-glow to-accent shadow-[0_6px_18px_-6px_hsl(var(--glow-primary)/0.8),0_0_18px_hsl(var(--glow-primary)/0.45)]"
-                          : "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
-                      )}
-                    >
-                      {category.label}
+                      isActive
+                        ? isGold
+                          ? "border-transparent text-warning-foreground bg-gradient-to-br from-warning to-affiliate shadow-[0_6px_18px_-6px_hsl(var(--affiliate)/0.7),0_0_18px_hsl(var(--affiliate)/0.45)]"
+                          : "border-transparent text-primary-foreground bg-gradient-to-br from-primary via-primary-glow to-accent shadow-[0_6px_18px_-6px_hsl(var(--glow-primary)/0.8),0_0_18px_hsl(var(--glow-primary)/0.45)]"
+                        : "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
+                    )}
+                  >
+                    {category.label}
 
-                      {signalCount !==
-                        undefined &&
-                        signalCount > 0 &&
-                        ` ${signalCount}`}
-                    </button>
-                  );
-                })}
-              </div>
+                    {signalCount !==
+                      undefined &&
+                      signalCount > 0 &&
+                      ` ${signalCount}`}
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
             {/* Market Ideas */}
             {mainCategory ===
