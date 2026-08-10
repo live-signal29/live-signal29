@@ -613,7 +613,7 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * TIME (UPDATED: FIXED REAL TIME)
+   * TIME (FIXED FOR UTC CONVERSION & LOCAL TIME DISPLAY)
    * ============================================================
    */
 
@@ -623,20 +623,27 @@ const SignalCardNew = ({
     try {
       if (!dateString) return "Just now";
 
-      const date = new Date(dateString);
+      // ISO String parse with UTC check
+      const rawDate = new Date(dateString);
+      const utcDate =
+        dateString.endsWith("Z") || dateString.includes("+")
+          ? rawDate
+          : new Date(dateString + "Z");
 
-      // Jab Signal Closed ho, to "Closed at 05:20 PM" show karega
+      const formattedTime = format(utcDate, "hh:mm a");
+
+      // Closed Signals
       if (
         isClosed ||
         signal.sl_hit ||
         signal.tp4_hit ||
         (!signal.tp4 && signal.tp3_hit)
       ) {
-        return `Closed at ${format(date, "hh:mm a")}`;
+        return `Closed at ${formattedTime}`;
       }
 
-      // Live / Open signals ke liye exact real time format (e.g., 05:02 PM)
-      return format(date, "hh:mm a");
+      // Open / Live Signals
+      return formattedTime;
     } catch {
       return "Just now";
     }
