@@ -1,119 +1,278 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, BarChart3, Target, ArrowUpRight } from "lucide-react";
+import { X } from "lucide-react";
+
+const EXNESS_LINK =
+  "https://one.exnessonelink.com/intl/en/a/dy8mlu37tb";
+
+const EXNESS_BANNER =
+  "https://d3dpet1g0ty5ed.cloudfront.net/EN_EN_GOOGLE_C1_BB2_C2_T1_EXECUTION_FASTBULLS_T2_PERFORMANCE_D-3-13_STATIC_970x250.jpg";
 
 const Hero = () => {
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const [bannerClosed, setBannerClosed] = useState(false);
+
+  useEffect(() => {
+    if (bannerClosed) return;
+
+    // First appearance after 4 seconds
+    const firstShow = window.setTimeout(() => {
+      setBannerVisible(true);
+    }, 4000);
+
+    // Hide after 8 seconds
+    const firstHide = window.setTimeout(() => {
+      setBannerVisible(false);
+    }, 12000);
+
+    return () => {
+      window.clearTimeout(firstShow);
+      window.clearTimeout(firstHide);
+    };
+  }, [bannerClosed]);
+
+  useEffect(() => {
+    if (bannerClosed) return;
+
+    // Repeat automatically
+    const interval = window.setInterval(() => {
+      setBannerVisible(true);
+
+      window.setTimeout(() => {
+        setBannerVisible(false);
+      }, 8000);
+    }, 15000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [bannerClosed]);
+
   return (
-    <section className="relative py-6 sm:py-10 overflow-hidden bg-background text-foreground transition-colors duration-300">
-      {/* Background Subtle Glows for Light/Dark */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-48 bg-amber-500/10 dark:bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
+    <section className="relative overflow-hidden bg-background py-6 text-foreground transition-colors duration-300 sm:py-10">
 
-      <div className="container mx-auto px-3 sm:px-4 relative z-10 max-w-5xl">
-        
-        {/* ================= TOP FEATURED LIVE TICKER CARD ================= */}
-        <div className="w-full p-4 sm:p-5 mb-8 rounded-2xl transition-all duration-300
-          /* Light Mode Styling */
-          bg-white border border-slate-200/80 shadow-md shadow-slate-200/50 text-slate-900
-          /* Dark Mode Styling */
-          dark:bg-slate-900/90 dark:border-slate-800 dark:text-white dark:shadow-none
-          backdrop-blur-xl"
+      {/* Background Glow */}
+      <div className="pointer-events-none absolute left-1/2 top-0 h-48 w-full max-w-7xl -translate-x-1/2 rounded-full bg-amber-500/10 blur-3xl dark:bg-amber-500/5" />
+
+      <div className="relative z-10 mx-auto max-w-5xl px-3 sm:px-4">
+
+        {/* ================= EXNESS PROMO ================= */}
+        <div
+          className={`
+            relative mx-auto mb-7 w-full max-w-[650px]
+            overflow-hidden
+            transition-all duration-700
+            ease-[cubic-bezier(0.22,1,0.36,1)]
+            ${
+              bannerVisible && !bannerClosed
+                ? "max-h-[90px] translate-y-0 opacity-100"
+                : "max-h-0 -translate-y-4 opacity-0"
+            }
+          `}
         >
-          <div className="flex items-center justify-between gap-3">
-            
-            {/* Left: Gold Asset Badge & Details */}
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-amber-950 bg-gradient-to-br from-amber-300 to-amber-500 shadow-sm shrink-0">
-                Au
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-base sm:text-lg tracking-tight">XAUUSD</h3>
-                  <span className="flex items-center gap-1 text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    LIVE
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gold / USD</p>
-              </div>
-            </div>
+          <div
+            className="
+              relative overflow-hidden
+              rounded-lg
+              border
+              border-slate-200/70
+              bg-white
+              p-1
+              shadow-md
+              shadow-black/10
 
-            {/* Center: Embedded Mini Sparkline Chart */}
-            <div className="hidden sm:block w-28 sm:w-36 h-10 shrink-0">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30">
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M 0 25 Q 15 10, 30 20 T 60 8 T 85 12 T 100 3 L 100 30 L 0 30 Z"
-                  fill="url(#chartGradient)"
-                />
-                <path
-                  d="M 0 25 Q 15 10, 30 20 T 60 8 T 85 12 T 100 3"
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
+              dark:border-slate-700/60
+              dark:bg-slate-900
+              dark:shadow-black/30
+            "
+          >
+            <a
+              href={EXNESS_LINK}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              aria-label="Visit Exness"
+              className="group relative block overflow-hidden rounded-md"
+            >
+              <img
+                src={EXNESS_BANNER}
+                alt="Exness"
+                width={970}
+                height={250}
+                className="
+                  block
+                  h-[58px]
+                  w-full
+                  object-cover
+                  object-center
+                  transition-transform
+                  duration-500
+                  group-hover:scale-[1.01]
 
-            {/* Right: Live Price & Growth Indicator */}
-            <div className="text-right">
-              <div className="text-lg sm:text-2xl font-black tracking-tight font-mono">
-                4,399.70
-              </div>
-              <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-0.5">
-                <ArrowUpRight className="w-3.5 h-3.5" /> +0.00%
-              </div>
-            </div>
+                  sm:h-[64px]
+                  md:h-[70px]
+                "
+              />
 
+              {/* Shine */}
+              <span
+                className="
+                  pointer-events-none
+                  absolute
+                  inset-y-0
+                  -left-[60%]
+                  w-[30%]
+                  skew-x-[-20deg]
+                  bg-gradient-to-r
+                  from-transparent
+                  via-white/25
+                  to-transparent
+                  transition-all
+                  duration-1000
+                  group-hover:left-[130%]
+                "
+              />
+            </a>
+
+            {/* Close */}
+            <button
+              type="button"
+              aria-label="Close Exness banner"
+              onClick={() => {
+                setBannerVisible(false);
+                setBannerClosed(true);
+              }}
+              className="
+                absolute
+                right-2
+                top-2
+                z-20
+                flex
+                h-6
+                w-6
+                items-center
+                justify-center
+                rounded-full
+                bg-black/55
+                text-white
+                shadow-md
+                backdrop-blur-md
+                transition-all
+                hover:scale-110
+                hover:bg-black/75
+                active:scale-95
+              "
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Bottom Accent */}
+            <div
+              className="
+                pointer-events-none
+                absolute
+                bottom-0
+                left-0
+                right-0
+                h-px
+                bg-gradient-to-r
+                from-transparent
+                via-emerald-400
+                to-transparent
+              "
+            />
           </div>
         </div>
-        {/* ================= END TICKER CARD ================= */}
 
-        {/* HERO TITLE & DETAILS */}
-        <div className="text-center space-y-6 max-w-3xl mx-auto">
-          
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+        {/* ================= HERO CONTENT ================= */}
+
+        <div className="mx-auto max-w-3xl space-y-6 text-center">
+
+          {/* Badge */}
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+            <span className="h-2 w-2 animate-ping rounded-full bg-amber-500" />
             Precision Trading Terminal
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight">
+          {/* Title */}
+          <h1 className="text-4xl font-black tracking-tight sm:text-5xl md:text-6xl">
             <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 bg-clip-text text-transparent">
               Premium Trading Signals
             </span>
           </h1>
-          
-          <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Get accurate Gold, Forex, and Crypto signals with real-time target updates and automated risk management.
+
+          {/* Description */}
+          <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-600 dark:text-slate-300 sm:text-lg">
+            Get accurate Gold, Forex, and Crypto signals with real-time target
+            updates and automated risk management.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-2">
-            <Button size="lg" className="w-full sm:w-auto font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20">
+          {/* Buttons */}
+          <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
+
+            <Button
+              size="lg"
+              className="
+                w-full
+                bg-amber-500
+                font-bold
+                text-slate-950
+                shadow-md
+                shadow-amber-500/20
+                hover:bg-amber-600
+                sm:w-auto
+              "
+            >
               Join VIP Group
             </Button>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto font-semibold border-slate-300 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800">
+
+            <Button
+              size="lg"
+              variant="outline"
+              className="
+                w-full
+                border-slate-300
+                font-semibold
+                hover:bg-slate-100
+                dark:border-slate-800
+                dark:hover:bg-slate-800
+                sm:w-auto
+              "
+            >
               View Signals
             </Button>
+
           </div>
 
-          {/* STATS ROW */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-6 mt-8 pt-4">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
-              <h3 className="text-2xl sm:text-3xl font-black text-amber-500">95%+</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">Win Rate</p>
+          {/* Stats */}
+          <div className="mt-8 grid grid-cols-3 gap-3 pt-4 sm:gap-6">
+
+            <div className="rounded-xl border border-slate-200/60 bg-slate-50 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+              <h3 className="text-2xl font-black text-amber-500 sm:text-3xl">
+                95%+
+              </h3>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
+                Win Rate
+              </p>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
-              <h3 className="text-2xl sm:text-3xl font-black text-blue-500">24/7</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">Alerts</p>
+
+            <div className="rounded-xl border border-slate-200/60 bg-slate-50 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+              <h3 className="text-2xl font-black text-blue-500 sm:text-3xl">
+                24/7
+              </h3>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
+                Alerts
+              </p>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
-              <h3 className="text-2xl sm:text-3xl font-black text-emerald-500">10k+</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">Traders</p>
+
+            <div className="rounded-xl border border-slate-200/60 bg-slate-50 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+              <h3 className="text-2xl font-black text-emerald-500 sm:text-3xl">
+                10k+
+              </h3>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
+                Traders
+              </p>
             </div>
+
           </div>
 
         </div>
