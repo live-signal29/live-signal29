@@ -4,12 +4,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState, lazy, Suspense, useCallback, useRef } from "react";
+import { useEffect, useState, Suspense, useCallback, useRef } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
+
 // Lazy load all pages for better performance
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const SignalsDashboard = lazyWithRetry(() => import("./pages/SignalsDashboard"));
@@ -65,7 +66,6 @@ const LoadingSpinner = () => (
 
 const clearAuthStorage = () => {
   try {
-    // Remove only auth-related keys (don’t nuke all app storage)
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const authKey = projectId ? `sb-${projectId}-auth-token` : null;
 
@@ -74,7 +74,6 @@ const clearAuthStorage = () => {
       sessionStorage.removeItem(authKey);
     }
 
-    // Also remove any stray Supabase auth keys
     for (const storage of [localStorage, sessionStorage]) {
       const keys: string[] = [];
       for (let i = 0; i < storage.length; i++) {
@@ -100,56 +99,59 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const userId = s?.user?.id;
     if (!userId) return;
 
-    // If their profile row is missing, treat as deleted user => force logout + redirect
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle();
+    try {
+      // Profile Row Check (Gracefully handle network errors without nuking login)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (error || !data) {
-      await supabase.auth.signOut();
-      clearAuthStorage();
-      navigate('/login?reason=deleted', { replace: true });
+      // IMPORTANT FIX: Network errors (error !== null) par signout NA karein!
+      // Jab confirm ho ke error zero hai aur data bilkul nahi mil raha tabhi delete samjhein.
+      if (!error && data === null) {
+        await supabase.auth.signOut();
+        clearAuthStorage();
+        navigate('/login?reason=deleted', { replace: true });
+      }
+    } catch {
+      // Ignore network errors during background check
     }
   }, [navigate]);
 
   useEffect(() => {
-    // Listener FIRST (best practice)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      sessionRef.current = s as Session | null;
-      setSession(s as Session | null);
+    let mounted = true;
+
+    // 1. Initial Get Session
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!mounted) return;
+      sessionRef.current = s;
+      setSession(s);
       setLoading(false);
 
       if (s?.user) {
-        setTimeout(() => {
-          verifyUserStillExists(s as Session);
-        }, 0);
+        verifyUserStillExists(s);
       }
     });
 
-    // THEN initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      sessionRef.current = session as Session | null;
-      setSession(session as Session | null);
+    // 2. Auth Listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (!mounted) return;
+      sessionRef.current = s;
+      setSession(s);
       setLoading(false);
-
-      if (session?.user) {
-        setTimeout(() => {
-          verifyUserStillExists(session as Session);
-        }, 0);
-      }
     });
 
-    // Periodic verification (covers refresh / cached sessions)
+    // 3. Interval check every 2 minutes instead of aggressive 30 seconds
     const interval = setInterval(() => {
       const s = sessionRef.current;
       if (s?.user) {
         verifyUserStillExists(s);
       }
-    }, 30_000);
+    }, 120_000);
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       clearInterval(interval);
     };
@@ -174,10 +176,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60, // 1 minute - better caching
+      staleTime: 1000 * 60, // 1 minute
       gcTime: 1000 * 60 * 10, // 10 minutes
       refetchOnWindowFocus: false,
-      refetchOnMount: false, // Don't refetch on component mount
+      refetchOnMount: false,
       retry: 1,
     },
   },
