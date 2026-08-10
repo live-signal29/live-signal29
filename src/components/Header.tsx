@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import TrialBanner from "./TrialBanner";
 import AppInstallBanner from "./AppInstallBanner";
@@ -8,9 +9,29 @@ import { GlobalSearch } from "./GlobalSearch";
 import { FlashSaleBanner } from "./FlashSaleBanner";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
-const Header = () => {
+// Dynamic Categories list
+const CATEGORIES = ["Gold 20", "Forex", "Crypto", "Deriv", "Ideas"];
+
+interface HeaderProps {
+  activeCategory?: string;
+  onCategoryChange?: (category: string) => void;
+}
+
+const Header = ({ activeCategory, onCategoryChange }: HeaderProps) => {
   const { subscriptionStatus } = useSubscriptionAccess();
   const isPremium = subscriptionStatus === "premium";
+
+  // Local state handling (agar parent se props na aaein)
+  const [selectedCategory, setSelectedCategory] = useState("Gold 20");
+  
+  const currentCategory = activeCategory || selectedCategory;
+
+  const handleSelect = (category: string) => {
+    setSelectedCategory(category);
+    if (onCategoryChange) {
+      onCategoryChange(category);
+    }
+  };
 
   return (
     <>
@@ -81,6 +102,26 @@ const Header = () => {
             </div>
 
           </div>
+        </div>
+
+        {/* Integrated Category Tabs (Image 2 underline style, dark/light theme safe) */}
+        <div className="flex items-center overflow-x-auto no-scrollbar border-t border-slate-200/60 dark:border-slate-800/60 px-2">
+          {CATEGORIES.map((cat) => {
+            const isActive = currentCategory.toLowerCase() === cat.toLowerCase();
+            return (
+              <button
+                key={cat}
+                onClick={() => handleSelect(cat)}
+                className={`relative px-4 py-2 text-xs font-bold uppercase whitespace-nowrap transition-all duration-200 ${
+                  isActive
+                    ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent"
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
       </header>
     </>
