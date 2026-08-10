@@ -22,6 +22,7 @@ import {
 import { Link } from "react-router-dom";
 
 const Index = () => {
+  // Master Active Category State
   const [activeCategory, setActiveCategory] = useState("All");
 
   const { data: signals, isLoading } = useQuery({
@@ -32,7 +33,7 @@ const Index = () => {
         .select("*")
         .eq("published", true)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(30);
 
       if (error) throw error;
       return data;
@@ -47,9 +48,15 @@ const Index = () => {
     ],
   };
 
+  // Connected Filtering Logic
   const filteredSignals = signals?.filter((signal) => {
-    if (activeCategory === "All") return true;
-    return signal.category?.toLowerCase() === activeCategory.toLowerCase();
+    if (!activeCategory || activeCategory.toLowerCase() === "all") {
+      return true;
+    }
+    const sigCat = (signal.category || "").trim().toLowerCase();
+    const activeCat = activeCategory.trim().toLowerCase();
+    
+    return sigCat === activeCat;
   });
 
   return (
@@ -62,15 +69,15 @@ const Index = () => {
         structuredData={structuredData}
       />
 
-      {/* Header connected with live signals & active category state */}
+      {/* Connected Header with Category Change Handler & Signals Data */}
       <Header
         signals={signals || []}
         activeCategory={activeCategory}
-        onCategoryChange={setActiveCategory}
+        onCategoryChange={(cat) => setActiveCategory(cat)}
       />
 
       <main className="flex-1">
-        {/* HERO */}
+        {/* HERO SECTION */}
         <section className="relative overflow-hidden px-4 pt-6 pb-5">
           <div className="pointer-events-none absolute -top-24 right-1/4 h-72 w-72 rounded-full bg-primary/8 blur-[110px]" />
           <div className="pointer-events-none absolute top-10 left-0 h-64 w-64 rounded-full bg-blue-500/6 blur-[120px]" />
@@ -97,7 +104,6 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Chart Accent */}
               <div className="hidden h-16 w-16 items-center justify-center rounded-2xl border border-border/60 bg-card/70 shadow-sm backdrop-blur-md sm:flex">
                 <LineChart className="h-8 w-8 text-primary" />
               </div>
@@ -105,11 +111,10 @@ const Index = () => {
           </div>
         </section>
 
-        {/* STATS */}
+        {/* STATS SECTION */}
         <section className="px-4 pb-8">
           <div className="mx-auto max-w-7xl">
             <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
-              {/* Win Rate */}
               <div className="group flex flex-col items-center gap-2 rounded-2xl border border-border/60 bg-card/80 p-3.5 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-emerald-500/30 hover:shadow-md sm:flex-row sm:items-start sm:gap-3 sm:p-5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 sm:h-11 sm:w-11">
                   <Target className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
@@ -124,7 +129,6 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Signals */}
               <div className="group flex flex-col items-center gap-2 rounded-2xl border border-border/60 bg-card/80 p-3.5 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-blue-500/30 hover:shadow-md sm:flex-row sm:items-start sm:gap-3 sm:p-5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 sm:h-11 sm:w-11">
                   <BarChart3 className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
@@ -139,7 +143,6 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Live Updates */}
               <div className="group flex flex-col items-center gap-2 rounded-2xl border border-border/60 bg-card/80 p-3.5 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-violet-500/30 hover:shadow-md sm:flex-row sm:items-start sm:gap-3 sm:p-5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10 text-violet-600 dark:text-violet-400 sm:h-11 sm:w-11">
                   <Clock className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
@@ -157,20 +160,19 @@ const Index = () => {
           </div>
         </section>
 
-        {/* SIGNALS */}
+        {/* SIGNALS LIST SECTION */}
         <section className="px-4 pb-10">
           <div className="mx-auto max-w-7xl">
-            {/* Section Header */}
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                   <h2 className="text-lg font-extrabold uppercase tracking-wide text-foreground sm:text-xl">
-                    Live Signals
+                    {activeCategory === "All" ? "Live Signals" : `${activeCategory} Signals`}
                   </h2>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Latest published trading opportunities
+                  Showing available opportunities for {activeCategory}
                 </p>
               </div>
 
@@ -183,7 +185,7 @@ const Index = () => {
               </Link>
             </div>
 
-            {/* Loading */}
+            {/* Loading Grid */}
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="rounded-2xl border border-border/60 bg-card/80 px-8 py-7 text-center shadow-sm backdrop-blur-md">
@@ -191,7 +193,7 @@ const Index = () => {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                   <p className="mt-3 text-xs font-medium text-muted-foreground">
-                    Loading live signals...
+                    Loading signals...
                   </p>
                 </div>
               </div>
@@ -210,12 +212,11 @@ const Index = () => {
                   No signals found
                 </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  There are currently no signals available for "{activeCategory}".
+                  There are currently no published signals available in "{activeCategory}".
                 </p>
               </div>
             )}
 
-            {/* Affiliate Banner */}
             {signals && signals.length > 0 && (
               <div className="mt-8">
                 <ExnessAffiliateBanner />
