@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SignalCardNew from "@/components/SignalCardNew";
 import AdBanner from "@/components/AdBanner";
@@ -17,7 +16,6 @@ import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
 import { startOfDay, formatDistanceToNow } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
-import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { StreakStatsRow } from "@/components/StreakStatsRow";
@@ -234,11 +232,6 @@ const SignalsDashboard = () => {
     setLightboxOpen(true);
   };
 
-  const handleCategoryChangeFromHeader = (catKey: string) => {
-    setMainCategory(catKey);
-    setSubCategory("all");
-  };
-
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -253,11 +246,7 @@ const SignalsDashboard = () => {
         structuredData={breadcrumbData}
       />
 
-      {/* Header with category change listener */}
-      <Header
-        activeCategory={mainCategory}
-        onCategoryChange={handleCategoryChangeFromHeader}
-      />
+      {/* NOTE: ExnessPopup Removed from here */}
 
       <HeadlineTicker />
 
@@ -464,7 +453,6 @@ const SignalsDashboard = () => {
         </div>
       </main>
 
-      <ExnessPopup />
       <Footer />
     </div>
   );
