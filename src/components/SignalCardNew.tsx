@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef, useCallback } from "react";
- } from "react";
 import { 
   Clock, 
   AlertCircle, 
@@ -210,7 +209,7 @@ const SignalCardNew = ({
   }, [isOpen, isPending, isClosed, currentPriceNum, parsedEntryPrice, signal.id, signal.type, signal.entry, signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl, signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit, signal.sl_hit]);
 
   // Social Share Logic
-  const handleShare = (e: React.MouseEvent, platform: 'whatsapp' | 'telegram' | 'copy') => {
+  const handleShare = (e: React.MouseEvent<HTMLDivElement>, platform: 'whatsapp' | 'telegram' | 'copy') => {
     e.stopPropagation();
     const shareUrl = `https://live-signal29.vercel.app/signal/${signal.id}`;
     
