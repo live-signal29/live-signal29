@@ -7,17 +7,16 @@ import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, Coins, Bitcoin, BarChart3, LineChart, Maximize2 } from "lucide-react";
+import { Loader2, Maximize2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
-import { cn } from "@/lib/utils";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
-import { differenceInDays, startOfDay, formatDistanceToNow } from "date-fns";
+import { startOfDay, formatDistanceToNow } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
@@ -88,17 +87,6 @@ const SignalsDashboard = () => {
     { name: "Home", url: "https://yourdomain.com" },
     { name: "Live Signals Dashboard", url: "https://yourdomain.com/signals-dashboard" }
   ]);
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "FOREX": return <TrendingUp className="h-4 w-4" />;
-      case "COMMODITIES": return <Coins className="h-4 w-4" />;
-      case "CRYPTO": return <Bitcoin className="h-4 w-4" />;
-      case "DERIV/BINARY": return <BarChart3 className="h-4 w-4" />;
-      case "MARKET IDEAS": return <LineChart className="h-4 w-4" />;
-      default: return null;
-    }
-  };
 
   const subCategoryOptions: Record<string, string[]> = {
     FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
@@ -225,11 +213,6 @@ const SignalsDashboard = () => {
   const openLightbox = (index: number) => {
     setSelectedChartIndex(index);
     setLightboxOpen(true);
-  };
-
-  const handleCategoryChange = (category: string) => {
-    setMainCategory(category);
-    setSubCategory("all");
   };
 
   return (
