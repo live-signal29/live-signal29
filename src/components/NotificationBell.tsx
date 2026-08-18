@@ -46,32 +46,32 @@ export const NotificationBell = () => {
         return {
           icon: Gift,
           emoji: "🎉",
-          className: "text-amber-500",
-          bg: "bg-amber-500/10",
+          className: "text-amber-400",
+          bg: "bg-amber-500/15",
         };
 
       case "signal":
         return {
           icon: BarChart3,
           emoji: "📊",
-          className: "text-emerald-500",
-          bg: "bg-emerald-500/10",
+          className: "text-emerald-400",
+          bg: "bg-emerald-500/15",
         };
 
       case "system":
         return {
           icon: Bell,
           emoji: "🔔",
-          className: "text-blue-500",
-          bg: "bg-blue-500/10",
+          className: "text-blue-400",
+          bg: "bg-blue-500/15",
         };
 
       default:
         return {
           icon: Info,
           emoji: "ℹ️",
-          className: "text-primary",
-          bg: "bg-primary/10",
+          className: "text-sky-400",
+          bg: "bg-sky-500/15",
         };
     }
   };
@@ -154,7 +154,7 @@ export const NotificationBell = () => {
 
   return (
     <>
-      {/* FLOATING AUTO NOTIFICATION (Compact & Sleek) */}
+      {/* FLOATING AUTO NOTIFICATION (Dark Sleek Theme) */}
       {popupNotification && popupIconData && (
         <div
           className={cn(
@@ -167,9 +167,9 @@ export const NotificationBell = () => {
         >
           <div
             className={cn(
-              "relative overflow-hidden rounded-xl border border-border/80",
-              "bg-background/95 backdrop-blur-md shadow-lg",
-              "cursor-pointer transition-all hover:border-primary/40"
+              "relative overflow-hidden rounded-xl border border-slate-700/80",
+              "bg-slate-900/95 text-slate-100 backdrop-blur-md shadow-2xl",
+              "cursor-pointer transition-all hover:border-slate-600"
             )}
             onClick={handlePopupClick}
           >
@@ -181,7 +181,9 @@ export const NotificationBell = () => {
                 )}
               >
                 {PopupIcon ? (
-                  <PopupIcon className={cn("h-3.5 w-3.5", popupIconData.className)} />
+                  <PopupIcon
+                    className={cn("h-3.5 w-3.5", popupIconData.className)}
+                  />
                 ) : (
                   <span className="text-xs">{popupIconData.emoji}</span>
                 )}
@@ -189,19 +191,20 @@ export const NotificationBell = () => {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-primary">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-400">
                     New Notification
                   </span>
-                  <span className="text-[10px] text-muted-foreground/80 shrink-0">
-                    {formatDistanceToNow(new Date(popupNotification.created_at), {
-                      addSuffix: false,
-                    })}
+                  <span className="text-[10px] text-slate-400 shrink-0">
+                    {formatDistanceToNow(
+                      new Date(popupNotification.created_at),
+                      { addSuffix: false }
+                    )}
                   </span>
                 </div>
 
-                <p className="text-xs font-semibold text-foreground truncate leading-snug">
+                <p className="text-xs font-semibold text-slate-100 truncate leading-snug">
                   {popupNotification.title}{" "}
-                  <span className="font-normal text-muted-foreground">
+                  <span className="font-normal text-slate-400">
                     — {popupNotification.message}
                   </span>
                 </p>
@@ -214,16 +217,16 @@ export const NotificationBell = () => {
                   event.stopPropagation();
                   closePopup();
                 }}
-                className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <div className="h-[2px] w-full bg-muted/50">
+            <div className="h-[2px] w-full bg-slate-800">
               <div
                 className={cn(
-                  "h-full bg-primary/80",
+                  "h-full bg-emerald-500",
                   popupVisible
                     ? "animate-[notification-progress_5s_linear_forwards]"
                     : "w-0"
