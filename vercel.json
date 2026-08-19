@@ -1,4 +1,16 @@
 {
+  "redirects": [
+    {
+      "source": "/http//:path*",
+      "destination": "https://livesignals29.online/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/http/:path*",
+      "destination": "https://livesignals29.online/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
