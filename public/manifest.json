@@ -55,7 +55,7 @@
       "name": "Live Signals",
       "short_name": "Signals",
       "description": "View live trading signals",
-      "url": "/signals-dashboard",
+      "url": "/signals",
       "icons": [
         {
           "src": "/icon-192.png",
