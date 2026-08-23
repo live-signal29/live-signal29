@@ -26,6 +26,8 @@ const Privacy = lazyWithRetry(() => import("./pages/Privacy"));
 const About = lazyWithRetry(() => import("./pages/About"));
 const Login = lazyWithRetry(() => import("./pages/Login"));
 const Signup = lazyWithRetry(() => import("./pages/Signup"));
+const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const Onboarding = lazyWithRetry(() => import("./pages/Onboarding"));
 const Profile = lazyWithRetry(() => import("./pages/Profile"));
 const AdminLogin = lazyWithRetry(() => import("./pages/AdminLogin"));
@@ -100,15 +102,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     if (!userId) return;
 
     try {
-      // Profile Row Check (Gracefully handle network errors without nuking login)
       const { data, error } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', userId)
         .maybeSingle();
 
-      // IMPORTANT FIX: Network errors (error !== null) par signout NA karein!
-      // Jab confirm ho ke error zero hai aur data bilkul nahi mil raha tabhi delete samjhein.
       if (!error && data === null) {
         await supabase.auth.signOut();
         clearAuthStorage();
@@ -122,7 +121,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    // 1. Initial Get Session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (!mounted) return;
       sessionRef.current = s;
@@ -134,7 +132,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // 2. Auth Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!mounted) return;
       sessionRef.current = s;
@@ -142,7 +139,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    // 3. Interval check every 2 minutes instead of aggressive 30 seconds
     const interval = setInterval(() => {
       const s = sessionRef.current;
       if (s?.user) {
@@ -200,6 +196,8 @@ const App = () => (
                 <Route path="/signal/:id" element={<SharedSignal />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 
                 {/* Protected routes */}
                 <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
