@@ -13,6 +13,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
   
@@ -88,6 +89,30 @@ const Login = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Please enter your email address first");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Password reset link has been sent to your Gmail!");
+      }
+    } catch (error: any) {
+      toast.error("Failed to send reset email. Please try again.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -154,12 +179,14 @@ const Login = () => {
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                <Link 
-                  to="/forgot-password" 
-                  className="text-xs text-primary hover:underline transition-all"
+                <button 
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
+                  className="text-xs text-primary hover:underline transition-all font-medium disabled:opacity-50"
                 >
-                  Forgot password?
-                </Link>
+                  {resetLoading ? "Sending..." : "Forgot password?"}
+                </button>
               </div>
               <Input
                 id="password"
