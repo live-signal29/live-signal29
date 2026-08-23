@@ -90,6 +90,17 @@ const clearAuthStorage = () => {
   }
 };
 
+const NavigationWrapper = () => {
+  const location = useLocation();
+  const hideOnPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/onboarding"];
+  
+  if (hideOnPaths.includes(location.pathname.toLowerCase())) {
+    return null;
+  }
+  
+  return <BottomNavigation />;
+};
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -187,7 +198,6 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner position="top-center" richColors closeButton />
-      
         <OfflineIndicator />
         <BrowserRouter>
           <div className="has-bottom-nav">
@@ -244,7 +254,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-            <BottomNavigation />
+            <NavigationWrapper />
           </div>
         </BrowserRouter>
       </TooltipProvider>
