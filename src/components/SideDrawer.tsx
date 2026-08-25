@@ -1,262 +1,304 @@
-import React, { useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ChevronDown,
-  ChevronUp,
-  TrendingUp,
-  PieChart,
-  BookOpen,
-  Award,
-  Newspaper,
-  Calendar,
-  GraduationCap,
-  History,
-  Sparkles,
-  Calculator,
-  LineChart,
-  Bell,
-  Crown,
-  Gift,
-  Users,
-  User,
-  Settings,
-  Grid,
-  Globe,
-  LogOut,
-  Sun,
-  Moon
+  Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Bell, Settings,
+  Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
+  Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
+  Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ThemeToggle } from "./ThemeToggle";
+import { cn } from "@/lib/utils";
+import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
-export const SideDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+const APP_VERSION = "1.0.0";
+
+type MenuItem = {
+  label: string;
+  path: string;
+  icon: typeof LineChart;
+  tint: string;
+  badge?: string;
+};
+
+const MenuRow = memo(
+  ({ item, active, onNavigate }: { item: MenuItem; active: boolean; onNavigate: () => void }) => {
+    const Icon = item.icon;
+    return (
+      <Link
+        to={item.path}
+        onClick={onNavigate}
+        className={cn(
+          "group flex items-center gap-2.5 h-8 px-2 rounded-lg font-sans",
+          "transition-all duration-200 ease-out active:scale-[0.98]",
+          active
+            ? "bg-primary/10 text-primary font-semibold shadow-[0_2px_8px_-3px_hsl(var(--glow-primary)/0.4)]"
+            : "text-muted-foreground hover:bg-accent/40 hover:text-foreground hover:translate-x-0.5"
+        )}
+      >
+        <span className="flex items-center justify-center shrink-0">
+          <Icon
+            className={cn(
+              "h-3.5 w-3.5 transition-transform duration-200 group-hover:scale-110",
+              active ? "text-primary stroke-[2.5]" : item.tint
+            )}
+          />
+        </span>
+        <span className="text-[11px] font-medium tracking-tight truncate">
+          {item.label}
+        </span>
+        {item.badge && (
+          <span className="ml-auto px-1.2 py-0.2 rounded bg-primary/15 text-primary text-[8px] font-bold uppercase shrink-0">
+            {item.badge}
+          </span>
+        )}
+        {active && (
+          <span className={cn("h-3.5 w-0.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--glow-primary))] shrink-0", !item.badge && "ml-auto")} />
+        )}
+      </Link>
+    );
+  }
+);
+MenuRow.displayName = "MenuRow";
+
+export const SideDrawer = () => {
+  const [open, setOpen] = useState(false);
+  const [otherAppsOpen, setOtherAppsOpen] = useState(false);
+  const menuScrollRef = useRef<HTMLElement | null>(null);
+  const scrollPos = useRef(0);
   const navigate = useNavigate();
-  
-  // Sabhi sub-categories default HIDDEN (null) hain
-  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const location = useLocation();
+  const { t } = useTranslation();
 
-  const toggleCategory = (cat: string) => {
-    setOpenCategory((prev) => (prev === cat ? null : cat));
-  };
+  useEffect(() => {
+    if (!open) return;
 
-  const handleLogout = async () => {
+    const root = document.documentElement;
+    const body = document.body;
+    const prev = {
+      htmlOverscroll: root.style.overscrollBehaviorY,
+      bodyOverscroll: body.style.overscrollBehaviorY,
+      bodyOverflow: body.style.overflow,
+    };
+
+    root.style.overscrollBehaviorY = "none";
+    body.style.overscrollBehaviorY = "none";
+    body.style.overflow = "hidden";
+
+    const scroller = menuScrollRef.current;
+    if (scroller) scroller.scrollTop = scrollPos.current;
+
+    return () => {
+      root.style.overscrollBehaviorY = prev.htmlOverscroll;
+      body.style.overscrollBehaviorY = prev.bodyOverscroll;
+      body.style.overflow = prev.bodyOverflow;
+    };
+  }, [open]);
+
+  const rememberScroll = useCallback(() => {
+    if (menuScrollRef.current) scrollPos.current = menuScrollRef.current.scrollTop;
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    rememberScroll();
+    setOpen(false);
+  }, [rememberScroll]);
+
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
+    setOpen(false);
     navigate("/login");
-  };
+  }, [navigate]);
 
-  const handleNav = (path: string) => {
-    navigate(path);
-    if (onClose) onClose();
-  };
-
-  if (!isOpen) return null;
+  const menuGroups = useMemo<{ title: string; items: MenuItem[] }[]>(
+    () => [
+      {
+        title: "Live Trading",
+        items: [
+          { label: t("live_signals"), path: "/signals", icon: LineChart, tint: "text-emerald-500" },
+          { label: "Portfolio", path: "/portfolio", icon: PieChart, tint: "text-teal-500" },
+          { label: t("trade_journal"), path: "/trade-journal", icon: BookOpen, tint: "text-lime-600" },
+          { label: t("results"), path: "/results", icon: BarChart3, tint: "text-violet-500" },
+        ],
+      },
+      {
+        title: "Learn & Analyze",
+        items: [
+          { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, tint: "text-sky-500" },
+          { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, tint: "text-indigo-500" },
+          { label: "Trading Academy", path: "/academy", icon: GraduationCap, tint: "text-emerald-500" },
+          { label: "Backtesting", path: "/backtesting", icon: History, tint: "text-purple-500" },
+        ],
+      },
+      {
+        title: "Tools",
+        items: [
+          { label: "AI Assistant", path: "/ai-chat", icon: Sparkles, tint: "text-fuchsia-500", badge: "New" },
+          { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, tint: "text-cyan-500" },
+          { label: "Compound Calculator", path: "/compound", icon: TrendingUp, tint: "text-green-500" },
+          { label: t("price_alerts"), path: "/price-alerts", icon: BellIcon, tint: "text-pink-500" },
+        ],
+      },
+      {
+        title: "Premium",
+        items: [
+          { label: t("premium"), path: "/premium", icon: Crown, tint: "text-amber-500", badge: "Pro" },
+          { label: "Gift Premium", path: "/gift-premium", icon: Gift, tint: "text-rose-500" },
+          { label: "Invite & Earn", path: "/referrals", icon: Gift, tint: "text-orange-500" },
+        ],
+      },
+      {
+        title: "Account",
+        items: [
+          { label: "Account Management", path: "/account-management", icon: Briefcase, tint: "text-teal-500" },
+          { label: "My Profile", path: "/profile", icon: User, tint: "text-purple-500" },
+          { label: t("notifications"), path: "/notifications", icon: Bell, tint: "text-rose-500" },
+          { label: t("settings"), path: "/settings", icon: Settings, tint: "text-slate-500" },
+          { label: "Leaderboard", path: "/leaderboard", icon: Trophy, tint: "text-amber-500" },
+        ],
+      },
+    ],
+    [t]
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      {/* Overlay Backdrop */}
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-
-      {/* Drawer Body - Exact Light Theme Matching Your App */}
-      <div className="relative w-[280px] h-full bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-700 dark:text-slate-200 flex flex-col justify-between p-4 shadow-2xl z-10 overflow-y-auto font-sans">
-        
-        <div>
-          {/* Top Logo & Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md shadow-cyan-500/20">
-                TF
-              </div>
-              <div>
-                <h3 className="text-xs font-black tracking-tight text-emerald-500 uppercase">TREND IS FRIEND</h3>
-                <p className="text-[10px] text-slate-400 font-medium">Live Signals</p>
-              </div>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) rememberScroll();
+        setOpen(next);
+      }}
+    >
+      <SheetTrigger asChild>
+        <button
+          aria-label="Open menu"
+          className="p-1.5 rounded-lg hover:bg-accent transition-colors duration-200 active:scale-95"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </SheetTrigger>
+      <SheetContent
+        side="left"
+        className="w-[220px] max-w-[70vw] p-0 border-r border-border/40 shadow-2xl flex flex-col h-dvh max-h-dvh overflow-hidden bg-background/95 backdrop-blur-md transition-all duration-300 [&>button]:hidden"
+      >
+        <div className="flex flex-col h-full min-h-0">
+          {/* Header with Gradient Text & Distinct Subhead */}
+          <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-background/80">
+            <div className="relative shrink-0">
+              <img
+                src={trendFriendLogo}
+                alt="Trend is Friend logo"
+                width={30}
+                height={30}
+                loading="eager"
+                decoding="async"
+                className="w-7.5 h-7.5 rounded-md ring-1 ring-primary/20 shadow-sm object-cover"
+              />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-background" />
             </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-[11px] font-black tracking-tight truncate leading-tight bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
+                TREND IS FRIEND
+              </h2>
+              <p className="text-[9px] font-mono text-muted-foreground/80 truncate leading-tight tracking-wide">
+                Live Signals
+              </p>
+            </div>
+            <ThemeToggle />
           </div>
 
-          {/* Navigation Links List */}
-          <div className="mt-4 space-y-1">
-
-            {/* LIVE TRADING */}
-            <div>
-              <button
-                onClick={() => toggleCategory("live")}
-                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
-              >
-                <span>LIVE TRADING</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "live" ? "rotate-180 text-emerald-500" : ""}`} />
-              </button>
-              
-              {openCategory === "live" && (
-                <div className="pl-2 space-y-1 my-1">
-                  <div onClick={() => handleNav("/")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <TrendingUp className="w-4 h-4 text-emerald-500" /> Live Signals
-                  </div>
-                  <div onClick={() => handleNav("/portfolio")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <PieChart className="w-4 h-4 text-cyan-500" /> Portfolio
-                  </div>
-                  <div onClick={() => handleNav("/trade-journal")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <BookOpen className="w-4 h-4 text-amber-500" /> Trade Journal
-                  </div>
-                  <div onClick={() => handleNav("/results")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Award className="w-4 h-4 text-purple-500" /> Results
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* LEARN & ANALYZE */}
-            <div>
-              <button
-                onClick={() => toggleCategory("learn")}
-                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
-              >
-                <span>LEARN & ANALYZE</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "learn" ? "rotate-180 text-emerald-500" : ""}`} />
-              </button>
-
-              {openCategory === "learn" && (
-                <div className="pl-2 space-y-1 my-1">
-                  <div onClick={() => handleNav("/market-brief")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Newspaper className="w-4 h-4 text-blue-500" /> Daily Market Brief
-                  </div>
-                  <div onClick={() => handleNav("/calendar")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Calendar className="w-4 h-4 text-indigo-500" /> Economic Calendar
-                  </div>
-                  <div onClick={() => handleNav("/academy")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <GraduationCap className="w-4 h-4 text-teal-500" /> Trading Academy
-                  </div>
-                  <div onClick={() => handleNav("/backtesting")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <History className="w-4 h-4 text-rose-500" /> Backtesting
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* TOOLS */}
-            <div>
-              <button
-                onClick={() => toggleCategory("tools")}
-                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
-              >
-                <span>TOOLS</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "tools" ? "rotate-180 text-emerald-500" : ""}`} />
-              </button>
-
-              {openCategory === "tools" && (
-                <div className="pl-2 space-y-1 my-1">
-                  <div onClick={() => handleNav("/ai-assistant")} className="flex items-center justify-between py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="w-4 h-4 text-purple-500" /> AI Assistant
-                    </div>
-                    <span className="text-[9px] bg-emerald-500/10 text-emerald-600 font-extrabold px-1.5 py-0.5 rounded">NEW</span>
-                  </div>
-                  <div onClick={() => handleNav("/risk-calculator")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Calculator className="w-4 h-4 text-cyan-500" /> Risk Calculator
-                  </div>
-                  <div onClick={() => handleNav("/compound-calculator")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <LineChart className="w-4 h-4 text-emerald-500" /> Compound Calculator
-                  </div>
-                  <div onClick={() => handleNav("/price-alerts")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Bell className="w-4 h-4 text-amber-500" /> Price Alerts
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* PREMIUM */}
-            <div>
-              <button
-                onClick={() => toggleCategory("premium")}
-                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
-              >
-                <span>PREMIUM</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "premium" ? "rotate-180 text-amber-500" : ""}`} />
-              </button>
-
-              {openCategory === "premium" && (
-                <div className="pl-2 space-y-1 my-1">
-                  <div onClick={() => handleNav("/premium")} className="flex items-center justify-between py-2 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-amber-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <Crown className="w-4 h-4 text-amber-500" /> Premium
-                    </div>
-                    <span className="text-[9px] bg-emerald-500/10 text-emerald-600 font-extrabold px-1.5 py-0.5 rounded">PRO</span>
-                  </div>
-                  <div onClick={() => handleNav("/gift-premium")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Gift className="w-4 h-4 text-rose-500" /> Gift Premium
-                  </div>
-                  <div onClick={() => handleNav("/invite-earn")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Users className="w-4 h-4 text-orange-500" /> Invite & Earn
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ACCOUNT */}
-            <div>
-              <button
-                onClick={() => toggleCategory("account")}
-                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
-              >
-                <span>ACCOUNT</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "account" ? "rotate-180 text-emerald-500" : ""}`} />
-              </button>
-
-              {openCategory === "account" && (
-                <div className="pl-2 space-y-1 my-1">
-                  <div onClick={() => handleNav("/profile")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <User className="w-4 h-4 text-emerald-500" /> My Profile
-                  </div>
-                  <div onClick={() => handleNav("/settings")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Settings className="w-4 h-4 text-slate-500" /> Settings
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* OTHER */}
-            <div>
-              <button
-                onClick={() => toggleCategory("other")}
-                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
-              >
-                <span>OTHER</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "other" ? "rotate-180 text-emerald-500" : ""}`} />
-              </button>
-
-              {openCategory === "other" && (
-                <div className="pl-2 space-y-1 my-1">
-                  <div onClick={() => handleNav("/other-apps")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
-                    <Grid className="w-4 h-4 text-slate-500" /> Other Apps
-                  </div>
-                </div>
-              )}
-            </div>
-
-          </div>
-        </div>
-
-        {/* Bottom Drawer Fixed Section (Language & Pink Logout Button) */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3 mb-6">
-          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-4 py-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
-              <Globe className="w-4 h-4" />
-              <span>English</span>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-
-          {/* Original Pink Pill Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#f43f5e] hover:bg-[#e11d48] text-white font-bold text-xs rounded-full shadow-md transition-all active:scale-95 cursor-pointer"
+          {/* Menu Sections with Bold Distinct Headings */}
+          <nav
+            ref={menuScrollRef}
+            onScroll={rememberScroll}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-2 py-1 space-y-0.5"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Logout</span>
-          </button>
-        </div>
+            {menuGroups.map((group) => (
+              <div key={group.title} className="pb-0.5">
+                <p className="px-2 pt-1.5 pb-0.5 text-[9px] font-extrabold uppercase tracking-widest text-foreground/70 font-mono">
+                  {group.title}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => (
+                    <MenuRow
+                      key={item.path + item.label}
+                      item={item}
+                      active={location.pathname === item.path}
+                      onNavigate={closeDrawer}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
 
-      </div>
-    </div>
+            <p className="px-2 pt-1.5 pb-0.5 text-[9px] font-extrabold uppercase tracking-widest text-foreground/70 font-mono">
+              Other
+            </p>
+
+            <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
+              <CollapsibleTrigger className="w-full h-7 px-2 rounded-lg flex items-center gap-2.5 text-muted-foreground hover:bg-accent/40 transition-colors duration-200">
+                <span className="flex items-center justify-center shrink-0">
+                  <Smartphone className="h-3.5 w-3.5 text-cyan-500" />
+                </span>
+                <span className="text-[11px] font-medium">Other Apps</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3 w-3 ml-auto transition-transform duration-200 text-muted-foreground",
+                    otherAppsOpen && "rotate-180"
+                  )}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                <div className="ml-3.5 my-0.5 space-y-0.5 border-l border-border/40 pl-2">
+                  <a
+                    href="http://cryptoincome.vercel.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={closeDrawer}
+                    className="flex items-center justify-between py-1 px-1.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors duration-200 group"
+                  >
+                    <span>Crypto Investment</span>
+                    <ExternalLink className="h-2.5 w-2.5 opacity-60 group-hover:opacity-100" />
+                  </a>
+                  <a
+                    href="https://one.exnessonelink.com/a/vtkbbmje"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={closeDrawer}
+                    className="flex items-center justify-between py-1 px-1.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors duration-200 group"
+                  >
+                    <span>Open Forex Account</span>
+                    <ExternalLink className="h-2.5 w-2.5 opacity-60 group-hover:opacity-100" />
+                  </a>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </nav>
+
+          {/* Compact Footer */}
+          <div className="shrink-0 px-2 py-1.5 border-t border-border/40 bg-background/80 space-y-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <LanguageSwitcher />
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted/60 text-[9px] font-mono text-muted-foreground">
+                <span className="w-1 h-1 rounded-full bg-emerald-500" />v{APP_VERSION}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full h-7.5 rounded-lg font-semibold text-[11px] flex items-center justify-center gap-1.5 bg-destructive text-destructive-foreground shadow-sm transition-all duration-200 hover:bg-destructive/90 active:scale-[0.98]"
+            >
+              <LogOut className="h-3 w-3" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
