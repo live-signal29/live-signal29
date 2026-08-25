@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Download, X, Smartphone, Sparkles, ChevronRight, Store } from "lucide-react";
 import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 
 const AppInstallBanner = () => {
   const [showBanner, setShowBanner] = useState(false);
