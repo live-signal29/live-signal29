@@ -1,186 +1,100 @@
-import { useState, useEffect, useRef, useCallback } from "react";
 import { Download, X, Smartphone } from "lucide-react";
 import { Button } from "./ui/button";
 
 const AppInstallBanner = () => {
-  const [showBanner, setShowBanner] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const visibleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const manuallyDismissed = useRef(false);
-
   const PLAY_STORE_URL =
     "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
 
-  const clearTimers = useCallback(() => {
-    if (autoHideTimerRef.current) {
-      clearTimeout(autoHideTimerRef.current);
-      autoHideTimerRef.current = null;
-    }
-
-    if (visibleTimerRef.current) {
-      clearTimeout(visibleTimerRef.current);
-      visibleTimerRef.current = null;
-    }
-
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
-  }, []);
-
-  const showBannerWithAutoHide = useCallback(() => {
-    if (manuallyDismissed.current) return;
-
-    clearTimers();
-
-    setShowBanner(true);
-
-    visibleTimerRef.current = setTimeout(() => {
-      setIsVisible(true);
-    }, 100);
-
-    autoHideTimerRef.current = setTimeout(() => {
-      setIsVisible(false);
-
-      hideTimerRef.current = setTimeout(() => {
-        setShowBanner(false);
-      }, 300);
-    }, 10000);
-  }, [clearTimers]);
-
-  useEffect(() => {
-    const bannerDismissed = localStorage.getItem(
-      "appInstallBannerDismissed"
-    );
-
-    if (!bannerDismissed) {
-      showBannerWithAutoHide();
-    }
-
-    return () => {
-      clearTimers();
-    };
-  }, [showBannerWithAutoHide, clearTimers]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const bannerDismissed = localStorage.getItem(
-        "appInstallBannerDismissed"
-      );
-
-      if (
-        !bannerDismissed &&
-        !showBanner &&
-        !manuallyDismissed.current
-      ) {
-        showBannerWithAutoHide();
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [showBanner, showBannerWithAutoHide]);
-
-  const handleManualDismiss = () => {
-    manuallyDismissed.current = true;
-
-    clearTimers();
-
-    setIsVisible(false);
-
-    hideTimerRef.current = setTimeout(() => {
-      setShowBanner(false);
-      localStorage.setItem("appInstallBannerDismissed", "true");
-    }, 300);
-  };
-
   const handleDownload = () => {
-    window.open(PLAY_STORE_URL, "_blank", "noopener,noreferrer");
+    window.open(PLAY_STORE_URL, "_blank");
   };
 
-  if (!showBanner) return null;
+  const handleClose = () => {
+    const banner = document.getElementById("app-install-banner");
+
+    if (banner) {
+      banner.style.transform = "translateY(-100%)";
+      banner.style.opacity = "0";
+
+      setTimeout(() => {
+        banner.style.display = "none";
+      }, 300);
+    }
+  };
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-[9999]
-        bg-gradient-to-r from-primary/95 via-primary to-accent/90
+      id="app-install-banner"
+      className="
+        fixed
+        top-0
+        left-0
+        right-0
+        z-[999999]
+        w-full
+        bg-gradient-to-r
+        from-primary
+        via-primary
+        to-accent
         text-primary-foreground
-        border-b border-primary/20
-        shadow-md
+        border-b
+        border-primary/20
+        shadow-lg
         backdrop-blur-md
-        transition-all duration-300 ease-in-out
-        ${
-          isVisible
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-full"
-        }`}
+        transition-all
+        duration-300
+      "
     >
-      <div className="container mx-auto px-3 py-1.5">
-        <div className="flex items-center justify-between sm:justify-center gap-2 text-xs">
+      <div className="w-full px-3 py-2">
+        <div className="flex items-center justify-between gap-2">
 
-          {/* App Title */}
+          {/* App Name */}
           <div className="flex items-center gap-1.5 min-w-0">
             <Smartphone
-              className="h-3.5 w-3.5 text-accent-foreground shrink-0 animate-pulse"
+              className="h-4 w-4 shrink-0 animate-pulse"
             />
 
-            <span className="font-semibold tracking-wide truncate">
+            <span className="font-semibold text-xs truncate">
               Live Signal Buy/Sell
             </span>
           </div>
 
-          {/* Action Area */}
+          {/* Buttons */}
           <div className="flex items-center gap-2 shrink-0">
 
             <Button
               onClick={handleDownload}
               size="sm"
-              variant="secondary"
               className="
-                bg-primary-foreground
+                bg-white
                 text-primary
-                hover:bg-primary-foreground/90
+                hover:bg-white/90
                 font-bold
                 text-[11px]
-                h-6
-                px-2.5
+                h-7
+                px-3
                 rounded-full
-                shadow-sm
-                hover:scale-105
-                active:scale-95
-                transition-all
+                shadow
                 flex
                 items-center
                 gap-1
               "
             >
               <Download className="h-3 w-3" />
-
-              <span>Get App</span>
+              Get App
             </Button>
 
             <button
-              onClick={handleManualDismiss}
+              onClick={handleClose}
               className="
                 p-1
-                hover:bg-black/10
-                dark:hover:bg-white/20
                 rounded-full
+                hover:bg-black/10
                 transition-colors
-                duration-200
-                text-primary-foreground/80
-                hover:text-primary-foreground
               "
               aria-label="Close banner"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
 
           </div>
