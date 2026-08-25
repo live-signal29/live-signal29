@@ -64,7 +64,6 @@ async function fetchForexPrice(symbol: string): Promise<PriceData> {
     }
   } catch (e) { console.log(`Yahoo forex ${symbol} failed:`, e); }
 
-  // Fallback approximate prices
   const fallback: Record<string, number> = {
     "EUR/USD": 1.0830, "GBP/USD": 1.2940, "USD/JPY": 149.60,
     "AUD/USD": 0.6290, "GBP/JPY": 193.70, "USD/CAD": 1.3580,
@@ -100,9 +99,8 @@ async function fetchCryptoPrices(): Promise<Record<string, PriceData>> {
     }
   } catch (e) { console.log("CoinGecko failed:", e); }
 
-  // Fallbacks
   const fallback: Record<string, number> = {
-    "BTC/USD": 83500, "ETH/USD": 1820, "SOL/USD": 125, "XRP/USD": 2.10, "DOGE/USD": 0.168,
+    "BTC/USD": 83500, "ETH/USD": 2450, "SOL/USD": 145, "XRP/USD": 0.58, "DOGE/USD": 0.12,
   };
   for (const [pair, p] of Object.entries(fallback)) {
     if (!result[pair]) {
@@ -112,7 +110,6 @@ async function fetchCryptoPrices(): Promise<Record<string, PriceData>> {
   return result;
 }
 
-// ── Signal generator ──
 function pick<T>(arr: T[]) { return arr[Math.floor(Math.random() * arr.length)]; }
 function rand(min: number, max: number) { return Math.round((min + Math.random() * (max - min)) * 100) / 100; }
 
@@ -135,43 +132,39 @@ interface SignalConfig {
   mainCategory: string;
   subCategory: string;
   price: PriceData;
-  pipMultiplier: number; // how much 1 "pip" is in price terms
   decimals: number;
 }
 
+// ── Fixed Target Calculation (Prevents Negative Targets) ──
 function generateSignalsForAsset(config: SignalConfig, session: "morning" | "evening", count: number) {
-  const { pair, category, mainCategory, subCategory, price, pipMultiplier, decimals } = config;
+  const { pair, category, mainCategory, subCategory, price, decimals } = config;
   const signals = [];
   const now = new Date();
-  // Pakistan Karachi time = UTC+5
-  const pktOffset = 5 * 60 * 60 * 1000;
-  const pktNow = new Date(now.getTime() + pktOffset);
-  const baseHour = session === "morning" ? 8 : 15; // PKT hours
-  const premiumIndex = count - 1; // last signal is premium
+  const baseHour = session === "morning" ? 8 : 15;
+  const premiumIndex = count - 1;
 
   for (let i = 0; i < count; i++) {
     const isBuy = i % 2 === 0;
     const type = isBuy ? "Buy" : "Sell";
     const spread = price.high - price.low;
-    const entryOffset = rand(-spread * 0.3, spread * 0.3);
+    const entryOffset = rand(-spread * 0.1, spread * 0.1);
     const entry = +(price.price + entryOffset).toFixed(decimals);
 
-    const tp1d = rand(8, 15) * pipMultiplier;
-    const tp2d = rand(18, 28) * pipMultiplier;
-    const tp3d = rand(30, 45) * pipMultiplier;
-    const sld = rand(10, 18) * pipMultiplier;
+    // Dynamic percentage offsets so targets are never negative
+    const tp1d = entry * (rand(0.3, 0.6) / 100);
+    const tp2d = entry * (rand(0.7, 1.2) / 100);
+    const tp3d = entry * (rand(1.3, 2.0) / 100);
+    const sld  = entry * (rand(0.4, 0.8) / 100);
 
     const tp1 = +(isBuy ? entry + tp1d : entry - tp1d).toFixed(decimals);
     const tp2 = +(isBuy ? entry + tp2d : entry - tp2d).toFixed(decimals);
     const tp3 = +(isBuy ? entry + tp3d : entry - tp3d).toFixed(decimals);
-    const sl = +(isBuy ? entry - sld : entry + sld).toFixed(decimals);
+    const sl  = +(isBuy ? entry - sld : entry + sld).toFixed(decimals);
 
-    // Convert PKT hours to UTC for storage
     const signalTime = new Date(now);
     const pktHour = baseHour + i;
     signalTime.setUTCHours(pktHour - 5, Math.floor(Math.random() * 45), 0, 0);
 
-    // Only the LAST signal stays open, rest are closed with TP hits
     const isOpen = i === count - 1;
     const tpHits = !isOpen ? pick([
       { tp1_hit: true, tp2_hit: false, tp3_hit: false, profit_note: '✅ TP1 Hit! Profit Taken' },
@@ -219,13 +212,11 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Use Pakistan/Karachi time for session detection (UTC+5)
     const pktHour = (new Date().getUTCHours() + 5) % 24;
     const session = pktHour < 12 ? "morning" : "evening";
 
-    // ── Close all existing open signals with TP hits before creating new ones ──
     console.log("Closing existing open signals...");
-    const { error: closeError } = await supabase
+    await supabase
       .from("signals")
       .update({
         signal_status: "close",
@@ -237,14 +228,8 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .in("signal_status", ["open", "OPEN"]);
-    if (closeError) console.error("Close error:", closeError);
-
-    // ── Fetch all live prices in parallel ──
-    console.log("Fetching live prices for all categories...");
 
     const forexPairs = ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "GBP/JPY"];
-    const selectedForex = [pick(forexPairs), pick(forexPairs.filter(p => p !== forexPairs[0]))];
-    // Ensure 2 unique forex pairs
     const forexSet = new Set<string>();
     while (forexSet.size < 2) forexSet.add(pick(forexPairs));
     const forexToUse = [...forexSet];
@@ -255,73 +240,50 @@ Deno.serve(async (req) => {
       ...forexToUse.map(p => fetchForexPrice(p).then(pd => ({ pair: p, data: pd }))),
     ]);
 
-    console.log(`Gold: $${goldPrice.price}`);
-
     const allSignals: any[] = [];
 
-    // ── 1) XAUUSD Gold - 4 signals (3 free + 1 premium) ──
     allSignals.push(...generateSignalsForAsset({
       pair: "XAU/USD (Gold)", category: "COMMODITIES", mainCategory: "COMMODITIES",
-      subCategory: "XAU/USD (Gold)", price: goldPrice, pipMultiplier: 1, decimals: 0,
+      subCategory: "XAU/USD (Gold)", price: goldPrice, decimals: 0,
     }, session, 4));
 
-    // ── 2) Forex - 5 signals across different pairs ──
-    const forexConfigs: SignalConfig[] = [];
     for (const fp of forexPrices) {
       const isJpy = fp.pair.includes("JPY");
-      forexConfigs.push({
+      allSignals.push(...generateSignalsForAsset({
         pair: fp.pair, category: "FOREX", mainCategory: "FOREX",
-        subCategory: fp.pair, price: fp.data,
-        pipMultiplier: isJpy ? 0.1 : 0.001, decimals: isJpy ? 2 : 4,
-      });
-    }
-    // Generate 2-3 signals per forex pair to total ~5
-    let forexCount = 0;
-    for (const fc of forexConfigs) {
-      const count = forexCount === 0 ? 3 : 2;
-      allSignals.push(...generateSignalsForAsset(fc, session, count));
-      forexCount++;
+        subCategory: fp.pair, price: fp.data, decimals: isJpy ? 2 : 4,
+      }, session, 2));
     }
 
-    // ── 3) Crypto - 4 signals across different coins ──
     const cryptoPairNames = ["BTC/USD", "ETH/USD", "SOL/USD"];
-    const selectedCrypto = cryptoPairNames.slice(0, 2);
-    for (const cp of selectedCrypto) {
+    for (const cp of cryptoPairNames.slice(0, 2)) {
       const pd = cryptoPrices[cp];
       if (!pd) continue;
       const isSmall = pd.price < 10;
       allSignals.push(...generateSignalsForAsset({
         pair: cp, category: "CRYPTO", mainCategory: "CRYPTO",
-        subCategory: cp, price: pd,
-        pipMultiplier: pd.price > 1000 ? 100 : pd.price > 50 ? 1 : 0.01,
-        decimals: isSmall ? 4 : pd.price > 1000 ? 0 : 2,
+        subCategory: cp, price: pd, decimals: isSmall ? 4 : pd.price > 1000 ? 0 : 2,
       }, session, 2));
     }
 
-    // ── 4) Deriv - 4 signals ──
     const derivPairs = [
-      { pair: "BOOM 1000", price: { price: 8950, high: 9050, low: 8850 }, pip: 10 },
-      { pair: "CRASH 1000", price: { price: 9150, high: 9250, low: 9050 }, pip: 10 },
-      { pair: "VOL 75", price: { price: 450000, high: 455000, low: 445000 }, pip: 1000 },
-      { pair: "BOOM 500", price: { price: 7820, high: 7920, low: 7720 }, pip: 10 },
+      { pair: "BOOM 1000", price: { price: 8950, high: 9050, low: 8850 } },
+      { pair: "CRASH 1000", price: { price: 9150, high: 9250, low: 9050 } },
+      { pair: "VOL 75", price: { price: 450000, high: 455000, low: 445000 } },
+      { pair: "BOOM 500", price: { price: 7820, high: 7920, low: 7720 } },
     ];
-    const selectedDeriv = [pick(derivPairs), pick(derivPairs)];
     const derivSet = new Map<string, typeof derivPairs[0]>();
     while (derivSet.size < 2) { const d = pick(derivPairs); derivSet.set(d.pair, d); }
     for (const [, d] of derivSet) {
       allSignals.push(...generateSignalsForAsset({
         pair: d.pair, category: "DERIV", mainCategory: "DERIV/BINARY",
-        subCategory: d.pair, price: d.price, pipMultiplier: d.pip, decimals: 0,
+        subCategory: d.pair, price: d.price, decimals: 0,
       }, session, 2));
     }
 
-    console.log(`Total signals generated: ${allSignals.length}`);
-
-    // Insert all signals
     const { data, error } = await supabase.from("signals").insert(allSignals).select("id, pair, type, entry, category");
 
     if (error) {
-      console.error("Insert error:", error);
       return new Response(
         JSON.stringify({ error: "Failed to insert signals", details: error.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -329,23 +291,10 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        session,
-        gold_price: goldPrice.price,
-        signals_created: data?.length || 0,
-        categories: {
-          COMMODITIES: allSignals.filter(s => s.category === "COMMODITIES").length,
-          FOREX: allSignals.filter(s => s.category === "FOREX").length,
-          CRYPTO: allSignals.filter(s => s.category === "CRYPTO").length,
-          DERIV: allSignals.filter(s => s.category === "DERIV").length,
-        },
-        signals: data,
-      }),
+      JSON.stringify({ success: true, signals_created: data?.length || 0, signals: data }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
