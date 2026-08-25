@@ -3,7 +3,13 @@ import {
   Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Bell, Settings,
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
   Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
-  Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart
+  Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart,
+  // Category Icons
+  TrendingUp as LiveIcon, 
+  BookOpen as LearnIcon,
+  Wrench as ToolsIcon,
+  Crown as PremiumIcon,
+  Settings as AccountIcon
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -24,6 +30,12 @@ type MenuItem = {
   icon: typeof LineChart;
   tint: string;
   badge?: string;
+};
+
+type MenuGroup = {
+  title: string;
+  icon: typeof LineChart;
+  items: MenuItem[];
 };
 
 const MenuRow = memo(
@@ -66,9 +78,74 @@ const MenuRow = memo(
 );
 MenuRow.displayName = "MenuRow";
 
+// New Category Component with Icon and Expand/Collapse
+const CategoryGroup = memo(
+  ({ 
+    group, 
+    isOpen, 
+    onToggle,
+    locationPath,
+    closeDrawer 
+  }: { 
+    group: MenuGroup; 
+    isOpen: boolean; 
+    onToggle: () => void;
+    locationPath: string;
+    closeDrawer: () => void;
+  }) => {
+    const Icon = group.icon;
+    
+    return (
+      <Collapsible open={isOpen} onOpenChange={onToggle}>
+        <CollapsibleTrigger className="w-full">
+          <div className={cn(
+            "flex items-center gap-2 px-2 py-1 rounded-lg",
+            "transition-all duration-200 hover:bg-accent/40",
+            isOpen && "bg-accent/20"
+          )}>
+            <span className="flex items-center justify-center shrink-0">
+              <Icon className="h-4 w-4 text-primary/70" />
+            </span>
+            <span className="flex-1 text-left text-[10px] font-extrabold uppercase tracking-wider text-foreground/80 font-mono">
+              {group.title}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 transition-transform duration-200 text-muted-foreground",
+                isOpen && "rotate-180"
+              )}
+            />
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+          <div className="ml-2 pl-3 border-l border-border/40 space-y-0.5 py-1">
+            {group.items.map((item) => (
+              <MenuRow
+                key={item.path + item.label}
+                item={item}
+                active={locationPath === item.path}
+                onNavigate={closeDrawer}
+              />
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+);
+CategoryGroup.displayName = "CategoryGroup";
+
 export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
   const [otherAppsOpen, setOtherAppsOpen] = useState(false);
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
+    "Live Trading": true,
+    "Learn & Analyze": false,
+    "Tools": false,
+    "Premium": false,
+    "Account": false,
+  });
+  
   const menuScrollRef = useRef<HTMLElement | null>(null);
   const scrollPos = useRef(0);
   const navigate = useNavigate();
@@ -109,6 +186,13 @@ export const SideDrawer = () => {
     setOpen(false);
   }, [rememberScroll]);
 
+  const toggleCategory = useCallback((title: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
+  }, []);
+
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
@@ -116,10 +200,11 @@ export const SideDrawer = () => {
     navigate("/login");
   }, [navigate]);
 
-  const menuGroups = useMemo<{ title: string; items: MenuItem[] }[]>(
+  const menuGroups = useMemo<MenuGroup[]>(
     () => [
       {
         title: "Live Trading",
+        icon: LiveIcon,
         items: [
           { label: t("live_signals"), path: "/signals", icon: LineChart, tint: "text-emerald-500" },
           { label: "Portfolio", path: "/portfolio", icon: PieChart, tint: "text-teal-500" },
@@ -129,6 +214,7 @@ export const SideDrawer = () => {
       },
       {
         title: "Learn & Analyze",
+        icon: LearnIcon,
         items: [
           { label: "Daily Market Brief", path: "/market-brief", icon: Newspaper, tint: "text-sky-500" },
           { label: "Economic Calendar", path: "/economic-calendar", icon: CalendarIcon, tint: "text-indigo-500" },
@@ -138,6 +224,7 @@ export const SideDrawer = () => {
       },
       {
         title: "Tools",
+        icon: ToolsIcon,
         items: [
           { label: "AI Assistant", path: "/ai-chat", icon: Sparkles, tint: "text-fuchsia-500", badge: "New" },
           { label: "Risk Calculator", path: "/calculator", icon: CalcIcon, tint: "text-cyan-500" },
@@ -147,6 +234,7 @@ export const SideDrawer = () => {
       },
       {
         title: "Premium",
+        icon: PremiumIcon,
         items: [
           { label: t("premium"), path: "/premium", icon: Crown, tint: "text-amber-500", badge: "Pro" },
           { label: "Gift Premium", path: "/gift-premium", icon: Gift, tint: "text-rose-500" },
@@ -155,6 +243,7 @@ export const SideDrawer = () => {
       },
       {
         title: "Account",
+        icon: AccountIcon,
         items: [
           { label: "Account Management", path: "/account-management", icon: Briefcase, tint: "text-teal-500" },
           { label: "My Profile", path: "/profile", icon: User, tint: "text-purple-500" },
@@ -188,7 +277,7 @@ export const SideDrawer = () => {
         className="w-[220px] max-w-[70vw] p-0 border-r border-border/40 shadow-2xl flex flex-col h-dvh max-h-dvh overflow-hidden bg-background/95 backdrop-blur-md transition-all duration-300 [&>button]:hidden"
       >
         <div className="flex flex-col h-full min-h-0">
-          {/* Header with Gradient Text & Distinct Subhead */}
+          {/* Header */}
           <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-background/80">
             <div className="relative shrink-0">
               <img
@@ -213,75 +302,75 @@ export const SideDrawer = () => {
             <ThemeToggle />
           </div>
 
-          {/* Menu Sections with Bold Distinct Headings */}
+          {/* Menu Sections with Expand/Collapse */}
           <nav
             ref={menuScrollRef}
             onScroll={rememberScroll}
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-2 py-1 space-y-0.5"
           >
             {menuGroups.map((group) => (
-              <div key={group.title} className="pb-0.5">
-                <p className="px-2 pt-1.5 pb-0.5 text-[9px] font-extrabold uppercase tracking-widest text-foreground/70 font-mono">
-                  {group.title}
-                </p>
-                <div className="space-y-0.5">
-                  {group.items.map((item) => (
-                    <MenuRow
-                      key={item.path + item.label}
-                      item={item}
-                      active={location.pathname === item.path}
-                      onNavigate={closeDrawer}
-                    />
-                  ))}
-                </div>
-              </div>
+              <CategoryGroup
+                key={group.title}
+                group={group}
+                isOpen={openCategories[group.title] ?? false}
+                onToggle={() => toggleCategory(group.title)}
+                locationPath={location.pathname}
+                closeDrawer={closeDrawer}
+              />
             ))}
 
-            <p className="px-2 pt-1.5 pb-0.5 text-[9px] font-extrabold uppercase tracking-widest text-foreground/70 font-mono">
-              Other
-            </p>
-
-            <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
-              <CollapsibleTrigger className="w-full h-7 px-2 rounded-lg flex items-center gap-2.5 text-muted-foreground hover:bg-accent/40 transition-colors duration-200">
-                <span className="flex items-center justify-center shrink-0">
-                  <Smartphone className="h-3.5 w-3.5 text-cyan-500" />
-                </span>
-                <span className="text-[11px] font-medium">Other Apps</span>
-                <ChevronDown
-                  className={cn(
-                    "h-3 w-3 ml-auto transition-transform duration-200 text-muted-foreground",
-                    otherAppsOpen && "rotate-180"
-                  )}
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                <div className="ml-3.5 my-0.5 space-y-0.5 border-l border-border/40 pl-2">
-                  <a
-                    href="http://cryptoincome.vercel.app"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={closeDrawer}
-                    className="flex items-center justify-between py-1 px-1.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors duration-200 group"
-                  >
-                    <span>Crypto Investment</span>
-                    <ExternalLink className="h-2.5 w-2.5 opacity-60 group-hover:opacity-100" />
-                  </a>
-                  <a
-                    href="https://one.exnessonelink.com/a/vtkbbmje"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={closeDrawer}
-                    className="flex items-center justify-between py-1 px-1.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors duration-200 group"
-                  >
-                    <span>Open Forex Account</span>
-                    <ExternalLink className="h-2.5 w-2.5 opacity-60 group-hover:opacity-100" />
-                  </a>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            {/* Other Apps Section */}
+            <div className="pt-1">
+              <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
+                <CollapsibleTrigger className="w-full">
+                  <div className={cn(
+                    "flex items-center gap-2 px-2 py-1 rounded-lg",
+                    "transition-all duration-200 hover:bg-accent/40",
+                    otherAppsOpen && "bg-accent/20"
+                  )}>
+                    <span className="flex items-center justify-center shrink-0">
+                      <Smartphone className="h-4 w-4 text-cyan-500" />
+                    </span>
+                    <span className="flex-1 text-left text-[10px] font-extrabold uppercase tracking-wider text-foreground/80 font-mono">
+                      Other Apps
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-3.5 w-3.5 transition-transform duration-200 text-muted-foreground",
+                        otherAppsOpen && "rotate-180"
+                      )}
+                    />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                  <div className="ml-2 pl-3 border-l border-border/40 space-y-0.5 py-1">
+                    <a
+                      href="http://cryptoincome.vercel.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={closeDrawer}
+                      className="flex items-center justify-between py-1 px-1.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors duration-200 group"
+                    >
+                      <span>Crypto Investment</span>
+                      <ExternalLink className="h-2.5 w-2.5 opacity-60 group-hover:opacity-100" />
+                    </a>
+                    <a
+                      href="https://one.exnessonelink.com/a/vtkbbmje"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={closeDrawer}
+                      className="flex items-center justify-between py-1 px-1.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors duration-200 group"
+                    >
+                      <span>Open Forex Account</span>
+                      <ExternalLink className="h-2.5 w-2.5 opacity-60 group-hover:opacity-100" />
+                    </a>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           </nav>
 
-          {/* Compact Footer */}
+          {/* Footer - Fixed at Bottom */}
           <div className="shrink-0 px-2 py-1.5 border-t border-border/40 bg-background/80 space-y-1.5">
             <div className="flex items-center justify-between gap-1">
               <LanguageSwitcher />
