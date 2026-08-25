@@ -21,7 +21,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.7.9";
 
 type MenuItem = {
   label: string;
@@ -317,7 +317,7 @@ export const SideDrawer = () => {
               />
             ))}
 
-            {/* Other Apps - Moved Up Slightly */}
+            {/* Other Apps */}
             <div className="pt-0.5">
               <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
                 <CollapsibleTrigger className="w-full">
@@ -367,25 +367,28 @@ export const SideDrawer = () => {
               </Collapsible>
             </div>
 
-            {/* Extra spacer to push footer up */}
+            {/* ⬇️ LOGOUT BUTTON - Other Apps ke neeche */}
+            <div className="pt-1 pb-0.5">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2.5 h-8 px-2 rounded-lg w-full transition-all duration-200 hover:bg-destructive/10 active:scale-[0.98] text-destructive"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-medium tracking-tight">Logout</span>
+              </button>
+            </div>
+
             <div className="h-1" />
           </nav>
 
-          {/* Footer - Fixed at Bottom with Better Spacing & Bigger Button */}
-          <div className="shrink-0 px-3 py-2 border-t border-border/40 bg-background/80 space-y-2">
+          {/* Footer - Only Language & Version (NO LOGOUT) */}
+          <div className="shrink-0 px-3 py-2 border-t border-border/40 bg-background/80">
             <div className="flex items-center justify-between gap-2">
               <LanguageSwitcher />
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[10px] font-mono text-muted-foreground">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />v{APP_VERSION}
               </span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="w-full h-9 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-destructive text-destructive-foreground shadow-md transition-all duration-200 hover:bg-destructive/90 active:scale-[0.97]"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
           </div>
         </div>
       </SheetContent>
