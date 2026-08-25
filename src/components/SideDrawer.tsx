@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import {
   ChevronDown,
+  ChevronUp,
   TrendingUp,
+  PieChart,
   BookOpen,
   Award,
   Newspaper,
@@ -10,16 +12,18 @@ import {
   History,
   Sparkles,
   Calculator,
-  PieChart,
+  LineChart,
   Bell,
   Crown,
   Gift,
-  Globe,
-  LogOut,
+  Users,
   User,
   Settings,
-  Shield,
-  Share2
+  Grid,
+  Globe,
+  LogOut,
+  Sun,
+  Moon
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,12 +31,12 @@ import { toast } from "sonner";
 
 export const SideDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const navigate = useNavigate();
-
+  
   // Sabhi sub-categories default HIDDEN (null) hain
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
 
-  const toggleCategory = (catName: string) => {
-    setExpandedCategory((prev) => (prev === catName ? null : catName));
+  const toggleCategory = (cat: string) => {
+    setOpenCategory((prev) => (prev === cat ? null : cat));
   };
 
   const handleLogout = async () => {
@@ -41,7 +45,7 @@ export const SideDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
     navigate("/login");
   };
 
-  const handleNavigation = (path: string) => {
+  const handleNav = (path: string) => {
     navigate(path);
     if (onClose) onClose();
   };
@@ -50,174 +54,180 @@ export const SideDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop overlay */}
-      <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      {/* Overlay Backdrop */}
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
 
-      {/* Drawer Content */}
-      <div className="relative w-[280px] h-full bg-[#0d131d] text-slate-200 flex flex-col justify-between p-4 shadow-2xl border-r border-slate-800/60 z-10 overflow-y-auto">
+      {/* Drawer Body - Exact Light Theme Matching Your App */}
+      <div className="relative w-[280px] h-full bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-700 dark:text-slate-200 flex flex-col justify-between p-4 shadow-2xl z-10 overflow-y-auto font-sans">
         
-        {/* Top App Header */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+        <div>
+          {/* Top Logo & Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-400 text-xs">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md shadow-cyan-500/20">
                 TF
               </div>
               <div>
-                <h3 className="text-xs font-black tracking-wider uppercase text-white">TREND IS FRIEND</h3>
-                <p className="text-[10px] text-slate-400">Live Signals</p>
+                <h3 className="text-xs font-black tracking-tight text-emerald-500 uppercase">TREND IS FRIEND</h3>
+                <p className="text-[10px] text-slate-400 font-medium">Live Signals</p>
               </div>
             </div>
           </div>
 
-          {/* Accordion List Categories */}
-          <div className="space-y-2">
+          {/* Navigation Links List */}
+          <div className="mt-4 space-y-1">
 
-            {/* 1. LIVE TRADING */}
-            <div className="border border-slate-800/60 rounded-xl overflow-hidden bg-slate-900/40">
+            {/* LIVE TRADING */}
+            <div>
               <button
                 onClick={() => toggleCategory("live")}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase hover:bg-slate-800/50 transition-all"
+                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
               >
-                <span className="flex items-center gap-2 text-slate-300">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> LIVE TRADING
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${expandedCategory === "live" ? "rotate-180 text-emerald-400" : ""}`} />
+                <span>LIVE TRADING</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "live" ? "rotate-180 text-emerald-500" : ""}`} />
               </button>
               
-              {expandedCategory === "live" && (
-                <div className="px-2 py-1.5 space-y-1 bg-slate-950/70 border-t border-slate-800/60">
-                  <div onClick={() => handleNavigation("/")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" /> Live Signals
+              {openCategory === "live" && (
+                <div className="pl-2 space-y-1 my-1">
+                  <div onClick={() => handleNav("/")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" /> Live Signals
                   </div>
-                  <div onClick={() => handleNavigation("/portfolio")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <PieChart className="w-4 h-4 text-cyan-400" /> Portfolio
+                  <div onClick={() => handleNav("/portfolio")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <PieChart className="w-4 h-4 text-cyan-500" /> Portfolio
                   </div>
-                  <div onClick={() => handleNavigation("/trade-journal")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <BookOpen className="w-4 h-4 text-amber-400" /> Trade Journal
+                  <div onClick={() => handleNav("/trade-journal")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <BookOpen className="w-4 h-4 text-amber-500" /> Trade Journal
                   </div>
-                  <div onClick={() => handleNavigation("/results")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Award className="w-4 h-4 text-purple-400" /> Results
+                  <div onClick={() => handleNav("/results")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Award className="w-4 h-4 text-purple-500" /> Results
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 2. LEARN & ANALYZE */}
-            <div className="border border-slate-800/60 rounded-xl overflow-hidden bg-slate-900/40">
+            {/* LEARN & ANALYZE */}
+            <div>
               <button
                 onClick={() => toggleCategory("learn")}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase hover:bg-slate-800/50 transition-all"
+                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
               >
-                <span className="flex items-center gap-2 text-slate-300">
-                  <BookOpen className="w-3.5 h-3.5 text-blue-400" /> LEARN & ANALYZE
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${expandedCategory === "learn" ? "rotate-180 text-blue-400" : ""}`} />
+                <span>LEARN & ANALYZE</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "learn" ? "rotate-180 text-emerald-500" : ""}`} />
               </button>
 
-              {expandedCategory === "learn" && (
-                <div className="px-2 py-1.5 space-y-1 bg-slate-950/70 border-t border-slate-800/60">
-                  <div onClick={() => handleNavigation("/market-brief")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Newspaper className="w-4 h-4 text-blue-400" /> Daily Market Brief
+              {openCategory === "learn" && (
+                <div className="pl-2 space-y-1 my-1">
+                  <div onClick={() => handleNav("/market-brief")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Newspaper className="w-4 h-4 text-blue-500" /> Daily Market Brief
                   </div>
-                  <div onClick={() => handleNavigation("/calendar")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Calendar className="w-4 h-4 text-indigo-400" /> Economic Calendar
+                  <div onClick={() => handleNav("/calendar")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Calendar className="w-4 h-4 text-indigo-500" /> Economic Calendar
                   </div>
-                  <div onClick={() => handleNavigation("/academy")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <GraduationCap className="w-4 h-4 text-teal-400" /> Trading Academy
+                  <div onClick={() => handleNav("/academy")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <GraduationCap className="w-4 h-4 text-teal-500" /> Trading Academy
                   </div>
-                  <div onClick={() => handleNavigation("/backtesting")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <History className="w-4 h-4 text-rose-400" /> Backtesting
+                  <div onClick={() => handleNav("/backtesting")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <History className="w-4 h-4 text-rose-500" /> Backtesting
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 3. TOOLS */}
-            <div className="border border-slate-800/60 rounded-xl overflow-hidden bg-slate-900/40">
+            {/* TOOLS */}
+            <div>
               <button
                 onClick={() => toggleCategory("tools")}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase hover:bg-slate-800/50 transition-all"
+                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
               >
-                <span className="flex items-center gap-2 text-slate-300">
-                  <Calculator className="w-3.5 h-3.5 text-amber-400" /> TOOLS
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${expandedCategory === "tools" ? "rotate-180 text-amber-400" : ""}`} />
+                <span>TOOLS</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "tools" ? "rotate-180 text-emerald-500" : ""}`} />
               </button>
 
-              {expandedCategory === "tools" && (
-                <div className="px-2 py-1.5 space-y-1 bg-slate-950/70 border-t border-slate-800/60">
-                  <div onClick={() => handleNavigation("/ai-assistant")} className="flex items-center justify-between px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <div className="flex items-center gap-2.5">
-                      <Sparkles className="w-4 h-4 text-purple-400" /> AI Assistant
+              {openCategory === "tools" && (
+                <div className="pl-2 space-y-1 my-1">
+                  <div onClick={() => handleNav("/ai-assistant")} className="flex items-center justify-between py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-4 h-4 text-purple-500" /> AI Assistant
                     </div>
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-black border border-emerald-500/30">NEW</span>
+                    <span className="text-[9px] bg-emerald-500/10 text-emerald-600 font-extrabold px-1.5 py-0.5 rounded">NEW</span>
                   </div>
-                  <div onClick={() => handleNavigation("/risk-calculator")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Calculator className="w-4 h-4 text-cyan-400" /> Risk Calculator
+                  <div onClick={() => handleNav("/risk-calculator")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Calculator className="w-4 h-4 text-cyan-500" /> Risk Calculator
                   </div>
-                  <div onClick={() => handleNavigation("/compound-calculator")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" /> Compound Calculator
+                  <div onClick={() => handleNav("/compound-calculator")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <LineChart className="w-4 h-4 text-emerald-500" /> Compound Calculator
                   </div>
-                  <div onClick={() => handleNavigation("/price-alerts")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Bell className="w-4 h-4 text-amber-400" /> Price Alerts
+                  <div onClick={() => handleNav("/price-alerts")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Bell className="w-4 h-4 text-amber-500" /> Price Alerts
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 4. PREMIUM */}
-            <div className="border border-amber-500/30 rounded-xl overflow-hidden bg-amber-500/5">
+            {/* PREMIUM */}
+            <div>
               <button
                 onClick={() => toggleCategory("premium")}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-bold tracking-wider text-amber-400 uppercase hover:bg-amber-500/10 transition-all"
+                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
               >
-                <span className="flex items-center gap-2">
-                  <Crown className="w-3.5 h-3.5 text-amber-400" /> PREMIUM
-                </span>
-                <ChevronDown className={`w-4 h-4 text-amber-400 transition-transform duration-200 ${expandedCategory === "premium" ? "rotate-180" : ""}`} />
+                <span>PREMIUM</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "premium" ? "rotate-180 text-amber-500" : ""}`} />
               </button>
 
-              {expandedCategory === "premium" && (
-                <div className="px-2 py-1.5 space-y-1 bg-slate-950/70 border-t border-amber-500/20">
-                  <div onClick={() => handleNavigation("/premium")} className="flex items-center justify-between px-3 py-2 text-xs text-amber-300 hover:text-amber-200 rounded-lg hover:bg-amber-500/10 cursor-pointer font-bold">
-                    <div className="flex items-center gap-2.5">
-                      <Crown className="w-4 h-4 text-amber-400" /> VIP Upgrade
+              {openCategory === "premium" && (
+                <div className="pl-2 space-y-1 my-1">
+                  <div onClick={() => handleNav("/premium")} className="flex items-center justify-between py-2 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-amber-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <Crown className="w-4 h-4 text-amber-500" /> Premium
                     </div>
-                    <span className="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded font-black">PRO</span>
+                    <span className="text-[9px] bg-emerald-500/10 text-emerald-600 font-extrabold px-1.5 py-0.5 rounded">PRO</span>
                   </div>
-                  <div onClick={() => handleNavigation("/invite-earn")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Gift className="w-4 h-4 text-rose-400" /> Invite & Earn
+                  <div onClick={() => handleNav("/gift-premium")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Gift className="w-4 h-4 text-rose-500" /> Gift Premium
+                  </div>
+                  <div onClick={() => handleNav("/invite-earn")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Users className="w-4 h-4 text-orange-500" /> Invite & Earn
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 5. ACCOUNT */}
-            <div className="border border-slate-800/60 rounded-xl overflow-hidden bg-slate-900/40">
+            {/* ACCOUNT */}
+            <div>
               <button
                 onClick={() => toggleCategory("account")}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase hover:bg-slate-800/50 transition-all"
+                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
               >
-                <span className="flex items-center gap-2 text-slate-300">
-                  <User className="w-3.5 h-3.5 text-cyan-400" /> ACCOUNT
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${expandedCategory === "account" ? "rotate-180 text-cyan-400" : ""}`} />
+                <span>ACCOUNT</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "account" ? "rotate-180 text-emerald-500" : ""}`} />
               </button>
 
-              {expandedCategory === "account" && (
-                <div className="px-2 py-1.5 space-y-1 bg-slate-950/70 border-t border-slate-800/60">
-                  <div onClick={() => handleNavigation("/profile")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <User className="w-4 h-4 text-blue-400" /> My Profile
+              {openCategory === "account" && (
+                <div className="pl-2 space-y-1 my-1">
+                  <div onClick={() => handleNav("/profile")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <User className="w-4 h-4 text-emerald-500" /> My Profile
                   </div>
-                  <div onClick={() => handleNavigation("/settings")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Settings className="w-4 h-4 text-slate-400" /> Settings
+                  <div onClick={() => handleNav("/settings")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Settings className="w-4 h-4 text-slate-500" /> Settings
                   </div>
-                  <div onClick={() => handleNavigation("/privacy")} className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-800/60 cursor-pointer">
-                    <Shield className="w-4 h-4 text-emerald-400" /> Privacy Policy
+                </div>
+              )}
+            </div>
+
+            {/* OTHER */}
+            <div>
+              <button
+                onClick={() => toggleCategory("other")}
+                className="w-full flex items-center justify-between py-2.5 px-2 text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
+              >
+                <span>OTHER</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openCategory === "other" ? "rotate-180 text-emerald-500" : ""}`} />
+              </button>
+
+              {openCategory === "other" && (
+                <div className="pl-2 space-y-1 my-1">
+                  <div onClick={() => handleNav("/other-apps")} className="flex items-center gap-3 py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 cursor-pointer">
+                    <Grid className="w-4 h-4 text-slate-500" /> Other Apps
                   </div>
                 </div>
               )}
@@ -226,22 +236,23 @@ export const SideDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           </div>
         </div>
 
-        {/* Footer: Bottom Controls Fix (Gesture bar Safe Zone) */}
-        <div className="pt-4 mt-auto border-t border-slate-800/60 space-y-3 pb-8">
-          <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-400">
+        {/* Bottom Drawer Fixed Section (Language & Pink Logout Button) */}
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3 mb-6">
+          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-4 py-2 text-xs">
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
               <Globe className="w-4 h-4" />
               <span>English</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </div>
 
+          {/* Original Pink Pill Logout Button */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-950/50 transition-all cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#f43f5e] hover:bg-[#e11d48] text-white font-bold text-xs rounded-full shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
-            <span>Logout Account</span>
+            <span>Logout</span>
           </button>
         </div>
 
