@@ -8,7 +8,7 @@ SELECT cron.schedule(
   '* * * * *',
   $$
   SELECT net.http_post(
-    url := 'https://scqgxekharzvanhhfoir.supabase.co/functions/v1/fetch-live-prices',
+    url := 'https://ytlynoknnvgpdkqsrfnl.supabase.co/functions/v1/fetch-live-prices',
     headers := '{"Content-Type": "application/json"}'::jsonb,
     body := '{}'::jsonb
   );
