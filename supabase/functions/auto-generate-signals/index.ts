@@ -11,7 +11,6 @@ interface PriceData {
   low: number;
 }
 
-// ── Gold price from Yahoo Finance / metals.dev fallback ──
 async function fetchGoldPrice(): Promise<PriceData> {
   try {
     const res = await fetch(
@@ -32,21 +31,9 @@ async function fetchGoldPrice(): Promise<PriceData> {
     }
   } catch (e) { console.log("Yahoo gold failed:", e); }
 
-  try {
-    const res = await fetch("https://api.metals.dev/v1/latest?api_key=demo&currency=USD&unit=oz");
-    if (res.ok) {
-      const data = await res.json();
-      if (data.metals?.gold) {
-        const p = data.metals.gold;
-        return { price: p, high: p + 15, low: p - 15 };
-      }
-    }
-  } catch (e) { console.log("metals.dev failed:", e); }
-
   return { price: 2650, high: 2665, low: 2635 };
 }
 
-// ── Forex prices from Yahoo Finance ──
 async function fetchForexPrice(symbol: string): Promise<PriceData> {
   try {
     const yahooSymbol = symbol.replace("/", "") + "=X";
@@ -66,77 +53,37 @@ async function fetchForexPrice(symbol: string): Promise<PriceData> {
 
   const fallback: Record<string, number> = {
     "EUR/USD": 1.0830, "GBP/USD": 1.2940, "USD/JPY": 149.60,
-    "AUD/USD": 0.6290, "GBP/JPY": 193.70, "USD/CAD": 1.3580,
-    "NZD/USD": 0.5680, "USD/CHF": 0.8830, "CHF/JPY": 169.40, "CAD/JPY": 110.20,
   };
   const p = fallback[symbol] || 1.0;
   const s = p * 0.003;
   return { price: p, high: p + s, low: p - s };
 }
 
-// ── Crypto prices from CoinGecko ──
 async function fetchCryptoPrices(): Promise<Record<string, PriceData>> {
   const result: Record<string, PriceData> = {};
   try {
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,dogecoin&vs_currencies=usd&include_24hr_high=true&include_24hr_low=true"
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_high=true&include_24hr_low=true"
     );
     if (res.ok) {
       const data = await res.json();
-      const map: Record<string, string> = {
-        bitcoin: "BTC/USD", ethereum: "ETH/USD", solana: "SOL/USD",
-        ripple: "XRP/USD", dogecoin: "DOGE/USD",
-      };
-      for (const [id, pair] of Object.entries(map)) {
-        if (data[id]?.usd) {
-          result[pair] = {
-            price: data[id].usd,
-            high: data[id].usd_24h_high || data[id].usd * 1.02,
-            low: data[id].usd_24h_low || data[id].usd * 0.98,
-          };
-        }
-      }
+      if (data.bitcoin?.usd) result["BTC/USD"] = { price: data.bitcoin.usd, high: data.bitcoin.usd * 1.01, low: data.bitcoin.usd * 0.99 };
+      if (data.ethereum?.usd) result["ETH/USD"] = { price: data.ethereum.usd, high: data.ethereum.usd * 1.01, low: data.ethereum.usd * 0.99 };
     }
-  } catch (e) { console.log("CoinGecko failed:", e); }
+  } catch (e) { console.log("Crypto fetch failed:", e); }
 
-  const fallback: Record<string, number> = {
-    "BTC/USD": 83500, "ETH/USD": 2450, "SOL/USD": 145, "XRP/USD": 0.58, "DOGE/USD": 0.12,
-  };
-  for (const [pair, p] of Object.entries(fallback)) {
-    if (!result[pair]) {
-      result[pair] = { price: p, high: p * 1.02, low: p * 0.98 };
-    }
-  }
+  if (!result["BTC/USD"]) result["BTC/USD"] = { price: 83500, high: 84000, low: 83000 };
+  if (!result["ETH/USD"]) result["ETH/USD"] = { price: 2450, high: 2480, low: 2420 };
   return result;
 }
 
 function pick<T>(arr: T[]) { return arr[Math.floor(Math.random() * arr.length)]; }
 function rand(min: number, max: number) { return Math.round((min + Math.random() * (max - min)) * 100) / 100; }
 
-const buyReasons = [
-  "Demand zone bounce with bullish engulfing", "Trendline support holding on H1",
-  "Double bottom formation confirmed", "RSI oversold bounce at key level",
-  "Order block retest with bullish confirmation",
-];
-const sellReasons = [
-  "Supply zone rejection with bearish pin bar", "Resistance rejection at daily high",
-  "Bearish divergence on RSI H1", "Head and shoulders pattern completing",
-];
-
-interface SignalConfig {
-  pair: string;
-  category: string;
-  mainCategory: string;
-  subCategory: string;
-  price: PriceData;
-  decimals: number;
-}
-
-function generateSignalsForAsset(config: SignalConfig, session: "morning" | "evening", count: number) {
+function generateSignalsForAsset(config: any, session: string, count: number) {
   const { pair, category, mainCategory, subCategory, price, decimals } = config;
   const signals = [];
   const now = new Date();
-  const baseHour = session === "morning" ? 8 : 15;
 
   for (let i = 0; i < count; i++) {
     const isBuy = i % 2 === 0;
@@ -155,15 +102,9 @@ function generateSignalsForAsset(config: SignalConfig, session: "morning" | "eve
     const tp3 = +(isBuy ? entry + tp3d : entry - tp3d).toFixed(decimals);
     const sl  = +(isBuy ? entry - sld : entry + sld).toFixed(decimals);
 
-    const signalTime = new Date(now.getTime() - (count - 1 - i) * 60000); // Latest signal is created NOW
-
-    // CRITICAL FIX: Last signal in loop is OPEN, older signals are CLOSED
+    // Latest created item is OPEN
     const isOpen = (i === count - 1);
-
-    const tpHits = !isOpen ? pick([
-      { tp1_hit: true, tp2_hit: false, tp3_hit: false, profit_note: '✅ TP1 Hit! Profit Taken' },
-      { tp1_hit: true, tp2_hit: true, tp3_hit: false, profit_note: 'TP 2 Secured! 💰 Signal Closed' },
-    ]) : { tp1_hit: false, tp2_hit: false, tp3_hit: false, profit_note: null };
+    const signalTime = new Date(now.getTime() - (count - 1 - i) * 60000);
 
     signals.push({
       pair,
@@ -182,95 +123,57 @@ function generateSignalsForAsset(config: SignalConfig, session: "morning" | "eve
       is_activated: true,
       activated_at: signalTime.toISOString(),
       entry_mode: "market",
-      signal_type: pick(["Scalping", "Intraday", "Swing"]),
-      risk_level: pick(["Low", "Medium", "High"]),
-      analysis_reason: isBuy ? pick(buyReasons) : pick(sellReasons),
+      signal_type: "Intraday",
+      risk_level: "Medium",
+      analysis_reason: isBuy ? "Demand zone bounce" : "Supply zone rejection",
       published: true,
       created_at: signalTime.toISOString(),
-      ...tpHits,
+      tp1_hit: !isOpen,
+      tp2_hit: !isOpen,
+      tp3_hit: false,
+      profit_note: !isOpen ? "TP 2 Secured! 💰 Signal Closed" : null,
     });
   }
   return signals;
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const pktHour = (new Date().getUTCHours() + 5) % 24;
-    const session = pktHour < 12 ? "morning" : "evening";
+    // Purane open signals close kar dein
+    await supabase.from("signals").update({
+      signal_status: "close",
+      status: "close",
+      tp1_hit: true,
+      tp2_hit: true,
+      profit_note: "TP 2 Secured! 💰 Signal Closed",
+    }).or("signal_status.eq.open,signal_status.eq.OPEN,status.eq.open,status.eq.OPEN");
 
-    // Step 1: Purane signals ko close karein
-    await supabase
-      .from("signals")
-      .update({
-        signal_status: "close",
-        status: "close",
-        tp1_hit: true,
-        tp2_hit: true,
-        profit_note: "TP 2 Secured! 💰 Signal Closed - New Signal Active",
-        auto_closed: true,
-        updated_at: new Date().toISOString(),
-      })
-      .or("signal_status.eq.open,signal_status.eq.OPEN,status.eq.open,status.eq.OPEN");
-
-    // Step 2: Naye Live Prices Fetch Karein
-    const forexPairs = ["EUR/USD", "GBP/USD", "USD/JPY"];
-    const [goldPrice, cryptoPrices, ...forexPrices] = await Promise.all([
+    const [goldPrice, cryptoPrices, eurPrice, gbpPrice] = await Promise.all([
       fetchGoldPrice(),
       fetchCryptoPrices(),
-      ...forexPairs.map(p => fetchForexPrice(p).then(pd => ({ pair: p, data: pd }))),
+      fetchForexPrice("EUR/USD"),
+      fetchForexPrice("GBP/USD"),
     ]);
 
-    const allSignals: any[] = [];
+    const allSignals = [
+      ...generateSignalsForAsset({ pair: "XAU/USD (Gold)", category: "COMMODITIES", mainCategory: "COMMODITIES", subCategory: "XAU/USD (Gold)", price: goldPrice, decimals: 0 }, "morning", 3),
+      ...generateSignalsForAsset({ pair: "EUR/USD", category: "FOREX", mainCategory: "FOREX", subCategory: "EUR/USD", price: eurPrice, decimals: 4 }, "morning", 2),
+      ...generateSignalsForAsset({ pair: "GBP/USD", category: "FOREX", mainCategory: "FOREX", subCategory: "GBP/USD", price: gbpPrice, decimals: 4 }, "morning", 2),
+      ...generateSignalsForAsset({ pair: "BTC/USD", category: "CRYPTO", mainCategory: "CRYPTO", subCategory: "BTC/USD", price: cryptoPrices["BTC/USD"], decimals: 0 }, "morning", 2),
+      ...generateSignalsForAsset({ pair: "ETH/USD", category: "CRYPTO", mainCategory: "CRYPTO", subCategory: "ETH/USD", price: cryptoPrices["ETH/USD"], decimals: 0 }, "morning", 2),
+    ];
 
-    // Step 3: Naye Open Signals Create Karein
-    allSignals.push(...generateSignalsForAsset({
-      pair: "XAU/USD (Gold)", category: "COMMODITIES", mainCategory: "COMMODITIES",
-      subCategory: "XAU/USD (Gold)", price: goldPrice, decimals: 0,
-    }, session, 3));
+    const { data, error } = await supabase.from("signals").insert(allSignals).select("id");
+    if (error) throw error;
 
-    for (const fp of forexPrices) {
-      const isJpy = fp.pair.includes("JPY");
-      allSignals.push(...generateSignalsForAsset({
-        pair: fp.pair, category: "FOREX", mainCategory: "FOREX",
-        subCategory: fp.pair, price: fp.data, decimals: isJpy ? 2 : 4,
-      }, session, 2));
-    }
-
-    const cryptoPairNames = ["BTC/USD", "ETH/USD"];
-    for (const cp of cryptoPairNames) {
-      const pd = cryptoPrices[cp];
-      if (!pd) continue;
-      allSignals.push(...generateSignalsForAsset({
-        pair: cp, category: "CRYPTO", mainCategory: "CRYPTO",
-        subCategory: cp, price: pd, decimals: pd.price > 1000 ? 0 : 2,
-      }, session, 2));
-    }
-
-    const { data, error } = await supabase.from("signals").insert(allSignals).select("id, pair, type, entry, status, signal_status");
-
-    if (error) {
-      return new Response(
-        JSON.stringify({ error: "Failed to insert signals", details: error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, signals_created: data?.length || 0, signals: data }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, count: data.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
   }
 });
