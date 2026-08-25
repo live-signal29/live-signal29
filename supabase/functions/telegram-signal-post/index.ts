@@ -10,7 +10,7 @@ const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const TELEGRAM_CHANNEL_ID = Deno.env.get("TELEGRAM_CHANNEL_ID");
 
 interface Signal {
-  id: string;
+  id?: string;
   pair: string;
   type: string;
   entry: string;
@@ -26,7 +26,7 @@ interface Signal {
 
 async function sendTelegramMessage(message: string): Promise<boolean> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
-    console.error("Telegram secrets are missing");
+    console.error("Missing Telegram secrets");
     return false;
   }
 
@@ -42,29 +42,26 @@ async function sendTelegramMessage(message: string): Promise<boolean> {
           chat_id: TELEGRAM_CHANNEL_ID,
           text: message,
           parse_mode: "HTML",
+          disable_web_page_preview: true,
         }),
       }
     );
 
     const result = await response.json();
 
-    if (!response.ok || !result.ok) {
-      console.error("Telegram API error:", result);
-      return false;
-    }
+    console.log("Telegram response:", result);
 
-    console.log("Telegram message sent successfully");
-    return true;
+    return response.ok && result.ok === true;
   } catch (error) {
-    console.error("Telegram request failed:", error);
+    console.error("Telegram request error:", error);
     return false;
   }
 }
 
 function formatSignalMessage(signal: Signal): string {
-  const isBuy = signal.type?.toUpperCase() === "BUY";
+  const type = String(signal.type || "").toUpperCase();
 
-  const emoji = isBuy ? "🟢" : "🔴";
+  const emoji = type === "BUY" ? "🟢" : "🔴";
 
   const riskEmoji =
     signal.risk_level === "High"
@@ -76,7 +73,7 @@ function formatSignalMessage(signal: Signal): string {
   let message = `${emoji} <b>NEW SIGNAL</b> ${emoji}\n\n`;
 
   message += `📊 <b>${signal.pair}</b>\n`;
-  message += `📈 Type: <b>${signal.type.toUpperCase()}</b>\n\n`;
+  message += `📈 Type: <b>${type}</b>\n\n`;
 
   message += `💰 Entry: <code>${signal.entry}</code>\n`;
   message += `🎯 TP1: <code>${signal.tp1}</code>\n`;
@@ -113,52 +110,9 @@ function formatSignalMessage(signal: Signal): string {
   return message;
 }
 
-async function sendTPSLUpdate(
-  signal: Signal,
-  updateType: string
-): Promise<boolean> {
-  let emoji = "📢";
-  let status = "SIGNAL UPDATE";
-
-  switch (updateType) {
-    case "tp1_hit":
-      emoji = "🎯";
-      status = "TP1 HIT";
-      break;
-
-    case "tp2_hit":
-      emoji = "🎯🎯";
-      status = "TP2 HIT";
-      break;
-
-    case "tp3_hit":
-      emoji = "🎯🎯🎯";
-      status = "TP3 HIT";
-      break;
-
-    case "tp4_hit":
-      emoji = "🎯🎯🎯🎯";
-      status = "ALL TP HIT";
-      break;
-
-    case "sl_hit":
-      emoji = "🛑";
-      status = "STOP LOSS HIT";
-      break;
-  }
-
-  const message =
-    `${emoji} <b>${status}</b>\n\n` +
-    `📊 <b>${signal.pair}</b> - ${signal.type.toUpperCase()}\n\n` +
-    `━━━━━━━━━━━━━━━\n` +
-    `🌐 <b>TREND IS FRIEND</b>`;
-
-  return await sendTelegramMessage(message);
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
+    return new Response("ok", {
       headers: corsHeaders,
     });
   }
@@ -166,15 +120,12 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
-    const {
-      signal,
-      action,
-      update_type,
-    } = body;
+    const { signal, action } = body;
 
     if (!signal) {
       return new Response(
         JSON.stringify({
+          success: false,
           error: "Signal data required",
         }),
         {
@@ -187,20 +138,10 @@ serve(async (req) => {
       );
     }
 
-    let success = false;
-
-    if (action === "new_signal") {
-      success = await sendTelegramMessage(
-        formatSignalMessage(signal)
-      );
-    } else if (action === "update") {
-      success = await sendTPSLUpdate(
-        signal,
-        update_type
-      );
-    } else {
+    if (action !== "new_signal") {
       return new Response(
         JSON.stringify({
+          success: false,
           error: "Invalid action",
         }),
         {
@@ -213,12 +154,16 @@ serve(async (req) => {
       );
     }
 
+    const message = formatSignalMessage(signal);
+
+    const success = await sendTelegramMessage(message);
+
     return new Response(
       JSON.stringify({
         success,
         message: success
-          ? "Telegram message sent successfully"
-          : "Failed to send Telegram message",
+          ? "Telegram signal sent"
+          : "Telegram signal failed",
       }),
       {
         status: success ? 200 : 500,
@@ -229,10 +174,11 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("telegram-signal-post error:", error);
+    console.error("Telegram function error:", error);
 
     return new Response(
       JSON.stringify({
+        success: false,
         error:
           error instanceof Error
             ? error.message
