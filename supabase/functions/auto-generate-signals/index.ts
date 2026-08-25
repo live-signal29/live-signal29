@@ -102,14 +102,14 @@ function generateSignalsForAsset(config: any, session: string, count: number) {
     const tp3 = +(isBuy ? entry + tp3d : entry - tp3d).toFixed(decimals);
     const sl  = +(isBuy ? entry - sld : entry + sld).toFixed(decimals);
 
-    // Latest created item is OPEN
-    const isOpen = (i === count - 1);
+    // Fix: Ensure at least one open signal per pair
+    const isOpen = (i === count - 1) || (i === 0 && count === 1);
     const signalTime = new Date(now.getTime() - (count - 1 - i) * 60000);
 
     signals.push({
-      pair,
-      type,
-      category,
+      pair: pair,
+      type: type,
+      category: category,
       main_category: mainCategory,
       sub_category: subCategory,
       entry: entry.toString(),
@@ -145,15 +145,16 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Purane open signals close kar dein
+    // Fix: Only close old signals, don't delete them
     await supabase.from("signals").update({
       signal_status: "close",
       status: "close",
       tp1_hit: true,
       tp2_hit: true,
       profit_note: "TP 2 Secured! 💰 Signal Closed",
-    }).or("signal_status.eq.open,signal_status.eq.OPEN,status.eq.open,status.eq.OPEN");
+    }).or("signal_status.eq.open,status.eq.open");
 
+    // Fetch fresh prices
     const [goldPrice, cryptoPrices, eurPrice, gbpPrice] = await Promise.all([
       fetchGoldPrice(),
       fetchCryptoPrices(),
@@ -161,19 +162,66 @@ Deno.serve(async (req) => {
       fetchForexPrice("GBP/USD"),
     ]);
 
+    // Generate signals with proper pairs matching database
     const allSignals = [
-      ...generateSignalsForAsset({ pair: "XAU/USD (Gold)", category: "COMMODITIES", mainCategory: "COMMODITIES", subCategory: "XAU/USD (Gold)", price: goldPrice, decimals: 0 }, "morning", 3),
-      ...generateSignalsForAsset({ pair: "EUR/USD", category: "FOREX", mainCategory: "FOREX", subCategory: "EUR/USD", price: eurPrice, decimals: 4 }, "morning", 2),
-      ...generateSignalsForAsset({ pair: "GBP/USD", category: "FOREX", mainCategory: "FOREX", subCategory: "GBP/USD", price: gbpPrice, decimals: 4 }, "morning", 2),
-      ...generateSignalsForAsset({ pair: "BTC/USD", category: "CRYPTO", mainCategory: "CRYPTO", subCategory: "BTC/USD", price: cryptoPrices["BTC/USD"], decimals: 0 }, "morning", 2),
-      ...generateSignalsForAsset({ pair: "ETH/USD", category: "CRYPTO", mainCategory: "CRYPTO", subCategory: "ETH/USD", price: cryptoPrices["ETH/USD"], decimals: 0 }, "morning", 2),
+      ...generateSignalsForAsset({ 
+        pair: "XAU/USD",  // Fixed: Removed "(Gold)" to match database
+        category: "COMMODITIES", 
+        mainCategory: "COMMODITIES", 
+        subCategory: "XAU/USD", 
+        price: goldPrice, 
+        decimals: 0 
+      }, "morning", 3),
+      ...generateSignalsForAsset({ 
+        pair: "EUR/USD", 
+        category: "FOREX", 
+        mainCategory: "FOREX", 
+        subCategory: "EUR/USD", 
+        price: eurPrice, 
+        decimals: 4 
+      }, "morning", 2),
+      ...generateSignalsForAsset({ 
+        pair: "GBP/USD", 
+        category: "FOREX", 
+        mainCategory: "FOREX", 
+        subCategory: "GBP/USD", 
+        price: gbpPrice, 
+        decimals: 4 
+      }, "morning", 2),
+      ...generateSignalsForAsset({ 
+        pair: "BTC/USD", 
+        category: "CRYPTO", 
+        mainCategory: "CRYPTO", 
+        subCategory: "BTC/USD", 
+        price: cryptoPrices["BTC/USD"], 
+        decimals: 0 
+      }, "morning", 2),
+      ...generateSignalsForAsset({ 
+        pair: "ETH/USD", 
+        category: "CRYPTO", 
+        mainCategory: "CRYPTO", 
+        subCategory: "ETH/USD", 
+        price: cryptoPrices["ETH/USD"], 
+        decimals: 0 
+      }, "morning", 2),
     ];
 
+    // Insert signals
     const { data, error } = await supabase.from("signals").insert(allSignals).select("id");
-    if (error) throw error;
+    if (error) {
+      console.error("Insert error:", error);
+      throw error;
+    }
 
-    return new Response(JSON.stringify({ success: true, count: data.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({ success: true, count: data?.length || 0 }), 
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    console.error("Function error:", err);
+    return new Response(
+      JSON.stringify({ error: err.message }), 
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
