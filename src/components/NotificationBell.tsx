@@ -108,12 +108,13 @@ export const NotificationBell = () => {
       setPopupVisible(true);
     });
 
+    // ⬇️ TIME REDUCED: 5s → 3s
     hideTimerRef.current = setTimeout(() => {
       setPopupVisible(false);
       setTimeout(() => {
         setPopupNotification(null);
       }, 300);
-    }, 5000);
+    }, 3000);
 
     return () => {
       cancelAnimationFrame(rafId);
@@ -154,11 +155,11 @@ export const NotificationBell = () => {
 
   return (
     <>
-      {/* FLOATING AUTO NOTIFICATION - Left Side + Smaller */}
+      {/* FLOATING AUTO NOTIFICATION - Smaller + Below Menu Bar */}
       {popupNotification && popupIconData && (
         <div
           className={cn(
-            "fixed top-4 left-4 z-[9999] w-[85%] max-w-[280px]",
+            "fixed top-14 left-3 z-[9999] w-[75%] max-w-[220px]", // ⬅️ Smaller + below menu
             "transition-all duration-300 ease-out",
             popupVisible
               ? "translate-x-0 opacity-100 scale-100"
@@ -167,34 +168,34 @@ export const NotificationBell = () => {
         >
           <div
             className={cn(
-              "relative overflow-hidden rounded-xl border border-slate-700/80",
-              "bg-slate-900/95 text-slate-100 backdrop-blur-md shadow-2xl",
+              "relative overflow-hidden rounded-lg border border-slate-700/80", // ⬅️ rounded-lg
+              "bg-slate-900/95 text-slate-100 backdrop-blur-md shadow-xl", // ⬅️ shadow-xl
               "cursor-pointer transition-all hover:border-slate-600"
             )}
             onClick={handlePopupClick}
           >
-            <div className="flex items-center gap-2 p-2.5">
+            <div className="flex items-center gap-1.5 p-2"> {/* ⬅️ Smaller padding */}
               <div
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg",
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-md", // ⬅️ Smaller
                   popupIconData.bg
                 )}
               >
                 {PopupIcon ? (
                   <PopupIcon
-                    className={cn("h-3 w-3", popupIconData.className)}
+                    className={cn("h-2.5 w-2.5", popupIconData.className)} // ⬅️ Smaller
                   />
                 ) : (
-                  <span className="text-[10px]">{popupIconData.emoji}</span>
+                  <span className="text-[9px]">{popupIconData.emoji}</span>
                 )}
               </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-400">
+                  <span className="text-[8px] font-bold uppercase tracking-wide text-emerald-400">
                     New
                   </span>
-                  <span className="text-[9px] text-slate-400 shrink-0">
+                  <span className="text-[8px] text-slate-400 shrink-0">
                     {formatDistanceToNow(
                       new Date(popupNotification.created_at),
                       { addSuffix: false }
@@ -202,7 +203,7 @@ export const NotificationBell = () => {
                   </span>
                 </div>
 
-                <p className="text-[11px] font-semibold text-slate-100 truncate leading-snug">
+                <p className="text-[10px] font-semibold text-slate-100 truncate leading-snug"> {/* ⬅️ Smaller */}
                   {popupNotification.title}{" "}
                   <span className="font-normal text-slate-400">
                     — {popupNotification.message}
@@ -217,18 +218,18 @@ export const NotificationBell = () => {
                   event.stopPropagation();
                   closePopup();
                 }}
-                className="shrink-0 rounded-md p-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+                className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
               >
-                <X className="h-3 w-3" />
+                <X className="h-2.5 w-2.5" /> {/* ⬅️ Smaller */}
               </button>
             </div>
 
-            <div className="h-[2px] w-full bg-slate-800">
+            <div className="h-[1.5px] w-full bg-slate-800"> {/* ⬅️ Thinner */}
               <div
                 className={cn(
                   "h-full bg-emerald-500",
                   popupVisible
-                    ? "animate-[notification-progress_5s_linear_forwards]"
+                    ? "animate-[notification-progress_3s_linear_forwards]" // ⬅️ 3s
                     : "w-0"
                 )}
               />
