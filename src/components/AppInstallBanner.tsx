@@ -13,8 +13,13 @@ const AppInstallBanner = () => {
 
   useEffect(() => {
     const bannerDismissed = localStorage.getItem("appInstallBannerDismissed");
+    console.log("🔔 Banner dismissed status:", bannerDismissed); // Debug log
+    
     if (!bannerDismissed) {
+      console.log("✅ Showing banner..."); // Debug log
       showBannerWithAutoHide();
+    } else {
+      console.log("❌ Banner is dismissed, not showing"); // Debug log
     }
   }, []);
 
@@ -31,6 +36,7 @@ const AppInstallBanner = () => {
   }, [showBanner]);
 
   const showBannerWithAutoHide = () => {
+    console.log("📢 Showing banner with auto-hide"); // Debug log
     setShowBanner(true);
     setTimeout(() => setIsVisible(true), 100);
     
@@ -47,6 +53,7 @@ const AppInstallBanner = () => {
   };
 
   const handleManualDismiss = () => {
+    console.log("👆 Banner manually dismissed"); // Debug log
     manuallyDismissed.current = true;
     setIsVisible(false);
     setTimeout(() => {
@@ -60,10 +67,14 @@ const AppInstallBanner = () => {
   };
 
   const handleOpenPlayStore = () => {
+    console.log("📱 Opening Play Store"); // Debug log
     window.open(PLAY_STORE_URL, "_blank");
   };
 
-  if (!showBanner) return null;
+  if (!showBanner) {
+    console.log("🚫 Banner not showing (showBanner = false)"); // Debug log
+    return null;
+  }
 
   return (
     <>
@@ -150,7 +161,6 @@ const AppInstallBanner = () => {
         </div>
       </div>
 
-      {/* CSS Animation */}
       <style>{`
         @keyframes banner-progress {
           from { width: 100%; }
