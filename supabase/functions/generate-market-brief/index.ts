@@ -6,7 +6,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
 
     const prompt = `You are a professional forex market analyst. Generate a concise daily market brief for today covering:
 1. Gold (XAU/USD) outlook
@@ -17,11 +17,11 @@ Deno.serve(async (req) => {
 Format in markdown. Keep it under 250 words. Also determine overall market sentiment: bullish, bearish, or neutral.
 Respond with JSON: {"title": "...", "summary": "...markdown...", "sentiment": "bullish|bearish|neutral"}`;
 
-    const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gemini-2.5-flash',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
       }),
