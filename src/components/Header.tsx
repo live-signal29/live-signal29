@@ -20,7 +20,6 @@ const Header = () => {
   const PLAY_STORE_URL =
     "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
 
-  // Scroll detection
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -33,7 +32,6 @@ const Header = () => {
     };
   }, []);
 
-  // Open Play Store
   const handleGetApp = () => {
     window.open(
       PLAY_STORE_URL,
@@ -52,7 +50,7 @@ const Header = () => {
         </>
       ) : null}
 
-      {/* Main Header */}
+      {/* Header */}
       <header
         className={cn(
           "sticky top-0 z-40 w-full border-b transition-all duration-300",
@@ -63,7 +61,7 @@ const Header = () => {
       >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
 
-          {/* ================= BRAND ================= */}
+          {/* Brand Logo */}
           <Link
             to="/"
             className="min-w-0 flex flex-col justify-center shrink-0"
@@ -111,28 +109,30 @@ const Header = () => {
                 className={
                   isPremium
                     ? `
-                      rounded-md
+                      rounded
                       bg-gradient-to-r
                       from-amber-500
                       to-yellow-400
-                      px-1.5
+                      px-1
                       py-0.5
-                      text-[9px]
+                      text-[7px]
                       font-black
                       uppercase
+                      leading-none
                       text-black
                       shadow-sm
                     `
                     : `
-                      rounded-md
+                      rounded
                       border
                       border-border/70
                       bg-muted
-                      px-1.5
+                      px-1
                       py-0.5
-                      text-[9px]
+                      text-[7px]
                       font-bold
                       uppercase
+                      leading-none
                       text-muted-foreground
                     `
                 }
@@ -182,7 +182,7 @@ const Header = () => {
             </span>
           </Link>
 
-          {/* ================= RIGHT ACTIONS ================= */}
+          {/* Right Actions */}
           <div className="flex items-center gap-1.5 shrink-0">
 
             {/* Desktop Search + Theme */}
@@ -196,58 +196,36 @@ const Header = () => {
               <SideDrawer />
             </div>
 
-            {/* ================= GET APP ================= */}
+            {/* Get App */}
             <button
               onClick={handleGetApp}
               aria-label="Get App"
               className="
-                relative
-                h-9
-                px-2.5
-                sm:px-3
-                rounded-full
+                h-8
+                px-2
+                sm:px-2.5
+                rounded-md
                 flex
                 items-center
                 justify-center
-                gap-1.5
-                overflow-hidden
-                bg-gradient-to-r
-                from-emerald-500
-                via-teal-400
-                to-amber-400
+                gap-1
+                bg-emerald-500
+                hover:bg-emerald-400
                 text-white
-                font-black
-                text-[11px]
+                text-[10px]
+                sm:text-[11px]
+                font-bold
                 border
-                border-white/20
-                shadow-[0_0_12px_rgba(16,185,129,0.45)]
-                hover:shadow-[0_0_20px_rgba(245,185,40,0.65)]
-                hover:scale-105
+                border-emerald-400/30
+                shadow-sm
                 active:scale-95
                 transition-all
                 duration-200
                 whitespace-nowrap
               "
             >
-              {/* Shine */}
-              <span
-                className="
-                  absolute
-                  inset-0
-                  bg-gradient-to-r
-                  from-transparent
-                  via-white/30
-                  to-transparent
-                  -translate-x-full
-                  animate-[shimmer_2.5s_infinite]
-                "
-              />
-
-              <Download className="relative h-3.5 w-3.5" />
-
-              <span className="relative">
-                Get App
-              </span>
+              <Download className="h-3 w-3" />
+              <span>Get App</span>
             </button>
 
             {/* Notification */}
