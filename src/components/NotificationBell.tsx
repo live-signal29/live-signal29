@@ -154,15 +154,15 @@ export const NotificationBell = () => {
 
   return (
     <>
-      {/* FLOATING AUTO NOTIFICATION (Dark Sleek Theme) */}
+      {/* FLOATING AUTO NOTIFICATION - Left Side + Smaller */}
       {popupNotification && popupIconData && (
         <div
           className={cn(
-            "fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[92%] max-w-sm",
+            "fixed top-4 left-4 z-[9999] w-[85%] max-w-[280px]",
             "transition-all duration-300 ease-out",
             popupVisible
-              ? "translate-y-0 opacity-100 scale-100"
-              : "-translate-y-4 opacity-0 scale-95 pointer-events-none"
+              ? "translate-x-0 opacity-100 scale-100"
+              : "-translate-x-4 opacity-0 scale-95 pointer-events-none"
           )}
         >
           <div
@@ -173,28 +173,28 @@ export const NotificationBell = () => {
             )}
             onClick={handlePopupClick}
           >
-            <div className="flex items-center gap-2.5 p-2.5">
+            <div className="flex items-center gap-2 p-2.5">
               <div
                 className={cn(
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg",
                   popupIconData.bg
                 )}
               >
                 {PopupIcon ? (
                   <PopupIcon
-                    className={cn("h-3.5 w-3.5", popupIconData.className)}
+                    className={cn("h-3 w-3", popupIconData.className)}
                   />
                 ) : (
-                  <span className="text-xs">{popupIconData.emoji}</span>
+                  <span className="text-[10px]">{popupIconData.emoji}</span>
                 )}
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-400">
-                    New Notification
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-400">
+                    New
                   </span>
-                  <span className="text-[10px] text-slate-400 shrink-0">
+                  <span className="text-[9px] text-slate-400 shrink-0">
                     {formatDistanceToNow(
                       new Date(popupNotification.created_at),
                       { addSuffix: false }
@@ -202,7 +202,7 @@ export const NotificationBell = () => {
                   </span>
                 </div>
 
-                <p className="text-xs font-semibold text-slate-100 truncate leading-snug">
+                <p className="text-[11px] font-semibold text-slate-100 truncate leading-snug">
                   {popupNotification.title}{" "}
                   <span className="font-normal text-slate-400">
                     — {popupNotification.message}
@@ -217,9 +217,9 @@ export const NotificationBell = () => {
                   event.stopPropagation();
                   closePopup();
                 }}
-                className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+                className="shrink-0 rounded-md p-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />
               </button>
             </div>
 
