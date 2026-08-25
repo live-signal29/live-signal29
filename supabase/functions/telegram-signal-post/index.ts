@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
-const TELEGRAM_CHANNEL_ID = Deno.env.get("TELEGRAM_CHANNEL_ID");
+const TELEGRAM_BOT_TOKEN = Deno.env.get("8955388351:AAECKEcmYPtiRuauf0CSMMLQYTE7yKLMdCY");
+const TELEGRAM_CHANNEL_ID = Deno.env.get("6542538070");
 
 interface Signal {
   id: string;
