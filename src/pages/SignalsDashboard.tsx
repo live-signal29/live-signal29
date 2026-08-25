@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
-import { startOfDay, format } from "date-fns"; // 'formatDistanceToNow' replace with 'format'
+import { startOfDay, format } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
@@ -33,7 +33,6 @@ const CATEGORIES = [
   "MARKET IDEAS",
 ];
 
-// Helper Function: Formats time to Real Time 12-Hour format (e.g. 05:02 PM)
 const formatExactRealTime = (dateString: string | Date | null | undefined) => {
   if (!dateString) return "";
   try {
@@ -61,13 +60,11 @@ const SignalsDashboard = () => {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  // Handle category change
   const handleCategoryChange = (category: string) => {
     setMainCategory(category);
     setSubCategory("all");
   };
 
-  // Swipe gesture to change categories on mobile
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -97,7 +94,6 @@ const SignalsDashboard = () => {
     [mainCategory]
   );
 
-  // Trial expired popup
   useEffect(() => {
     if (trialExpired && subscriptionStatus === "free_trial") {
       setShowTrialExpiredPopup(true);
@@ -116,7 +112,6 @@ const SignalsDashboard = () => {
     "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
   };
 
-  // Infinite query for signals
   const {
     data: signalsData,
     isLoading,
@@ -142,7 +137,7 @@ const SignalsDashboard = () => {
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
     enabled: mainCategory !== "MARKET IDEAS",
-    staleTime: 60000,
+    staleTime: 5000,
   });
 
   const allSignals = signalsData?.pages.flatMap((page) => page.data) || [];
@@ -150,40 +145,34 @@ const SignalsDashboard = () => {
     ? allSignals.filter((signal) => new Date(signal.created_at) <= trialEndDate)
     : allSignals;
 
-  // Count open/active signals per category
   const getActiveSignalsCount = (category: string) => {
     if (category === "MARKET IDEAS") return 0;
     return signals?.filter(
-      (signal) => signal.main_category === category && signal.signal_status !== "CLOSE"
+      (signal) => signal.main_category === category && String(signal.signal_status).toLowerCase() !== "close"
     ).length || 0;
   };
 
   const openSignalPairs = signals
-    .filter((signal) => signal.signal_status !== "CLOSE")
+    .filter((signal) => String(signal.signal_status).toLowerCase() !== "close")
     .map((signal) => signal.pair)
     .filter((pair, index, arr) => arr.indexOf(pair) === index);
 
   const { prices: livePrices } = useLivePricesFetch(openSignalPairs, openSignalPairs.length > 0);
 
-  // Realtime subscription
+  // Realtime instant updates for new signals
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const channel = supabase
-        .channel("signals-changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "signals" }, () => {
-          refetch();
-        })
-        .subscribe();
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }, 3000);
+    const channel = supabase
+      .channel("signals-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "signals" }, () => {
+        refetch();
+      })
+      .subscribe();
+
     return () => {
-      clearTimeout(timeoutId);
+      supabase.removeChannel(channel);
     };
   }, [refetch]);
 
-  // Infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -199,7 +188,6 @@ const SignalsDashboard = () => {
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Chart analysis + market ideas
   const { data: chartAnalysis, isLoading: isLoadingCharts } = useQuery({
     queryKey: ["chart-analysis-and-ideas"],
     queryFn: async () => {
@@ -223,7 +211,6 @@ const SignalsDashboard = () => {
     setLightboxOpen(true);
   };
 
-  // Category tabs config
   const categoryTabs = [
     { key: "COMMODITIES", label: "Gold" },
     { key: "FOREX", label: "Forex" },
@@ -243,12 +230,10 @@ const SignalsDashboard = () => {
       />
 
       <Header />
-
       <HeadlineTicker />
 
       <main className="flex-1">
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
-
           <TrialExpiredPopup open={showTrialExpiredPopup} onClose={() => setShowTrialExpiredPopup(false)} />
 
           {/* Category Tabs */}
@@ -289,14 +274,12 @@ const SignalsDashboard = () => {
             </div>
           </div>
 
-          {/* Top Ad */}
           {subscriptionStatus !== "premium" && (
             <div className="mb-4">
               <AdBanner />
             </div>
           )}
 
-          {/* Subcategory Filter */}
           {mainCategory !== "MARKET IDEAS" && subCategoryOptions[mainCategory] && (
             <div className="mb-4">
               <select
@@ -325,8 +308,6 @@ const SignalsDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {chartAnalysis?.map((analysis, index) => {
                     const hasImage = !!analysis.image_url && String(analysis.image_url).trim() !== "";
-                    
-                    // Exact real-time format for Market Ideas (e.g. 05:02 PM)
                     const displayTime = formatExactRealTime(analysis.created_at);
 
                     return (
@@ -378,15 +359,10 @@ const SignalsDashboard = () => {
                   initialIndex={selectedChartIndex}
                 />
               )}
-              {!isLoadingCharts && chartAnalysis?.length === 0 && (
-                <div className="text-center py-20">
-                  <p className="text-muted-foreground text-lg">No chart analysis available</p>
-                </div>
-              )}
             </>
           )}
 
-          {/* Signals */}
+          {/* Signals Render */}
           {mainCategory !== "MARKET IDEAS" && (
             <>
               {isLoading ? (
@@ -412,7 +388,11 @@ const SignalsDashboard = () => {
                                     signal={signal as any}
                                     hasAccess={hasAccess}
                                     subscriptionStatus={subscriptionStatus}
-                                    livePrice={livePrices[signal.pair] ? parseFloat(livePrices[signal.pair]) : undefined}
+                                    livePrice={
+                                      livePrices[signal.pair]
+                                        ? parseFloat(livePrices[signal.pair])
+                                        : parseFloat(signal.entry || "0")
+                                    }
                                   />
                                   {(i + 1) % 3 === 0 && (
                                     <div className="md:col-span-2">
@@ -442,12 +422,10 @@ const SignalsDashboard = () => {
             </>
           )}
 
-          {/* Stats */}
           <div className="mt-3">
             <StreakStatsRow />
           </div>
 
-          {/* Bottom Ad */}
           {subscriptionStatus !== "premium" && (
             <div className="mt-6">
               <AdBanner />
