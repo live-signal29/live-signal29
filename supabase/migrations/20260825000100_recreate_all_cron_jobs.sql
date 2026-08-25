@@ -1,24 +1,24 @@
--- ============================================================
--- Recreate ALL cron jobs on the NEW project (ytlynoknnvgpdkqsrfnl)
--- Run this once in Supabase Dashboard → SQL Editor.
--- Safe to re-run: it drops any job with the same name first.
--- ============================================================
+-- Fix: cron job "live-prices-every-minute" was created while the project
+-- was still linked to the OLD Supabase project (ytlynoknnvgpdkqsrfnl).
+-- It must be unscheduled and recreated pointing at the NEW project URL,
+-- otherwise it silently keeps calling the old (now different) project.
 
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA pg_catalog;
-CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
+SELECT cron.unschedule('live-prices-every-minute')
+WHERE EXISTS (
+  SELECT 1 FROM cron.job WHERE jobname = 'live-prices-every-minute'
+);
 
--- Drop old/duplicate jobs if they already exist (won't error if missing)
-SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = ANY(ARRAY[
+SELECT cron.schedule(
   'live-prices-every-minute',
-  'auto-generate-signals-morning',
-  'auto-generate-signals-evening',
-  'auto-generate-ideas-morning',
-  'auto-generate-ideas-afternoon',
-  'auto-generate-ideas-evening',
-  'calculate-daily-stats-job',
-  'trial-notifications-job',
-  'fetch-forex-news-job'
-]);
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://ytlynoknnvgpdkqsrfnl.supabase.co/functions/v1/fetch-live-prices',
+    headers := '{"Content-Type": "application/json"}'::jsonb,
+    body := '{}'::jsonb
+  );
+  $$
+);
 
 -- 1) Live prices — every minute (feeds live price ticker / signal engine)
 SELECT cron.schedule(
