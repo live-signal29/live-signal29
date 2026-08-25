@@ -4,7 +4,6 @@ import {
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
   Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
   Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart,
-  // Category Icons
   TrendingUp as LiveIcon, 
   BookOpen as LearnIcon,
   Wrench as ToolsIcon,
@@ -78,7 +77,6 @@ const MenuRow = memo(
 );
 MenuRow.displayName = "MenuRow";
 
-// New Category Component with Icon and Expand/Collapse
 const CategoryGroup = memo(
   ({ 
     group, 
@@ -302,7 +300,7 @@ export const SideDrawer = () => {
             <ThemeToggle />
           </div>
 
-          {/* Menu Sections with Expand/Collapse */}
+          {/* Menu Sections */}
           <nav
             ref={menuScrollRef}
             onScroll={rememberScroll}
@@ -319,8 +317,8 @@ export const SideDrawer = () => {
               />
             ))}
 
-            {/* Other Apps Section */}
-            <div className="pt-1">
+            {/* Other Apps - Moved Up Slightly */}
+            <div className="pt-0.5">
               <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
                 <CollapsibleTrigger className="w-full">
                   <div className={cn(
@@ -368,21 +366,24 @@ export const SideDrawer = () => {
                 </CollapsibleContent>
               </Collapsible>
             </div>
+
+            {/* Extra spacer to push footer up */}
+            <div className="h-1" />
           </nav>
 
-          {/* Footer - Fixed at Bottom */}
-          <div className="shrink-0 px-2 py-1.5 border-t border-border/40 bg-background/80 space-y-1.5">
-            <div className="flex items-center justify-between gap-1">
+          {/* Footer - Fixed at Bottom with Better Spacing & Bigger Button */}
+          <div className="shrink-0 px-3 py-2 border-t border-border/40 bg-background/80 space-y-2">
+            <div className="flex items-center justify-between gap-2">
               <LanguageSwitcher />
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted/60 text-[9px] font-mono text-muted-foreground">
-                <span className="w-1 h-1 rounded-full bg-emerald-500" />v{APP_VERSION}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[10px] font-mono text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />v{APP_VERSION}
               </span>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full h-7.5 rounded-lg font-semibold text-[11px] flex items-center justify-center gap-1.5 bg-destructive text-destructive-foreground shadow-sm transition-all duration-200 hover:bg-destructive/90 active:scale-[0.98]"
+              className="w-full h-9 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-destructive text-destructive-foreground shadow-md transition-all duration-200 hover:bg-destructive/90 active:scale-[0.97]"
             >
-              <LogOut className="h-3 w-3" />
+              <LogOut className="h-4 w-4" />
               Logout
             </button>
           </div>
