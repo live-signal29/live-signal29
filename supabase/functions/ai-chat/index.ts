@@ -1,4 +1,4 @@
-// AI Chat Assistant for trading questions - streaming via Lovable AI Gateway
+// AI Chat Assistant for trading questions - streaming via Google Gemini
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -9,8 +9,8 @@ Deno.serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
 
     const systemPrompt = `You are "Trend AI" — a professional forex, gold, crypto and indices trading assistant for the "Trend Is Friend" app. 
 - Answer questions about trading concepts, market analysis, risk management, technical analysis, pip calculations, and current market context.
@@ -20,14 +20,14 @@ Deno.serve(async (req) => {
 - Never give financial guarantees. Always mention risk.
 - If asked about a pair, give: trend bias, key levels, risk note.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.5-flash",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         stream: true,
       }),
