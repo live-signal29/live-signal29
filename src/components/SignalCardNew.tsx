@@ -5,24 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-interface Signal {
-  id: string;
-  pair: string;
-  action: "BUY" | "SELL" | string;
-  entry_price: number;
-  stop_loss: number;
-  take_profit1: number;
-  take_profit2?: number;
-  take_profit3?: number;
-  signal_status: "OPEN" | "CLOSE" | "PENDING" | string;
-  notes?: string;
-  created_at: string;
-  main_category?: string;
-  tp_status?: string;
-}
-
 interface SignalCardNewProps {
-  signal: Signal;
+  signal: any;
   hasAccess: boolean;
   subscriptionStatus?: string;
   livePrice?: number;
@@ -34,18 +18,23 @@ export const SignalCardNew: React.FC<SignalCardNewProps> = ({
   subscriptionStatus,
   livePrice,
 }) => {
-  const isBuy = String(signal.action).toUpperCase().includes("BUY");
-  const entryVal = Number(signal.entry_price || 0);
-  
-  // Real-time live price dynamic override (agar livePrice missing ho to entry price render karega)
-  const currentVal = livePrice !== undefined ? Number(livePrice) : entryVal;
+  // Database column fallbacks handle kar diye hain
+  const pairName = signal?.pair || signal?.symbol || "XAU/USD";
+  const actionType = String(signal?.action || signal?.type || "BUY").toUpperCase();
+  const isBuy = actionType.includes("BUY");
 
-  // Profit/Loss Calculation
+  const entryVal = Number(signal?.entry_price ?? signal?.entry ?? 0);
+  const stopLossVal = signal?.stop_loss ?? signal?.sl ?? "--";
+  const tp1Val = signal?.take_profit1 ?? signal?.tp1 ?? "--";
+  const tp2Val = signal?.take_profit2 ?? signal?.tp2 ?? "--";
+  const tp3Val = signal?.take_profit3 ?? signal?.tp3 ?? "--";
+
+  const currentVal = livePrice !== undefined && !isNaN(livePrice) ? Number(livePrice) : entryVal;
   const isProfit = isBuy ? currentVal >= entryVal : currentVal <= entryVal;
-  const isClosed = signal.signal_status === "CLOSE";
+  const statusStr = String(signal?.signal_status || signal?.status || "OPEN").toUpperCase();
+  const isClosed = statusStr === "CLOSE" || statusStr === "CLOSED";
 
-  // Formatted Creation Time (e.g. 08:00 AM)
-  const formattedTime = signal.created_at
+  const formattedTime = signal?.created_at
     ? format(new Date(signal.created_at), "hh:mm a")
     : "";
 
@@ -53,16 +42,18 @@ export const SignalCardNew: React.FC<SignalCardNewProps> = ({
     <Card className="relative overflow-hidden border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl">
       <CardContent className="p-3 sm:p-4">
         
-        {/* Top Header: Symbol, Time, Status Badge */}
+        {/* Top Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="font-extrabold text-base sm:text-lg text-foreground tracking-tight">
-              {signal.pair}
+              {pairName}
             </span>
-            <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-              <Clock className="w-3 h-3" />
-              {formattedTime}
-            </span>
+            {formattedTime && (
+              <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+                <Clock className="w-3 h-3" />
+                {formattedTime}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -75,24 +66,22 @@ export const SignalCardNew: React.FC<SignalCardNewProps> = ({
                   : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
               )}
             >
-              • {signal.signal_status || "OPEN"}
+              • {statusStr}
             </Badge>
 
             <Badge
               className={cn(
                 "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1",
-                isBuy
-                  ? "bg-emerald-500 text-white"
-                  : "bg-rose-500 text-white"
+                isBuy ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
               )}
             >
               {isBuy ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {signal.action}
+              {actionType}
             </Badge>
           </div>
         </div>
 
-        {/* Access Locked Layer for Non-Subscribers */}
+        {/* Access Restriction */}
         {!hasAccess ? (
           <div className="relative my-2 p-6 rounded-xl bg-muted/40 border border-dashed border-border flex flex-col items-center justify-center text-center backdrop-blur-sm">
             <Lock className="w-6 h-6 text-muted-foreground mb-1 animate-bounce" />
@@ -100,8 +89,8 @@ export const SignalCardNew: React.FC<SignalCardNewProps> = ({
             <p className="text-[11px] text-muted-foreground">Subscribe to view Entry, SL & TP targets</p>
           </div>
         ) : (
-          /* Locked Content Unlocked: Entry & Current Live Price Row */
           <>
+            {/* Entry & Current Price Grid */}
             <div className="bg-muted/30 rounded-xl p-2.5 sm:p-3 grid grid-cols-2 gap-2 mb-3 border border-border/40">
               <div>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">ENTRY</p>
@@ -132,36 +121,28 @@ export const SignalCardNew: React.FC<SignalCardNewProps> = ({
               </div>
             </div>
 
-            {/* Target & SL Levels Grid */}
+            {/* Target & Stop Loss Row */}
             <div className="grid grid-cols-4 gap-1 text-center text-[10px] sm:text-[11px] pt-1 border-t border-border/40">
               <div className="bg-rose-500/5 p-1.5 rounded-lg border border-rose-500/10">
                 <span className="text-muted-foreground block font-medium">STOP LOSS</span>
-                <span className="font-bold text-rose-500 text-xs">
-                  {signal.stop_loss || "--"}
-                </span>
+                <span className="font-bold text-rose-500 text-xs">{stopLossVal}</span>
               </div>
               <div className="bg-blue-500/5 p-1.5 rounded-lg border border-blue-500/10">
                 <span className="text-muted-foreground block font-medium">TARGET 1</span>
-                <span className="font-bold text-blue-500 text-xs">
-                  {signal.take_profit1 || "--"}
-                </span>
+                <span className="font-bold text-blue-500 text-xs">{tp1Val}</span>
               </div>
               <div className="bg-blue-500/5 p-1.5 rounded-lg border border-blue-500/10">
                 <span className="text-muted-foreground block font-medium">TARGET 2</span>
-                <span className="font-bold text-blue-500 text-xs">
-                  {signal.take_profit2 || "--"}
-                </span>
+                <span className="font-bold text-blue-500 text-xs">{tp2Val}</span>
               </div>
               <div className="bg-blue-500/5 p-1.5 rounded-lg border border-blue-500/10">
                 <span className="text-muted-foreground block font-medium">TARGET 3</span>
-                <span className="font-bold text-blue-500 text-xs">
-                  {signal.take_profit3 || "--"}
-                </span>
+                <span className="font-bold text-blue-500 text-xs">{tp3Val}</span>
               </div>
             </div>
 
-            {/* Optional Signal Notes / Status Banner */}
-            {signal.notes && (
+            {/* Notes */}
+            {signal?.notes && (
               <div className="mt-2 text-[11px] px-2.5 py-1.5 rounded-lg bg-muted/60 text-muted-foreground flex items-center gap-1.5 border border-border/30">
                 {isClosed ? (
                   <XCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
