@@ -21,11 +21,14 @@ const fetchWithRetry = async <T>(
 // Parse entry price (handles ranges like "4280-4282" or single values)
 export const parseEntryPrice = (entry: string): number => {
   if (!entry) return 0;
+
   const cleaned = entry.replace(/[^\d.\-–]/g, '');
   const parts = cleaned.split(/[-–]/);
+
   if (parts.length >= 2) {
     return (parseFloat(parts[0]) + parseFloat(parts[1])) / 2;
   }
+
   return parseFloat(cleaned) || 0;
 };
 
@@ -36,16 +39,27 @@ export const calculateRunningPL = (
   signalType: string,
   lotValue: number = 1
 ): { value: number; isProfit: boolean; formatted: string } => {
-  if (!currentPrice || !entryPrice) return { value: 0, isProfit: true, formatted: '$0' };
+  if (!currentPrice || !entryPrice) {
+    return {
+      value: 0,
+      isProfit: true,
+      formatted: '$0'
+    };
+  }
+
   const isBuy = signalType?.toLowerCase() === 'buy';
-  const pl = isBuy 
+
+  const pl = isBuy
     ? (currentPrice - entryPrice) * lotValue
     : (entryPrice - currentPrice) * lotValue;
-  
+
   return {
     value: pl,
     isProfit: pl >= 0,
-    formatted: pl >= 0 ? `+$${Math.abs(pl).toFixed(0)}` : `-$${Math.abs(pl).toFixed(0)}`
+    formatted:
+      pl >= 0
+        ? `+$${Math.abs(pl).toFixed(0)}`
+        : `-$${Math.abs(pl).toFixed(0)}`
   };
 };
 
@@ -58,20 +72,25 @@ export const checkTPSLHit = (
   signalType: string,
   isSL: boolean = false
 ): boolean => {
-  if (!currentPrice || !targetPrice || currentPrice <= 0 || targetPrice <= 0) return false;
-  
+  if (
+    !currentPrice ||
+    !targetPrice ||
+    currentPrice <= 0 ||
+    targetPrice <= 0
+  ) {
+    return false;
+  }
+
   const isBuy = signalType?.toLowerCase() === 'buy';
-  
+
   if (isSL) {
-    // SL hit: BUY when price drops to/below SL, SELL when price rises to/above SL
     if (isBuy) {
       return currentPrice <= targetPrice;
     } else {
       return currentPrice >= targetPrice;
     }
   }
-  
-  // TP hit: BUY when price rises to/above TP, SELL when price drops to/below TP
+
   if (isBuy) {
     return currentPrice >= targetPrice;
   } else {
@@ -79,94 +98,208 @@ export const checkTPSLHit = (
   }
 };
 
-// Hook to fetch live prices via edge function (avoids CORS issues)
-export const useLivePricesFetch = (pairs: string[], enabled: boolean = true) => {
+// Hook to fetch live prices via edge function
+export const useLivePricesFetch = (
+  pairs: string[],
+  enabled: boolean = true
+) => {
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const failedAttemptsRef = useRef(0);
-  const maxFailedAttempts = 5;
-  
+  const retryAfterRef = useRef(0);
+
+  /*
+   * IMPORTANT:
+   * `pairs` can be recreated on every render.
+   * Using the array directly in useEffect causes the polling
+   * interval to restart repeatedly.
+   *
+   * Convert the pairs into one stable string key instead.
+   */
+  const pairsKey = pairs
+    .map((pair) => String(pair).trim())
+    .filter(Boolean)
+    .join('\u0001');
+
   const fetchPrices = useCallback(async () => {
-    if (!enabled || pairs.length === 0) return;
-    
-    // Don't spam requests if we've had too many failures
-    if (failedAttemptsRef.current >= maxFailedAttempts) {
-      // Reset after 30 seconds
-      setTimeout(() => {
-        failedAttemptsRef.current = 0;
-      }, 30000);
-      return;
-    }
-    
+    if (!enabled || !pairsKey) return;
+
+    if (Date.now() < retryAfterRef.current) return;
+
+    const requestedPairs = pairsKey
+      .split('\u0001')
+      .map((pair) => pair.trim())
+      .filter(Boolean);
+
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Call edge function with pairs param for faster price-only responses
-      const pairsQuery = pairs.join(',');
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      const result = await fetchWithRetry(async () => {
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/fetch-live-prices`,
+      const { data, error: invokeError } =
+        await supabase.functions.invoke(
+          'fetch-live-prices',
           {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${anonKey}`,
-              'apikey': anonKey,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ pairs: pairs }),
-            signal: AbortSignal.timeout(15000),
+            body: {
+              pairs: requestedPairs
+            }
           }
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`HTTP ${response.status}: ${text}`);
+
+      if (invokeError) {
+        throw new Error(
+          invokeError.message ||
+            'Live price function failed'
+        );
+      }
+
+      if (!data?.success) {
+        throw new Error(
+          data?.error ||
+            'MT5 live price service failed'
+        );
+      }
+
+      const nextPrices = data?.prices;
+
+      if (
+        !nextPrices ||
+        typeof nextPrices !== 'object'
+      ) {
+        throw new Error(
+          'MT5 returned no prices'
+        );
+      }
+
+      const validPrices: Record<string, string> = {};
+
+      for (const pair of requestedPairs) {
+        const raw = nextPrices[pair];
+
+        const numeric =
+          typeof raw === 'number'
+            ? raw
+            : parseFloat(
+                String(raw ?? '')
+              );
+
+        if (
+          Number.isFinite(numeric) &&
+          numeric > 0
+        ) {
+          validPrices[pair] = String(raw);
         }
-        return response.json();
-      }, 2, 2000);
-      
-      if (result?.prices) {
-        setPrices(prev => ({ ...prev, ...result.prices }));
-        failedAttemptsRef.current = 0;
       }
+
+      if (
+        Object.keys(validPrices).length === 0
+      ) {
+        throw new Error(
+          'MT5 returned no live prices for the requested pairs'
+        );
+      }
+
+      setPrices((prev) => {
+        let changed = false;
+
+        const next = {
+          ...prev
+        };
+
+        for (const [
+          pair,
+          value
+        ] of Object.entries(validPrices)) {
+          if (next[pair] !== value) {
+            next[pair] = value;
+            changed = true;
+          }
+        }
+
+        return changed ? next : prev;
+      });
+
+      failedAttemptsRef.current = 0;
+      retryAfterRef.current = 0;
+
     } catch (err) {
+
       failedAttemptsRef.current++;
-      // Only log on first few failures to avoid spam
-      if (failedAttemptsRef.current <= 2) {
-        console.error('Error fetching live prices:', err);
+
+      if (
+        failedAttemptsRef.current >= 5
+      ) {
+        retryAfterRef.current =
+          Date.now() + 30000;
       }
-      setError('Network error');
+
+      if (
+        failedAttemptsRef.current <= 2
+      ) {
+        console.error(
+          'Error fetching live prices:',
+          err
+        );
+      }
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Network error'
+      );
+
     } finally {
       setLoading(false);
     }
-  }, [pairs, enabled]);
-  
+  }, [pairsKey, enabled]);
+
   useEffect(() => {
-    if (!enabled) return;
-    
-    // Initial fetch with small delay to let app stabilize
-    const initTimeout = setTimeout(fetchPrices, 500);
-    
-    // Poll every 3 seconds (slightly slower for stability)
-    intervalRef.current = setInterval(fetchPrices, 3000);
-    
+    if (!enabled || !pairsKey) return;
+
+    // Fetch immediately after mount/pair change.
+    const initTimeout = setTimeout(
+      fetchPrices,
+      250
+    );
+
+    /*
+     * Real 3-second polling.
+     * Stable pairsKey prevents the interval
+     * from restarting on every render.
+     */
+    intervalRef.current =
+      setInterval(
+        fetchPrices,
+        3000
+      );
+
     return () => {
       clearTimeout(initTimeout);
+
       if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+        clearInterval(
+          intervalRef.current
+        );
+
+        intervalRef.current = null;
       }
     };
-  }, [fetchPrices, enabled]);
-  
-  return { prices, loading, error, refetch: fetchPrices };
+  }, [
+    fetchPrices,
+    enabled,
+    pairsKey
+  ]);
+
+  return {
+    prices,
+    loading,
+    error,
+    refetch: fetchPrices
+  };
 };
 
-// Hook to auto-update TP/SL status
 export const useAutoTPSLUpdate = (
   signalId: string,
   pair: string,
@@ -183,77 +316,170 @@ export const useAutoTPSLUpdate = (
   tp4Hit: boolean,
   slHit: boolean
 ) => {
-  const lastUpdateRef = useRef<string>('');
-  
+  const lastUpdateRef =
+    useRef<string>('');
+
   useEffect(() => {
     if (!currentPrice || slHit) return;
-    
-    const priceNum = parseFloat(currentPrice);
+
+    const priceNum =
+      parseFloat(currentPrice);
+
     if (!priceNum) return;
-    
-    const updates: Record<string, any> = {};
-    
+
+    const updates: Record<
+      string,
+      any
+    > = {};
+
     // Check TP1
     if (!tp1Hit && tp1) {
-      const tp1Price = parseEntryPrice(tp1);
-      if (checkTPSLHit(priceNum, tp1Price, signalType, false)) {
+      const tp1Price =
+        parseEntryPrice(tp1);
+
+      if (
+        checkTPSLHit(
+          priceNum,
+          tp1Price,
+          signalType,
+          false
+        )
+      ) {
         updates.tp1_hit = true;
       }
     }
-    
+
     // Check TP2
     if (!tp2Hit && tp2) {
-      const tp2Price = parseEntryPrice(tp2);
-      if (checkTPSLHit(priceNum, tp2Price, signalType, false)) {
+      const tp2Price =
+        parseEntryPrice(tp2);
+
+      if (
+        checkTPSLHit(
+          priceNum,
+          tp2Price,
+          signalType,
+          false
+        )
+      ) {
         updates.tp2_hit = true;
       }
     }
-    
+
     // Check TP3
     if (!tp3Hit && tp3) {
-      const tp3Price = parseEntryPrice(tp3);
-      if (checkTPSLHit(priceNum, tp3Price, signalType, false)) {
+      const tp3Price =
+        parseEntryPrice(tp3);
+
+      if (
+        checkTPSLHit(
+          priceNum,
+          tp3Price,
+          signalType,
+          false
+        )
+      ) {
         updates.tp3_hit = true;
       }
     }
-    
+
     // Check TP4
     if (!tp4Hit && tp4) {
-      const tp4Price = parseEntryPrice(tp4);
-      if (checkTPSLHit(priceNum, tp4Price, signalType, false)) {
+      const tp4Price =
+        parseEntryPrice(tp4);
+
+      if (
+        checkTPSLHit(
+          priceNum,
+          tp4Price,
+          signalType,
+          false
+        )
+      ) {
         updates.tp4_hit = true;
       }
     }
-    
-    // Check SL - ONLY if no TP has been hit
-    // If any TP is hit, SL should NOT trigger (price moved in our favor once)
-    const anyTPHit = tp1Hit || tp2Hit || tp3Hit || tp4Hit || 
-                     updates.tp1_hit || updates.tp2_hit || updates.tp3_hit || updates.tp4_hit;
-    
-    if (!slHit && sl && !anyTPHit) {
-      const slPrice = parseEntryPrice(sl);
-      if (checkTPSLHit(priceNum, slPrice, signalType, true)) {
+
+    /*
+     * SL:
+     * Only trigger if no TP has been hit.
+     */
+    const anyTPHit =
+      tp1Hit ||
+      tp2Hit ||
+      tp3Hit ||
+      tp4Hit ||
+      updates.tp1_hit ||
+      updates.tp2_hit ||
+      updates.tp3_hit ||
+      updates.tp4_hit;
+
+    if (
+      !slHit &&
+      sl &&
+      !anyTPHit
+    ) {
+      const slPrice =
+        parseEntryPrice(sl);
+
+      if (
+        checkTPSLHit(
+          priceNum,
+          slPrice,
+          signalType,
+          true
+        )
+      ) {
         updates.sl_hit = true;
-        updates.signal_status = 'CLOSE';
+        updates.signal_status =
+          'CLOSE';
       }
     }
-    
+
     // Update database if there are changes
-    if (Object.keys(updates).length > 0) {
-      const updateKey = JSON.stringify(updates);
-      if (lastUpdateRef.current !== updateKey) {
-        lastUpdateRef.current = updateKey;
-        
+    if (
+      Object.keys(updates).length > 0
+    ) {
+      const updateKey =
+        JSON.stringify(updates);
+
+      if (
+        lastUpdateRef.current !==
+        updateKey
+      ) {
+        lastUpdateRef.current =
+          updateKey;
+
         supabase
           .from('signals')
           .update(updates)
-          .eq('id', signalId)
+          .eq(
+            'id',
+            signalId
+          )
           .then(({ error }) => {
             if (error) {
-              console.error('Error updating signal:', error);
+              console.error(
+                'Error updating signal:',
+                error
+              );
             }
           });
       }
     }
-  }, [currentPrice, signalId, signalType, tp1, tp2, tp3, tp4, sl, tp1Hit, tp2Hit, tp3Hit, tp4Hit, slHit]);
+  }, [
+    currentPrice,
+    signalId,
+    signalType,
+    tp1,
+    tp2,
+    tp3,
+    tp4,
+    sl,
+    tp1Hit,
+    tp2Hit,
+    tp3Hit,
+    tp4Hit,
+    slHit
+  ]);
 };
