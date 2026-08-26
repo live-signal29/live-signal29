@@ -2,14 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const TELEGRAM_FUNCTION_URL =
-  `${Deno.env.get("SUPABASE_URL")}/functions/v1/telegram-signal-post`;
-
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
 interface PriceData {
   price: number;
@@ -17,575 +11,377 @@ interface PriceData {
   low: number;
 }
 
+// ── Gold price from Yahoo Finance / metals.dev fallback ──
 async function fetchGoldPrice(): Promise<PriceData> {
   try {
     const res = await fetch(
       "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=1d",
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-        },
-      }
+      { headers: { "User-Agent": "Mozilla/5.0" } }
     );
-
     if (res.ok) {
       const data = await res.json();
       const meta = data.chart?.result?.[0]?.meta;
       const quote = data.chart?.result?.[0]?.indicators?.quote?.[0];
-
       if (meta?.regularMarketPrice) {
         return {
           price: meta.regularMarketPrice,
-          high:
-            quote?.high?.[0] ||
-            meta.regularMarketPrice + 15,
-          low:
-            quote?.low?.[0] ||
-            meta.regularMarketPrice - 15,
+          high: quote?.high?.[0] || meta.regularMarketPrice + 15,
+          low: quote?.low?.[0] || meta.regularMarketPrice - 15,
         };
       }
     }
-  } catch (e) {
-    console.log("Yahoo gold failed:", e);
-  }
+  } catch (e) { console.log("Yahoo gold failed:", e); }
 
-  return {
-    price: 2650,
-    high: 2665,
-    low: 2635,
-  };
+  try {
+    const res = await fetch("https://api.metals.dev/v1/latest?api_key=demo&currency=USD&unit=oz");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.metals?.gold) {
+        const p = data.metals.gold;
+        return { price: p, high: p + 15, low: p - 15 };
+      }
+    }
+  } catch (e) { console.log("metals.dev failed:", e); }
+
+  throw new Error("Could not fetch gold price");
 }
 
-async function fetchForexPrice(
-  symbol: string
-): Promise<PriceData> {
+// ── Forex prices from Yahoo Finance ──
+async function fetchForexPrice(symbol: string): Promise<PriceData> {
   try {
-    const yahooSymbol =
-      symbol.replace("/", "") + "=X";
-
+    const yahooSymbol = symbol.replace("/", "") + "=X";
     const res = await fetch(
       `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`,
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-        },
-      }
+      { headers: { "User-Agent": "Mozilla/5.0" } }
     );
-
     if (res.ok) {
       const data = await res.json();
       const meta = data.chart?.result?.[0]?.meta;
-
       if (meta?.regularMarketPrice) {
-        const spread =
-          meta.regularMarketPrice * 0.003;
-
-        return {
-          price: meta.regularMarketPrice,
-          high: meta.regularMarketPrice + spread,
-          low: meta.regularMarketPrice - spread,
-        };
+        const spread = meta.regularMarketPrice * 0.003;
+        return { price: meta.regularMarketPrice, high: meta.regularMarketPrice + spread, low: meta.regularMarketPrice - spread };
       }
     }
-  } catch (e) {
-    console.log(
-      `Yahoo forex ${symbol} failed:`,
-      e
-    );
-  }
+  } catch (e) { console.log(`Yahoo forex ${symbol} failed:`, e); }
 
+  // Fallback approximate prices
   const fallback: Record<string, number> = {
-    "EUR/USD": 1.0830,
-    "GBP/USD": 1.2940,
-    "USD/JPY": 149.60,
+    "EUR/USD": 1.0830, "GBP/USD": 1.2940, "USD/JPY": 149.60,
+    "AUD/USD": 0.6290, "GBP/JPY": 193.70, "USD/CAD": 1.3580,
+    "NZD/USD": 0.5680, "USD/CHF": 0.8830, "CHF/JPY": 169.40, "CAD/JPY": 110.20,
   };
-
   const p = fallback[symbol] || 1.0;
   const s = p * 0.003;
-
-  return {
-    price: p,
-    high: p + s,
-    low: p - s,
-  };
+  return { price: p, high: p + s, low: p - s };
 }
 
-async function fetchCryptoPrices(): Promise<
-  Record<string, PriceData>
-> {
+// ── Crypto prices from CoinGecko ──
+async function fetchCryptoPrices(): Promise<Record<string, PriceData>> {
   const result: Record<string, PriceData> = {};
-
   try {
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_high=true&include_24hr_low=true"
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,dogecoin&vs_currencies=usd&include_24hr_high=true&include_24hr_low=true"
     );
-
     if (res.ok) {
       const data = await res.json();
-
-      if (data.bitcoin?.usd) {
-        result["BTC/USD"] = {
-          price: data.bitcoin.usd,
-          high: data.bitcoin.usd * 1.01,
-          low: data.bitcoin.usd * 0.99,
-        };
-      }
-
-      if (data.ethereum?.usd) {
-        result["ETH/USD"] = {
-          price: data.ethereum.usd,
-          high: data.ethereum.usd * 1.01,
-          low: data.ethereum.usd * 0.99,
-        };
+      const map: Record<string, string> = {
+        bitcoin: "BTC/USD", ethereum: "ETH/USD", solana: "SOL/USD",
+        ripple: "XRP/USD", dogecoin: "DOGE/USD",
+      };
+      for (const [id, pair] of Object.entries(map)) {
+        if (data[id]?.usd) {
+          result[pair] = {
+            price: data[id].usd,
+            high: data[id].usd_24h_high || data[id].usd * 1.02,
+            low: data[id].usd_24h_low || data[id].usd * 0.98,
+          };
+        }
       }
     }
-  } catch (e) {
-    console.log("Crypto fetch failed:", e);
-  }
+  } catch (e) { console.log("CoinGecko failed:", e); }
 
-  if (!result["BTC/USD"]) {
-    result["BTC/USD"] = {
-      price: 83500,
-      high: 84000,
-      low: 83000,
-    };
+  // Fallbacks
+  const fallback: Record<string, number> = {
+    "BTC/USD": 83500, "ETH/USD": 1820, "SOL/USD": 125, "XRP/USD": 2.10, "DOGE/USD": 0.168,
+  };
+  for (const [pair, p] of Object.entries(fallback)) {
+    if (!result[pair]) {
+      result[pair] = { price: p, high: p * 1.02, low: p * 0.98 };
+    }
   }
-
-  if (!result["ETH/USD"]) {
-    result["ETH/USD"] = {
-      price: 2450,
-      high: 2480,
-      low: 2420,
-    };
-  }
-
   return result;
 }
 
-function rand(
-  min: number,
-  max: number
-) {
-  return (
-    Math.round(
-      (min + Math.random() * (max - min)) * 100
-    ) / 100
-  );
+
+// ── Signal generator ──
+function pick<T>(arr: T[]) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rand(min: number, max: number) { return Math.round((min + Math.random() * (max - min)) * 100) / 100; }
+
+const buyReasons = [
+  "Demand zone bounce with bullish engulfing", "Trendline support holding on H1",
+  "Double bottom formation confirmed", "RSI oversold bounce at key level",
+  "Order block retest with bullish confirmation", "Golden ratio 61.8% retracement support",
+  "Bullish MACD crossover on M30", "Asian session support zone holding",
+];
+const sellReasons = [
+  "Supply zone rejection with bearish pin bar", "Resistance rejection at daily high",
+  "Bearish divergence on RSI H1", "Head and shoulders pattern completing",
+  "MACD bearish crossover near resistance", "Failed breakout at upper channel",
+  "Overbought conditions on H4", "Distribution zone detected on volume",
+];
+
+interface SignalConfig {
+  pair: string;
+  category: string;
+  mainCategory: string;
+  subCategory: string;
+  price: PriceData;
+  pipMultiplier: number; // how much 1 "pip" is in price terms
+  decimals: number;
+  thresholdPct: number; // % move required since last signal before a new one is allowed
 }
 
-function generateSignalsForAsset(
-  config: any,
-  count: number
-) {
-  const {
-    pair,
-    category,
-    mainCategory,
-    subCategory,
-    price,
-    decimals,
-  } = config;
+// Builds exactly ONE fresh open signal for a pair. No fake history, no
+// forced pre-closed signals — this pair had no active signal and enough
+// movement occurred, so this is the one new trade idea for it right now.
+function generateOneOpenSignal(config: SignalConfig, session: "morning" | "evening") {
+  const { pair, category, mainCategory, subCategory, price, pipMultiplier, decimals } = config;
+  const isBuy = Math.random() < 0.5;
+  const type = isBuy ? "Buy" : "Sell";
+  const spread = price.high - price.low;
+  const entryOffset = rand(-spread * 0.3, spread * 0.3);
+  const entry = +(price.price + entryOffset).toFixed(decimals);
 
-  const signals = [];
+  const tp1d = rand(8, 15) * pipMultiplier;
+  const tp2d = rand(18, 28) * pipMultiplier;
+  const tp3d = rand(30, 45) * pipMultiplier;
+  const sld = rand(10, 18) * pipMultiplier;
+
+  const tp1 = +(isBuy ? entry + tp1d : entry - tp1d).toFixed(decimals);
+  const tp2 = +(isBuy ? entry + tp2d : entry - tp2d).toFixed(decimals);
+  const tp3 = +(isBuy ? entry + tp3d : entry - tp3d).toFixed(decimals);
+  const sl = +(isBuy ? entry - sld : entry + sld).toFixed(decimals);
+
   const now = new Date();
 
-  for (let i = 0; i < count; i++) {
-    const isBuy = i % 2 === 0;
-
-    const type = isBuy ? "Buy" : "Sell";
-
-    const spread = price.high - price.low;
-
-    const entryOffset = rand(
-      -spread * 0.05,
-      spread * 0.05
-    );
-
-    const entry = +(
-      price.price + entryOffset
-    ).toFixed(decimals);
-
-    const tp1d =
-      entry * (rand(0.3, 0.6) / 100);
-
-    const tp2d =
-      entry * (rand(0.7, 1.2) / 100);
-
-    const tp3d =
-      entry * (rand(1.3, 2.0) / 100);
-
-    const sld =
-      entry * (rand(0.4, 0.8) / 100);
-
-    const tp1 = +(
-      isBuy
-        ? entry + tp1d
-        : entry - tp1d
-    ).toFixed(decimals);
-
-    const tp2 = +(
-      isBuy
-        ? entry + tp2d
-        : entry - tp2d
-    ).toFixed(decimals);
-
-    const tp3 = +(
-      isBuy
-        ? entry + tp3d
-        : entry - tp3d
-    ).toFixed(decimals);
-
-    const sl = +(
-      isBuy
-        ? entry - sld
-        : entry + sld
-    ).toFixed(decimals);
-
-    const isOpen =
-      i === count - 1 ||
-      (i === 0 && count === 1);
-
-    const signalTime = new Date(
-      now.getTime() -
-        (count - 1 - i) * 60000
-    );
-
-    signals.push({
-      pair,
-      type,
-      category,
-      main_category: mainCategory,
-      sub_category: subCategory,
-
-      entry: entry.toString(),
-      tp1: tp1.toString(),
-      tp2: tp2.toString(),
-      tp3: tp3.toString(),
-      sl: sl.toString(),
-
-      status: isOpen ? "open" : "close",
-      signal_status: isOpen ? "open" : "close",
-
-      is_premium: i % 2 === 1,
-      is_activated: true,
-
-      activated_at:
-        signalTime.toISOString(),
-
-      entry_mode: "market",
-      signal_type: "Intraday",
-      risk_level: "Medium",
-
-      analysis_reason: isBuy
-        ? "Demand zone bounce"
-        : "Supply zone rejection",
-
-      published: true,
-
-      created_at:
-        signalTime.toISOString(),
-
-      tp1_hit: !isOpen,
-      tp2_hit: !isOpen,
-      tp3_hit: false,
-
-      profit_note: !isOpen
-        ? "TP 2 Secured! 💰 Signal Closed"
-        : null,
-    });
-  }
-
-  return signals;
+  return {
+    pair,
+    type,
+    category,
+    main_category: mainCategory,
+    sub_category: subCategory,
+    entry: entry.toString(),
+    tp1: tp1.toString(),
+    tp2: tp2.toString(),
+    tp3: tp3.toString(),
+    sl: sl.toString(),
+    status: "open",
+    signal_status: "open",
+    is_premium: Math.random() < 0.25,
+    is_activated: true,
+    activated_at: now.toISOString(),
+    entry_mode: "market",
+    signal_type: pick(["Scalping", "Intraday", "Swing"]),
+    risk_level: pick(["Low", "Medium", "High"]),
+    analysis_reason: isBuy ? pick(buyReasons) : pick(sellReasons),
+    tag: null,
+    signal_raw_text: null,
+    published: true,
+    created_at: now.toISOString(),
+    tp1_hit: false,
+    tp2_hit: false,
+    tp3_hit: false,
+    profit_note: null,
+  };
 }
 
-/**
- * Send one signal to Telegram
- */
-async function sendTelegramSignal(
-  signal: any
-): Promise<boolean> {
-  try {
-    const response = await fetch(
-      TELEGRAM_FUNCTION_URL,
-      {
-        method: "POST",
+// Decides whether `pair` is eligible for a new signal right now:
+//  1) it must have NO currently active (non-closed) signal, and
+//  2) price must have moved at least `thresholdPct` since that pair's
+//     last signal (open or closed) — or it must have no prior signal at all.
+async function evaluatePair(
+  supabase: ReturnType<typeof createClient>,
+  pair: string,
+  currentPrice: number,
+  thresholdPct: number
+): Promise<{ generate: boolean; reason: string; pctMove?: number }> {
+  const { data: active } = await supabase
+    .from("signals")
+    .select("id")
+    .eq("pair", pair)
+    .not("signal_status", "ilike", "close")
+    .limit(1)
+    .maybeSingle();
 
-        headers: {
-          "Content-Type": "application/json",
+  if (active) return { generate: false, reason: "signal_still_open" };
 
-          ...(SUPABASE_ANON_KEY
-            ? {
-                Authorization:
-                  `Bearer ${SUPABASE_ANON_KEY}`,
-              }
-            : {}),
-        },
+  const { data: last } = await supabase
+    .from("signals")
+    .select("entry, created_at")
+    .eq("pair", pair)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-        body: JSON.stringify({
-          action: "new_signal",
+  if (!last?.entry) return { generate: true, reason: "no_prior_signal" };
 
-          signal: {
-            id: signal.id,
-            pair: signal.pair,
-            type: signal.type,
-            entry: signal.entry,
-            tp1: signal.tp1,
-            tp2: signal.tp2,
-            tp3: signal.tp3,
-            tp4: signal.tp4,
-            sl: signal.sl,
-            risk_level:
-              signal.risk_level,
-            signal_type:
-              signal.signal_type,
-            analysis_reason:
-              signal.analysis_reason,
-          },
-        }),
-      }
-    );
+  const lastPrice = parseFloat(last.entry as string);
+  if (!lastPrice) return { generate: true, reason: "no_prior_signal" };
 
-    const result = await response.json();
-
-    console.log(
-      "Telegram result:",
-      result
-    );
-
-    return (
-      response.ok &&
-      result?.success === true
-    );
-  } catch (error) {
-    console.error(
-      "Telegram send failed:",
-      error
-    );
-
-    return false;
+  const pctMove = Math.abs((currentPrice - lastPrice) / lastPrice) * 100;
+  if (pctMove >= thresholdPct) {
+    return { generate: true, reason: "movement_detected", pctMove: +pctMove.toFixed(4) };
   }
+  return { generate: false, reason: "no_significant_movement", pctMove: +pctMove.toFixed(4) };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl =
-      Deno.env.get("SUPABASE_URL");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const serviceRoleKey =
-      Deno.env.get(
-        "SUPABASE_SERVICE_ROLE_KEY"
-      );
+    // Pakistan/Karachi time, used only to tag the session on new signals.
+    const pktHour = (new Date().getUTCHours() + 5) % 24;
+    const session: "morning" | "evening" = pktHour < 12 ? "morning" : "evening";
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error(
-        "Supabase environment variables are missing"
-      );
-    }
+    // ── Fetch live prices for every candidate pair (real feeds where available) ──
+    const forexPairPool = ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "GBP/JPY"];
+    const cryptoPairPool = ["BTC/USD", "ETH/USD", "SOL/USD"];
 
-    const supabase = createClient(
-      supabaseUrl,
-      serviceRoleKey
-    );
-
-    /*
-     * Close previous open signals
-     */
-    const { error: closeError } =
-      await supabase
-        .from("signals")
-        .update({
-          signal_status: "close",
-          status: "close",
-          tp1_hit: true,
-          tp2_hit: true,
-          profit_note:
-            "TP 2 Secured! 💰 Signal Closed",
-        })
-        .or(
-          "signal_status.eq.open,status.eq.open"
-        );
-
-    if (closeError) {
-      console.error(
-        "Close old signals error:",
-        closeError
-      );
-    }
-
-    /*
-     * Fetch prices
-     */
-    const [
-      goldPrice,
-      cryptoPrices,
-      eurPrice,
-      gbpPrice,
-    ] = await Promise.all([
+    const [goldPrice, cryptoPrices, ...forexResults] = await Promise.all([
       fetchGoldPrice(),
       fetchCryptoPrices(),
-      fetchForexPrice("EUR/USD"),
-      fetchForexPrice("GBP/USD"),
+      ...forexPairPool.map((p) => fetchForexPrice(p).then((pd) => ({ pair: p, data: pd }))),
     ]);
 
-    /*
-     * Generate signals
-     *
-     * IMPORTANT:
-     * Gold uses XAU/USD (Gold)
-     * to match dashboard dropdown.
-     */
-    const allSignals = [
-      ...generateSignalsForAsset(
-        {
-          pair: "XAU/USD",
-          category: "COMMODITIES",
-          mainCategory: "COMMODITIES",
-          subCategory: "XAU/USD",
-          price: goldPrice,
-          decimals: 0,
-        },
-        3
-      ),
+    // Deriv synthetic indices — fetched from the same MT5 account (Deriv broker
+    // carries these symbols natively), via the fetch-live-prices function so all
+    // MT5 connection/symbol-matching logic stays in one place.
+    const derivPairNames = ["BOOM 1000", "CRASH 1000", "VOL 75", "BOOM 500"];
+    const derivPipMap: Record<string, number> = {
+      "BOOM 1000": 10, "CRASH 1000": 10, "VOL 75": 1, "BOOM 500": 10,
+    };
+    const derivPool: { pair: string; pip: number; price: PriceData }[] = [];
 
-      ...generateSignalsForAsset(
-        {
-          pair: "EUR/USD",
-          category: "FOREX",
-          mainCategory: "FOREX",
-          subCategory: "EUR/USD",
-          price: eurPrice,
-          decimals: 4,
-        },
-        2
-      ),
-
-      ...generateSignalsForAsset(
-        {
-          pair: "GBP/USD",
-          category: "FOREX",
-          mainCategory: "FOREX",
-          subCategory: "GBP/USD",
-          price: gbpPrice,
-          decimals: 4,
-        },
-        2
-      ),
-
-      ...generateSignalsForAsset(
-        {
-          pair: "BTC/USD",
-          category: "CRYPTO",
-          mainCategory: "CRYPTO",
-          subCategory: "BTC/USD",
-          price: cryptoPrices["BTC/USD"],
-          decimals: 0,
-        },
-        2
-      ),
-
-      ...generateSignalsForAsset(
-        {
-          pair: "ETH/USD",
-          category: "CRYPTO",
-          mainCategory: "CRYPTO",
-          subCategory: "ETH/USD",
-          price: cryptoPrices["ETH/USD"],
-          decimals: 0,
-        },
-        2
-      ),
-    ];
-
-    /*
-     * Insert signals
-     */
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("signals")
-      .insert(allSignals)
-      .select("*");
-
-    if (error) {
-      console.error(
-        "Signal insert error:",
-        error
+    try {
+      const derivResp = await fetch(
+        `${supabaseUrl}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(derivPairNames.join(","))}`,
+        { headers: { Authorization: `Bearer ${serviceRoleKey}` } }
       );
-
-      throw error;
+      if (derivResp.ok) {
+        const derivJson = await derivResp.json();
+        const derivPrices: Record<string, string> = derivJson?.prices || {};
+        for (const name of derivPairNames) {
+          const raw = derivPrices[name];
+          const p = raw ? parseFloat(raw) : NaN;
+          if (p && p > 0) {
+            derivPool.push({
+              pair: name,
+              pip: derivPipMap[name],
+              price: { price: p, high: p * 1.002, low: p * 0.998 },
+            });
+          } else {
+            console.log(`No real MT5 price for ${name} — skipping this run.`);
+          }
+        }
+      } else {
+        console.log("fetch-live-prices call for Deriv pairs failed:", derivResp.status);
+      }
+    } catch (e) {
+      console.log("Deriv price fetch error:", String(e));
     }
 
-    /*
-     * Send each NEW signal to Telegram
-     */
-    let telegramSent = 0;
-    let telegramFailed = 0;
+    // ── Build the full candidate list with per-category thresholds ──
+    const candidates: SignalConfig[] = [];
 
-    if (data && data.length > 0) {
-      for (const signal of data) {
-        const sent =
-          await sendTelegramSignal(
-            signal
-          );
+    candidates.push({
+      pair: "XAU/USD (Gold)", category: "COMMODITIES", mainCategory: "COMMODITIES",
+      subCategory: "XAU/USD (Gold)", price: goldPrice, pipMultiplier: 1, decimals: 0,
+      thresholdPct: 0.12,
+    });
 
-        if (sent) {
-          telegramSent++;
-        } else {
-          telegramFailed++;
-        }
+    for (const fr of forexResults) {
+      const isJpy = fr.pair.includes("JPY");
+      candidates.push({
+        pair: fr.pair, category: "FOREX", mainCategory: "FOREX", subCategory: fr.pair,
+        price: fr.data, pipMultiplier: isJpy ? 0.1 : 0.001, decimals: isJpy ? 2 : 4,
+        thresholdPct: 0.12,
+      });
+    }
+
+    for (const cp of cryptoPairPool) {
+      const pd = cryptoPrices[cp];
+      if (!pd) continue;
+      const isSmall = pd.price < 10;
+      candidates.push({
+        pair: cp, category: "CRYPTO", mainCategory: "CRYPTO", subCategory: cp, price: pd,
+        pipMultiplier: pd.price > 1000 ? 100 : pd.price > 50 ? 1 : 0.01,
+        decimals: isSmall ? 4 : pd.price > 1000 ? 0 : 2,
+        thresholdPct: 0.4, // crypto is naturally more volatile
+      });
+    }
+
+    for (const d of derivPool) {
+      candidates.push({
+        pair: d.pair, category: "DERIV", mainCategory: "DERIV/BINARY", subCategory: d.pair,
+        price: d.price, pipMultiplier: d.pip, decimals: 0,
+        thresholdPct: 0.15,
+      });
+    }
+
+    // ── Evaluate every pair independently: skip if still open, skip if no ──
+    // ── real movement since its last signal, otherwise generate exactly ──
+    // ── one fresh open signal for it. ──
+    const newSignals: any[] = [];
+    const decisions: Record<string, { generated: boolean; reason: string; pctMove?: number }> = {};
+
+    for (const c of candidates) {
+      const evalResult = await evaluatePair(supabase, c.pair, c.price.price, c.thresholdPct);
+      decisions[c.pair] = { generated: evalResult.generate, reason: evalResult.reason, pctMove: evalResult.pctMove };
+      if (evalResult.generate) {
+        newSignals.push(generateOneOpenSignal(c, session));
       }
+    }
+
+    if (newSignals.length === 0) {
+      console.log("No pairs eligible this run (all open or no movement).");
+      return new Response(
+        JSON.stringify({ success: true, generated: false, signals_created: 0, decisions }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data, error } = await supabase.from("signals").insert(newSignals).select("id, pair, type, entry, category");
+
+    if (error) {
+      console.error("Insert error:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to insert signals", details: error.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-
-        signals_created:
-          data?.length || 0,
-
-        telegram_sent:
-          telegramSent,
-
-        telegram_failed:
-          telegramFailed,
+        generated: true,
+        session,
+        signals_created: data?.length || 0,
+        decisions,
+        signals: data,
       }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
-    console.error(
-      "auto-generate-signals error:",
-      err
-    );
-
+  } catch (error) {
+    console.error("Error:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error:
-          err instanceof Error
-            ? err.message
-            : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
-      }
+      JSON.stringify({ error: (error as Error).message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
