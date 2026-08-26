@@ -32,6 +32,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("signals"); // Track active tab
   const [showSignalForm, setShowSignalForm] = useState(false);
   const [showChartForm, setShowChartForm] = useState(false);
 
@@ -46,7 +47,6 @@ const AdminDashboard = () => {
           return;
         }
 
-        // Check if user has admin role
         const { data: roles } = await supabase
           .from('user_roles')
           .select('role')
@@ -113,8 +113,8 @@ const AdminDashboard = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="signals" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 h-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 h-auto gap-1">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="ideas" className="text-xs sm:text-sm py-2">Ideas</TabsTrigger>
             <TabsTrigger value="headlines" className="text-xs sm:text-sm py-2">Headlines</TabsTrigger>
@@ -128,77 +128,97 @@ const AdminDashboard = () => {
           </TabsList>
 
           <Suspense fallback={<TabLoader />}>
-            <TabsContent value="signals" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                    <CardTitle className="text-base sm:text-lg">Manage Signals</CardTitle>
-                    <Button onClick={() => setShowSignalForm(!showSignalForm)} className="text-xs sm:text-sm h-8 sm:h-9">
-                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      {showSignalForm ? "Hide" : "Add"}
-                    </Button>
-                  </div>
-                </CardHeader>
-                {showSignalForm && (
-                  <CardContent>
-                    <SignalForm onSuccess={() => setShowSignalForm(false)} />
-                  </CardContent>
-                )}
-              </Card>
-              <SignalsList />
-            </TabsContent>
+            {activeTab === "signals" && (
+              <TabsContent value="signals" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                      <CardTitle className="text-base sm:text-lg">Manage Signals</CardTitle>
+                      <Button onClick={() => setShowSignalForm(!showSignalForm)} className="text-xs sm:text-sm h-8 sm:h-9">
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        {showSignalForm ? "Hide" : "Add"}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  {showSignalForm && (
+                    <CardContent>
+                      <SignalForm onSuccess={() => setShowSignalForm(false)} />
+                    </CardContent>
+                  )}
+                </Card>
+                <SignalsList />
+              </TabsContent>
+            )}
 
-            <TabsContent value="ideas" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                    <CardTitle className="text-base sm:text-lg">Ideas</CardTitle>
-                    <Button onClick={() => setShowChartForm(!showChartForm)} className="text-xs sm:text-sm h-8 sm:h-9">
-                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      {showChartForm ? "Hide" : "Add"}
-                    </Button>
-                  </div>
-                </CardHeader>
-                {showChartForm && (
-                  <CardContent>
-                    <ChartAnalysisForm onSuccess={() => setShowChartForm(false)} />
-                  </CardContent>
-                )}
-              </Card>
-              <ChartAnalysisList />
-            </TabsContent>
+            {activeTab === "ideas" && (
+              <TabsContent value="ideas" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                      <CardTitle className="text-base sm:text-lg">Ideas</CardTitle>
+                      <Button onClick={() => setShowChartForm(!showChartForm)} className="text-xs sm:text-sm h-8 sm:h-9">
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        {showChartForm ? "Hide" : "Add"}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  {showChartForm && (
+                    <CardContent>
+                      <ChartAnalysisForm onSuccess={() => setShowChartForm(false)} />
+                    </CardContent>
+                  )}
+                </Card>
+                <ChartAnalysisList />
+              </TabsContent>
+            )}
 
-            <TabsContent value="headlines" className="space-y-4">
-              <HeadlinesManagement />
-            </TabsContent>
+            {activeTab === "headlines" && (
+              <TabsContent value="headlines" className="space-y-4">
+                <HeadlinesManagement />
+              </TabsContent>
+            )}
 
-            <TabsContent value="users" className="space-y-4">
-              <UserManagement />
-            </TabsContent>
+            {activeTab === "users" && (
+              <TabsContent value="users" className="space-y-4">
+                <UserManagement />
+              </TabsContent>
+            )}
 
-            <TabsContent value="accounts" className="space-y-4">
-              <AccountApplications />
-            </TabsContent>
+            {activeTab === "accounts" && (
+              <TabsContent value="accounts" className="space-y-4">
+                <AccountApplications />
+              </TabsContent>
+            )}
 
-            <TabsContent value="performance" className="space-y-4">
-              <PerformanceManagement />
-            </TabsContent>
+            {activeTab === "performance" && (
+              <TabsContent value="performance" className="space-y-4">
+                <PerformanceManagement />
+              </TabsContent>
+            )}
 
-            <TabsContent value="coupons" className="space-y-4">
-              <CouponManagement />
-            </TabsContent>
+            {activeTab === "coupons" && (
+              <TabsContent value="coupons" className="space-y-4">
+                <CouponManagement />
+              </TabsContent>
+            )}
 
-            <TabsContent value="offers" className="space-y-4">
-              <SpecialOfferManagement />
-            </TabsContent>
+            {activeTab === "offers" && (
+              <TabsContent value="offers" className="space-y-4">
+                <SpecialOfferManagement />
+              </TabsContent>
+            )}
 
-            <TabsContent value="user-activity" className="space-y-4">
-              <UserActivityDashboard />
-            </TabsContent>
+            {activeTab === "user-activity" && (
+              <TabsContent value="user-activity" className="space-y-4">
+                <UserActivityDashboard />
+              </TabsContent>
+            )}
 
-            <TabsContent value="activity" className="space-y-4">
-              <ActivityLog />
-            </TabsContent>
+            {activeTab === "activity" && (
+              <TabsContent value="activity" className="space-y-4">
+                <ActivityLog />
+              </TabsContent>
+            )}
           </Suspense>
         </Tabs>
       </div>
