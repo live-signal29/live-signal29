@@ -62,50 +62,53 @@ function formatSignalMessage(signal: Signal): string {
   const type = String(signal.type || "").toUpperCase();
 
   const emoji = type === "BUY" ? "🟢" : "🔴";
+  const actionEmoji = type === "BUY" ? "🚀 BUY NOW" : "📉 SELL NOW";
 
   const riskEmoji =
     signal.risk_level === "High"
-      ? "🔥"
+      ? "🔥 High"
       : signal.risk_level === "Medium"
-      ? "⚡"
-      : "✅";
+      ? "⚡ Medium"
+      : "🛡️ Low";
 
-  let message = `${emoji} <b>NEW SIGNAL</b> ${emoji}\n\n`;
+  let message = `${emoji} <b>VIP TRADING SIGNAL</b> ${emoji}\n\n`;
 
-  message += `📊 <b>${signal.pair}</b>\n`;
-  message += `📈 Type: <b>${type}</b>\n\n`;
+  message += `📊 Asset: <b>${signal.pair}</b>\n`;
+  message += `📈 Action: <b>${actionEmoji}</b>\n\n`;
 
-  message += `💰 Entry: <code>${signal.entry}</code>\n`;
-  message += `🎯 TP1: <code>${signal.tp1}</code>\n`;
+  message += `💰 Entry Zone: <code>${signal.entry}</code>\n`;
+  message += `🎯 TP 1: <code>${signal.tp1}</code>\n`;
 
   if (signal.tp2) {
-    message += `🎯 TP2: <code>${signal.tp2}</code>\n`;
+    message += `🎯 TP 2: <code>${signal.tp2}</code>\n`;
   }
 
   if (signal.tp3) {
-    message += `🎯 TP3: <code>${signal.tp3}</code>\n`;
+    message += `🎯 TP 3: <code>${signal.tp3}</code>\n`;
   }
 
   if (signal.tp4) {
-    message += `🎯 TP4: <code>${signal.tp4}</code>\n`;
+    message += `🎯 TP 4: <code>${signal.tp4}</code>\n`;
   }
 
-  message += `🛑 SL: <code>${signal.sl}</code>\n\n`;
+  message += `🛑 Stop Loss: <code>${signal.sl}</code>\n\n`;
 
   if (signal.risk_level) {
-    message += `${riskEmoji} Risk: ${signal.risk_level}\n`;
+    message += `${riskEmoji} Risk Level\n`;
   }
 
   if (signal.signal_type) {
-    message += `⏱ Type: ${signal.signal_type}\n`;
+    message += `⏱ Trade Type: <b>${signal.signal_type}</b>\n`;
   }
 
   if (signal.analysis_reason) {
     message += `\n📝 <i>${signal.analysis_reason}</i>\n`;
   }
 
+  message += `\n💡 <b>Auto Note:</b> TP1 hit hone par SL entry level par shift kar dein.\n`;
+
   message += `\n━━━━━━━━━━━━━━━\n`;
-  message += `🌐 <b>TREND IS FRIEND</b>`;
+  message += `🌐 <b><a href="https://unlimiteddownload.vercel.app">TREND IS FRIEND</a></b>`;
 
   return message;
 }
