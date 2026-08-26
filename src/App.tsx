@@ -57,12 +57,12 @@ const Backtesting = lazyWithRetry(() => import("./pages/Backtesting"));
 const CompoundCalculator = lazyWithRetry(() => import("./pages/CompoundCalculator"));
 
 const LoadingSpinner = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
     <div className="relative">
       <div className="w-12 h-12 border-4 border-primary/20 rounded-full"></div>
       <div className="absolute top-0 left-0 w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
     </div>
-    <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
+    <p className="text-sm text-muted-foreground animate-pulse">Loading Live Data...</p>
   </div>
 );
 
@@ -125,7 +125,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         navigate('/login?reason=deleted', { replace: true });
       }
     } catch {
-      // Ignore network errors during background check
+      // Ignore network errors
     }
   }, [navigate]);
 
@@ -165,11 +165,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }, [verifyUserStillExists]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!session) {
@@ -180,14 +176,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Realtime dynamic signals fetch configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60, // 1 minute
-      gcTime: 1000 * 60 * 10, // 10 minutes
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      retry: 1,
+      staleTime: 0, // Live real-time stream sync (0ms)
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      retry: 2,
     },
   },
 });
@@ -203,7 +200,7 @@ const App = () => (
           <div className="has-bottom-nav">
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
-                {/* Public routes first */}
+                {/* Public routes */}
                 <Route path="/signal/:id" element={<SharedSignal />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
@@ -250,7 +247,6 @@ const App = () => (
                 <Route path="/backtesting" element={<ProtectedRoute><Backtesting /></ProtectedRoute>} />
                 <Route path="/compound" element={<ProtectedRoute><CompoundCalculator /></ProtectedRoute>} />
                 
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
