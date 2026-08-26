@@ -19,6 +19,7 @@ interface Signal {
   tp3?: string;
   tp4?: string;
   sl: string;
+  category?: string; // Commodities, Ideas, Synthetic, Forex etc.
   risk_level?: string;
   signal_type?: string;
   analysis_reason?: string;
@@ -110,8 +111,7 @@ serve(async (req) => {
     const body = await req.json();
     const { signal, action, status } = body;
 
-    // Direct signal object check
-    const signalData = signal || body;
+    const signalData: Signal = signal || body;
 
     if (!signalData || (!signalData.pair && !signalData.entry)) {
       return new Response(
@@ -120,11 +120,46 @@ serve(async (req) => {
       );
     }
 
+    // -------------------------------------------------------------
+    // CATEGORY FILTER LOGIC
+    // -------------------------------------------------------------
+    const pairName = (signalData.pair || "").toUpperCase();
+    const catName = (signalData.category || "").toLowerCase();
+
+    // Commodities List: XAUUSD (Gold), XAGUSD (Silver), WTI/USOIL (Oil)
+    const isCommodities = 
+      catName.includes("commodities") || 
+      pairName.includes("XAU") || 
+      pairName.includes("GOLD") || 
+      pairName.includes("OIL") || 
+      pairName.includes("USOIL") || 
+      pairName.includes("XAG");
+
+    // Ideas List: Signal type ya category mein "idea" / "analysis" ho
+    const isIdea = 
+      catName.includes("ideas") || 
+      catName.includes("idea") || 
+      (signalData.signal_type && signalData.signal_type.toLowerCase().includes("idea"));
+
+    // Agar na to Commodities ho aur na hi Ideas ho, toh Telegram post rok do
+    if (!isCommodities && !isIdea) {
+      console.log(`Ignored signal: ${signalData.pair} (Not in Commodities or Ideas)`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Signal ignored (Category filter applied - Only Commodities & Ideas allowed)",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // -------------------------------------------------------------
+    // POST GENERATION LOGIC
+    // -------------------------------------------------------------
     let message = "";
     if (action === "update_signal" && status) {
       message = formatUpdateMessage(signalData, status);
     } else {
-      // Default: Agar action pass na ho tab bhi new signal post hoga
       message = formatSignalMessage(signalData);
     }
 
