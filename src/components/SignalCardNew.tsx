@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Clock,
   AlertCircle,
@@ -86,6 +87,7 @@ const SignalCardNew = ({
   subscriptionStatus,
   livePrice,
 }: SignalCardProps) => {
+  const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
 
   const confettiFiredRef = useRef(false);
@@ -160,6 +162,44 @@ const SignalCardNew = ({
       : signal.current_price
         ? parseFloat(signal.current_price)
         : 0;
+
+  /*
+   * ============================================================
+   * LIVE PRICE MOVEMENT
+   * ============================================================
+   * Current price color must follow the actual MT5 movement,
+   * NOT the signal type.
+   *
+   * UP   -> blue
+   * DOWN -> red
+   * SAME -> keep the last movement color
+   *
+   * This is intentionally based on the livePrice prop because
+   * SignalsDashboard refreshes it from MetaApi every few seconds.
+   */
+  const previousLivePriceRef = useRef<number | null>(null);
+  const [priceDirection, setPriceDirection] = useState<"up" | "down" | "neutral">("neutral");
+
+  useEffect(() => {
+    if (typeof livePrice !== "number" || livePrice <= 0) return;
+
+    const previous = previousLivePriceRef.current;
+
+    if (previous !== null) {
+      if (livePrice > previous) {
+        setPriceDirection("up");
+      } else if (livePrice < previous) {
+        setPriceDirection("down");
+      }
+    }
+
+    previousLivePriceRef.current = livePrice;
+  }, [livePrice]);
+
+  const currentPriceColor =
+    priceDirection === "down"
+      ? "text-red-600 dark:text-red-400"
+      : "text-blue-600 dark:text-blue-400";
 
   /*
    * ============================================================
@@ -995,18 +1035,19 @@ const SignalCardNew = ({
       </div>
 
       {/* ======================================================
-          PREMIUM LOCKED VIEW
+          PREMIUM LOCKED VIEW (FIXED WITH CLICK HANDLER)
           ====================================================== */}
 
       {isLocked ? (
-        <div className="flex flex-col items-center justify-center gap-1.5 py-4 bg-muted/20 rounded-[9px] border border-dashed border-border/60">
+        <div 
+          onClick={() => navigate("/premium")}
+          className="flex flex-col items-center justify-center gap-1.5 py-4 bg-muted/20 hover:bg-muted/30 active:scale-[0.98] rounded-[9px] border border-dashed border-border/60 cursor-pointer transition-all select-none"
+        >
+          <Lock className="h-4 w-4 text-amber-500 pointer-events-none" />
 
-          <Lock className="h-4 w-4 text-amber-500" />
-
-          <span className="text-[10px] font-bold text-muted-foreground">
+          <span className="text-[10px] font-bold text-muted-foreground pointer-events-none">
             🔒 Premium Signal - Tap to Unlock
           </span>
-
         </div>
       ) : (
         <>
@@ -1040,10 +1081,8 @@ const SignalCardNew = ({
 
               <span
                 className={cn(
-                  "font-mono text-[11px] font-bold",
-                  isBuy
-                    ? "text-emerald-500 dark:text-emerald-400"
-                    : "text-rose-500 dark:text-rose-400"
+                  "font-mono text-[11px] font-bold transition-colors duration-200",
+                  currentPriceColor
                 )}
               >
                 {currentPriceNum > 0
