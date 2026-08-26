@@ -255,6 +255,50 @@ async function findBrokerSymbol(
   ) {
     preferred = ["ETHUSD"];
   } else if (
+    upper.includes("SOL")
+  ) {
+    preferred = ["SOLUSD"];
+  } else if (
+    /BOOM/.test(upper) && upper.includes("1000")
+  ) {
+    preferred = ["BOOM1000", "BOOM1000INDEX"];
+  } else if (
+    /BOOM/.test(upper) && upper.includes("500")
+  ) {
+    preferred = ["BOOM500", "BOOM500INDEX"];
+  } else if (
+    /CRASH/.test(upper) && upper.includes("1000")
+  ) {
+    preferred = ["CRASH1000", "CRASH1000INDEX"];
+  } else if (
+    /CRASH/.test(upper) && upper.includes("500")
+  ) {
+    preferred = ["CRASH500", "CRASH500INDEX"];
+  } else if (
+    /VOL(ATILITY)?/.test(upper) && upper.includes("75")
+  ) {
+    preferred = ["VOLATILITY75INDEX", "VOL75", "VOLATILITY75"];
+  } else if (
+    /VOL(ATILITY)?/.test(upper) && upper.includes("100")
+  ) {
+    preferred = ["VOLATILITY100INDEX", "VOL100", "VOLATILITY100"];
+  } else if (
+    /VOL(ATILITY)?/.test(upper) && upper.includes("50")
+  ) {
+    preferred = ["VOLATILITY50INDEX", "VOL50", "VOLATILITY50"];
+  } else if (
+    /VOL(ATILITY)?/.test(upper) && upper.includes("25")
+  ) {
+    preferred = ["VOLATILITY25INDEX", "VOL25", "VOLATILITY25"];
+  } else if (
+    /STEP/.test(upper)
+  ) {
+    preferred = ["STEPINDEX", "STEP"];
+  } else if (
+    /JUMP/.test(upper)
+  ) {
+    preferred = [upper, "JUMP"];
+  } else if (
     /^[A-Z]{6}$/.test(upper)
   ) {
     preferred = [upper];
