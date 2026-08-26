@@ -30,8 +30,8 @@ async function fetchMT5Prices(
       )}`,
       {
         headers: {
-          Authorization:
-            `Bearer ${serviceRoleKey}`,
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
         },
       }
     );
@@ -39,40 +39,84 @@ async function fetchMT5Prices(
     if (!response.ok) {
       console.error(
         "fetch-live-prices failed:",
-        response.status
+        response.status,
+        await response.text()
       );
       return result;
     }
 
-    const json =
-      await response.json();
+    const json = await response.json();
+    const prices = json?.prices || {};
 
-    const prices =
-      json?.prices || {};
+    console.log(
+      "RAW MT5 PRICES:",
+      JSON.stringify(prices)
+    );
 
     for (const pair of pairs) {
-      const value =
-        prices[pair];
+      const value = prices[pair];
 
-      const price =
-        value
-          ? parseFloat(value)
-          : NaN;
+      const price = value
+        ? parseFloat(String(value))
+        : NaN;
 
       if (
         Number.isFinite(price) &&
         price > 0
       ) {
-        result[pair] =
-          price;
+        result[pair] = price;
       }
     }
+
+    /*
+     * GOLD ALIAS SUPPORT
+     *
+     * This makes sure XAUUSD / XAU/USD / Gold
+     * are treated as the same instrument.
+     */
+
+    const goldKeys = Object.keys(prices);
+
+    for (const key of goldKeys) {
+      const normalized = String(key)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+
+      const value = parseFloat(
+        String(prices[key])
+      );
+
+      if (
+        Number.isFinite(value) &&
+        value > 0
+      ) {
+        if (
+          normalized.includes("XAUUSD") ||
+          normalized === "GOLD"
+        ) {
+          result["XAU/USD (Gold)"] = value;
+        }
+
+        if (
+          normalized.includes("XAGUSD") ||
+          normalized === "SILVER"
+        ) {
+          result["XAG/USD (Silver)"] = value;
+        }
+      }
+    }
+
   } catch (error) {
     console.error(
       "MT5 fetch error:",
       String(error)
     );
   }
+
+  console.log(
+    "FINAL MT5 PRICE MAP:",
+    JSON.stringify(result)
+  );
 
   return result;
 }
@@ -84,8 +128,7 @@ async function fetchMT5Prices(
 function pick<T>(array: T[]): T {
   return array[
     Math.floor(
-      Math.random() *
-        array.length
+      Math.random() * array.length
     )
   ];
 }
@@ -96,29 +139,13 @@ function rand(
 ): number {
   return (
     Math.round(
-      (min +
+      (
+        min +
         Math.random() *
-          (max - min)) *
-        100
+          (max - min)
+      ) * 100
     ) / 100
   );
-}
-
-function recenter(
-  pd: PriceData,
-  price: number
-): PriceData {
-  const up =
-    pd.high - pd.price;
-
-  const down =
-    pd.price - pd.low;
-
-  return {
-    price,
-    high: price + up,
-    low: price - down,
-  };
 }
 
 /* =========================================================
@@ -191,8 +218,7 @@ function generateSignal(
 
   const spread =
     Math.max(
-      price.high -
-        price.low,
+      price.high - price.low,
       pipMultiplier * 20
     );
 
@@ -230,10 +256,8 @@ function generateSignal(
     Number(
       (
         isBuy
-          ? entry +
-            tp1Distance
-          : entry -
-            tp1Distance
+          ? entry + tp1Distance
+          : entry - tp1Distance
       ).toFixed(decimals)
     );
 
@@ -241,10 +265,8 @@ function generateSignal(
     Number(
       (
         isBuy
-          ? entry +
-            tp2Distance
-          : entry -
-            tp2Distance
+          ? entry + tp2Distance
+          : entry - tp2Distance
       ).toFixed(decimals)
     );
 
@@ -252,10 +274,8 @@ function generateSignal(
     Number(
       (
         isBuy
-          ? entry +
-            tp3Distance
-          : entry -
-            tp3Distance
+          ? entry + tp3Distance
+          : entry - tp3Distance
       ).toFixed(decimals)
     );
 
@@ -263,10 +283,8 @@ function generateSignal(
     Number(
       (
         isBuy
-          ? entry -
-            slDistance
-          : entry +
-            slDistance
+          ? entry - slDistance
+          : entry + slDistance
       ).toFixed(decimals)
     );
 
@@ -283,16 +301,11 @@ function generateSignal(
     sub_category:
       subCategory,
 
-    entry:
-      String(entry),
-    tp1:
-      String(tp1),
-    tp2:
-      String(tp2),
-    tp3:
-      String(tp3),
-    sl:
-      String(sl),
+    entry: String(entry),
+    tp1: String(tp1),
+    tp2: String(tp2),
+    tp3: String(tp3),
+    sl: String(sl),
 
     status: "open",
     signal_status: "open",
@@ -342,9 +355,7 @@ function generateSignal(
 ========================================================= */
 
 async function evaluatePair(
-  supabase: ReturnType<
-    typeof createClient
-  >,
+  supabase: ReturnType<typeof createClient>,
   pair: string,
   currentPrice: number,
   thresholdPct: number
@@ -366,8 +377,7 @@ async function evaluatePair(
   if (active) {
     return {
       generate: false,
-      reason:
-        "signal_still_open",
+      reason: "signal_still_open",
     };
   }
 
@@ -391,8 +401,7 @@ async function evaluatePair(
   if (!last?.entry) {
     return {
       generate: true,
-      reason:
-        "no_prior_signal",
+      reason: "no_prior_signal",
     };
   }
 
@@ -402,9 +411,7 @@ async function evaluatePair(
     );
 
   if (
-    !Number.isFinite(
-      lastPrice
-    ) ||
+    !Number.isFinite(lastPrice) ||
     lastPrice <= 0
   ) {
     return {
@@ -422,8 +429,7 @@ async function evaluatePair(
     ) * 100;
 
   if (
-    move >=
-    thresholdPct
+    move >= thresholdPct
   ) {
     return {
       generate: true,
@@ -453,8 +459,7 @@ async function evaluatePair(
 
 Deno.serve(async (req) => {
   if (
-    req.method ===
-    "OPTIONS"
+    req.method === "OPTIONS"
   ) {
     return new Response(
       "ok",
@@ -487,9 +492,10 @@ Deno.serve(async (req) => {
     ===================================================== */
 
     const pktHour =
-      (new Date().getUTCHours() +
-        5) %
-      24;
+      (
+        new Date().getUTCHours() +
+        5
+      ) % 24;
 
     const session =
       pktHour < 12
@@ -497,11 +503,17 @@ Deno.serve(async (req) => {
         : "evening";
 
     /* =====================================================
-       ALL SUPPORTED PAIRS
+       GOLD
     ===================================================== */
 
-    const gold =
-      "XAU/USD (Gold)";
+    const goldPairs = [
+      "XAU/USD (Gold)",
+      "XAG/USD (Silver)",
+    ];
+
+    /* =====================================================
+       FOREX
+    ===================================================== */
 
     const forex = [
       "EUR/USD",
@@ -516,6 +528,10 @@ Deno.serve(async (req) => {
       "CAD/JPY",
     ];
 
+    /* =====================================================
+       CRYPTO
+    ===================================================== */
+
     const crypto = [
       "BTC/USD",
       "ETH/USD",
@@ -523,6 +539,10 @@ Deno.serve(async (req) => {
       "XRP/USD",
       "DOGE/USD",
     ];
+
+    /* =====================================================
+       DERIV
+    ===================================================== */
 
     const deriv = [
       "BOOM 1000",
@@ -536,7 +556,7 @@ Deno.serve(async (req) => {
     ];
 
     const allPairs = [
-      gold,
+      ...goldPairs,
       ...forex,
       ...crypto,
       ...deriv,
@@ -565,35 +585,69 @@ Deno.serve(async (req) => {
     const candidates: SignalConfig[] =
       [];
 
-    /* GOLD */
+    /* =====================================================
+       GOLD / COMMODITIES
+    ===================================================== */
 
-    if (mt5[gold]) {
+    for (
+      const pair of goldPairs
+    ) {
+      if (!mt5[pair]) {
+        console.log(
+          `No MT5 price for ${pair}`
+        );
+        continue;
+      }
+
       const p =
-        mt5[gold];
+        mt5[pair];
 
       candidates.push({
-        pair: gold,
+        pair,
+
         category:
           "COMMODITIES",
+
         mainCategory:
           "COMMODITIES",
+
         subCategory:
-          gold,
+          pair,
+
         price: {
           price: p,
-          high: p + 15,
-          low: p - 15,
+          high:
+            pair.includes("XAU")
+              ? p + 15
+              : p + 1.5,
+          low:
+            pair.includes("XAU")
+              ? p - 15
+              : p - 1.5,
         },
-        pipMultiplier: 1,
-        decimals: 2,
+
+        pipMultiplier:
+          pair.includes("XAU")
+            ? 1
+            : 0.1,
+
+        decimals:
+          3,
+
         thresholdPct:
-          0.12,
+          pair.includes("XAU")
+            ? 0.12
+            : 0.15,
       });
     }
 
-    /* FOREX */
+    /* =====================================================
+       FOREX
+    ===================================================== */
 
-    for (const pair of forex) {
+    for (
+      const pair of forex
+    ) {
       if (!mt5[pair]) {
         console.log(
           `No MT5 price for ${pair}`
@@ -614,30 +668,42 @@ Deno.serve(async (req) => {
 
       candidates.push({
         pair,
-        category: "FOREX",
+
+        category:
+          "FOREX",
+
         mainCategory:
           "FOREX",
+
         subCategory:
           pair,
+
         price: {
           price: p,
           high: p + width,
           low: p - width,
         },
+
         pipMultiplier:
           isJPY
             ? 0.1
             : 0.001,
+
         decimals:
           isJPY ? 3 : 5,
+
         thresholdPct:
           0.12,
       });
     }
 
-    /* CRYPTO */
+    /* =====================================================
+       CRYPTO
+    ===================================================== */
 
-    for (const pair of crypto) {
+    for (
+      const pair of crypto
+    ) {
       if (!mt5[pair]) {
         console.log(
           `No MT5 price for ${pair}`
@@ -658,31 +724,39 @@ Deno.serve(async (req) => {
       const decimals =
         p < 10
           ? 4
-          : p > 1000
-          ? 2
           : 2;
 
       candidates.push({
         pair,
-        category: "CRYPTO",
+
+        category:
+          "CRYPTO",
+
         mainCategory:
           "CRYPTO",
+
         subCategory:
           pair,
+
         price: {
           price: p,
           high: p * 1.02,
           low: p * 0.98,
         },
+
         pipMultiplier:
           multiplier,
+
         decimals,
+
         thresholdPct:
           0.4,
       });
     }
 
-    /* DERIV */
+    /* =====================================================
+       DERIV
+    ===================================================== */
 
     const derivSettings: Record<
       string,
@@ -698,7 +772,9 @@ Deno.serve(async (req) => {
       "VOL 25": 1,
     };
 
-    for (const pair of deriv) {
+    for (
+      const pair of deriv
+    ) {
       if (!mt5[pair]) {
         console.log(
           `No MT5 price for ${pair}`
@@ -711,20 +787,27 @@ Deno.serve(async (req) => {
 
       candidates.push({
         pair,
-        category: "DERIV",
+
+        category:
+          "DERIV",
+
         mainCategory:
           "DERIV/BINARY",
+
         subCategory:
           pair,
+
         price: {
           price: p,
           high: p * 1.002,
           low: p * 0.998,
         },
+
         pipMultiplier:
-          derivSettings[pair] ||
-          1,
+          derivSettings[pair] || 1,
+
         decimals: 2,
+
         thresholdPct:
           0.15,
       });
@@ -733,7 +816,7 @@ Deno.serve(async (req) => {
     console.log(
       "CANDIDATES:",
       candidates.map(
-        (x) => x.pair
+        x => x.pair
       )
     );
 
@@ -749,7 +832,9 @@ Deno.serve(async (req) => {
       any
     > = {};
 
-    for (const config of candidates) {
+    for (
+      const config of candidates
+    ) {
       const current =
         mt5[config.pair];
 
@@ -766,11 +851,20 @@ Deno.serve(async (req) => {
       ] = {
         generated:
           decision.generate,
+
         reason:
           decision.reason,
+
         pctMove:
           decision.pctMove,
       };
+
+      console.log(
+        `DECISION ${config.pair}:`,
+        JSON.stringify(
+          decision
+        )
+      );
 
       if (
         decision.generate
@@ -793,13 +887,18 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
+
           generated: false,
+
           signals_created: 0,
+
           session,
+
           candidates:
             candidates.map(
-              (x) => x.pair
+              x => x.pair
             ),
+
           decisions,
         }),
         {
@@ -825,7 +924,7 @@ Deno.serve(async (req) => {
         newSignals
       )
       .select(
-        "id,pair,type,entry,tp1,tp2,tp3,sl,risk_level,signal_type,analysis_reason,category"
+        "id,pair,type,entry,tp1,tp2,tp3,sl,risk_level,signal_type,analysis_reason,category,main_category,sub_category"
       );
 
     if (error) {
@@ -852,7 +951,8 @@ Deno.serve(async (req) => {
     }
 
     /* =====================================================
-       TELEGRAM - EVERY NEW SIGNAL
+       TELEGRAM
+       EVERY NEW SIGNAL
     ===================================================== */
 
     const telegramResults: Record<
@@ -866,22 +966,29 @@ Deno.serve(async (req) => {
     ) {
       await Promise.allSettled(
         data.map(
-          async (signal) => {
+          async signal => {
             try {
               const response =
                 await fetch(
                   `${supabaseUrl}/functions/v1/telegram-signal-post`,
                   {
                     method: "POST",
+
                     headers: {
                       "Content-Type":
                         "application/json",
+
                       Authorization:
                         `Bearer ${serviceRoleKey}`,
+
+                      apikey:
+                        serviceRoleKey,
                     },
+
                     body:
                       JSON.stringify({
                         signal,
+
                         action:
                           "new_signal",
                       }),
@@ -906,8 +1013,10 @@ Deno.serve(async (req) => {
 
               console.log(
                 `Telegram ${signal.pair}:`,
-                ok
+                ok,
+                result
               );
+
             } catch (error) {
               telegramResults[
                 signal.pair
@@ -930,27 +1039,37 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+
         generated: true,
+
         session,
+
         signals_created:
           data?.length || 0,
+
         candidates:
           candidates.map(
-            (x) => x.pair
+            x => x.pair
           ),
+
         telegram_posted:
           telegramResults,
+
         decisions,
-        signals: data,
+
+        signals:
+          data,
       }),
       {
         headers: {
           ...corsHeaders,
+
           "Content-Type":
             "application/json",
         },
       }
     );
+
   } catch (error) {
     console.error(
       "auto-generate-signals error:",
@@ -960,6 +1079,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
+
         error:
           error instanceof Error
             ? error.message
@@ -967,8 +1087,10 @@ Deno.serve(async (req) => {
       }),
       {
         status: 500,
+
         headers: {
           ...corsHeaders,
+
           "Content-Type":
             "application/json",
         },
