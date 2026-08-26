@@ -14,12 +14,11 @@ interface Signal {
   pair: string;
   type: string;
   entry: string;
-  tp1?: string;
+  tp1: string;
   tp2?: string;
   tp3?: string;
   tp4?: string;
-  sl?: string;
-  category?: string;
+  sl: string;
   risk_level?: string;
   signal_type?: string;
   analysis_reason?: string;
@@ -27,7 +26,7 @@ interface Signal {
 
 async function sendTelegramMessage(message: string): Promise<boolean> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
-    console.error("Missing Telegram secrets: TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID");
+    console.error("Missing Telegram secrets");
     return false;
   }
 
@@ -36,7 +35,9 @@ async function sendTelegramMessage(message: string): Promise<boolean> {
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           chat_id: TELEGRAM_CHANNEL_ID,
           text: message,
@@ -47,138 +48,149 @@ async function sendTelegramMessage(message: string): Promise<boolean> {
     );
 
     const result = await response.json();
+
+    console.log("Telegram response:", result);
+
     return response.ok && result.ok === true;
   } catch (error) {
-    console.error("Telegram error:", error);
+    console.error("Telegram request error:", error);
     return false;
   }
 }
 
-// FORMAT FOR NEW SIGNAL
 function formatSignalMessage(signal: Signal): string {
   const type = String(signal.type || "").toUpperCase();
-  const emoji = type === "BUY" ? "🟢" : "🔴";
-  const actionEmoji = type === "BUY" ? "🚀 BUY NOW" : "📉 SELL NOW";
 
-  let message = `${emoji} <b>VIP TRADING SIGNAL</b> ${emoji}\n\n`;
-  message += `📊 Asset: <b>${signal.pair}</b>\n`;
-  message += `📈 Action: <b>${actionEmoji}</b>\n\n`;
+  const emoji = type === "BUY" ? "🟢" : "🔴";
+
+  const riskEmoji =
+    signal.risk_level === "High"
+      ? "🔥"
+      : signal.risk_level === "Medium"
+      ? "⚡"
+      : "✅";
+
+  let message = `${emoji} <b>NEW SIGNAL</b> ${emoji}\n\n`;
+
+  message += `📊 <b>${signal.pair}</b>\n`;
+  message += `📈 Type: <b>${type}</b>\n\n`;
 
   message += `💰 Entry: <code>${signal.entry}</code>\n`;
-  if (signal.tp1) message += `🎯 TP1: <code>${signal.tp1}</code>\n`;
-  if (signal.tp2) message += `🎯 TP2: <code>${signal.tp2}</code>\n`;
-  if (signal.tp3) message += `🎯 TP3: <code>${signal.tp3}</code>\n`;
-  if (signal.tp4) message += `🎯 TP4: <code>${signal.tp4}</code>\n`;
+  message += `🎯 TP1: <code>${signal.tp1}</code>\n`;
 
-  if (signal.sl) message += `🛑 SL: <code>${signal.sl}</code>\n\n`;
+  if (signal.tp2) {
+    message += `🎯 TP2: <code>${signal.tp2}</code>\n`;
+  }
 
-  if (signal.risk_level) message += `⚡ Risk: <b>${signal.risk_level}</b>\n`;
-  if (signal.signal_type) message += `⏱ Type: <b>${signal.signal_type}</b>\n`;
-  if (signal.analysis_reason) message += `\n📝 <i>${signal.analysis_reason}</i>\n`;
+  if (signal.tp3) {
+    message += `🎯 TP3: <code>${signal.tp3}</code>\n`;
+  }
 
-  message += `\n━━━━━━━━━━━━━━━\n`;
-  message += `🌐 <b><a href="https://unlimiteddownload.vercel.app">TREND IS FRIEND</a></b>`;
+  if (signal.tp4) {
+    message += `🎯 TP4: <code>${signal.tp4}</code>\n`;
+  }
 
-  return message;
-}
+  message += `🛑 SL: <code>${signal.sl}</code>\n\n`;
 
-// FORMAT FOR TP / SL UPDATES
-function formatUpdateMessage(signal: Signal, status: string): string {
-  const upperStatus = status.toUpperCase();
-  const isTP = upperStatus.startsWith("TP") || upperStatus.includes("PROFIT");
-  let icon = isTP ? "🎯" : "🛑";
-  let title = isTP ? `${upperStatus} HIT! 🚀` : "STOP LOSS HIT ⚠️";
+  if (signal.risk_level) {
+    message += `${riskEmoji} Risk: ${signal.risk_level}\n`;
+  }
 
-  let message = `${icon} <b>${title}</b> ${icon}\n\n`;
-  message += `📊 Asset: <b>${signal.pair}</b>\n`;
-  if (signal.type) message += `📈 Action: <b>${signal.type.toUpperCase()}</b>\n`;
-  if (signal.entry) message += `💰 Entry: <code>${signal.entry}</code>\n\n`;
+  if (signal.signal_type) {
+    message += `⏱ Type: ${signal.signal_type}\n`;
+  }
 
-  if (isTP) {
-    message += `✅ Target Status: <b>${upperStatus}</b>\n`;
-    message += `💡 <i>Tip: Risk free karne ke liye SL ko entry price (Break-Even) par shift kar lein!</i>\n`;
-  } else {
-    message += `❌ Trade Closed at Stop Loss.\n`;
+  if (signal.analysis_reason) {
+    message += `\n📝 <i>${signal.analysis_reason}</i>\n`;
   }
 
   message += `\n━━━━━━━━━━━━━━━\n`;
-  message += `🌐 <b><a href="https://unlimiteddownload.vercel.app">TREND IS FRIEND</a></b>`;
+  message += `🌐 <b>TREND IS FRIEND</b>`;
 
   return message;
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", {
+      headers: corsHeaders,
+    });
   }
 
   try {
     const body = await req.json();
-    const { signal, action, status } = body;
 
-    const signalData: Signal = signal || body;
+    const { signal, action } = body;
 
-    if (!signalData || (!signalData.pair && !signalData.entry)) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Signal data required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // -------------------------------------------------------------
-    // CATEGORY FILTER LOGIC (Commodities & Ideas Only)
-    // -------------------------------------------------------------
-    const pairName = (signalData.pair || "").toUpperCase();
-    const catName = (signalData.category || "").toLowerCase();
-
-    const isCommodities = 
-      catName.includes("commodities") || 
-      pairName.includes("XAU") || 
-      pairName.includes("GOLD") || 
-      pairName.includes("OIL") || 
-      pairName.includes("USOIL") || 
-      pairName.includes("XAG");
-
-    const isIdea = 
-      catName.includes("ideas") || 
-      catName.includes("idea") || 
-      (signalData.signal_type && signalData.signal_type.toLowerCase().includes("idea"));
-
-    // Agar na Commodities ho na Ideas, toh ignore kar do
-    if (!isCommodities && !isIdea) {
-      console.log(`Filtered out: ${signalData.pair}`);
+    if (!signal) {
       return new Response(
         JSON.stringify({
-          success: true,
-          message: "Signal ignored (Only Commodities and Ideas are allowed for Telegram)",
+          success: false,
+          error: "Signal data required",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
-    // -------------------------------------------------------------
-    // POST CREATION
-    // -------------------------------------------------------------
-    let message = "";
-    if (action === "update_signal" || status) {
-      message = formatUpdateMessage(signalData, status || "TP/SL Update");
-    } else {
-      message = formatSignalMessage(signalData);
+    if (action !== "new_signal") {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid action",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
+
+    const message = formatSignalMessage(signal);
 
     const success = await sendTelegramMessage(message);
 
     return new Response(
       JSON.stringify({
         success,
-        message: success ? "Telegram post sent successfully" : "Failed to send Telegram post",
+        message: success
+          ? "Telegram signal sent"
+          : "Telegram signal failed",
       }),
-      { status: success ? 200 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: success ? 200 : 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   } catch (error) {
+    console.error("Telegram function error:", error);
+
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   }
 });
