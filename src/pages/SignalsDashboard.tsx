@@ -1,476 +1,1403 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import SignalCardNew from "@/components/SignalCardNew";
-import AdBanner from "@/components/AdBanner";
-import SEO from "@/components/SEO";
-import { getBreadcrumbStructuredData } from "@/components/StructuredData";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Maximize2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import TrialExpiredPopup from "@/components/TrialExpiredPopup";
-import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
-import { cn } from "@/lib/utils";
-import SignalsSkeleton from "@/components/SignalsSkeleton";
-import { useLivePricesFetch } from "@/hooks/useLivePrices";
-import ChartLightbox from "@/components/ChartLightbox";
-import { startOfDay, format } from "date-fns";
-import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
-import { ExnessPopup } from "@/components/ExnessPopup";
-import HeadlineTicker from "@/components/HeadlineTicker";
-import { ChartReactions } from "@/components/ChartReactions";
-import { StreakStatsRow } from "@/components/StreakStatsRow";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SIGNALS_PER_PAGE = 20;
-
-const CATEGORIES = [
-  "COMMODITIES",
-  "FOREX",
-  "CRYPTO",
-  "DERIV/BINARY",
-  "MARKET IDEAS",
-];
-
-// Helper: Ticker clean function to ensure "XAU/USD (Gold)" maps correctly to "XAUUSD" for WebSockets
-const normalizeSymbolKey = (symbolStr: string): string => {
-  if (!symbolStr) return "";
-  const upper = symbolStr.toUpperCase();
-  if (upper.includes("XAUUSD") || upper.includes("GOLD") || upper.includes("XAU/USD")) return "XAUUSD";
-  if (upper.includes("EURUSD") || upper.includes("EUR/USD")) return "EURUSD";
-  if (upper.includes("GBPUSD") || upper.includes("GBP/USD")) return "GBPUSD";
-  if (upper.includes("BTCUSD") || upper.includes("BITCOIN") || upper.includes("BTC/USD")) return "BTCUSD";
-  return symbolStr.split(" ")[0].replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
-// Formats time to Real Time 12-Hour format (e.g. 05:02 PM)
-const formatExactRealTime = (dateString: string | Date | null | undefined) => {
-  if (!dateString) return "";
+interface PriceData {
+  price: number;
+  high: number;
+  low: number;
+}
+
+interface SignalConfig {
+  pair: string;
+  category: string;
+  mainCategory: string;
+  subCategory: string;
+  price: PriceData;
+  pipMultiplier: number;
+  decimals: number;
+  thresholdPct: number;
+}
+
+/* =========================================================
+   MT5 LIVE PRICES
+========================================================= */
+
+async function fetchMT5Prices(
+  pairs: string[],
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<Record<string, number>> {
+  const result: Record<string, number> = {};
+
   try {
-    return format(new Date(dateString), "hh:mm a");
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(
+        pairs.join(",")
+      )}`,
+      {
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        "fetch-live-prices failed:",
+        response.status,
+        await response.text()
+      );
+      return result;
+    }
+
+    const json = await response.json();
+
+    const prices: Record<string, string> =
+      json?.prices || {};
+
+    for (const pair of pairs) {
+      const raw = prices[pair];
+      const price = raw ? parseFloat(raw) : NaN;
+
+      if (Number.isFinite(price) && price > 0) {
+        result[pair] = price;
+      }
+    }
+
+    console.log(
+      "MT5 prices:",
+      JSON.stringify(result)
+    );
   } catch (error) {
-    return "";
+    console.error(
+      "MT5 price fetch error:",
+      String(error)
+    );
   }
-};
 
-const SignalsDashboard = () => {
-  const {
-    hasAccess,
-    subscriptionStatus,
-    trialExpired,
-    trialEndDate,
-  } = useSubscriptionAccess();
+  return result;
+}
 
-  const [mainCategory, setMainCategory] = useState("COMMODITIES");
-  const [subCategory, setSubCategory] = useState<string>("all");
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [selectedChartIndex, setSelectedChartIndex] = useState(0);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
+/* =========================================================
+   EXTERNAL PRICE DATA
+   ONLY USED FOR RANGE / VOLATILITY
+========================================================= */
 
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
+async function fetchMarketPrice(
+  symbol: string
+): Promise<PriceData> {
+  try {
+    const yahooSymbol =
+      symbol.replace("/", "") + "=X";
 
-  // Handle category change
-  const handleCategoryChange = (category: string) => {
-    setMainCategory(category);
-    setSubCategory("all");
+    const response = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+
+      const meta =
+        data.chart?.result?.[0]?.meta;
+
+      const quote =
+        data.chart?.result?.[0]?.indicators
+          ?.quote?.[0];
+
+      if (meta?.regularMarketPrice) {
+        const price =
+          Number(meta.regularMarketPrice);
+
+        const high =
+          Number(quote?.high?.[0]) ||
+          price * 1.003;
+
+        const low =
+          Number(quote?.low?.[0]) ||
+          price * 0.997;
+
+        return {
+          price,
+          high,
+          low,
+        };
+      }
+    }
+  } catch (error) {
+    console.log(
+      `Yahoo failed for ${symbol}:`,
+      String(error)
+    );
+  }
+
+  const fallback: Record<string, number> = {
+    "EUR/USD": 1.0830,
+    "GBP/USD": 1.2940,
+    "USD/JPY": 149.60,
+    "AUD/USD": 0.6290,
+    "GBP/JPY": 193.70,
+    "USD/CAD": 1.3580,
+    "NZD/USD": 0.5680,
+    "USD/CHF": 0.8830,
+    "CHF/JPY": 169.40,
+    "CAD/JPY": 110.20,
   };
 
-  // Swipe gesture to change categories on mobile
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  }, []);
+  const price =
+    fallback[symbol] || 1;
 
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      if (touchStartX.current === null || touchStartY.current === null) return;
+  return {
+    price,
+    high: price * 1.003,
+    low: price * 0.997,
+  };
+}
 
-      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-      const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+/* =========================================================
+   GOLD / SILVER MARKET RANGE
+========================================================= */
 
-      touchStartX.current = null;
-      touchStartY.current = null;
+async function fetchMetalPrice(
+  symbol: string
+): Promise<PriceData> {
+  try {
+    const yahooSymbol =
+      symbol === "XAU/USD"
+        ? "GC=F"
+        : "SI=F";
 
-      if (Math.abs(deltaX) > 80 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-        const currentIndex = CATEGORIES.indexOf(mainCategory);
-        if (deltaX < 0 && currentIndex < CATEGORIES.length - 1) {
-          setMainCategory(CATEGORIES[currentIndex + 1]);
-          setSubCategory("all");
-        } else if (deltaX > 0 && currentIndex > 0) {
-          setMainCategory(CATEGORIES[currentIndex - 1]);
-          setSubCategory("all");
+    const response = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+
+      const meta =
+        data.chart?.result?.[0]?.meta;
+
+      const quote =
+        data.chart?.result?.[0]?.indicators
+          ?.quote?.[0];
+
+      if (meta?.regularMarketPrice) {
+        const price =
+          Number(meta.regularMarketPrice);
+
+        return {
+          price,
+          high:
+            Number(quote?.high?.[0]) ||
+            price + 15,
+          low:
+            Number(quote?.low?.[0]) ||
+            price - 15,
+        };
+      }
+    }
+  } catch (error) {
+    console.log(
+      `${symbol} market data failed:`,
+      String(error)
+    );
+  }
+
+  if (symbol === "XAU/USD") {
+    return {
+      price: 3300,
+      high: 3330,
+      low: 3270,
+    };
+  }
+
+  return {
+    price: 37,
+    high: 38,
+    low: 36,
+  };
+}
+
+/* =========================================================
+   CRYPTO
+========================================================= */
+
+async function fetchCryptoPrices(): Promise<
+  Record<string, PriceData>
+> {
+  const result: Record<string, PriceData> = {};
+
+  try {
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,dogecoin&vs_currencies=usd&include_24hr_high=true&include_24hr_low=true"
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+
+      const map: Record<string, string> = {
+        bitcoin: "BTC/USD",
+        ethereum: "ETH/USD",
+        solana: "SOL/USD",
+        ripple: "XRP/USD",
+        dogecoin: "DOGE/USD",
+      };
+
+      for (const [id, pair] of Object.entries(map)) {
+        if (data[id]?.usd) {
+          result[pair] = {
+            price: Number(data[id].usd),
+            high:
+              Number(data[id].usd_24h_high) ||
+              Number(data[id].usd) * 1.02,
+            low:
+              Number(data[id].usd_24h_low) ||
+              Number(data[id].usd) * 0.98,
+          };
         }
       }
-    },
-    [mainCategory]
-  );
-
-  // Trial expired popup
-  useEffect(() => {
-    if (trialExpired && subscriptionStatus === "free_trial") {
-      setShowTrialExpiredPopup(true);
     }
-  }, [trialExpired, subscriptionStatus]);
-
-  const breadcrumbData = getBreadcrumbStructuredData([
-    { name: "Home", url: "https://yourdomain.com" },
-    { name: "Live Signals Dashboard", url: "https://yourdomain.com/signals-dashboard" },
-  ]);
-
-  const subCategoryOptions: Record<string, string[]> = {
-    FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
-    COMMODITIES: ["XAU/USD (Gold)", "XAG/USD (Silver)", "Oil - Crude", "Oil - Brent", "Natural Gas", "US30", "NASDAQ", "S&P500", "DAX", "FTSE100", "Nikkei"],
-    CRYPTO: ["BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD", "ADA/USD", "SOL/USD"],
-    "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
-  };
-
-  // Infinite query for signals
-  const {
-    data: signalsData,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: ["signals-infinite", mainCategory, subCategory],
-    queryFn: async ({ pageParam = 0 }) => {
-      const { data, error } = await supabase.rpc("get_signals_filtered", {
-        p_main_category: mainCategory,
-        p_sub_category: subCategory || "all",
-        p_limit: SIGNALS_PER_PAGE,
-        p_offset: pageParam * SIGNALS_PER_PAGE,
-      });
-      if (error) throw error;
-      return {
-        data: data || [],
-        nextPage: (data?.length || 0) === SIGNALS_PER_PAGE ? pageParam + 1 : undefined,
-      };
-    },
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-    initialPageParam: 0,
-    enabled: mainCategory !== "MARKET IDEAS",
-    staleTime: 0, // Stale time set to 0 for instant live updates
-  });
-
-  const allSignals = signalsData?.pages.flatMap((page) => page.data) || [];
-  const signals = trialExpired && trialEndDate
-    ? allSignals.filter((signal) => new Date(signal.created_at) <= trialEndDate)
-    : allSignals;
-
-  // Count open/active signals per category
-  const getActiveSignalsCount = (category: string) => {
-    if (category === "MARKET IDEAS") return 0;
-    return signals?.filter(
-      (signal) => signal.main_category === category && signal.signal_status !== "CLOSE"
-    ).length || 0;
-  };
-
-  // Normalize open signal pairs to ensure API/WebSocket match
-  const openSignalPairs = signals
-    .filter((signal) => signal.signal_status !== "CLOSE")
-    .map((signal) => normalizeSymbolKey(signal.pair))
-    .filter((pair, index, arr) => arr.indexOf(pair) === index);
-
-  const { prices: livePrices } = useLivePricesFetch(openSignalPairs, openSignalPairs.length > 0);
-
-  // Realtime subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel("signals-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "signals" }, () => {
-        refetch();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refetch]);
-
-  // Infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1 }
+  } catch (error) {
+    console.log(
+      "CoinGecko failed:",
+      String(error)
     );
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }
 
-  // Chart analysis + market ideas
-  const { data: chartAnalysis, isLoading: isLoadingCharts } = useQuery({
-    queryKey: ["chart-analysis-and-ideas"],
-    queryFn: async () => {
-      const [charts, ideas] = await Promise.all([
-        supabase.from("chart_analysis").select("*").eq("published", true).order("created_at", { ascending: false }).limit(30),
-        supabase.from("market_ideas").select("*").eq("published", true).order("created_at", { ascending: false }).limit(30),
-      ]);
-      if (charts.error) throw charts.error;
-      if (ideas.error) throw ideas.error;
-      const merged = [...(charts.data || []), ...(ideas.data || [])].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      return merged;
-    },
-    enabled: mainCategory === "MARKET IDEAS",
-    staleTime: 60000,
-  });
-
-  const openLightbox = (index: number) => {
-    setSelectedChartIndex(index);
-    setLightboxOpen(true);
+  const fallback: Record<string, number> = {
+    "BTC/USD": 83500,
+    "ETH/USD": 1820,
+    "SOL/USD": 125,
+    "XRP/USD": 2.10,
+    "DOGE/USD": 0.168,
   };
 
-  // Category tabs config
-  const categoryTabs = [
-    { key: "COMMODITIES", label: "Gold" },
-    { key: "FOREX", label: "Forex" },
-    { key: "CRYPTO", label: "Crypto" },
-    { key: "DERIV/BINARY", label: "Deriv" },
-    { key: "MARKET IDEAS", label: "Ideas" },
+  for (const [pair, price] of Object.entries(
+    fallback
+  )) {
+    if (!result[pair]) {
+      result[pair] = {
+        price,
+        high: price * 1.02,
+        low: price * 0.98,
+      };
+    }
+  }
+
+  return result;
+}
+
+/* =========================================================
+   SIGNAL REASONS
+========================================================= */
+
+function pick<T>(arr: T[]): T {
+  return arr[
+    Math.floor(Math.random() * arr.length)
   ];
+}
 
+function rand(
+  min: number,
+  max: number
+): number {
   return (
-    <div className="min-h-screen flex flex-col" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <SEO
-        title="Live Signals Dashboard - Real-time Trading Signals"
-        description="Access real-time trading signals for Forex, Crypto, Commodities, and Indices."
-        keywords="live signals dashboard, trading signals, forex signals live, crypto signals real-time"
-        url="https://yourdomain.com/signals-dashboard"
-        structuredData={breadcrumbData}
-      />
-
-      <Header />
-
-      <HeadlineTicker />
-
-      <main className="flex-1">
-        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
-
-          <TrialExpiredPopup open={showTrialExpiredPopup} onClose={() => setShowTrialExpiredPopup(false)} />
-
-          {/* Category Tabs */}
-          <div className="mb-4">
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-              {categoryTabs.map((tab) => {
-                const isActive = mainCategory === tab.key;
-                const activeCount = getActiveSignalsCount(tab.key);
-                const hasActiveSignals = activeCount > 0;
-
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => handleCategoryChange(tab.key)}
-                    className={cn(
-                      "relative flex items-center gap-1.5 px-4 py-1.5 text-xs sm:text-sm font-semibold rounded-full whitespace-nowrap transition-all duration-200",
-                      "border-2",
-                      isActive
-                        ? "border-primary bg-primary/10 text-primary shadow-sm"
-                        : "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <span>{tab.label}</span>
-
-                    {hasActiveSignals && (
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                      </span>
-                    )}
-
-                    {isActive && (
-                      <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary"></span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Top Ad */}
-          {subscriptionStatus !== "premium" && (
-            <div className="mb-4">
-              <AdBanner />
-            </div>
-          )}
-
-          {/* Subcategory Filter */}
-          {mainCategory !== "MARKET IDEAS" && subCategoryOptions[mainCategory] && (
-            <div className="mb-4">
-              <select
-                value={subCategory}
-                onChange={(e) => setSubCategory(e.target.value)}
-                className="w-full sm:w-[200px] rounded-md border border-border/70 bg-muted/60 px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="all">All Pairs</option>
-                {subCategoryOptions[mainCategory].map((pair) => (
-                  <option key={pair} value={pair}>
-                    {pair}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Market Ideas */}
-          {mainCategory === "MARKET IDEAS" && (
-            <>
-              {isLoadingCharts ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {chartAnalysis?.map((analysis, index) => {
-                    const hasImage = !!analysis.image_url && String(analysis.image_url).trim() !== "";
-                    const displayTime = formatExactRealTime(analysis.created_at);
-
-                    return (
-                      <Card key={analysis.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300">
-                        {hasImage && (
-                          <div
-                            className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
-                            onClick={() => openLightbox(index)}
-                          >
-                            <img
-                              src={analysis.image_url}
-                              alt={analysis.title || "Trading idea chart"}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/15 transition-colors duration-300 flex items-center justify-center">
-                              <Button
-                                size="icon"
-                                variant="secondary"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/90 hover:bg-background"
-                              >
-                                <Maximize2 className="h-5 w-5 text-foreground" />
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                        <CardHeader className="pb-2">
-                          {analysis.title && <CardTitle className="text-lg group-hover:text-primary transition-colors">{analysis.title}</CardTitle>}
-                          <p className="text-xs text-muted-foreground">{displayTime}</p>
-                        </CardHeader>
-                        {analysis.description && (
-                          <CardContent className="pt-0 pb-2">
-                            <p className="text-sm text-muted-foreground line-clamp-2">{analysis.description}</p>
-                          </CardContent>
-                        )}
-                        <CardContent className="pt-2 border-t border-border/50">
-                          <ChartReactions chartId={analysis.id} />
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-              {chartAnalysis && chartAnalysis.length > 0 && (
-                <ChartLightbox
-                  isOpen={lightboxOpen}
-                  onClose={() => setLightboxOpen(false)}
-                  charts={chartAnalysis}
-                  initialIndex={selectedChartIndex}
-                />
-              )}
-              {!isLoadingCharts && chartAnalysis?.length === 0 && (
-                <div className="text-center py-20">
-                  <p className="text-muted-foreground text-lg">No chart analysis available</p>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Signals */}
-          {mainCategory !== "MARKET IDEAS" && (
-            <>
-              {isLoading ? (
-                <SignalsSkeleton />
-              ) : (
-                <div className="space-y-6">
-                  {signals && signals.length > 0 ? (
-                    (() => {
-                      const groupedSignals: { [key: string]: typeof signals } = {};
-                      signals.forEach((signal) => {
-                        const date = startOfDay(new Date(signal.created_at)).toISOString();
-                        if (!groupedSignals[date]) groupedSignals[date] = [];
-                        groupedSignals[date].push(signal);
-                      });
-
-                      return Object.entries(groupedSignals).map(([date, daySignals]) => (
-                        <div key={date}>
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                              {daySignals.map((signal, i) => {
-                                const key = normalizeSymbolKey(signal.pair);
-                                const currentLivePrice = livePrices[key] ? parseFloat(livePrices[key]) : undefined;
-
-                                return (
-                                  <React.Fragment key={signal.id}>
-                                    <SignalCardNew
-                                      signal={signal as any}
-                                      hasAccess={hasAccess}
-                                      subscriptionStatus={subscriptionStatus}
-                                      livePrice={currentLivePrice}
-                                    />
-                                    {(i + 1) % 3 === 0 && (
-                                      <div className="md:col-span-2">
-                                        <AffiliateBannerCarousel />
-                                      </div>
-                                    )}
-                                  </React.Fragment>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      ));
-                    })()
-                  ) : (
-                    <div className="text-center py-20">
-                      <p className="text-muted-foreground text-lg">No signals found</p>
-                    </div>
-                  )}
-                  <div ref={loadMoreRef} className="py-8 flex justify-center">
-                    {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
-                    {!hasNextPage && signals.length > 0 && (
-                      <p className="text-muted-foreground text-sm">All signals loaded</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Stats */}
-          <div className="mt-3">
-            <StreakStatsRow />
-          </div>
-
-          {/* Bottom Ad */}
-          {subscriptionStatus !== "premium" && (
-            <div className="mt-6">
-              <AdBanner />
-            </div>
-          )}
-        </div>
-      </main>
-
-      <ExnessPopup />
-      <Footer />
-    </div>
+    Math.round(
+      (min +
+        Math.random() * (max - min)) *
+        100
+    ) / 100
   );
-};
+}
 
-export default SignalsDashboard;
+const buyReasons = [
+  "Demand zone bounce with bullish engulfing",
+  "Trendline support holding on H1",
+  "Double bottom formation confirmed",
+  "RSI oversold bounce at key level",
+  "Order block retest with bullish confirmation",
+  "Golden ratio 61.8% retracement support",
+  "Bullish MACD crossover on M30",
+  "Asian session support zone holding",
+];
+
+const sellReasons = [
+  "Supply zone rejection with bearish pin bar",
+  "Resistance rejection at daily high",
+  "Bearish divergence on RSI H1",
+  "Head and shoulders pattern completing",
+  "MACD bearish crossover near resistance",
+  "Failed breakout at upper channel",
+  "Overbought conditions on H4",
+  "Distribution zone detected on volume",
+];
+
+/* =========================================================
+   GENERATE SIGNAL
+========================================================= */
+
+function generateOneOpenSignal(
+  config: SignalConfig
+) {
+  const {
+    pair,
+    category,
+    mainCategory,
+    subCategory,
+    price,
+    pipMultiplier,
+    decimals,
+  } = config;
+
+  const isBuy =
+    Math.random() < 0.5;
+
+  const type =
+    isBuy ? "Buy" : "Sell";
+
+  const spread =
+    price.high - price.low;
+
+  const entryOffset = rand(
+    -spread * 0.3,
+    spread * 0.3
+  );
+
+  const entry = Number(
+    (
+      price.price + entryOffset
+    ).toFixed(decimals)
+  );
+
+  const tp1d =
+    rand(8, 15) *
+    pipMultiplier;
+
+  const tp2d =
+    rand(18, 28) *
+    pipMultiplier;
+
+  const tp3d =
+    rand(30, 45) *
+    pipMultiplier;
+
+  const sld =
+    rand(10, 18) *
+    pipMultiplier;
+
+  const tp1 = Number(
+    (
+      isBuy
+        ? entry + tp1d
+        : entry - tp1d
+    ).toFixed(decimals)
+  );
+
+  const tp2 = Number(
+    (
+      isBuy
+        ? entry + tp2d
+        : entry - tp2d
+    ).toFixed(decimals)
+  );
+
+  const tp3 = Number(
+    (
+      isBuy
+        ? entry + tp3d
+        : entry - tp3d
+    ).toFixed(decimals)
+  );
+
+  const sl = Number(
+    (
+      isBuy
+        ? entry - sld
+        : entry + sld
+    ).toFixed(decimals)
+  );
+
+  const now =
+    new Date().toISOString();
+
+  return {
+    pair,
+    type,
+
+    category,
+    main_category:
+      mainCategory,
+    sub_category:
+      subCategory,
+
+    entry:
+      entry.toString(),
+
+    tp1:
+      tp1.toString(),
+
+    tp2:
+      tp2.toString(),
+
+    tp3:
+      tp3.toString(),
+
+    sl:
+      sl.toString(),
+
+    status: "open",
+    signal_status: "open",
+
+    is_premium:
+      Math.random() < 0.25,
+
+    is_activated: true,
+
+    activated_at: now,
+
+    entry_mode: "market",
+
+    signal_type: pick([
+      "Scalping",
+      "Intraday",
+      "Swing",
+    ]),
+
+    risk_level: pick([
+      "Low",
+      "Medium",
+      "High",
+    ]),
+
+    analysis_reason:
+      isBuy
+        ? pick(buyReasons)
+        : pick(sellReasons),
+
+    tag: null,
+    signal_raw_text: null,
+
+    published: true,
+
+    created_at: now,
+
+    tp1_hit: false,
+    tp2_hit: false,
+    tp3_hit: false,
+
+    profit_note: null,
+  };
+}
+
+/* =========================================================
+   CHECK SIGNAL ELIGIBILITY
+========================================================= */
+
+async function evaluatePair(
+  supabase: ReturnType<
+    typeof createClient
+  >,
+  pair: string,
+  currentPrice: number,
+  thresholdPct: number
+): Promise<{
+  generate: boolean;
+  reason: string;
+  pctMove?: number;
+}> {
+  const { data: active } =
+    await supabase
+      .from("signals")
+      .select("id")
+      .eq("pair", pair)
+      .not(
+        "signal_status",
+        "ilike",
+        "close"
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (active) {
+    return {
+      generate: false,
+      reason:
+        "signal_still_open",
+    };
+  }
+
+  const { data: last } =
+    await supabase
+      .from("signals")
+      .select(
+        "entry,created_at"
+      )
+      .eq("pair", pair)
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (!last?.entry) {
+    return {
+      generate: true,
+      reason:
+        "no_prior_signal",
+    };
+  }
+
+  const lastPrice =
+    parseFloat(
+      String(last.entry)
+    );
+
+  if (
+    !Number.isFinite(lastPrice) ||
+    lastPrice <= 0
+  ) {
+    return {
+      generate: true,
+      reason:
+        "invalid_previous_price",
+    };
+  }
+
+  const pctMove =
+    Math.abs(
+      (currentPrice -
+        lastPrice) /
+        lastPrice
+    ) * 100;
+
+  if (
+    pctMove >=
+    thresholdPct
+  ) {
+    return {
+      generate: true,
+      reason:
+        "movement_detected",
+      pctMove:
+        Number(
+          pctMove.toFixed(4)
+        ),
+    };
+  }
+
+  return {
+    generate: false,
+    reason:
+      "no_significant_movement",
+    pctMove:
+      Number(
+        pctMove.toFixed(4)
+      ),
+  };
+}
+
+/* =========================================================
+   TELEGRAM AUTO POST
+========================================================= */
+
+async function postTelegram(
+  signal: any,
+  supabaseUrl: string,
+  serviceRoleKey: string
+) {
+  try {
+    const response =
+      await fetch(
+        `${supabaseUrl}/functions/v1/telegram-signal-post`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${serviceRoleKey}`,
+          },
+
+          body: JSON.stringify({
+            signal,
+            action:
+              "new_signal",
+          }),
+        }
+      );
+
+    const json =
+      await response
+        .json()
+        .catch(() => ({}));
+
+    console.log(
+      `Telegram ${signal.pair}:`,
+      response.status,
+      json
+    );
+
+    return (
+      response.ok &&
+      json?.success === true
+    );
+  } catch (error) {
+    console.error(
+      `Telegram error ${signal.pair}:`,
+      String(error)
+    );
+
+    return false;
+  }
+}
+
+/* =========================================================
+   SERVER
+========================================================= */
+
+Deno.serve(
+  async (req) => {
+    if (
+      req.method ===
+      "OPTIONS"
+    ) {
+      return new Response(
+        "ok",
+        {
+          headers:
+            corsHeaders,
+        }
+      );
+    }
+
+    try {
+      const supabaseUrl =
+        Deno.env.get(
+          "SUPABASE_URL"
+        )!;
+
+      const serviceRoleKey =
+        Deno.env.get(
+          "SUPABASE_SERVICE_ROLE_KEY"
+        )!;
+
+      const supabase =
+        createClient(
+          supabaseUrl,
+          serviceRoleKey
+        );
+
+      /* =====================================================
+         SESSION
+      ===================================================== */
+
+      const pktHour =
+        (new Date().getUTCHours() +
+          5) %
+        24;
+
+      const session:
+        | "morning"
+        | "evening" =
+        pktHour < 12
+          ? "morning"
+          : "evening";
+
+      /* =====================================================
+         PAIRS
+      ===================================================== */
+
+      const forexPairPool = [
+        "EUR/USD",
+        "GBP/USD",
+        "USD/JPY",
+        "AUD/USD",
+        "GBP/JPY",
+      ];
+
+      const cryptoPairPool = [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+      ];
+
+      /*
+       * IMPORTANT:
+       * These names EXACTLY match dashboard.
+       */
+
+      const goldPair =
+        "XAU/USD (Gold)";
+
+      const silverPair =
+        "XAG/USD (Silver)";
+
+      const derivPairNames = [
+        "BOOM 1000",
+        "CRASH 1000",
+        "VOL 75",
+        "BOOM 500",
+      ];
+
+      /* =====================================================
+         EXTERNAL MARKET DATA
+      ===================================================== */
+
+      const [
+        goldMarket,
+        silverMarket,
+        cryptoPrices,
+        ...forexResults
+      ] = await Promise.all([
+        fetchMetalPrice(
+          "XAU/USD"
+        ),
+
+        fetchMetalPrice(
+          "XAG/USD"
+        ),
+
+        fetchCryptoPrices(),
+
+        ...forexPairPool.map(
+          async (pair) => ({
+            pair,
+            data:
+              await fetchMarketPrice(
+                pair
+              ),
+          })
+        ),
+      ]);
+
+      /* =====================================================
+         GET ALL MT5 PRICES
+      ===================================================== */
+
+      const mt5Pairs = [
+        goldPair,
+        silverPair,
+        ...forexPairPool,
+        ...cryptoPairPool,
+        ...derivPairNames,
+      ];
+
+      const mt5Prices =
+        await fetchMT5Prices(
+          mt5Pairs,
+          supabaseUrl,
+          serviceRoleKey
+        );
+
+      console.log(
+        "ALL REQUESTED MT5 PAIRS:",
+        mt5Pairs
+      );
+
+      console.log(
+        "ALL RETURNED MT5 PRICES:",
+        mt5Prices
+      );
+
+      /* =====================================================
+         CANDIDATES
+      ===================================================== */
+
+      const candidates:
+        SignalConfig[] = [];
+
+      /* =====================================================
+         GOLD
+      ===================================================== */
+
+      if (
+        mt5Prices[goldPair]
+      ) {
+        const p =
+          mt5Prices[
+            goldPair
+          ];
+
+        candidates.push({
+          pair:
+            goldPair,
+
+          category:
+            "COMMODITIES",
+
+          mainCategory:
+            "COMMODITIES",
+
+          subCategory:
+            goldPair,
+
+          price: {
+            price: p,
+            high:
+              p +
+              Math.max(
+                10,
+                Math.abs(
+                  goldMarket.high -
+                    goldMarket.price
+                )
+              ),
+            low:
+              p -
+              Math.max(
+                10,
+                Math.abs(
+                  goldMarket.price -
+                    goldMarket.low
+                )
+              ),
+          },
+
+          pipMultiplier: 1,
+          decimals: 2,
+          thresholdPct: 0.12,
+        });
+
+        console.log(
+          "GOLD CANDIDATE ADDED:",
+          p
+        );
+      } else {
+        console.log(
+          "GOLD SKIPPED - NO MT5 PRICE:",
+          goldPair
+        );
+      }
+
+      /* =====================================================
+         SILVER
+      ===================================================== */
+
+      if (
+        mt5Prices[silverPair]
+      ) {
+        const p =
+          mt5Prices[
+            silverPair
+          ];
+
+        candidates.push({
+          pair:
+            silverPair,
+
+          category:
+            "COMMODITIES",
+
+          mainCategory:
+            "COMMODITIES",
+
+          subCategory:
+            silverPair,
+
+          price: {
+            price: p,
+            high:
+              p +
+              Math.max(
+                0.5,
+                Math.abs(
+                  silverMarket.high -
+                    silverMarket.price
+                )
+              ),
+            low:
+              p -
+              Math.max(
+                0.5,
+                Math.abs(
+                  silverMarket.price -
+                    silverMarket.low
+                )
+              ),
+          },
+
+          pipMultiplier: 0.01,
+          decimals: 3,
+          thresholdPct: 0.20,
+        });
+
+        console.log(
+          "SILVER CANDIDATE ADDED:",
+          p
+        );
+      } else {
+        console.log(
+          "SILVER SKIPPED - NO MT5 PRICE:",
+          silverPair
+        );
+      }
+
+      /* =====================================================
+         FOREX
+      ===================================================== */
+
+      for (
+        const fr of forexResults
+      ) {
+        if (
+          !mt5Prices[
+            fr.pair
+          ]
+        ) {
+          console.log(
+            "FOREX skipped:",
+            fr.pair
+          );
+          continue;
+        }
+
+        const isJpy =
+          fr.pair.includes(
+            "JPY"
+          );
+
+        const mt5Price =
+          mt5Prices[
+            fr.pair
+          ];
+
+        candidates.push({
+          pair:
+            fr.pair,
+
+          category:
+            "FOREX",
+
+          mainCategory:
+            "FOREX",
+
+          subCategory:
+            fr.pair,
+
+          price: {
+            price:
+              mt5Price,
+
+            high:
+              mt5Price +
+              Math.abs(
+                fr.data.high -
+                  fr.data.price
+              ),
+
+            low:
+              mt5Price -
+              Math.abs(
+                fr.data.price -
+                  fr.data.low
+              ),
+          },
+
+          pipMultiplier:
+            isJpy
+              ? 0.1
+              : 0.001,
+
+          decimals:
+            isJpy
+              ? 3
+              : 5,
+
+          thresholdPct:
+            0.12,
+        });
+      }
+
+      /* =====================================================
+         CRYPTO
+      ===================================================== */
+
+      for (
+        const pair of cryptoPairPool
+      ) {
+        if (
+          !mt5Prices[pair]
+        ) {
+          console.log(
+            "CRYPTO skipped:",
+            pair
+          );
+          continue;
+        }
+
+        const pd =
+          cryptoPrices[
+            pair
+          ];
+
+        if (!pd) continue;
+
+        const mt5Price =
+          mt5Prices[pair];
+
+        const isSmall =
+          mt5Price < 10;
+
+        candidates.push({
+          pair,
+
+          category:
+            "CRYPTO",
+
+          mainCategory:
+            "CRYPTO",
+
+          subCategory:
+            pair,
+
+          price: {
+            price:
+              mt5Price,
+
+            high:
+              mt5Price +
+              Math.abs(
+                pd.high -
+                  pd.price
+              ),
+
+            low:
+              mt5Price -
+              Math.abs(
+                pd.price -
+                  pd.low
+              ),
+          },
+
+          pipMultiplier:
+            mt5Price > 1000
+              ? 100
+              : mt5Price > 50
+              ? 1
+              : 0.01,
+
+          decimals:
+            isSmall
+              ? 4
+              : mt5Price > 1000
+              ? 2
+              : 2,
+
+          thresholdPct:
+            0.4,
+        });
+      }
+
+      /* =====================================================
+         DERIV
+      ===================================================== */
+
+      const derivPipMap:
+        Record<string, number> =
+        {
+          "BOOM 1000": 10,
+          "CRASH 1000": 10,
+          "VOL 75": 1,
+          "BOOM 500": 10,
+        };
+
+      for (
+        const pair of derivPairNames
+      ) {
+        const p =
+          mt5Prices[pair];
+
+        if (
+          !p ||
+          p <= 0
+        ) {
+          console.log(
+            "DERIV skipped:",
+            pair
+          );
+          continue;
+        }
+
+        candidates.push({
+          pair,
+
+          category:
+            "DERIV",
+
+          mainCategory:
+            "DERIV/BINARY",
+
+          subCategory:
+            pair,
+
+          price: {
+            price: p,
+            high:
+              p * 1.002,
+            low:
+              p * 0.998,
+          },
+
+          pipMultiplier:
+            derivPipMap[
+              pair
+            ] || 1,
+
+          decimals: 0,
+
+          thresholdPct:
+            0.15,
+        });
+      }
+
+      console.log(
+        "TOTAL CANDIDATES:",
+        candidates.map(
+          (c) =>
+            `${c.pair} -> ${c.mainCategory}`
+        )
+      );
+
+      /* =====================================================
+         EVALUATE
+      ===================================================== */
+
+      const newSignals:
+        any[] = [];
+
+      const decisions:
+        Record<
+          string,
+          any
+        > = {};
+
+      for (
+        const candidate of
+          candidates
+      ) {
+        const result =
+          await evaluatePair(
+            supabase,
+            candidate.pair,
+            candidate.price.price,
+            candidate.thresholdPct
+          );
+
+        decisions[
+          candidate.pair
+        ] = {
+          generated:
+            result.generate,
+
+          reason:
+            result.reason,
+
+          pctMove:
+            result.pctMove,
+        };
+
+        if (
+          result.generate
+        ) {
+          newSignals.push(
+            generateOneOpenSignal(
+              candidate
+            )
+          );
+        }
+      }
+
+      /* =====================================================
+         NO SIGNAL
+      ===================================================== */
+
+      if (
+        newSignals.length ===
+        0
+      ) {
+        console.log(
+          "No signals generated."
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            generated: false,
+            signals_created: 0,
+            session,
+            candidates:
+              candidates.map(
+                (c) => c.pair
+              ),
+            decisions,
+          }),
+          {
+            headers: {
+              ...corsHeaders,
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+      }
+
+      /* =====================================================
+         INSERT
+      ===================================================== */
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("signals")
+        .insert(
+          newSignals
+        )
+        .select(
+          "id,pair,type,entry,tp1,tp2,tp3,sl,risk_level,signal_type,analysis_reason,category,main_category,sub_category"
+        );
+
+      if (error) {
+        console.error(
+          "Signal insert error:",
+          error
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "Failed to insert signals",
+            details:
+              error.message,
+          }),
+          {
+            status: 500,
+            headers: {
+              ...corsHeaders,
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+      }
+
+      /* =====================================================
+         TELEGRAM
+      ===================================================== */
+
+      const telegramResults:
+        Record<
+          string,
+          boolean
+        > = {};
+
+      if (
+        data &&
+        data.length > 0
+      ) {
+        await Promise.allSettled(
+          data.map(
+            async (signal) => {
+              const success =
+                await postTelegram(
+                  signal,
+                  supabaseUrl,
+                  serviceRoleKey
+                );
+
+              telegramResults[
+                signal.pair
+              ] = success;
+            }
+          )
+        );
+      }
+
+      /* =====================================================
+         RESPONSE
+      ===================================================== */
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+
+          generated: true,
+
+          session,
+
+          signals_created:
+            data?.length || 0,
+
+          telegram_posted:
+            telegramResults,
+
+          candidates:
+            candidates.map(
+              (c) => ({
+                pair:
+                  c.pair,
+
+                category:
+                  c.mainCategory,
+              })
+            ),
+
+          decisions,
+
+          signals:
+            data || [],
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+    } catch (error) {
+      console.error(
+        "auto-generate-signals error:",
+        error
+      );
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Internal server error",
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+    }
+  }
+);
