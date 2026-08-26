@@ -4,75 +4,136 @@ interface SignalProps {
   signal: {
     id: string;
     symbol: string;
-    type: "BUY" | "SELL";
-    entryPrice: number;
-    stopLoss: number;
-    takeProfit: number;
-    status: "OPEN" | "ACTIVE" | "CLOSED";
-    currentPrice?: number;
+    type: string;
+    entry: number | string;
+    stopLoss: number | string;
+    tp1: number | string;
+    tp2?: number | string;
+    tp3?: number | string;
+    status: string;
+    current?: number | string;
+    time?: string;
   };
-  livePrices?: Record<string, number>; // Dynamic real-time broker feeds
 }
 
-export const SignalCard: React.FC<SignalProps> = ({ signal, livePrices }) => {
-  // Normalize symbol (e.g. XAUUSD vs XAUUSD.m)
-  const cleanSymbol = signal.symbol ? signal.symbol.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() : "";
+// Custom Clean Symbol Helper (e.g., "XAUUSD (Gold)" -> "XAUUSD")
+const cleanSymbolKey = (str: string) => {
+  if (!str) return "";
+  return str.split(" ")[0].replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+};
 
-  // Extract live price dynamically from incoming state or websocket map
-  const livePrice = 
-    livePrices?.[signal.symbol] || 
-    livePrices?.[cleanSymbol] || 
-    signal.currentPrice || 
-    signal.entryPrice;
+export const SignalCard: React.FC<SignalProps> = ({ signal }) => {
+  const [livePrice, setLivePrice] = useState<number>(
+    Number(signal.current || signal.entry || 0)
+  );
+  const [isPriceUp, setIsPriceUp] = useState<boolean | null>(null);
 
-  const isBuy = signal.type.toUpperCase() === "BUY";
-  
-  // Calculate Live PnL Pip Difference
-  const pipsDifference = isBuy
-    ? (livePrice - signal.entryPrice)
-    : (signal.entryPrice - livePrice);
+  useEffect(() => {
+    const activeSymbol = cleanSymbolKey(signal.symbol);
 
-  const isProfit = pipsDifference >= 0;
+    // MetaAPI / Custom Price Stream WebSocket Relay URL
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "wss://your-api-domain.com/ws";
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ action: "subscribe", symbol: activeSymbol }));
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (cleanSymbolKey(data.symbol) === activeSymbol && data.price) {
+          const newPrice = Number(data.price);
+          setLivePrice((prev) => {
+            if (newPrice !== prev) {
+              setIsPriceUp(newPrice > prev);
+            }
+            return newPrice;
+          });
+        }
+      } catch (err) {
+        console.error("WS Parse Error:", err);
+      }
+    };
+
+    return () => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+    };
+  }, [signal.symbol]);
+
+  const entryVal = Number(signal.entry || 0);
+  const currentVal = livePrice || entryVal;
+  const isBuy = String(signal.type).toUpperCase() === "BUY";
+  const isProfit = isBuy ? currentVal >= entryVal : currentVal <= entryVal;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg text-white mb-4">
+    <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-4">
+      {/* Header */}
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-lg tracking-wide">{signal.symbol}</span>
+          <span className="font-bold text-gray-800 text-base">{signal.symbol}</span>
+        </div>
+        <div className="flex items-center gap-2">
           <span
-            className={`text-xs px-2 py-0.5 rounded font-semibold ${
-              isBuy ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+              signal.status === "OPEN"
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-rose-50 text-rose-500"
             }`}
           >
-            {signal.type}
+            • {signal.status}
           </span>
         </div>
-        <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full border border-blue-500/20 font-medium animate-pulse">
-          {signal.status}
-        </span>
       </div>
 
-      {/* Real-time Price Metric Section */}
-      <div className="grid grid-cols-2 gap-3 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 mb-3">
+      {/* Price Grid */}
+      <div className="bg-slate-50 rounded-xl p-3 grid grid-cols-2 gap-2 mb-3 border border-slate-100">
         <div>
-          <p className="text-xs text-slate-400 mb-0.5">Entry Price</p>
-          <p className="font-semibold text-sm text-slate-200">{signal.entryPrice.toFixed(2)}</p>
+          <p className="text-[10px] text-gray-400 font-semibold uppercase">ENTRY</p>
+          <p className="font-bold text-gray-700 text-base">{entryVal.toFixed(2)}</p>
         </div>
+
         <div>
-          <p className="text-xs text-slate-400 mb-0.5">Current / Real Price</p>
-          <p className={`font-bold text-sm ${isProfit ? "text-emerald-400" : "text-rose-400"}`}>
-            {livePrice ? livePrice.toFixed(2) : "Fetching..."}
+          <div className="flex items-center gap-1">
+            <p className="text-[10px] text-gray-400 font-semibold uppercase">CURRENT</p>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+          </div>
+          <p
+            className={`font-bold text-base transition-colors duration-300 ${
+              isPriceUp === true
+                ? "text-emerald-500"
+                : isPriceUp === false
+                ? "text-rose-500"
+                : isProfit
+                ? "text-emerald-500"
+                : "text-rose-500"
+            }`}
+          >
+            {currentVal.toFixed(2)}
           </p>
         </div>
       </div>
 
-      {/* Target & Stop Loss Levels */}
-      <div className="flex justify-between text-xs text-slate-400 px-1">
-        <span>SL: <strong className="text-rose-400">{signal.stopLoss}</strong></span>
-        <span>TP: <strong className="text-emerald-400">{signal.takeProfit}</strong></span>
-        <span>P&L: <strong className={isProfit ? "text-emerald-400" : "text-rose-400"}>
-          {pipsDifference > 0 ? `+${pipsDifference.toFixed(2)}` : pipsDifference.toFixed(2)}
-        </strong></span>
+      {/* Levels */}
+      <div className="grid grid-cols-4 text-center text-[11px]">
+        <div>
+          <span className="text-gray-400 block">SL</span>
+          <span className="font-bold text-rose-500">{signal.stopLoss}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 block">TP 1</span>
+          <span className="font-bold text-blue-500">{signal.tp1}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 block">TP 2</span>
+          <span className="font-bold text-blue-500">{signal.tp2 || "-"}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 block">TP 3</span>
+          <span className="font-bold text-blue-500">{signal.tp3 || "-"}</span>
+        </div>
       </div>
     </div>
   );
