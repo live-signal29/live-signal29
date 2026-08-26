@@ -445,13 +445,46 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data, error } = await supabase.from("signals").insert(newSignals).select("id, pair, type, entry, category");
+    const { data, error } = await supabase.from("signals").insert(newSignals).select(
+      "id, pair, type, entry, tp1, tp2, tp3, sl, risk_level, signal_type, analysis_reason, category"
+    );
 
     if (error) {
       console.error("Insert error:", error);
       return new Response(
         JSON.stringify({ error: "Failed to insert signals", details: error.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Auto-post every freshly inserted signal to Telegram ──
+    // Previously nothing called telegram-signal-post automatically — only a
+    // manual admin action could trigger it, so cron-generated signals never
+    // reached the channel. Post each one now; a Telegram failure here should
+    // never fail the signal-generation response, so failures are only logged.
+    const telegramResults: Record<string, boolean> = {};
+    if (data && data.length > 0) {
+      await Promise.allSettled(
+        data.map(async (sig) => {
+          try {
+            const resp = await fetch(`${supabaseUrl}/functions/v1/telegram-signal-post`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${serviceRoleKey}`,
+              },
+              body: JSON.stringify({ signal: sig, action: "new_signal" }),
+            });
+            const json = await resp.json().catch(() => ({}));
+            telegramResults[sig.pair] = resp.ok && json?.success === true;
+            if (!telegramResults[sig.pair]) {
+              console.log(`Telegram post failed for ${sig.pair}:`, resp.status, json);
+            }
+          } catch (e) {
+            telegramResults[sig.pair] = false;
+            console.log(`Telegram post error for ${sig.pair}:`, String(e));
+          }
+        })
       );
     }
 
@@ -462,6 +495,7 @@ Deno.serve(async (req) => {
         session,
         signals_created: data?.length || 0,
         decisions,
+        telegram_posted: telegramResults,
         signals: data,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
