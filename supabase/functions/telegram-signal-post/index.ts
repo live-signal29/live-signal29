@@ -48,9 +48,6 @@ async function sendTelegramMessage(message: string): Promise<boolean> {
     );
 
     const result = await response.json();
-
-    console.log("Telegram response:", result);
-
     return response.ok && result.ok === true;
   } catch (error) {
     console.error("Telegram request error:", error);
@@ -58,54 +55,68 @@ async function sendTelegramMessage(message: string): Promise<boolean> {
   }
 }
 
+// 1. Naye Signal Ka Format
 function formatSignalMessage(signal: Signal): string {
   const type = String(signal.type || "").toUpperCase();
-
   const emoji = type === "BUY" ? "🟢" : "🔴";
   const actionEmoji = type === "BUY" ? "🚀 BUY NOW" : "📉 SELL NOW";
 
-  const riskEmoji =
-    signal.risk_level === "High"
-      ? "🔥 High"
-      : signal.risk_level === "Medium"
-      ? "⚡ Medium"
-      : "🛡️ Low";
-
   let message = `${emoji} <b>VIP TRADING SIGNAL</b> ${emoji}\n\n`;
-
   message += `📊 Asset: <b>${signal.pair}</b>\n`;
   message += `📈 Action: <b>${actionEmoji}</b>\n\n`;
 
   message += `💰 Entry Zone: <code>${signal.entry}</code>\n`;
   message += `🎯 TP 1: <code>${signal.tp1}</code>\n`;
 
-  if (signal.tp2) {
-    message += `🎯 TP 2: <code>${signal.tp2}</code>\n`;
-  }
-
-  if (signal.tp3) {
-    message += `🎯 TP 3: <code>${signal.tp3}</code>\n`;
-  }
-
-  if (signal.tp4) {
-    message += `🎯 TP 4: <code>${signal.tp4}</code>\n`;
-  }
+  if (signal.tp2) message += `🎯 TP 2: <code>${signal.tp2}</code>\n`;
+  if (signal.tp3) message += `🎯 TP 3: <code>${signal.tp3}</code>\n`;
+  if (signal.tp4) message += `🎯 TP 4: <code>${signal.tp4}</code>\n`;
 
   message += `🛑 Stop Loss: <code>${signal.sl}</code>\n\n`;
 
-  if (signal.risk_level) {
-    message += `${riskEmoji} Risk Level\n`;
-  }
-
-  if (signal.signal_type) {
-    message += `⏱ Trade Type: <b>${signal.signal_type}</b>\n`;
-  }
-
-  if (signal.analysis_reason) {
-    message += `\n📝 <i>${signal.analysis_reason}</i>\n`;
-  }
+  if (signal.risk_level) message += `⚡ Risk Level: <b>${signal.risk_level}</b>\n`;
+  if (signal.signal_type) message += `⏱ Trade Type: <b>${signal.signal_type}</b>\n`;
+  if (signal.analysis_reason) message += `\n📝 <i>${signal.analysis_reason}</i>\n`;
 
   message += `\n💡 <b>Auto Note:</b> TP1 hit hone par SL entry level par shift kar dein.\n`;
+  message += `\n━━━━━━━━━━━━━━━\n`;
+  message += `🌐 <b><a href="https://unlimiteddownload.vercel.app">TREND IS FRIEND</a></b>`;
+
+  return message;
+}
+
+// 2. TP / SL Hit Update Ka Format
+function formatUpdateMessage(signal: Signal, status: string): string {
+  let title = "TRADE UPDATE";
+  let icon = "🎯";
+
+  const upperStatus = status.toUpperCase();
+
+  if (upperStatus === "TP1") {
+    icon = "🎯";
+    title = "TP 1 HIT! 🚀";
+  } else if (upperStatus === "TP2") {
+    icon = "🔥";
+    title = "TP 2 HIT! 🔥";
+  } else if (upperStatus === "TP3") {
+    icon = "💰";
+    title = "TP 3 HIT! 💰";
+  } else if (upperStatus === "SL") {
+    icon = "🛑";
+    title = "STOP LOSS HIT ⚠️";
+  }
+
+  let message = `${icon} <b>${title}</b> ${icon}\n\n`;
+  message += `📊 Asset: <b>${signal.pair}</b>\n`;
+  message += `📈 Type: <b>${signal.type.toUpperCase()}</b>\n`;
+  message += `💰 Entry: <code>${signal.entry}</code>\n\n`;
+
+  if (upperStatus.startsWith("TP")) {
+    message += `✅ Target Achieved: <b>${upperStatus}</b>\n`;
+    message += `💡 <i>Tip: Risk free karne ke liye SL entry price (Break-Even) par shift kar lein!</i>\n`;
+  } else {
+    message += `❌ Trade Closed at Stop Loss.\n`;
+  }
 
   message += `\n━━━━━━━━━━━━━━━\n`;
   message += `🌐 <b><a href="https://unlimiteddownload.vercel.app">TREND IS FRIEND</a></b>`;
@@ -115,85 +126,52 @@ function formatSignalMessage(signal: Signal): string {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const body = await req.json();
-
-    const { signal, action } = body;
+    const { signal, action, status } = body;
 
     if (!signal) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Signal data required",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
+        JSON.stringify({ success: false, error: "Signal data required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (action !== "new_signal") {
+    let message = "";
+
+    if (action === "new_signal") {
+      message = formatSignalMessage(signal);
+    } else if (action === "update_signal" && status) {
+      message = formatUpdateMessage(signal, status);
+    } else {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Invalid action",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
+        JSON.stringify({ success: false, error: "Invalid action or missing status" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const message = formatSignalMessage(signal);
 
     const success = await sendTelegramMessage(message);
 
     return new Response(
       JSON.stringify({
         success,
-        message: success
-          ? "Telegram signal sent"
-          : "Telegram signal failed",
+        message: success ? "Telegram post sent" : "Telegram post failed",
       }),
       {
         status: success ? 200 : 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error("Telegram function error:", error);
-
     return new Response(
       JSON.stringify({
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Internal server error",
+        error: error instanceof Error ? error.message : "Internal server error",
       }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
