@@ -309,25 +309,38 @@ Deno.serve(async (req) => {
     const mt5PairNames = [goldPairName, ...forexPairPool, ...cryptoPairPool];
     const mt5Prices = await fetchMT5Prices(mt5PairNames, supabaseUrl, serviceRoleKey);
 
+    // Strict: if the real MT5 quote isn't available for a pair this run, we
+    // do NOT fall back to Yahoo/CoinGecko for a NEW signal's entry anymore.
+    // A mismatched entry (vs. the real price fetch-live-prices checks TP/SL
+    // against every minute) was causing signals to look like they hit TP/SL
+    // "instantly" with no real movement — because they were never anchored
+    // to the real price to begin with. Better to skip a pair for one cycle
+    // than generate another bad-entry signal. hasMT5Price tracks this.
+    let goldHasMT5 = false;
     if (mt5Prices[goldPairName]) {
       Object.assign(goldPrice, recenterOnMT5(goldPrice, mt5Prices[goldPairName]));
+      goldHasMT5 = true;
     } else {
-      console.log("No MT5 price for gold — using Yahoo/metals.dev fallback.");
+      console.log("No MT5 price for gold this run — skipping gold signal generation.");
     }
 
+    const forexHasMT5: Record<string, boolean> = {};
     for (const fr of forexResults) {
       if (mt5Prices[fr.pair]) {
         Object.assign(fr.data, recenterOnMT5(fr.data, mt5Prices[fr.pair]));
+        forexHasMT5[fr.pair] = true;
       } else {
-        console.log(`No MT5 price for ${fr.pair} — using Yahoo fallback.`);
+        console.log(`No MT5 price for ${fr.pair} this run — skipping ${fr.pair} signal generation.`);
       }
     }
 
+    const cryptoHasMT5: Record<string, boolean> = {};
     for (const cp of cryptoPairPool) {
       if (cryptoPrices[cp] && mt5Prices[cp]) {
         Object.assign(cryptoPrices[cp], recenterOnMT5(cryptoPrices[cp], mt5Prices[cp]));
+        cryptoHasMT5[cp] = true;
       } else if (cryptoPrices[cp]) {
-        console.log(`No MT5 price for ${cp} — using CoinGecko fallback.`);
+        console.log(`No MT5 price for ${cp} this run — skipping ${cp} signal generation.`);
       }
     }
 
@@ -371,13 +384,16 @@ Deno.serve(async (req) => {
     // ── Build the full candidate list with per-category thresholds ──
     const candidates: SignalConfig[] = [];
 
-    candidates.push({
-      pair: goldPairName, category: "COMMODITIES", mainCategory: "COMMODITIES",
-      subCategory: goldPairName, price: goldPrice, pipMultiplier: 1, decimals: 0,
-      thresholdPct: 0.12,
-    });
+    if (goldHasMT5) {
+      candidates.push({
+        pair: goldPairName, category: "COMMODITIES", mainCategory: "COMMODITIES",
+        subCategory: goldPairName, price: goldPrice, pipMultiplier: 1, decimals: 0,
+        thresholdPct: 0.12,
+      });
+    }
 
     for (const fr of forexResults) {
+      if (!forexHasMT5[fr.pair]) continue;
       const isJpy = fr.pair.includes("JPY");
       candidates.push({
         pair: fr.pair, category: "FOREX", mainCategory: "FOREX", subCategory: fr.pair,
@@ -387,6 +403,7 @@ Deno.serve(async (req) => {
     }
 
     for (const cp of cryptoPairPool) {
+      if (!cryptoHasMT5[cp]) continue;
       const pd = cryptoPrices[cp];
       if (!pd) continue;
       const isSmall = pd.price < 10;
