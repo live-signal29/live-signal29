@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Clock,
   AlertCircle,
@@ -86,6 +87,7 @@ const SignalCardNew = ({
   subscriptionStatus,
   livePrice,
 }: SignalCardProps) => {
+  const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
 
   const confettiFiredRef = useRef(false);
@@ -995,18 +997,19 @@ const SignalCardNew = ({
       </div>
 
       {/* ======================================================
-          PREMIUM LOCKED VIEW
+          PREMIUM LOCKED VIEW (FIXED WITH CLICK HANDLER)
           ====================================================== */}
 
       {isLocked ? (
-        <div className="flex flex-col items-center justify-center gap-1.5 py-4 bg-muted/20 rounded-[9px] border border-dashed border-border/60">
+        <div 
+          onClick={() => navigate("/premium")}
+          className="flex flex-col items-center justify-center gap-1.5 py-4 bg-muted/20 hover:bg-muted/30 active:scale-[0.98] rounded-[9px] border border-dashed border-border/60 cursor-pointer transition-all select-none"
+        >
+          <Lock className="h-4 w-4 text-amber-500 pointer-events-none" />
 
-          <Lock className="h-4 w-4 text-amber-500" />
-
-          <span className="text-[10px] font-bold text-muted-foreground">
+          <span className="text-[10px] font-bold text-muted-foreground pointer-events-none">
             🔒 Premium Signal - Tap to Unlock
           </span>
-
         </div>
       ) : (
         <>
