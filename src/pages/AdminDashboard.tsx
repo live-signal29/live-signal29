@@ -32,7 +32,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("signals");
+  const [activeTab, setActiveTab] = useState("signals"); // Track active tab
   const [showSignalForm, setShowSignalForm] = useState(false);
   const [showChartForm, setShowChartForm] = useState(false);
 
@@ -48,10 +48,10 @@ const AdminDashboard = () => {
         }
 
         const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
           .maybeSingle();
 
         if (!roles) {
