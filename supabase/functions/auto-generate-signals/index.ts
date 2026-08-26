@@ -11,6 +11,47 @@ interface PriceData {
   low: number;
 }
 
+// ── Real MT5 broker prices (same feed the app uses for "CURRENT" price) ──
+// Fetches every candidate pair from the fetch-live-prices function in ONE
+// call, so gold/forex/crypto signals get generated off the actual MT5 quote
+// instead of an external Yahoo/CoinGecko feed that can drift from the broker.
+async function fetchMT5Prices(
+  pairs: string[],
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<Record<string, number>> {
+  const result: Record<string, number> = {};
+  try {
+    const resp = await fetch(
+      `${supabaseUrl}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(pairs.join(","))}`,
+      { headers: { Authorization: `Bearer ${serviceRoleKey}` } }
+    );
+    if (resp.ok) {
+      const json = await resp.json();
+      const prices: Record<string, string> = json?.prices || {};
+      for (const pair of pairs) {
+        const raw = prices[pair];
+        const p = raw ? parseFloat(raw) : NaN;
+        if (p && p > 0) result[pair] = p;
+      }
+    } else {
+      console.log("fetch-live-prices (MT5) call failed:", resp.status);
+    }
+  } catch (e) {
+    console.log("MT5 price fetch error:", String(e));
+  }
+  return result;
+}
+
+// Re-centers a PriceData on the real MT5 price while keeping the original
+// spread width (so TP/SL sizing logic downstream is unaffected) — only the
+// entry anchor point moves to match the live broker quote.
+function recenterOnMT5(pd: PriceData, mt5Price: number): PriceData {
+  const upWidth = pd.high - pd.price;
+  const downWidth = pd.price - pd.low;
+  return { price: mt5Price, high: mt5Price + upWidth, low: mt5Price - downWidth };
+}
+
 // ── Gold price from Yahoo Finance / metals.dev fallback ──
 async function fetchGoldPrice(): Promise<PriceData> {
   try {
@@ -249,15 +290,46 @@ Deno.serve(async (req) => {
     const pktHour = (new Date().getUTCHours() + 5) % 24;
     const session: "morning" | "evening" = pktHour < 12 ? "morning" : "evening";
 
-    // ── Fetch live prices for every candidate pair (real feeds where available) ──
+    // ── Fetch shape/volatility data for every candidate pair (external feeds) ──
     const forexPairPool = ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "GBP/JPY"];
     const cryptoPairPool = ["BTC/USD", "ETH/USD", "SOL/USD"];
+    const goldPairName = "XAU/USD (Gold)";
 
     const [goldPrice, cryptoPrices, ...forexResults] = await Promise.all([
       fetchGoldPrice(),
       fetchCryptoPrices(),
       ...forexPairPool.map((p) => fetchForexPrice(p).then((pd) => ({ pair: p, data: pd }))),
     ]);
+
+    // ── Pull the REAL MT5 broker quote for gold/forex/crypto too (same feed ──
+    // the app uses to show "CURRENT" price), so signal entries stay in sync
+    // with what the user actually sees live in-app instead of drifting from
+    // Yahoo/CoinGecko. External feeds above are now only a fallback (used to
+    // shape spread/volatility, and as the price if MT5 has no quote).
+    const mt5PairNames = [goldPairName, ...forexPairPool, ...cryptoPairPool];
+    const mt5Prices = await fetchMT5Prices(mt5PairNames, supabaseUrl, serviceRoleKey);
+
+    if (mt5Prices[goldPairName]) {
+      Object.assign(goldPrice, recenterOnMT5(goldPrice, mt5Prices[goldPairName]));
+    } else {
+      console.log("No MT5 price for gold — using Yahoo/metals.dev fallback.");
+    }
+
+    for (const fr of forexResults) {
+      if (mt5Prices[fr.pair]) {
+        Object.assign(fr.data, recenterOnMT5(fr.data, mt5Prices[fr.pair]));
+      } else {
+        console.log(`No MT5 price for ${fr.pair} — using Yahoo fallback.`);
+      }
+    }
+
+    for (const cp of cryptoPairPool) {
+      if (cryptoPrices[cp] && mt5Prices[cp]) {
+        Object.assign(cryptoPrices[cp], recenterOnMT5(cryptoPrices[cp], mt5Prices[cp]));
+      } else if (cryptoPrices[cp]) {
+        console.log(`No MT5 price for ${cp} — using CoinGecko fallback.`);
+      }
+    }
 
     // Deriv synthetic indices — fetched from the same MT5 account (Deriv broker
     // carries these symbols natively), via the fetch-live-prices function so all
@@ -300,8 +372,8 @@ Deno.serve(async (req) => {
     const candidates: SignalConfig[] = [];
 
     candidates.push({
-      pair: "XAU/USD (Gold)", category: "COMMODITIES", mainCategory: "COMMODITIES",
-      subCategory: "XAU/USD (Gold)", price: goldPrice, pipMultiplier: 1, decimals: 0,
+      pair: goldPairName, category: "COMMODITIES", mainCategory: "COMMODITIES",
+      subCategory: goldPairName, price: goldPrice, pipMultiplier: 1, decimals: 0,
       thresholdPct: 0.12,
     });
 
