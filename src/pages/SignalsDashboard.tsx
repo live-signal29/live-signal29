@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import SignalsSkeleton from "@/components/SignalsSkeleton";
 import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
-import { startOfDay, format } from "date-fns"; // 'formatDistanceToNow' replace with 'format'
+import { startOfDay, format } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
@@ -33,7 +33,18 @@ const CATEGORIES = [
   "MARKET IDEAS",
 ];
 
-// Helper Function: Formats time to Real Time 12-Hour format (e.g. 05:02 PM)
+// Helper: Ticker clean function to ensure "XAU/USD (Gold)" maps correctly to "XAUUSD" for WebSockets
+const normalizeSymbolKey = (symbolStr: string): string => {
+  if (!symbolStr) return "";
+  const upper = symbolStr.toUpperCase();
+  if (upper.includes("XAUUSD") || upper.includes("GOLD") || upper.includes("XAU/USD")) return "XAUUSD";
+  if (upper.includes("EURUSD") || upper.includes("EUR/USD")) return "EURUSD";
+  if (upper.includes("GBPUSD") || upper.includes("GBP/USD")) return "GBPUSD";
+  if (upper.includes("BTCUSD") || upper.includes("BITCOIN") || upper.includes("BTC/USD")) return "BTCUSD";
+  return symbolStr.split(" ")[0].replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+};
+
+// Formats time to Real Time 12-Hour format (e.g. 05:02 PM)
 const formatExactRealTime = (dateString: string | Date | null | undefined) => {
   if (!dateString) return "";
   try {
@@ -142,7 +153,7 @@ const SignalsDashboard = () => {
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
     enabled: mainCategory !== "MARKET IDEAS",
-    staleTime: 60000,
+    staleTime: 0, // Stale time set to 0 for instant live updates
   });
 
   const allSignals = signalsData?.pages.flatMap((page) => page.data) || [];
@@ -158,28 +169,25 @@ const SignalsDashboard = () => {
     ).length || 0;
   };
 
+  // Normalize open signal pairs to ensure API/WebSocket match
   const openSignalPairs = signals
     .filter((signal) => signal.signal_status !== "CLOSE")
-    .map((signal) => signal.pair)
+    .map((signal) => normalizeSymbolKey(signal.pair))
     .filter((pair, index, arr) => arr.indexOf(pair) === index);
 
   const { prices: livePrices } = useLivePricesFetch(openSignalPairs, openSignalPairs.length > 0);
 
   // Realtime subscription
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const channel = supabase
-        .channel("signals-changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "signals" }, () => {
-          refetch();
-        })
-        .subscribe();
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }, 3000);
+    const channel = supabase
+      .channel("signals-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "signals" }, () => {
+        refetch();
+      })
+      .subscribe();
+
     return () => {
-      clearTimeout(timeoutId);
+      supabase.removeChannel(channel);
     };
   }, [refetch]);
 
@@ -215,7 +223,7 @@ const SignalsDashboard = () => {
       return merged;
     },
     enabled: mainCategory === "MARKET IDEAS",
-    staleTime: 120000,
+    staleTime: 60000,
   });
 
   const openLightbox = (index: number) => {
@@ -325,8 +333,6 @@ const SignalsDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {chartAnalysis?.map((analysis, index) => {
                     const hasImage = !!analysis.image_url && String(analysis.image_url).trim() !== "";
-                    
-                    // Exact real-time format for Market Ideas (e.g. 05:02 PM)
                     const displayTime = formatExactRealTime(analysis.created_at);
 
                     return (
@@ -406,21 +412,26 @@ const SignalsDashboard = () => {
                         <div key={date}>
                           <div className="space-y-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                              {daySignals.map((signal, i) => (
-                                <React.Fragment key={signal.id}>
-                                  <SignalCardNew
-                                    signal={signal as any}
-                                    hasAccess={hasAccess}
-                                    subscriptionStatus={subscriptionStatus}
-                                    livePrice={livePrices[signal.pair] ? parseFloat(livePrices[signal.pair]) : undefined}
-                                  />
-                                  {(i + 1) % 3 === 0 && (
-                                    <div className="md:col-span-2">
-                                      <AffiliateBannerCarousel />
-                                    </div>
-                                  )}
-                                </React.Fragment>
-                              ))}
+                              {daySignals.map((signal, i) => {
+                                const key = normalizeSymbolKey(signal.pair);
+                                const currentLivePrice = livePrices[key] ? parseFloat(livePrices[key]) : undefined;
+
+                                return (
+                                  <React.Fragment key={signal.id}>
+                                    <SignalCardNew
+                                      signal={signal as any}
+                                      hasAccess={hasAccess}
+                                      subscriptionStatus={subscriptionStatus}
+                                      livePrice={currentLivePrice}
+                                    />
+                                    {(i + 1) % 3 === 0 && (
+                                      <div className="md:col-span-2">
+                                        <AffiliateBannerCarousel />
+                                      </div>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
