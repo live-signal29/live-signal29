@@ -10,15 +10,19 @@ const PROVISIONING = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.a
 const DEFAULT_CLIENT_API = "https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai";
 
 interface TradeRequest {
-  action: "open" | "check" | "close" | "stats";
+  action: "open" | "open_multi" | "check" | "close" | "stats";
   signal_id?: string;
   symbol?: string;
   trade_type?: "buy" | "sell";
   entry?: number;
   sl?: number;
   tp?: number;
+  tp1?: number;
+  tp2?: number;
+  tp3?: number;
   lot_size?: number;
   trade_id?: string;
+  tp_level?: number;
 }
 
 interface Credentials {
@@ -109,6 +113,9 @@ serve(async (req) => {
     switch (body.action) {
       case "open":
         return await openTrade(supabase, creds.token, accountId, clientApi, body);
+
+      case "open_multi":
+        return await openMultiTrade(supabase, creds.token, accountId, clientApi, body);
       
       case "check":
         return await checkTrades(supabase, creds.token, accountId, clientApi);
@@ -302,10 +309,92 @@ async function openTrade(
   clientApi: string,
   body: TradeRequest
 ): Promise<Response> {
-  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.01 } = body;
+  const result = await placeSingleTrade(supabase, token, accountId, clientApi, body);
+  if (!result.success) {
+    return new Response(
+      JSON.stringify({ error: result.error }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  return new Response(
+    JSON.stringify({
+      success: true,
+      trade_id: result.trade_id,
+      mt5_ticket: result.mt5_ticket,
+      message: "Trade opened successfully",
+    }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// Opens 3 separate MT5 positions for one signal — same symbol/entry/SL,
+// but each targeting a different take-profit level (TP1, TP2, TP3). This
+// is how partial profit-taking is done on MT5: since a single position
+// can't have three TPs, we open three smaller positions instead, so each
+// one can close independently as price reaches that level. Once the
+// TP1-tagged trade closes in profit, checkTrades() below moves the SL of
+// the remaining two positions to break-even automatically.
+async function openMultiTrade(
+  supabase: any,
+  token: string,
+  accountId: string,
+  clientApi: string,
+  body: TradeRequest
+): Promise<Response> {
+  const { tp1, tp2, tp3, sl, lot_size = 0.01 } = body;
+
+  const legs: { tp_level: number; tp: number | undefined }[] = [
+    { tp_level: 1, tp: tp1 },
+    { tp_level: 2, tp: tp2 },
+    { tp_level: 3, tp: tp3 },
+  ].filter((leg) => leg.tp && leg.tp > 0);
+
+  if (legs.length === 0) {
+    return new Response(
+      JSON.stringify({ error: "At least one of tp1/tp2/tp3 is required for open_multi" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const results: any[] = [];
+
+  // Placed one at a time (not in parallel) — MT5/MetaApi can reject
+  // rapid-fire simultaneous orders on the same symbol from one account.
+  for (const leg of legs) {
+    const result = await placeSingleTrade(supabase, token, accountId, clientApi, {
+      ...body,
+      tp: leg.tp,
+      sl,
+      lot_size,
+      tp_level: leg.tp_level,
+    });
+    results.push({ tp_level: leg.tp_level, ...result });
+  }
+
+  const opened = results.filter((r) => r.success).length;
+
+  return new Response(
+    JSON.stringify({
+      success: opened > 0,
+      opened,
+      total: legs.length,
+      results,
+    }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+async function placeSingleTrade(
+  supabase: any,
+  token: string,
+  accountId: string,
+  clientApi: string,
+  body: TradeRequest
+): Promise<{ success: boolean; trade_id?: string; mt5_ticket?: any; error?: string }> {
+  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.01, tp_level } = body;
 
   if (!symbol || !trade_type) {
-    throw new Error("Symbol and trade type required");
+    return { success: false, error: "Symbol and trade type required" };
   }
 
   const brokerSymbol = await resolveBrokerSymbol(token, clientApi, accountId, symbol);
@@ -325,12 +414,13 @@ async function openTrade(
       tp_price: tp,
       lot_size: validVolume,
       status: "pending",
+      tp_level: tp_level ?? null,
     })
     .select()
     .single();
 
   if (insertError) {
-    throw new Error(`Failed to create trade record: ${insertError.message}`);
+    return { success: false, error: `Failed to create trade record: ${insertError.message}` };
   }
 
   try {
@@ -343,7 +433,7 @@ async function openTrade(
       // "Signal: <uuid>" (44+ chars) gets rejected by MetaApi with
       // "clientId and comment fields length is invalid". Keep it short;
       // the real signal_id is already stored in mt5_demo_trades.
-      comment: "LiveSignal",
+      comment: tp_level ? `LiveSignal TP${tp_level}` : "LiveSignal",
     };
 
     // Add SL/TP if provided and valid
@@ -402,15 +492,7 @@ async function openTrade(
       })
       .eq("id", tradeRecord.id);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        trade_id: tradeRecord.id,
-        mt5_ticket: ticket,
-        message: "Trade opened successfully",
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return { success: true, trade_id: tradeRecord.id, mt5_ticket: ticket };
   } catch (error) {
     // Update trade record with error
     await supabase
@@ -421,7 +503,7 @@ async function openTrade(
       })
       .eq("id", tradeRecord.id);
 
-    throw error;
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
 
@@ -504,6 +586,14 @@ async function checkTrades(
 
         updated++;
         console.log(`Trade ${trade.id} closed with ${result}: $${closedDeal.profit}`);
+
+        // Scale-out logic: when the TP1 leg of a multi-TP signal closes
+        // in profit, move the SL of the still-open TP2/TP3 legs (same
+        // signal_id) to break-even (the shared entry price) so they can
+        // no longer turn into a loss.
+        if (trade.tp_level === 1 && result === "win" && trade.signal_id) {
+          await moveSiblingsToBreakeven(supabase, token, clientApi, accountId, trade, positions);
+        }
       }
     }
   }
@@ -516,6 +606,68 @@ async function checkTrades(
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
+}
+
+async function moveSiblingsToBreakeven(
+  supabase: any,
+  token: string,
+  clientApi: string,
+  accountId: string,
+  tp1Trade: any,
+  positions: any[]
+): Promise<void> {
+  const { data: siblings, error } = await supabase
+    .from("mt5_demo_trades")
+    .select("*")
+    .eq("signal_id", tp1Trade.signal_id)
+    .eq("status", "open")
+    .in("tp_level", [2, 3]);
+
+  if (error || !siblings || siblings.length === 0) return;
+
+  const breakevenPrice = tp1Trade.entry_price;
+
+  for (const sibling of siblings) {
+    // Already moved (avoid redundant MetaApi calls on every cron run)
+    if (Number(sibling.sl_price) === Number(breakevenPrice)) continue;
+
+    const position = positions.find(
+      (p: any) => p.id === sibling.mt5_ticket || p.positionId === sibling.mt5_ticket
+    );
+    if (!position) continue;
+
+    try {
+      const response = await fetch(
+        `${clientApi}/users/current/accounts/${accountId}/trade`,
+        {
+          method: "POST",
+          headers: { "auth-token": token, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actionType: "POSITION_MODIFY",
+            positionId: sibling.mt5_ticket,
+            stopLoss: breakevenPrice,
+            takeProfit: position.takeProfit,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      const ok = response.ok && !result.error &&
+        (result.numericCode === undefined || result.numericCode === 0 || result.numericCode === 10009);
+
+      if (ok) {
+        await supabase
+          .from("mt5_demo_trades")
+          .update({ sl_price: breakevenPrice })
+          .eq("id", sibling.id);
+        console.log(`Moved TP${sibling.tp_level} trade ${sibling.id} SL to breakeven (${breakevenPrice})`);
+      } else {
+        console.error(`Failed to move SL to breakeven for trade ${sibling.id}:`, result);
+      }
+    } catch (err) {
+      console.error(`Breakeven modify error for trade ${sibling.id}:`, String(err));
+    }
+  }
 }
 
 async function closeTrade(
