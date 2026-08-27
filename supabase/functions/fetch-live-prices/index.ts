@@ -962,6 +962,27 @@ serve(async (req) => {
       const currentPrice =
         parseFloat(current);
 
+      // Sanity check — if a symbol got mismatched/mis-resolved, the
+      // "price" that comes back can be wildly off from where the signal
+      // actually started (e.g. a Volatility 100 signal around 597
+      // suddenly showing 7166). Trusting that number was causing signals
+      // to get marked CLOSED (fake TP/SL hits) on the dashboard while the
+      // real MT5 position was still open and nowhere near those levels.
+      // Reject anything more than 5x away from Entry as bad data instead
+      // of using it.
+      const entryPrice = parseFloat(String(signal.entry));
+      if (
+        Number.isFinite(entryPrice) &&
+        entryPrice > 0 &&
+        Number.isFinite(currentPrice) &&
+        (currentPrice > entryPrice * 5 || currentPrice < entryPrice / 5)
+      ) {
+        console.error(
+          `Rejecting implausible price for ${signal.pair} (signal ${signal.id}): entry=${entryPrice}, got=${currentPrice}`
+        );
+        continue;
+      }
+
       const updates: Record<
         string,
         any
