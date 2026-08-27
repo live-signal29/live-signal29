@@ -48,10 +48,34 @@ const MarketIdeasManagement = () => {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-market-ideas"] });
       queryClient.invalidateQueries({ queryKey: ["market-ideas"] });
       toast.success("Market idea added");
+
+      // Push published ideas to the Telegram channel too.
+      if (variables.published) {
+        supabase.functions
+          .invoke("telegram-signal-post", {
+            body: {
+              action: "new_idea",
+              idea: {
+                title: variables.title,
+                description: variables.description,
+                image_url: variables.image_url || null,
+              },
+            },
+          })
+          .then(({ error: tgError }) => {
+            if (tgError) {
+              console.error("Telegram post error:", tgError);
+              toast.error("Idea saved, but Telegram post failed");
+            } else {
+              toast.success("Posted to Telegram");
+            }
+          });
+      }
+
       resetForm();
     },
     onError: (error) => {

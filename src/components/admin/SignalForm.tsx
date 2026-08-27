@@ -123,6 +123,22 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           return;
         }
         toast.success("Signal created successfully");
+
+        // Post every new signal to the Telegram channel — regardless of
+        // category (Gold/Commodities, Crypto, Forex, Deriv all go through
+        // here), so manually created signals aren't silently skipped.
+        supabase.functions
+          .invoke("telegram-signal-post", {
+            body: { signal: cleanedData, action: "new_signal" },
+          })
+          .then(({ error: tgError }) => {
+            if (tgError) {
+              console.error("Telegram post error:", tgError);
+              toast.error("Signal saved, but Telegram post failed");
+            } else {
+              toast.success("Posted to Telegram");
+            }
+          });
       }
 
       queryClient.invalidateQueries({ queryKey: ["signals"] });

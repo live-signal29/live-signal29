@@ -88,6 +88,29 @@ const ChartAnalysisForm = ({ onSuccess }: ChartAnalysisFormProps) => {
       toast.success("Idea created");
       queryClient.invalidateQueries({ queryKey: ["chart-analysis"] });
       queryClient.invalidateQueries({ queryKey: ["admin-chart-analysis"] });
+
+      // Chart analysis ideas publish by default (published defaults to true
+      // in the DB) - post them to Telegram as well.
+      supabase.functions
+        .invoke("telegram-signal-post", {
+          body: {
+            action: "new_idea",
+            idea: {
+              title: cleanedData.title,
+              description: cleanedData.description,
+              image_url: cleanedData.image_url,
+            },
+          },
+        })
+        .then(({ error: tgError }) => {
+          if (tgError) {
+            console.error("Telegram post error:", tgError);
+            toast.error("Idea saved, but Telegram post failed");
+          } else {
+            toast.success("Posted to Telegram");
+          }
+        });
+
       setFormData({ title: "", description: "", image_url: "" });
       onSuccess();
     } catch (error: any) {
