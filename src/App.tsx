@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState, Suspense, useCallback, useRef } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState, Suspense } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
@@ -66,30 +66,6 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const clearAuthStorage = () => {
-  try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const authKey = projectId ? `sb-${projectId}-auth-token` : null;
-
-    if (authKey) {
-      localStorage.removeItem(authKey);
-      sessionStorage.removeItem(authKey);
-    }
-
-    for (const storage of [localStorage, sessionStorage]) {
-      const keys: string[] = [];
-      for (let i = 0; i < storage.length; i++) {
-        const k = storage.key(i);
-        if (!k) continue;
-        if (k.startsWith("sb-") && k.endsWith("-auth-token")) keys.push(k);
-      }
-      keys.forEach((k) => storage.removeItem(k));
-    }
-  } catch {
-    // ignore
-  }
-};
-
 const NavigationWrapper = () => {
   const location = useLocation();
   const hideOnPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/onboarding"];
@@ -102,67 +78,30 @@ const NavigationWrapper = () => {
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const sessionRef = useRef<Session | null>(null);
-
-  const verifyUserStillExists = useCallback(async (s: Session) => {
-    const userId = s?.user?.id;
-    if (!userId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (!error && data === null) {
-        await supabase.auth.signOut();
-        clearAuthStorage();
-        navigate('/login?reason=deleted', { replace: true });
-      }
-    } catch {
-      // Ignore network errors
-    }
-  }, [navigate]);
 
   useEffect(() => {
     let mounted = true;
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (!mounted) return;
-      sessionRef.current = s;
       setSession(s);
       setLoading(false);
-
-      if (s?.user) {
-        verifyUserStillExists(s);
-      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!mounted) return;
-      sessionRef.current = s;
       setSession(s);
       setLoading(false);
     });
 
-    const interval = setInterval(() => {
-      const s = sessionRef.current;
-      if (s?.user) {
-        verifyUserStillExists(s);
-      }
-    }, 120_000);
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearInterval(interval);
     };
-  }, [verifyUserStillExists]);
+  }, []);
 
   if (loading) {
     return <LoadingSpinner />;
