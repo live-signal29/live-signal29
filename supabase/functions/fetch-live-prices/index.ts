@@ -90,14 +90,6 @@ async function loadCredentials() {
     "";
 
   credentialsLoadedAt = Date.now();
-
-  console.log(
-    "Credentials:",
-    Boolean(METAAPI_TOKEN),
-    Boolean(MT5_LOGIN),
-    Boolean(MT5_SERVER),
-    Boolean(MT5_PASSWORD)
-  );
 }
 
 /* =========================================================
@@ -135,11 +127,6 @@ async function getAccountId(): Promise<string | null> {
     );
 
     if (!response.ok) {
-      console.error(
-        "Account list failed:",
-        response.status,
-        (await response.text()).slice(0, 500)
-      );
       return null;
     }
 
@@ -162,8 +149,6 @@ async function getAccountId(): Promise<string | null> {
       );
 
     if (!account && MT5_PASSWORD) {
-      console.log("Creating MetaApi account...");
-
       const createResponse = await fetch(
         `${PROVISIONING}/users/current/accounts`,
         {
@@ -186,11 +171,6 @@ async function getAccountId(): Promise<string | null> {
       );
 
       if (!createResponse.ok) {
-        console.error(
-          "Account creation failed:",
-          createResponse.status,
-          (await createResponse.text()).slice(0, 500)
-        );
         return null;
       }
 
@@ -201,7 +181,6 @@ async function getAccountId(): Promise<string | null> {
       account?._id || account?.id;
 
     if (!accountId) {
-      console.error("No MetaApi account ID");
       return null;
     }
 
@@ -214,7 +193,7 @@ async function getAccountId(): Promise<string | null> {
       state !== "DEPLOYED" &&
       state !== "DEPLOYING"
     ) {
-      const deploy = await fetch(
+      await fetch(
         `${PROVISIONING}/users/current/accounts/${accountId}/deploy`,
         {
           method: "POST",
@@ -223,11 +202,6 @@ async function getAccountId(): Promise<string | null> {
           },
           signal: AbortSignal.timeout(10000),
         }
-      );
-
-      console.log(
-        "Deploy status:",
-        deploy.status
       );
     }
 
@@ -239,12 +213,6 @@ async function getAccountId(): Promise<string | null> {
       null;
 
     cachedAccountAt = Date.now();
-
-    console.log(
-      "MT5 account ready:",
-      accountId,
-      cachedRegion || "default"
-    );
 
     return accountId;
   } catch (error) {
@@ -347,25 +315,18 @@ async function fetchDerivPrice(
         ws.onerror = null;
         try {
           ws.close();
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
       resolve(value);
     };
 
     const timer = setTimeout(() => {
-      console.error(`Deriv timeout: ${symbol}`);
       finish(null);
-    }, 8000);
+    }, 6000);
 
     try {
       ws = new WebSocket(DERIV_WS_URL);
-    } catch (error) {
-      console.error(
-        `Deriv WS init error ${symbol}:`,
-        String(error)
-      );
+    } catch {
       clearTimeout(timer);
       resolve(null);
       return;
@@ -393,10 +354,6 @@ async function fetchDerivPrice(
         );
 
         if (data?.error) {
-          console.error(
-            `Deriv error ${symbol}:`,
-            data.error?.message || data.error
-          );
           finish(null);
           return;
         }
@@ -408,42 +365,27 @@ async function fetchDerivPrice(
 
         if (Array.isArray(prices) && prices.length > 0) {
           const price = Number(prices[prices.length - 1]);
-
           if (price > 0) {
-            console.log(
-              `REAL DERIV PRICE: ${symbol} -> ${price}`
-            );
             finish(price.toFixed(decimals));
             return;
           }
         }
 
         const tickPrice = Number(data?.tick?.quote);
-
         if (tickPrice > 0) {
-          console.log(
-            `REAL DERIV PRICE (tick): ${symbol} -> ${tickPrice}`
-          );
           finish(tickPrice.toFixed(decimals));
         }
-      } catch (error) {
-        console.error(
-          `Deriv parse error ${symbol}:`,
-          String(error)
-        );
+      } catch {
         finish(null);
       }
     };
 
-    ws.onerror = () => {
-      console.error(`Deriv WS error: ${symbol}`);
-      finish(null);
-    };
+    ws.onerror = () => finish(null);
   });
 }
 
 /* =========================================================
-   SYMBOL ALIASES
+   FOREX / CRYPTO SYMBOL ALIASES (DERIV EXCLUDED)
 ========================================================= */
 
 function getSymbolAliases(
@@ -505,122 +447,6 @@ function getSymbolAliases(
     return crypto[n];
   }
 
-  if (
-    n.includes("BOOM") &&
-    n.includes("1000")
-  ) {
-    return [
-      "BOOM1000",
-      "BOOM1000INDEX",
-      "BOOM1000INDEX.M",
-      "BOOM1000.M",
-    ];
-  }
-
-  if (
-    n.includes("BOOM") &&
-    n.includes("500")
-  ) {
-    return [
-      "BOOM500",
-      "BOOM500INDEX",
-      "BOOM500INDEX.M",
-      "BOOM500.M",
-    ];
-  }
-
-  if (
-    n.includes("CRASH") &&
-    n.includes("1000")
-  ) {
-    return [
-      "CRASH1000",
-      "CRASH1000INDEX",
-      "CRASH1000INDEX.M",
-      "CRASH1000.M",
-    ];
-  }
-
-  if (
-    n.includes("CRASH") &&
-    n.includes("500")
-  ) {
-    return [
-      "CRASH500",
-      "CRASH500INDEX",
-      "CRASH500INDEX.M",
-      "CRASH500.M",
-    ];
-  }
-
-  if (
-    n.includes("VOL") &&
-    n.includes("75")
-  ) {
-    return [
-      "VOLATILITY75INDEX",
-      "VOLATILITY75",
-      "VOL75",
-      "V75",
-      "VOLATILITY75INDEX.M",
-      "VOL75.M",
-    ];
-  }
-
-  if (
-    n.includes("VOL") &&
-    n.includes("100")
-  ) {
-    return [
-      "VOLATILITY100INDEX",
-      "VOLATILITY100",
-      "VOL100",
-      "V100",
-    ];
-  }
-
-  if (
-    n.includes("VOL") &&
-    n.includes("50")
-  ) {
-    return [
-      "VOLATILITY50INDEX",
-      "VOLATILITY50",
-      "VOL50",
-      "V50",
-    ];
-  }
-
-  if (
-    n.includes("VOL") &&
-    n.includes("25")
-  ) {
-    return [
-      "VOLATILITY25INDEX",
-      "VOLATILITY25",
-      "VOL25",
-      "V25",
-    ];
-  }
-
-  if (n.includes("STEP")) {
-    return [
-      "STEPINDEX",
-      "STEP",
-    ];
-  }
-
-  if (n.includes("JUMP")) {
-    return [
-      n,
-      "JUMP",
-    ];
-  }
-
-  if (/^[A-Z]{6}$/.test(n)) {
-    return [n];
-  }
-
   return [n];
 }
 
@@ -642,16 +468,9 @@ async function getBrokerSymbols(
       }
     );
 
-    if (!response.ok) {
-      console.error(
-        "Broker symbols failed:",
-        response.status
-      );
-      return [];
-    }
+    if (!response.ok) return [];
 
     const raw = await response.json();
-
     const list = Array.isArray(raw)
       ? raw
       : raw?.symbols ||
@@ -665,17 +484,13 @@ async function getBrokerSymbols(
           : s?.symbol || s?.name
       )
       .filter(Boolean);
-  } catch (error) {
-    console.error(
-      "getBrokerSymbols error:",
-      String(error)
-    );
+  } catch {
     return [];
   }
 }
 
 /* =========================================================
-   FIND BROKER SYMBOL - STRONG MATCHING
+   FIND BROKER SYMBOL
 ========================================================= */
 
 async function findBrokerSymbol(
@@ -683,82 +498,43 @@ async function findBrokerSymbol(
   appPair: string,
   brokerSymbols: string[]
 ): Promise<string | null> {
-  const aliases =
-    getSymbolAliases(appPair);
+  const aliases = getSymbolAliases(appPair);
 
-  const normalizedBroker =
-    brokerSymbols.map((symbol) => ({
-      original: symbol,
-      normalized: normalizeSymbol(symbol),
-    }));
+  const normalizedBroker = brokerSymbols.map((symbol) => ({
+    original: symbol,
+    normalized: normalizeSymbol(symbol),
+  }));
 
   /* EXACT */
   for (const alias of aliases) {
     const wanted = normalizeSymbol(alias);
-
-    const exact =
-      normalizedBroker.find(
-        (x) =>
-          x.normalized === wanted
-      );
-
-    if (exact) {
-      console.log(
-        `SYMBOL EXACT: ${appPair} -> ${exact.original}`
-      );
-      return exact.original;
-    }
+    const exact = normalizedBroker.find((x) => x.normalized === wanted);
+    if (exact) return exact.original;
   }
 
   /* STARTS WITH */
   for (const alias of aliases) {
     const wanted = normalizeSymbol(alias);
-
-    const match =
-      normalizedBroker.find(
-        (x) =>
-          x.normalized.startsWith(wanted) ||
-          wanted.startsWith(x.normalized)
-      );
-
-    if (match) {
-      console.log(
-        `SYMBOL PREFIX: ${appPair} -> ${match.original}`
-      );
-      return match.original;
-    }
+    const match = normalizedBroker.find(
+      (x) =>
+        x.normalized.startsWith(wanted) || wanted.startsWith(x.normalized)
+    );
+    if (match) return match.original;
   }
 
   /* CONTAINS */
   for (const alias of aliases) {
     const wanted = normalizeSymbol(alias);
-
     if (wanted.length < 4) continue;
-
-    const match =
-      normalizedBroker.find(
-        (x) =>
-          x.normalized.includes(wanted)
-      );
-
-    if (match) {
-      console.log(
-        `SYMBOL CONTAINS: ${appPair} -> ${match.original}`
-      );
-      return match.original;
-    }
+    const match = normalizedBroker.find((x) => x.normalized.includes(wanted));
+    if (match) return match.original;
   }
-
-  console.log(
-    `NO BROKER SYMBOL: ${appPair}`,
-    aliases
-  );
 
   return null;
 }
 
 /* =========================================================
-   GET PRICE
+   GET PRICE FROM MT5
 ========================================================= */
 
 async function fetchMt5Price(
@@ -778,16 +554,9 @@ async function fetchMt5Price(
       }
     );
 
-    if (!response.ok) {
-      console.error(
-        `Price failed ${symbol}:`,
-        response.status
-      );
-      return null;
-    }
+    if (!response.ok) return null;
 
     const data = await response.json();
-
     const bid = Number(data?.bid);
     const ask = Number(data?.ask);
 
@@ -798,57 +567,35 @@ async function fetchMt5Price(
         ? bid
         : ask;
 
-    if (!price || price <= 0) {
-      return null;
-    }
+    if (!price || price <= 0) return null;
 
     const n = normalizeSymbol(symbol);
-
     let decimals = 5;
 
     if (n.includes("JPY")) {
       decimals = 3;
-    } else if (
-      n.includes("XAU") ||
-      n.includes("GOLD")
-    ) {
+    } else if (n.includes("XAU") || n.includes("GOLD")) {
       decimals = 2;
-    } else if (
-      n.includes("XAG") ||
-      n.includes("SILVER")
-    ) {
+    } else if (n.includes("XAG") || n.includes("SILVER")) {
       decimals = 3;
     } else if (
       n.includes("BTC") ||
       n.includes("ETH") ||
       n.includes("SOL") ||
       n.includes("XRP") ||
-      n.includes("DOGE") ||
-      n.includes("VOL") ||
-      n.includes("BOOM") ||
-      n.includes("CRASH") ||
-      n.includes("STEP") ||
-      n.includes("JUMP")
+      n.includes("DOGE")
     ) {
       decimals = 2;
     }
 
-    console.log(
-      `REAL MT5 PRICE: ${symbol} -> ${price}`
-    );
-
     return price.toFixed(decimals);
-  } catch (error) {
-    console.error(
-      `Price error ${symbol}:`,
-      String(error)
-    );
+  } catch {
     return null;
   }
 }
 
 /* =========================================================
-   FETCH ALL
+   FETCH ALL (STRICT DERIV SEPARATION)
 ========================================================= */
 
 async function fetchAllPrices(
@@ -869,84 +616,44 @@ async function fetchAllPrices(
     }
   }
 
+  // 1. Deriv Real-time Fetch
   if (derivPairs.length > 0) {
     await Promise.all(
       derivPairs.map(async ({ pair, symbol }) => {
         const price = await fetchDerivPrice(symbol);
-
         if (price) {
           prices[pair] = price;
-        } else {
-          console.log(
-            `Deriv price unavailable for ${pair} (${symbol})`
-          );
         }
       })
     );
   }
 
-  console.log(
-    "DERIV PRICES:",
-    JSON.stringify(prices)
-  );
-
+  // Strictly return if no Forex/Crypto pairs requested
   if (remainingPairs.length === 0) {
     return prices;
   }
 
-  const accountId =
-    await getAccountId();
+  // 2. MT5 Fetch ONLY for non-Deriv Pairs
+  const accountId = await getAccountId();
+  if (!accountId) return prices;
 
-  if (!accountId) {
-    return prices;
-  }
-
-  const brokerSymbols =
-    await getBrokerSymbols(
-      accountId
-    );
-
-  if (!brokerSymbols.length) {
-    console.error(
-      "No broker symbols received"
-    );
-    return prices;
-  }
-
-  console.log(
-    `Broker symbols loaded: ${brokerSymbols.length}`
-  );
+  const brokerSymbols = await getBrokerSymbols(accountId);
+  if (!brokerSymbols.length) return prices;
 
   for (const pair of remainingPairs) {
-    const symbol =
-      await findBrokerSymbol(
-        accountId,
-        pair,
-        brokerSymbols
-      );
+    const symbol = await findBrokerSymbol(
+      accountId,
+      pair,
+      brokerSymbols
+    );
 
-    if (!symbol) {
-      console.log(
-        `Skipping ${pair}: broker symbol not found`
-      );
-      continue;
-    }
+    if (!symbol) continue;
 
-    const price =
-      await fetchMt5Price(
-        accountId,
-        symbol
-      );
-
+    const price = await fetchMt5Price(accountId, symbol);
     if (price) {
       prices[pair] = price;
     }
   }
-
-  console.log(
-    "FINAL PRICES:",
-    JSON.stringify(prices)
-  );
 
   return prices;
 }
@@ -955,22 +662,14 @@ async function fetchAllPrices(
    PARSE PRICE
 ========================================================= */
 
-function parsePrice(
-  value: string
-): number {
+function parsePrice(value: string): number {
   if (!value) return 0;
-
-  const cleaned =
-    String(value).replace(
-      /[^\d.\-]/g,
-      ""
-    );
-
+  const cleaned = String(value).replace(/[^\d.\-]/g, "");
   return parseFloat(cleaned) || 0;
 }
 
 /* =========================================================
-   TELEGRAM TP/SL UPDATE NOTIFICATION
+   TELEGRAM NOTIFICATION
 ========================================================= */
 
 async function notifyTelegramUpdate(
@@ -978,468 +677,245 @@ async function notifyTelegramUpdate(
   updateType: string
 ): Promise<void> {
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/telegram-signal-post`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SERVICE_KEY}`,
-          apikey: SERVICE_KEY,
+    await fetch(`${SUPABASE_URL}/functions/v1/telegram-signal-post`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        apikey: SERVICE_KEY,
+      },
+      body: JSON.stringify({
+        action: "update",
+        update_type: updateType,
+        signal: {
+          pair: signal.pair,
+          type: signal.type,
+          entry: signal.entry,
+          tp1: signal.tp1,
+          tp2: signal.tp2,
+          tp3: signal.tp3,
+          tp4: signal.tp4,
+          sl: signal.sl,
+          profit_note: signal.profit_note,
+          tp1_hit: signal.tp1_hit,
+          tp2_hit: signal.tp2_hit,
+          tp3_hit: signal.tp3_hit,
+          tp4_hit: signal.tp4_hit,
+          sl_hit: signal.sl_hit,
         },
-        body: JSON.stringify({
-          action: "update",
-          update_type: updateType,
-          signal: {
-            pair: signal.pair,
-            type: signal.type,
-            entry: signal.entry,
-            tp1: signal.tp1,
-            tp2: signal.tp2,
-            tp3: signal.tp3,
-            tp4: signal.tp4,
-            sl: signal.sl,
-            profit_note: signal.profit_note,
-            tp1_hit: signal.tp1_hit,
-            tp2_hit: signal.tp2_hit,
-            tp3_hit: signal.tp3_hit,
-            tp4_hit: signal.tp4_hit,
-            sl_hit: signal.sl_hit,
-          },
-        }),
-      }
-    );
-
-    const result = await response.json();
-    console.log(
-      `Telegram update (${updateType}) for ${signal.pair}:`,
-      JSON.stringify(result)
-    );
+      }),
+    });
   } catch (error) {
-    console.error(
-      `Telegram update notify error for ${signal.pair}:`,
-      String(error)
-    );
+    console.error(`Telegram notify error ${signal.pair}:`, String(error));
   }
 }
 
 /* =========================================================
-   SERVER
+   MAIN EDGE FUNCTION SERVER
 ========================================================= */
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase =
-      createClient(
-        SUPABASE_URL,
-        SERVICE_KEY
-      );
-
-    const url =
-      new URL(req.url);
-
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+    const url = new URL(req.url);
     let pairs: string[] = [];
 
-    const pairsParam =
-      url.searchParams.get(
-        "pairs"
-      );
-
+    const pairsParam = url.searchParams.get("pairs");
     if (pairsParam) {
-      pairs = pairsParam
-        .split(",")
-        .map((x) => x.trim())
-        .filter(Boolean);
-    } else if (
-      req.method === "POST"
-    ) {
+      pairs = pairsParam.split(",").map((x) => x.trim()).filter(Boolean);
+    } else if (req.method === "POST") {
       try {
-        const body =
-          await req.json();
-
-        if (
-          Array.isArray(
-            body?.pairs
-          )
-        ) {
-          pairs =
-            body.pairs
-              .map((x: any) =>
-                String(x)
-              )
-              .filter(Boolean);
+        const body = await req.json();
+        if (Array.isArray(body?.pairs)) {
+          pairs = body.pairs.map((x: any) => String(x)).filter(Boolean);
         }
       } catch {}
     }
 
-    /* =====================================================
-       PRICE REQUEST
-    ===================================================== */
-
     if (pairs.length > 0) {
-      const prices =
-        await fetchAllPrices(
-          pairs
-        );
-
+      const prices = await fetchAllPrices(pairs);
       return new Response(
         JSON.stringify({
-          success:
-            Object.keys(prices)
-              .length > 0,
-          source: "MT5",
+          success: Object.keys(prices).length > 0,
+          source: "LIVE_SYNC",
           prices,
         }),
         {
           headers: {
             ...corsHeaders,
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
         }
       );
     }
 
     /* =====================================================
-       UPDATE ACTIVE SIGNALS
+       DATABASE SIGNALS PROCESS & REAL-TIME SYNC
     ===================================================== */
 
-    const { data: signals, error } =
-      await supabase
-        .from("signals")
-        .select(
-          "id,pair,type,entry,tp1,tp2,tp3,tp4,sl,tp1_hit,tp2_hit,tp3_hit,tp4_hit,sl_hit,status,signal_status,entry_mode,limit_entry_price,is_activated,published"
-        )
-        .eq("published", true)
-        .not(
-          "signal_status",
-          "ilike",
-          "close"
-        );
+    const { data: signals, error } = await supabase
+      .from("signals")
+      .select(
+        "id,pair,type,entry,tp1,tp2,tp3,tp4,sl,tp1_hit,tp2_hit,tp3_hit,tp4_hit,sl_hit,status,signal_status,entry_mode,limit_entry_price,is_activated,published"
+      )
+      .eq("published", true)
+      .not("signal_status", "ilike", "close");
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    if (
-      !signals ||
-      signals.length === 0
-    ) {
+    if (!signals || signals.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
-          message:
-            "No active signals",
-          source: "MT5",
+          message: "No active signals",
           prices: {},
         }),
         {
           headers: {
             ...corsHeaders,
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
         }
       );
     }
 
-    const uniquePairs =
-      [
-        ...new Set(
-          signals.map(
-            (s) => s.pair
-          )
-        ),
-      ];
-
-    const prices =
-      await fetchAllPrices(
-        uniquePairs
-      );
+    const uniquePairs = [...new Set(signals.map((s) => s.pair))];
+    const prices = await fetchAllPrices(uniquePairs);
 
     let updatedCount = 0;
     let activatedCount = 0;
     const telegramPromises: Promise<void>[] = [];
 
     for (const signal of signals) {
-      const current =
-        prices[signal.pair];
-
+      const current = prices[signal.pair];
       if (!current) continue;
 
-      const currentPrice =
-        parseFloat(current);
-
-      const updates: Record<
-        string,
-        any
-      > = {
+      const currentPrice = parseFloat(current);
+      const updates: Record<string, any> = {
         current_price: current,
         updated_at: new Date().toISOString(),
       };
 
-      const runningState: Record<string, any> = {
-        ...signal,
-      };
+      const runningState: Record<string, any> = { ...signal };
+      const hitEvents: { type: string; snapshot: Record<string, any> }[] = [];
 
-      const hitEvents: {
-        type: string;
-        snapshot: Record<string, any>;
-      }[] = [];
+      const isBuy = String(signal.type || "").toLowerCase() === "buy";
+      const lifecycle = String(
+        signal.signal_status || signal.status || ""
+      ).toLowerCase();
 
-      const isBuy =
-        String(signal.type || "")
-          .toLowerCase() ===
-        "buy";
+      const isLimit = signal.entry_mode === "limit";
+      const isPending = lifecycle === "pending";
+      const limit = typeof signal.limit_entry_price === "number" ? signal.limit_entry_price : 0;
 
-      const lifecycle =
-        String(
-          signal.signal_status ||
-            signal.status ||
-            ""
-        ).toLowerCase();
-
-      const isLimit =
-        signal.entry_mode ===
-        "limit";
-
-      const isPending =
-        lifecycle === "pending";
-
-      const limit =
-        typeof signal.limit_entry_price ===
-        "number"
-          ? signal.limit_entry_price
-          : 0;
-
-      if (
-        isLimit &&
-        isPending &&
-        limit > 0
-      ) {
-        const activate =
-          isBuy
-            ? currentPrice <= limit
-            : currentPrice >= limit;
-
+      // Limit Order Activation
+      if (isLimit && isPending && limit > 0) {
+        const activate = isBuy ? currentPrice <= limit : currentPrice >= limit;
         if (activate) {
-          updates.signal_status =
-            "open";
+          updates.signal_status = "open";
           updates.status = "open";
           updates.is_activated = true;
-          updates.activated_at =
-            new Date().toISOString();
-
+          updates.activated_at = new Date().toISOString();
           activatedCount++;
         }
       }
 
-      const isOpen =
-        lifecycle === "open" ||
-        updates.signal_status ===
-          "open";
+      const isOpen = lifecycle === "open" || updates.signal_status === "open";
 
       if (!isOpen) {
-        await supabase
-          .from("signals")
-          .update(updates)
-          .eq("id", signal.id);
-
+        await supabase.from("signals").update(updates).eq("id", signal.id);
         updatedCount++;
         continue;
       }
 
-      const entry =
-        parsePrice(
-          signal.entry || ""
-        );
+      const entry = parsePrice(signal.entry || "");
 
       /* TP1 */
-      if (
-        !signal.tp1_hit &&
-        signal.tp1
-      ) {
-        const tp =
-          parsePrice(signal.tp1);
-
-        if (
-          tp > 0 &&
-          (isBuy
-            ? currentPrice >= tp
-            : currentPrice <= tp)
-        ) {
+      if (!signal.tp1_hit && signal.tp1) {
+        const tp = parsePrice(signal.tp1);
+        if (tp > 0 && (isBuy ? currentPrice >= tp : currentPrice <= tp)) {
           updates.tp1_hit = true;
-          updates.profit_note =
-            "TP 1 Hit ✅ SL moved to B.E";
-
-          if (entry > 0) {
-            updates.sl =
-              String(entry);
-          }
+          updates.profit_note = "TP 1 Hit ✅ SL moved to B.E";
+          if (entry > 0) updates.sl = String(entry);
 
           runningState.tp1_hit = true;
-          runningState.profit_note =
-            updates.profit_note;
-          if (updates.sl) {
-            runningState.sl =
-              updates.sl;
-          }
+          runningState.profit_note = updates.profit_note;
+          if (updates.sl) runningState.sl = updates.sl;
 
-          hitEvents.push({
-            type: "tp1_hit",
-            snapshot: { ...runningState },
-          });
+          hitEvents.push({ type: "tp1_hit", snapshot: { ...runningState } });
         }
       }
 
       /* TP2 */
-      if (
-        !signal.tp2_hit &&
-        signal.tp2
-      ) {
-        const tp =
-          parsePrice(signal.tp2);
-
-        if (
-          tp > 0 &&
-          (isBuy
-            ? currentPrice >= tp
-            : currentPrice <= tp)
-        ) {
+      if (!signal.tp2_hit && signal.tp2) {
+        const tp = parsePrice(signal.tp2);
+        if (tp > 0 && (isBuy ? currentPrice >= tp : currentPrice <= tp)) {
           updates.tp2_hit = true;
-          updates.profit_note =
-            "TP 2 Cleared! Secure More Profits 💰";
-
+          updates.profit_note = "TP 2 Cleared! Secure More Profits 💰";
           runningState.tp2_hit = true;
-          runningState.profit_note =
-            updates.profit_note;
+          runningState.profit_note = updates.profit_note;
 
-          hitEvents.push({
-            type: "tp2_hit",
-            snapshot: { ...runningState },
-          });
+          hitEvents.push({ type: "tp2_hit", snapshot: { ...runningState } });
         }
       }
 
       /* TP3 */
-      if (
-        !signal.tp3_hit &&
-        signal.tp3
-      ) {
-        const tp =
-          parsePrice(signal.tp3);
-
-        if (
-          tp > 0 &&
-          (isBuy
-            ? currentPrice >= tp
-            : currentPrice <= tp)
-        ) {
+      if (!signal.tp3_hit && signal.tp3) {
+        const tp = parsePrice(signal.tp3);
+        if (tp > 0 && (isBuy ? currentPrice >= tp : currentPrice <= tp)) {
           updates.tp3_hit = true;
-          updates.signal_status =
-            "close";
+          updates.signal_status = "close";
           updates.status = "close";
-          updates.profit_note =
-            "TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅";
-
+          updates.profit_note = "TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅";
           runningState.tp3_hit = true;
-          runningState.profit_note =
-            updates.profit_note;
+          runningState.profit_note = updates.profit_note;
 
-          hitEvents.push({
-            type: "tp3_hit",
-            snapshot: { ...runningState },
-          });
+          hitEvents.push({ type: "tp3_hit", snapshot: { ...runningState } });
         }
       }
 
       /* TP4 */
-      if (
-        !signal.tp4_hit &&
-        signal.tp4
-      ) {
-        const tp =
-          parsePrice(signal.tp4);
-
-        if (
-          tp > 0 &&
-          (isBuy
-            ? currentPrice >= tp
-            : currentPrice <= tp)
-        ) {
+      if (!signal.tp4_hit && signal.tp4) {
+        const tp = parsePrice(signal.tp4);
+        if (tp > 0 && (isBuy ? currentPrice >= tp : currentPrice <= tp)) {
           updates.tp4_hit = true;
-          updates.profit_note =
-            "TP 4 Hit 🚀";
-
+          updates.profit_note = "TP 4 Hit 🚀";
           runningState.tp4_hit = true;
-          runningState.profit_note =
-            updates.profit_note;
+          runningState.profit_note = updates.profit_note;
 
-          hitEvents.push({
-            type: "tp4_hit",
-            snapshot: { ...runningState },
-          });
+          hitEvents.push({ type: "tp4_hit", snapshot: { ...runningState } });
         }
       }
 
       /* SL */
-      const tp1Hit =
-        signal.tp1_hit ||
-        updates.tp1_hit;
-
-      if (
-        !signal.sl_hit &&
-        signal.sl &&
-        !tp1Hit
-      ) {
-        const sl =
-          parsePrice(signal.sl);
-
-        if (
-          sl > 0 &&
-          (isBuy
-            ? currentPrice <= sl
-            : currentPrice >= sl)
-        ) {
+      const tp1Hit = signal.tp1_hit || updates.tp1_hit;
+      if (!signal.sl_hit && signal.sl && !tp1Hit) {
+        const sl = parsePrice(signal.sl);
+        if (sl > 0 && (isBuy ? currentPrice <= sl : currentPrice >= sl)) {
           updates.sl_hit = true;
-          updates.signal_status =
-            "close";
+          updates.signal_status = "close";
           updates.status = "close";
-          updates.profit_note =
-            signal.tp1_hit
-              ? "Break-Even Exit ⚪ (TP1 was already secured)"
-              : "SL Hit ❌";
+          updates.profit_note = signal.tp1_hit
+            ? "Break-Even Exit ⚪ (TP1 was already secured)"
+            : "SL Hit ❌";
 
           runningState.sl_hit = true;
-          runningState.profit_note =
-            updates.profit_note;
+          runningState.profit_note = updates.profit_note;
 
-          hitEvents.push({
-            type: "sl_hit",
-            snapshot: { ...runningState },
-          });
+          hitEvents.push({ type: "sl_hit", snapshot: { ...runningState } });
         }
       }
 
-      await supabase
-        .from("signals")
-        .update(updates)
-        .eq("id", signal.id);
-
+      await supabase.from("signals").update(updates).eq("id", signal.id);
       updatedCount++;
 
       for (const event of hitEvents) {
         telegramPromises.push(
-          notifyTelegramUpdate(
-            event.snapshot,
-            event.type
-          )
+          notifyTelegramUpdate(event.snapshot, event.type)
         );
       }
     }
@@ -1449,44 +925,31 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        source: "MT5",
-        pricesUpdated:
-          updatedCount,
-        limitOrdersActivated:
-          activatedCount,
-        pairs:
-          Object.keys(prices),
+        source: "LIVE_SYNC",
+        pricesUpdated: updatedCount,
+        limitOrdersActivated: activatedCount,
+        pairs: Object.keys(prices),
         prices,
       }),
       {
         headers: {
           ...corsHeaders,
-          "Content-Type":
-            "application/json",
+          "Content-Type": "application/json",
         },
       }
     );
   } catch (error) {
-    console.error(
-      "fetch-live-prices error:",
-      error
-    );
-
+    console.error("fetch-live-prices error:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        source: "MT5",
-        error:
-          error instanceof Error
-            ? error.message
-            : "MT5 live price service failed",
+        error: error instanceof Error ? error.message : "Live price service failed",
       }),
       {
         status: 500,
         headers: {
           ...corsHeaders,
-          "Content-Type":
-            "application/json",
+          "Content-Type": "application/json",
         },
       }
     );
