@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { signalSchema } from "@/lib/validations";
-import { Crown, TrendingUp, TrendingDown, Clock, Zap, Tag, FileText } from "lucide-react";
+import { Crown, TrendingUp, TrendingDown, Clock, Zap, Tag } from "lucide-react";
 
 interface SignalFormProps {
   onSuccess: () => void;
@@ -39,23 +39,20 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
     is_premium: editSignal?.is_premium || false,
     tag: editSignal?.tag || "",
   });
-  
 
   const subCategoryOptions: Record<string, string[]> = {
     FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
     COMMODITIES: ["XAU/USD (Gold)", "XAG/USD (Silver)", "Oil - Crude", "Oil - Brent", "Natural Gas", "US30", "NASDAQ", "S&P500", "DAX", "FTSE100", "Nikkei"],
     CRYPTO: ["BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD", "ADA/USD", "SOL/USD"],
-    "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
+    "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100", "VOL 50", "VOL 25", "VOL 10"],
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Entry, TP, SL can be text or numbers - no numeric validation required
     const entryPrice = parseFloat(formData.entry);
     const hasNumericEntry = !isNaN(entryPrice) && entryPrice > 0;
 
-    // Validate input
     const validation = signalSchema.safeParse(formData);
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
@@ -64,47 +61,46 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
 
     setLoading(true);
 
-      try {
-        const isLimitOrder = formData.entry_mode === "limit";
+    try {
+      const isLimitOrder = formData.entry_mode === "limit";
+      const initialLifecycle = isLimitOrder ? "pending" : "open";
 
-        // SYSTEM STANDARD:
-        // status + signal_status are the only lifecycle states and must be:
-        // pending | open | close
-        const initialLifecycle = isLimitOrder ? "pending" : "open";
+      // SAFE INITIAL CURRENT PRICE (Prevents instant auto-SL hit)
+      const initialCurrentPrice = hasNumericEntry
+        ? String(entryPrice)
+        : String(formData.entry || "");
 
-        const cleanedData = {
-          pair: validation.data.pair,
-          type: validation.data.type,
-          category: validation.data.category,
-          main_category: validation.data.main_category,
-          sub_category: validation.data.sub_category || null,
-          entry: formData.entry,
-          entry_mode: formData.entry_mode,
-          limit_entry_price: isLimitOrder && hasNumericEntry ? entryPrice : null,
+      const cleanedData = {
+        pair: validation.data.pair,
+        type: validation.data.type,
+        category: validation.data.category,
+        main_category: validation.data.main_category,
+        sub_category: validation.data.sub_category || null,
+        entry: formData.entry,
+        current_price: initialCurrentPrice, // FIX: Direct safe assignment
+        entry_mode: formData.entry_mode,
+        limit_entry_price: isLimitOrder && hasNumericEntry ? entryPrice : null,
 
-          // For LIMIT orders, start PENDING and not activated.
-          // For MARKET orders, start OPEN and activated.
-          is_activated: isLimitOrder ? false : true,
-          activated_at: isLimitOrder ? null : new Date().toISOString(),
+        is_activated: !isLimitOrder,
+        activated_at: isLimitOrder ? null : new Date().toISOString(),
 
-          tp1: validation.data.tp1,
-          tp2: validation.data.tp2 || null,
-          tp3: validation.data.tp3 || null,
-          sl: validation.data.sl,
-          note: validation.data.note || null,
-          profit_note: validation.data.profit_note || null,
+        tp1: validation.data.tp1,
+        tp2: validation.data.tp2 || null,
+        tp3: validation.data.tp3 || null,
+        sl: validation.data.sl,
+        note: validation.data.note || null,
+        profit_note: validation.data.profit_note || null,
 
-          // IMPORTANT: remove any "Active" backend status.
-          status: initialLifecycle,
-          signal_status: initialLifecycle,
+        status: initialLifecycle,
+        signal_status: initialLifecycle,
 
-          signal_type: validation.data.signal_type || null,
-          risk_level: validation.data.risk_level || null,
-          analysis_reason: validation.data.analysis_reason || null,
-          is_premium: formData.is_premium,
-          tag: formData.tag || null,
-          signal_raw_text: null,
-        };
+        signal_type: validation.data.signal_type || null,
+        risk_level: validation.data.risk_level || null,
+        analysis_reason: validation.data.analysis_reason || null,
+        is_premium: formData.is_premium,
+        tag: formData.tag || null,
+        signal_raw_text: null,
+      };
 
       if (editSignal) {
         const { error } = await supabase
@@ -122,15 +118,14 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           .insert([cleanedData])
           .select("id, pair, type, entry, tp1, tp2, tp3, sl")
           .single();
+
         if (error) {
           toast.error("Failed to create signal. Please try again.");
           return;
         }
         toast.success("Signal created successfully");
 
-        // Post every new signal to the Telegram channel — regardless of
-        // category (Gold/Commodities, Crypto, Forex, Deriv all go through
-        // here), so manually created signals aren't silently skipped.
+        // Telegram Notification
         supabase.functions
           .invoke("telegram-signal-post", {
             body: { signal: cleanedData, action: "new_signal" },
@@ -144,13 +139,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             }
           });
 
-        // Mirror every new signal onto the connected MT5 demo account —
-        // opens THREE positions (one per TP1/TP2/TP3) so each can bank
-        // profit at its own level; once TP1 closes in profit, the other
-        // two get their SL moved to break-even automatically (handled by
-        // the mt5-demo-trade cron check). Runs in the background so a
-        // slow/failed MT5 call never blocks signal creation; the
-        // auto-generate-signals function does the same.
+        // MT5 Auto-Trade Execution
         if (inserted) {
           const entryNum = parseFloat(String(inserted.entry));
           const slNum = parseFloat(String(inserted.sl));
@@ -244,9 +233,8 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         </div>
       </div>
 
-      {/* Order Type Section - Professional MT5 Style */}
+      {/* Order Type Section */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Trade Type: Buy/Sell */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Trade Type</Label>
           <div className="grid grid-cols-2 gap-2">
@@ -277,7 +265,6 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           </div>
         </div>
 
-        {/* Entry Type: Market/Limit */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Entry Type</Label>
           <div className="grid grid-cols-2 gap-2">
@@ -309,7 +296,6 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         </div>
       </div>
 
-      {/* Auto Status Info */}
       <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
         isMarket 
           ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
@@ -343,21 +329,17 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
               className="mt-1 font-mono text-lg"
               required
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              {isMarket ? 'Entry at current market price' : `Triggers when price ${isBuy ? 'drops to' : 'rises to'} this level`}
-            </p>
           </div>
           <div>
             <Label className="text-xs text-destructive">Stop Loss (SL)</Label>
             <Input
               type="text"
-              placeholder="e.g., 2640.00 or SL OPEN"
+              placeholder="e.g., 2640.00"
               value={formData.sl}
               onChange={(e) => setFormData({ ...formData, sl: e.target.value })}
               className="mt-1 font-mono text-lg border-destructive/30"
               required
             />
-            <p className="text-xs text-destructive/70 mt-1">Auto-closes signal if hit (numeric only)</p>
           </div>
         </div>
 
@@ -366,7 +348,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             <Label className="text-xs text-success">Take Profit 1 (TP1)</Label>
             <Input
               type="text"
-              placeholder="e.g., 2660.00 or TP OPEN"
+              placeholder="e.g., 2660.00"
               value={formData.tp1}
               onChange={(e) => setFormData({ ...formData, tp1: e.target.value })}
               className="mt-1 font-mono border-success/30"
@@ -430,7 +412,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
       <div>
         <Label className="text-xs text-muted-foreground">Analysis / Reason (Optional)</Label>
         <Textarea
-          placeholder="e.g., Trendline breakout, Support/Resistance, News impact..."
+          placeholder="e.g., Trendline breakout, Support/Resistance..."
           value={formData.analysis_reason}
           onChange={(e) => setFormData({ ...formData, analysis_reason: e.target.value })}
           className="mt-1"
@@ -465,16 +447,14 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           <Label className="text-sm font-semibold text-purple-400">Event Tag (Optional)</Label>
         </div>
         <Input
-          placeholder="e.g., NFP Trade, CPI News, FOMC..."
+          placeholder="e.g., NFP Trade, CPI News..."
           value={formData.tag}
           onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
           className="border-purple-500/30 focus:border-purple-500"
         />
-        <p className="text-xs text-muted-foreground mt-2">Tag will show on user dashboard next to entry price</p>
       </div>
 
-
-      {/* Premium Access Toggle */}
+      {/* Premium Toggle */}
       <div className="flex items-center justify-between p-4 border border-yellow-500/30 rounded-xl bg-gradient-to-r from-yellow-500/5 to-yellow-500/10">
         <div className="flex items-center gap-3">
           <Crown className="h-5 w-5 text-yellow-500" />
@@ -487,24 +467,6 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           checked={formData.is_premium}
           onCheckedChange={(checked) => setFormData({ ...formData, is_premium: checked })}
         />
-      </div>
-
-      {/* Preview Card */}
-      <div className="p-4 rounded-xl border border-dashed border-border bg-muted/10">
-        <p className="text-xs text-muted-foreground mb-2">Signal Preview:</p>
-        <div className="flex items-center gap-2 text-sm font-mono">
-          <span className={`px-2 py-1 rounded text-xs font-bold ${isBuy ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'}`}>
-            {formData.type.toUpperCase()}
-          </span>
-          <span className="font-semibold">{formData.pair || 'Symbol'}</span>
-          <span className="text-muted-foreground">@</span>
-          <span className={isMarket ? 'text-blue-400' : 'text-orange-400'}>
-            {isMarket ? 'Active' : 'Limit'} {formData.entry || '0.00'}
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Status: {isMarket ? '🟢 Active (Market Order)' : '🟡 Pending (Limit Order)'} → Auto-closes on TP/SL hit
-        </p>
       </div>
 
       <Button type="submit" className="w-full btn-glow text-base py-6" disabled={loading}>
