@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SignalCard from "@/components/SignalCard";
@@ -22,7 +22,6 @@ import {
 import { Link } from "react-router-dom";
 
 const Index = () => {
-  const queryClient = useQueryClient();
   // Master Active Category State
   const [activeCategory, setActiveCategory] = useState("All");
 
@@ -39,54 +38,7 @@ const Index = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 3000, // Har 3 sec baad database state verify
   });
-
-  /* =========================================================
-     LIVE PRICES EDGE FUNCTION TRIGGER & REAL-TIME SYNC
-  ========================================================= */
-  useEffect(() => {
-    // 1. Live Fetch Function Call
-    const fetchPrices = async () => {
-      try {
-        await supabase.functions.invoke("fetch-live-prices");
-      } catch (err) {
-        console.error("Error triggering live price update:", err);
-      }
-    };
-
-    // Initial Trigger on load
-    fetchPrices();
-
-    // Trigger every 3 seconds for continuous accuracy
-    const interval = setInterval(fetchPrices, 3000);
-
-    // 2. Realtime Database Subscription
-    const channel = supabase
-      .channel("schema-db-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "signals",
-        },
-        (payload) => {
-          queryClient.setQueryData(["latest-signals"], (oldData: any[]) => {
-            if (!oldData) return [];
-            return oldData.map((sig) =>
-              sig.id === payload.new.id ? { ...sig, ...payload.new } : sig
-            );
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearInterval(interval);
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
 
   const structuredData = {
     "@context": "https://schema.org",
