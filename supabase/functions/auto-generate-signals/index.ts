@@ -122,88 +122,6 @@ async function fetchMT5Prices(
 }
 
 /* =========================================================
-   YAHOO FINANCE FALLBACK
-   ---------------------------------------------------------
-   The connected MT5 account is a Deriv account, whose broker
-   symbol list only exposes the synthetic indices (Boom/Crash/
-   Volatility). Gold, Silver, Crypto and Forex pairs are not
-   in that symbol list, so fetchMT5Prices() legitimately comes
-   back empty for them - which meant those categories never
-   generated (and never posted to Telegram). Yahoo Finance is
-   used here as a free fallback price source so those
-   categories can still generate signals when MT5 has nothing.
-========================================================= */
-
-const YAHOO_SYMBOLS: Record<string, string> = {
-  "XAU/USD (Gold)": "GC=F",
-  "XAG/USD (Silver)": "SI=F",
-  "EUR/USD": "EURUSD=X",
-  "GBP/USD": "GBPUSD=X",
-  "USD/JPY": "USDJPY=X",
-  "AUD/USD": "AUDUSD=X",
-  "GBP/JPY": "GBPJPY=X",
-  "USD/CAD": "USDCAD=X",
-  "NZD/USD": "NZDUSD=X",
-  "USD/CHF": "USDCHF=X",
-  "CHF/JPY": "CHFJPY=X",
-  "CAD/JPY": "CADJPY=X",
-  "BTC/USD": "BTC-USD",
-  "ETH/USD": "ETH-USD",
-  "SOL/USD": "SOL-USD",
-  "XRP/USD": "XRP-USD",
-  "DOGE/USD": "DOGE-USD",
-};
-
-async function fetchYahooPrice(
-  symbol: string
-): Promise<number | null> {
-  try {
-    const response = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`,
-      {
-        headers: { "User-Agent": "Mozilla/5.0" },
-        signal: AbortSignal.timeout(8000),
-      }
-    );
-
-    if (!response.ok) {
-      console.log(`Yahoo fetch failed for ${symbol}:`, response.status);
-      return null;
-    }
-
-    const json = await response.json();
-    const meta = json?.chart?.result?.[0]?.meta;
-    const price = Number(meta?.regularMarketPrice);
-
-    return Number.isFinite(price) && price > 0 ? price : null;
-  } catch (error) {
-    console.log(`Yahoo fetch error for ${symbol}:`, String(error));
-    return null;
-  }
-}
-
-async function fillMissingPricesFromYahoo(
-  pairs: string[],
-  mt5: Record<string, number>
-): Promise<void> {
-  const missing = pairs.filter(
-    (pair) => !mt5[pair] && YAHOO_SYMBOLS[pair]
-  );
-
-  if (missing.length === 0) return;
-
-  await Promise.allSettled(
-    missing.map(async (pair) => {
-      const price = await fetchYahooPrice(YAHOO_SYMBOLS[pair]);
-      if (price) {
-        mt5[pair] = price;
-        console.log(`YAHOO FALLBACK PRICE: ${pair} -> ${price}`);
-      }
-    })
-  );
-}
-
-/* =========================================================
    HELPERS
 ========================================================= */
 
@@ -657,19 +575,6 @@ Deno.serve(async (req) => {
 
     console.log(
       "AVAILABLE MT5 PRICES:",
-      JSON.stringify(mt5)
-    );
-
-    // Deriv MT5 accounts don't carry Gold/Silver/Crypto/Forex
-    // symbols, so fill in whatever MT5 couldn't provide via Yahoo
-    // Finance instead of silently dropping those categories.
-    await fillMissingPricesFromYahoo(
-      allPairs,
-      mt5
-    );
-
-    console.log(
-      "FINAL PRICE MAP (MT5 + Yahoo fallback):",
       JSON.stringify(mt5)
     );
 
@@ -1128,6 +1033,56 @@ Deno.serve(async (req) => {
     }
 
     /* =====================================================
+       MT5 AUTO-TRADE
+       MIRROR EVERY NEW SIGNAL ONTO THE
+       CONNECTED MT5 DEMO ACCOUNT
+    ===================================================== */
+
+    const mt5Results: Record<string, boolean> = {};
+
+    if (data && data.length > 0) {
+      await Promise.allSettled(
+        data.map(async (signal) => {
+          try {
+            const entryNum = parseFloat(String(signal.entry));
+            const slNum = parseFloat(String(signal.sl));
+            const tpNum = parseFloat(String(signal.tp1));
+
+            const response = await fetch(
+              `${supabaseUrl}/functions/v1/mt5-demo-trade`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${serviceRoleKey}`,
+                  apikey: serviceRoleKey,
+                },
+                body: JSON.stringify({
+                  action: "open",
+                  signal_id: signal.id,
+                  symbol: signal.pair,
+                  trade_type: signal.type === "Buy" ? "buy" : "sell",
+                  entry: Number.isFinite(entryNum) ? entryNum : undefined,
+                  sl: Number.isFinite(slNum) ? slNum : undefined,
+                  tp: Number.isFinite(tpNum) ? tpNum : undefined,
+                  lot_size: 0.01,
+                }),
+              }
+            );
+
+            const result = await response.json().catch(() => ({}));
+            const ok = response.ok && result?.success === true;
+            mt5Results[signal.pair] = ok;
+            console.log(`MT5 auto-trade ${signal.pair}:`, ok, result);
+          } catch (error) {
+            mt5Results[signal.pair] = false;
+            console.error(`MT5 auto-trade error ${signal.pair}:`, String(error));
+          }
+        })
+      );
+    }
+
+    /* =====================================================
        RESPONSE
     ===================================================== */
 
@@ -1149,6 +1104,9 @@ Deno.serve(async (req) => {
 
         telegram_posted:
           telegramResults,
+
+        mt5_auto_trade:
+          mt5Results,
 
         decisions,
 
