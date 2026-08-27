@@ -783,8 +783,14 @@ async function notifyTelegramUpdate(
             tp1: signal.tp1,
             tp2: signal.tp2,
             tp3: signal.tp3,
+            tp4: signal.tp4,
             sl: signal.sl,
             profit_note: signal.profit_note,
+            tp1_hit: signal.tp1_hit,
+            tp2_hit: signal.tp2_hit,
+            tp3_hit: signal.tp3_hit,
+            tp4_hit: signal.tp4_hit,
+            sl_hit: signal.sl_hit,
           },
         }),
       }
@@ -1152,7 +1158,9 @@ serve(async (req) => {
             "close";
           updates.status = "close";
           updates.profit_note =
-            "SL Hit ❌";
+            signal.tp1_hit
+              ? "Break-Even Exit ⚪ (TP1 was already secured)"
+              : "SL Hit ❌";
 
           hitEvents.push("sl_hit");
         }
