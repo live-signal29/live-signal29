@@ -395,7 +395,7 @@ async function openMultiTrade(
   clientApi: string,
   body: TradeRequest
 ): Promise<Response> {
-  const { tp1, tp2, tp3, sl, lot_size = 0.50 } = body;
+  const { tp1, tp2, tp3, sl, lot_size = 0.01 } = body;
 
   const legs: { tp_level: number; tp: number | undefined }[] = [
     { tp_level: 1, tp: tp1 },
@@ -445,7 +445,7 @@ async function placeSingleTrade(
   clientApi: string,
   body: TradeRequest
 ): Promise<{ success: boolean; trade_id?: string; mt5_ticket?: any; error?: string }> {
-  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.50, tp_level } = body;
+  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.01, tp_level } = body;
 
   if (!symbol || !trade_type) {
     return { success: false, error: "Symbol and trade type required" };
