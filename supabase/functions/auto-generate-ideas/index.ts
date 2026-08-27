@@ -333,7 +333,7 @@ Deno.serve(async (req) => {
       image_url: imageUrl,
     }];
 
-    const { data, error } = await supabase.from("market_ideas").insert(rows).select("id, title, image_url");
+    const { data, error } = await supabase.from("market_ideas").insert(rows).select("id, title, description, image_url");
     if (error) {
       console.error("Insert error:", error);
       return new Response(JSON.stringify({ error: error.message }), {
@@ -341,8 +341,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Push the auto-generated idea to the Telegram channel too — this was
+    // missing here (it only existed in the unused index.tsx sibling file),
+    // which is why Ideas showed up on the dashboard but never posted.
+    const telegramResults: Record<string, boolean> = {};
+    if (data && data.length > 0) {
+      await Promise.allSettled(
+        data.map(async (row) => {
+          try {
+            const response = await fetch(`${supabaseUrl}/functions/v1/telegram-signal-post`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${serviceRoleKey}`,
+                apikey: serviceRoleKey,
+              },
+              body: JSON.stringify({
+                action: "new_idea",
+                idea: {
+                  title: row.title,
+                  description: row.description,
+                  image_url: row.image_url,
+                },
+              }),
+            });
+            const result = await response.json();
+            telegramResults[row.id] = Boolean(result?.success);
+          } catch (e) {
+            console.error("Telegram idea post error:", e);
+            telegramResults[row.id] = false;
+          }
+        })
+      );
+    }
+
     return new Response(JSON.stringify({
-      success: true, gold_price: base.price, ideas_created: data?.length || 0, ideas: data,
+      success: true, gold_price: base.price, ideas_created: data?.length || 0, ideas: data, telegramResults,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error:", error);
