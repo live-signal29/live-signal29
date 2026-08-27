@@ -1046,7 +1046,9 @@ Deno.serve(async (req) => {
           try {
             const entryNum = parseFloat(String(signal.entry));
             const slNum = parseFloat(String(signal.sl));
-            const tpNum = parseFloat(String(signal.tp1));
+            const tp1Num = parseFloat(String(signal.tp1));
+            const tp2Num = parseFloat(String(signal.tp2));
+            const tp3Num = parseFloat(String(signal.tp3));
 
             const response = await fetch(
               `${supabaseUrl}/functions/v1/mt5-demo-trade`,
@@ -1058,13 +1060,15 @@ Deno.serve(async (req) => {
                   apikey: serviceRoleKey,
                 },
                 body: JSON.stringify({
-                  action: "open",
+                  action: "open_multi",
                   signal_id: signal.id,
                   symbol: signal.pair,
                   trade_type: signal.type === "Buy" ? "buy" : "sell",
                   entry: Number.isFinite(entryNum) ? entryNum : undefined,
                   sl: Number.isFinite(slNum) ? slNum : undefined,
-                  tp: Number.isFinite(tpNum) ? tpNum : undefined,
+                  tp1: Number.isFinite(tp1Num) ? tp1Num : undefined,
+                  tp2: Number.isFinite(tp2Num) ? tp2Num : undefined,
+                  tp3: Number.isFinite(tp3Num) ? tp3Num : undefined,
                   lot_size: 0.01,
                 }),
               }
