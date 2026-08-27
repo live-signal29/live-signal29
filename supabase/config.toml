@@ -31,7 +31,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.mt5-demo-trade]
-verify_jwt = true
+verify_jwt = false
 
 [functions.admin-delete-user]
 verify_jwt = false
