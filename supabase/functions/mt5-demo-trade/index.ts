@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PROVISIONING = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
+const DEFAULT_CLIENT_API = "https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai";
+
 interface TradeRequest {
   action: "open" | "check" | "close" | "stats";
   signal_id?: string;
@@ -18,45 +21,100 @@ interface TradeRequest {
   trade_id?: string;
 }
 
+interface Credentials {
+  token: string;
+  login: string;
+  password: string;
+  server: string;
+}
+
+// Credentials can live in TWO places depending on how they were entered:
+// 1. The admin "MT5 Connection Settings" UI -> saved to the
+//    `integration_settings` table (this is how fetch-live-prices reads
+//    them, which is why live prices already work).
+// 2. Supabase Edge Function secrets (METAAPI_TOKEN / MT5_LOGIN / etc).
+// Check the table FIRST, fall back to secrets, so this function always
+// sees the same credentials the rest of the app is using.
+async function loadCredentials(supabase: any): Promise<Credentials> {
+  const keys = ["METAAPI_TOKEN", "MT5_LOGIN", "MT5_PASSWORD", "MT5_SERVER"];
+  const values: Record<string, string> = {};
+
+  try {
+    const { data, error } = await supabase
+      .from("integration_settings")
+      .select("key,value")
+      .in("key", keys);
+
+    if (error) {
+      console.error("integration_settings error:", error.message);
+    }
+
+    for (const row of data || []) {
+      values[row.key] = String(row.value || "").trim();
+    }
+  } catch (error) {
+    console.error("integration_settings fetch failed:", String(error));
+  }
+
+  const token = values.METAAPI_TOKEN || Deno.env.get("METAAPI_TOKEN")?.trim() || "";
+  const login = values.MT5_LOGIN || Deno.env.get("MT5_LOGIN")?.trim() || "";
+  const password = values.MT5_PASSWORD || Deno.env.get("MT5_PASSWORD")?.trim() || "";
+  const server = values.MT5_SERVER || Deno.env.get("MT5_SERVER")?.trim() || "";
+
+  console.log(
+    "MT5 credentials loaded:",
+    "token=" + Boolean(token),
+    "login=" + Boolean(login),
+    "password=" + Boolean(password),
+    "server=" + Boolean(server)
+  );
+
+  return { token, login, password, server };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const METAAPI_TOKEN = Deno.env.get("METAAPI_TOKEN");
-    const MT5_LOGIN = Deno.env.get("MT5_LOGIN");
-    const MT5_PASSWORD = Deno.env.get("MT5_PASSWORD");
-    const MT5_SERVER = Deno.env.get("MT5_SERVER");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    if (!METAAPI_TOKEN) {
-      throw new Error("MetaApi token not configured");
+    const creds = await loadCredentials(supabase);
+
+    if (!creds.token) {
+      throw new Error("MetaApi token not configured (checked integration_settings table and secrets)");
+    }
+    if (!creds.login || !creds.server) {
+      throw new Error("MT5 login/server not configured (checked integration_settings table and secrets)");
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body: TradeRequest = await req.json();
     
     console.log("MT5 Demo Trade request:", body.action);
 
-    // Get or create MetaApi account
-    const accountId = await getOrCreateMetaApiAccount(
-      METAAPI_TOKEN,
-      MT5_LOGIN!,
-      MT5_PASSWORD!,
-      MT5_SERVER!
+    // Get or create MetaApi account (also resolves the region-specific
+    // client-api host, same as fetch-live-prices does — the generic host
+    // works for provisioning but trade/position calls need the region
+    // host or they silently fail / 404).
+    const { accountId, clientApi } = await getOrCreateMetaApiAccount(
+      creds.token,
+      creds.login,
+      creds.password,
+      creds.server
     );
 
     switch (body.action) {
       case "open":
-        return await openTrade(supabase, METAAPI_TOKEN, accountId, body);
+        return await openTrade(supabase, creds.token, accountId, clientApi, body);
       
       case "check":
-        return await checkTrades(supabase, METAAPI_TOKEN, accountId);
+        return await checkTrades(supabase, creds.token, accountId, clientApi);
       
       case "close":
-        return await closeTrade(supabase, METAAPI_TOKEN, accountId, body.trade_id!);
+        return await closeTrade(supabase, creds.token, accountId, clientApi, body.trade_id!);
       
       case "stats":
         return await getStats(supabase);
@@ -78,9 +136,9 @@ async function getOrCreateMetaApiAccount(
   login: string,
   password: string,
   server: string
-): Promise<string> {
+): Promise<{ accountId: string; clientApi: string }> {
   // Check if account already exists
-  const listResponse = await fetch("https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts", {
+  const listResponse = await fetch(`${PROVISIONING}/users/current/accounts`, {
     headers: { "auth-token": token },
   });
 
@@ -88,67 +146,114 @@ async function getOrCreateMetaApiAccount(
     throw new Error(`Failed to list MetaApi accounts: ${await listResponse.text()}`);
   }
 
-  const accounts = await listResponse.json();
-  const existingAccount = accounts.find((acc: any) => acc.login === login && acc.server === server);
+  const raw = await listResponse.json();
+  const accounts = Array.isArray(raw) ? raw : raw?.items || [];
+  let account = accounts.find((acc: any) => String(acc.login) === String(login) && String(acc.server || "").toLowerCase() === String(server).toLowerCase())
+    || accounts.find((acc: any) => String(acc.login) === String(login));
 
-  if (existingAccount) {
-    console.log("Using existing MetaApi account:", existingAccount._id);
-    
-    // Deploy if not deployed
-    if (existingAccount.state !== "DEPLOYED") {
-      await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${existingAccount._id}/deploy`, {
-        method: "POST",
-        headers: { "auth-token": token },
-      });
-      // Wait for deployment
-      await new Promise(resolve => setTimeout(resolve, 5000));
+  if (!account) {
+    // Create new account
+    console.log("Creating new MetaApi account...");
+    const createResponse = await fetch(`${PROVISIONING}/users/current/accounts`, {
+      method: "POST",
+      headers: {
+        "auth-token": token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: `Demo-${login}`,
+        type: "cloud",
+        login: login,
+        password: password,
+        server: server,
+        platform: "mt5",
+        magic: 123456,
+      }),
+    });
+
+    if (!createResponse.ok) {
+      throw new Error(`Failed to create MetaApi account: ${await createResponse.text()}`);
     }
-    
-    return existingAccount._id;
+
+    account = await createResponse.json();
+    console.log("Created MetaApi account:", account._id || account.id);
+  } else {
+    console.log("Using existing MetaApi account:", account._id || account.id);
   }
 
-  // Create new account
-  console.log("Creating new MetaApi account...");
-  const createResponse = await fetch("https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts", {
-    method: "POST",
-    headers: {
-      "auth-token": token,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: `Demo-${login}`,
-      type: "cloud",
-      login: login,
-      password: password,
-      server: server,
-      platform: "mt5",
-      magic: 123456,
-    }),
-  });
+  const accountId = account._id || account.id;
+  const state = String(account?.state || "").toUpperCase();
 
-  if (!createResponse.ok) {
-    throw new Error(`Failed to create MetaApi account: ${await createResponse.text()}`);
+  // Deploy if not deployed
+  if (state && state !== "DEPLOYED" && state !== "DEPLOYING") {
+    await fetch(`${PROVISIONING}/users/current/accounts/${accountId}/deploy`, {
+      method: "POST",
+      headers: { "auth-token": token },
+    });
+    // Wait for deployment
+    await new Promise(resolve => setTimeout(resolve, 5000));
   }
 
-  const newAccount = await createResponse.json();
-  console.log("Created MetaApi account:", newAccount.id);
+  const region = account?.region || account?.primaryReplica?.region || null;
+  const clientApi = region
+    ? `https://mt-client-api-v1.${region}.agiliumtrade.ai`
+    : DEFAULT_CLIENT_API;
 
-  // Deploy the account
-  await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${newAccount.id}/deploy`, {
-    method: "POST",
-    headers: { "auth-token": token },
-  });
+  console.log("MT5 account ready:", accountId, "region:", region || "default");
 
-  // Wait for deployment
-  await new Promise(resolve => setTimeout(resolve, 10000));
+  return { accountId, clientApi };
+}
 
-  return newAccount.id;
+// Broker MT5 accounts often list symbols with a suffix/prefix that differs
+// from the plain pair name used in our signals (e.g. our "XAUUSD" might be
+// the broker's "XAUUSDm" or "GOLD"). Placing a trade with the wrong exact
+// symbol string fails silently with a MetaApi error, even though price
+// lookups (which already do this matching) work fine. Resolve against the
+// broker's actual symbol list before sending the trade.
+async function resolveBrokerSymbol(
+  token: string,
+  clientApi: string,
+  accountId: string,
+  appSymbol: string
+): Promise<string> {
+  try {
+    const response = await fetch(
+      `${clientApi}/users/current/accounts/${accountId}/symbols`,
+      { headers: { "auth-token": token }, signal: AbortSignal.timeout(15000) }
+    );
+
+    if (!response.ok) return appSymbol;
+
+    const raw = await response.json();
+    const list: string[] = (Array.isArray(raw) ? raw : raw?.symbols || raw?.items || [])
+      .map((s: any) => (typeof s === "string" ? s : s?.symbol || s?.name))
+      .filter(Boolean);
+
+    const normalize = (v: string) => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const wanted = normalize(appSymbol);
+
+    const exact = list.find((s) => normalize(s) === wanted);
+    if (exact) return exact;
+
+    const prefix = list.find((s) => normalize(s).startsWith(wanted) || wanted.startsWith(normalize(s)));
+    if (prefix) return prefix;
+
+    const contains = wanted.length >= 4 ? list.find((s) => normalize(s).includes(wanted)) : null;
+    if (contains) return contains;
+
+    console.log(`No broker symbol match for ${appSymbol}, using as-is`);
+    return appSymbol;
+  } catch (error) {
+    console.error("resolveBrokerSymbol error:", String(error));
+    return appSymbol;
+  }
 }
 
 async function openTrade(
   supabase: any,
   token: string,
   accountId: string,
+  clientApi: string,
   body: TradeRequest
 ): Promise<Response> {
   const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.01 } = body;
@@ -156,6 +261,9 @@ async function openTrade(
   if (!symbol || !trade_type) {
     throw new Error("Symbol and trade type required");
   }
+
+  const brokerSymbol = await resolveBrokerSymbol(token, clientApi, accountId, symbol);
+  console.log(`Symbol resolved: ${symbol} -> ${brokerSymbol}`);
 
   // Insert pending trade record
   const { data: tradeRecord, error: insertError } = await supabase
@@ -181,7 +289,7 @@ async function openTrade(
     // Place trade via MetaApi
     const tradePayload: any = {
       actionType: trade_type.toUpperCase() === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
-      symbol: symbol,
+      symbol: brokerSymbol,
       volume: lot_size,
       comment: `Signal: ${signal_id || "manual"}`,
     };
@@ -193,7 +301,7 @@ async function openTrade(
     console.log("Opening MT5 trade:", tradePayload);
 
     const tradeResponse = await fetch(
-      `https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/trade`,
+      `${clientApi}/users/current/accounts/${accountId}/trade`,
       {
         method: "POST",
         headers: {
@@ -248,7 +356,8 @@ async function openTrade(
 async function checkTrades(
   supabase: any,
   token: string,
-  accountId: string
+  accountId: string,
+  clientApi: string
 ): Promise<Response> {
   // Get all open trades from database
   const { data: openTrades, error } = await supabase
@@ -269,7 +378,7 @@ async function checkTrades(
 
   // Get positions from MetaApi
   const positionsResponse = await fetch(
-    `https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/positions`,
+    `${clientApi}/users/current/accounts/${accountId}/positions`,
     { headers: { "auth-token": token } }
   );
 
@@ -278,7 +387,7 @@ async function checkTrades(
 
   // Get closed positions (history)
   const historyResponse = await fetch(
-    `https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/history-deals?startTime=${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}`,
+    `${clientApi}/users/current/accounts/${accountId}/history-deals?startTime=${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}`,
     { headers: { "auth-token": token } }
   );
 
@@ -341,6 +450,7 @@ async function closeTrade(
   supabase: any,
   token: string,
   accountId: string,
+  clientApi: string,
   tradeId: string
 ): Promise<Response> {
   // Get trade from database
@@ -360,7 +470,7 @@ async function closeTrade(
 
   // Close position via MetaApi
   const closeResponse = await fetch(
-    `https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/trade`,
+    `${clientApi}/users/current/accounts/${accountId}/trade`,
     {
       method: "POST",
       headers: {
