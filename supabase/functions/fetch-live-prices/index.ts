@@ -268,10 +268,6 @@ function normalizeSymbol(value: string): string {
 
 /* =========================================================
    DERIV SYNTHETIC INDICES (VOL / BOOM / CRASH / STEP / JUMP)
-   These symbols do NOT exist on regular MT5 forex brokers
-   (they are only offered on Deriv's own platform), so they
-   must be priced directly from Deriv's public API instead
-   of going through the MetaApi/MT5 broker symbol lookup.
 ========================================================= */
 
 const DERIV_WS_URL =
@@ -311,8 +307,6 @@ function getDerivSymbol(
     return null;
   }
 
-  // "VOL" / "VOLATILITY" indices - check longest numbers first
-  // so "VOL100" isn't wrongly matched by the "10" check.
   if (n.includes("VOL")) {
     const oneSecond = n.includes("1S") || n.includes("1SEC");
 
@@ -347,10 +341,15 @@ async function fetchDerivPrice(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      try {
-        ws?.close();
-      } catch {
-        // ignore
+      if (ws) {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        try {
+          ws.close();
+        } catch {
+          // ignore
+        }
       }
       resolve(value);
     };
@@ -402,6 +401,9 @@ async function fetchDerivPrice(
           return;
         }
 
+        const decimals =
+          symbol.includes("R_75") || symbol.includes("1HZ75V") ? 4 : 2;
+
         const prices = data?.history?.prices;
 
         if (Array.isArray(prices) && prices.length > 0) {
@@ -411,19 +413,18 @@ async function fetchDerivPrice(
             console.log(
               `REAL DERIV PRICE: ${symbol} -> ${price}`
             );
-            finish(price.toFixed(2));
+            finish(price.toFixed(decimals));
             return;
           }
         }
 
-        // Fallback: some responses come back as a single tick
         const tickPrice = Number(data?.tick?.quote);
 
         if (tickPrice > 0) {
           console.log(
             `REAL DERIV PRICE (tick): ${symbol} -> ${tickPrice}`
           );
-          finish(tickPrice.toFixed(2));
+          finish(tickPrice.toFixed(decimals));
         }
       } catch (error) {
         console.error(
@@ -855,12 +856,6 @@ async function fetchAllPrices(
 ): Promise<Record<string, string>> {
   const prices: Record<string, string> = {};
 
-  /*
-   * STEP 1 - Deriv synthetic indices (Volatility / Boom / Crash /
-   * Step / Jump). These are NOT available on regular MT5 forex
-   * brokers, so they are priced straight from Deriv's own public
-   * API rather than through the MetaApi/MT5 broker symbol lookup.
-   */
   const derivPairs: { pair: string; symbol: string }[] = [];
   const remainingPairs: string[] = [];
 
@@ -895,10 +890,6 @@ async function fetchAllPrices(
     JSON.stringify(prices)
   );
 
-  /*
-   * STEP 2 - Everything else (regular forex, metals, crypto)
-   * goes through the MT5/MetaApi broker as before.
-   */
   if (remainingPairs.length === 0) {
     return prices;
   }
@@ -1190,12 +1181,9 @@ serve(async (req) => {
         any
       > = {
         current_price: current,
+        updated_at: new Date().toISOString(),
       };
 
-      // Snapshot of the signal that we progressively update as each
-      // level is detected below - this is what actually gets sent to
-      // Telegram per event, so a TP1 post shows ONLY TP1 as done even
-      // if TP2/TP3 also got crossed later in this same price check.
       const runningState: Record<string, any> = {
         ...signal,
       };
@@ -1446,9 +1434,6 @@ serve(async (req) => {
 
       updatedCount++;
 
-      // Post every newly-hit TP/SL level to Telegram (one message per
-      // event, using that event's own progressive snapshot so a TP1
-      // post never shows TP2/TP3 as already done).
       for (const event of hitEvents) {
         telegramPromises.push(
           notifyTelegramUpdate(
