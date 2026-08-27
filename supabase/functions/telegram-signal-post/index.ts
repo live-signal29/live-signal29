@@ -25,6 +25,11 @@ interface Signal {
   category?: string;
   main_category?: string;
   profit_note?: string;
+  tp1_hit?: boolean;
+  tp2_hit?: boolean;
+  tp3_hit?: boolean;
+  tp4_hit?: boolean;
+  sl_hit?: boolean;
 }
 
 interface Idea {
@@ -122,10 +127,11 @@ function formatSignalMessage(signal: Signal): string {
       ? "⚡"
       : "✅";
 
-  let message = `${emoji} <b>NEW SIGNAL</b> ${emoji}\n\n`;
+  let message = `${emoji} <b>NEW SIGNAL</b> ${emoji}\n`;
+  message += `━━━━━━━━━━━━━━━\n\n`;
 
   message += `📊 <b>${signal.pair}</b>\n`;
-  message += `📈 Type: <b>${type}</b>\n\n`;
+  message += `📈 Direction: <b>${type}</b>\n\n`;
 
   message += `💰 Entry: <code>${signal.entry}</code>\n`;
   message += `🎯 TP1: <code>${signal.tp1}</code>\n`;
@@ -156,34 +162,85 @@ function formatSignalMessage(signal: Signal): string {
     message += `\n📝 <i>${signal.analysis_reason}</i>\n`;
   }
 
+  message += `\n📍 <b>Status: Position Opened</b>\n`;
+
   message += `\n━━━━━━━━━━━━━━━\n`;
   message += `🌐 <b>TREND IS FRIEND</b>`;
 
   return message;
 }
 
+/* =========================================================
+   TP/SL UPDATE MESSAGE
+   ---------------------------------------------------------
+   Deliberately built to LOOK DIFFERENT from a "new signal"
+   post at a glance: a bold status headline up top (what just
+   happened), a ✅/⏳ progress checklist of every TP level so
+   readers can see the whole trade at once, and a clear
+   running/closed status line at the bottom.
+========================================================= */
+
+const UPDATE_META: Record<
+  string,
+  { headline: string; banner: string }
+> = {
+  tp1_hit: { headline: "✅ TP1 ACHIEVED", banner: "🟢" },
+  tp2_hit: { headline: "✅ TP2 ACHIEVED", banner: "🟢" },
+  tp3_hit: { headline: "🏆 FINAL TARGET HIT", banner: "🟢" },
+  tp4_hit: { headline: "✅ TP4 ACHIEVED", banner: "🟢" },
+  sl_hit: { headline: "🛑 STOP LOSS HIT", banner: "🔴" },
+};
+
 function formatUpdateMessage(
   signal: Signal,
   updateType?: string
 ): string {
-  const label = updateType
-    ? updateType.replace(/_/g, " ").toUpperCase()
-    : "UPDATE";
+  const type = String(signal.type || "").toUpperCase();
 
-  let message = `🔔 <b>SIGNAL ${label}</b> 🔔\n\n`;
+  const isSl = updateType === "sl_hit";
+  const isClosingEvent =
+    updateType === "tp3_hit" || isSl;
 
-  message += `📊 <b>${signal.pair}</b>\n`;
-  message += `📈 Type: <b>${String(signal.type || "").toUpperCase()}</b>\n\n`;
+  let meta =
+    UPDATE_META[updateType || ""] || {
+      headline: "🔔 SIGNAL UPDATE",
+      banner: "🔔",
+    };
 
-  message += `💰 Entry: <code>${signal.entry}</code>\n`;
-  message += `🎯 TP1: <code>${signal.tp1}</code>\n`;
-  if (signal.tp2) message += `🎯 TP2: <code>${signal.tp2}</code>\n`;
-  if (signal.tp3) message += `🎯 TP3: <code>${signal.tp3}</code>\n`;
-  message += `🛑 SL: <code>${signal.sl}</code>\n`;
+  // SL hit AFTER TP1 means SL had already moved to break-even -
+  // that's an even exit, not a loss, so label it distinctly
+  // instead of a scary "STOP LOSS HIT".
+  if (isSl && signal.tp1_hit) {
+    meta = { headline: "⚪ BREAK-EVEN EXIT", banner: "⚪" };
+  }
+
+  let message = `${meta.banner} <b>${meta.headline}</b> ${meta.banner}\n`;
+  message += `━━━━━━━━━━━━━━━\n\n`;
+
+  message += `📊 <b>${signal.pair}</b>  •  ${type}\n`;
+  message += `💰 Entry: <code>${signal.entry}</code>\n\n`;
+
+  message += `<b>Progress:</b>\n`;
+  message += `${signal.tp1_hit ? "✅" : "⏳"} TP1: <code>${signal.tp1}</code>\n`;
+  if (signal.tp2) {
+    message += `${signal.tp2_hit ? "✅" : "⏳"} TP2: <code>${signal.tp2}</code>\n`;
+  }
+  if (signal.tp3) {
+    message += `${signal.tp3_hit ? "✅" : "⏳"} TP3: <code>${signal.tp3}</code>\n`;
+  }
+  if (signal.tp4) {
+    message += `${signal.tp4_hit ? "✅" : "⏳"} TP4: <code>${signal.tp4}</code>\n`;
+  }
+  message += `${isSl ? "🛑" : "🔒"} SL: <code>${signal.sl}</code>`;
+  message += `${signal.tp1_hit && !isSl ? " (Break-Even)" : ""}\n`;
 
   if (signal.profit_note) {
-    message += `\n📝 <b>${signal.profit_note}</b>\n`;
+    message += `\n📝 <i>${signal.profit_note}</i>\n`;
   }
+
+  message += isClosingEvent
+    ? `\n🏁 <b>Status: Trade Closed</b>\n`
+    : `\n🟢 <b>Status: Trade Running</b>\n`;
 
   message += `\n━━━━━━━━━━━━━━━\n`;
   message += `🌐 <b>TREND IS FRIEND</b>`;
