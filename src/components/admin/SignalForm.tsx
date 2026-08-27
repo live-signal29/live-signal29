@@ -120,7 +120,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         const { data: inserted, error } = await supabase
           .from("signals")
           .insert([cleanedData])
-          .select("id, pair, type, entry, tp1, sl")
+          .select("id, pair, type, entry, tp1, tp2, tp3, sl")
           .single();
         if (error) {
           toast.error("Failed to create signal. Please try again.");
@@ -145,23 +145,30 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           });
 
         // Mirror every new signal onto the connected MT5 demo account —
-        // opens the same Buy/Sell with the signal's Entry/SL/TP1. Runs in
-        // the background so a slow/failed MT5 call never blocks signal
-        // creation; the auto-generate-signals function does the same.
+        // opens THREE positions (one per TP1/TP2/TP3) so each can bank
+        // profit at its own level; once TP1 closes in profit, the other
+        // two get their SL moved to break-even automatically (handled by
+        // the mt5-demo-trade cron check). Runs in the background so a
+        // slow/failed MT5 call never blocks signal creation; the
+        // auto-generate-signals function does the same.
         if (inserted) {
           const entryNum = parseFloat(String(inserted.entry));
           const slNum = parseFloat(String(inserted.sl));
-          const tpNum = parseFloat(String(inserted.tp1));
+          const tp1Num = parseFloat(String(inserted.tp1));
+          const tp2Num = parseFloat(String(inserted.tp2));
+          const tp3Num = parseFloat(String(inserted.tp3));
           supabase.functions
             .invoke("mt5-demo-trade", {
               body: {
-                action: "open",
+                action: "open_multi",
                 signal_id: inserted.id,
                 symbol: inserted.pair,
                 trade_type: inserted.type === "Buy" ? "buy" : "sell",
                 entry: Number.isFinite(entryNum) ? entryNum : undefined,
                 sl: Number.isFinite(slNum) ? slNum : undefined,
-                tp: Number.isFinite(tpNum) ? tpNum : undefined,
+                tp1: Number.isFinite(tp1Num) ? tp1Num : undefined,
+                tp2: Number.isFinite(tp2Num) ? tp2Num : undefined,
+                tp3: Number.isFinite(tp3Num) ? tp3Num : undefined,
                 lot_size: 0.01,
               },
             })
@@ -170,7 +177,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
                 console.error("MT5 auto-trade error:", mt5Error);
                 toast.error("Signal saved, but MT5 trade failed to open");
               } else {
-                toast.success("MT5 trade opened");
+                toast.success("MT5 trades opened");
               }
             });
         }
