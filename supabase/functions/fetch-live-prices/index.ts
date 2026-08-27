@@ -267,6 +267,181 @@ function normalizeSymbol(value: string): string {
 }
 
 /* =========================================================
+   DERIV SYNTHETIC INDICES (VOL / BOOM / CRASH / STEP / JUMP)
+   These symbols do NOT exist on regular MT5 forex brokers
+   (they are only offered on Deriv's own platform), so they
+   must be priced directly from Deriv's public API instead
+   of going through the MetaApi/MT5 broker symbol lookup.
+========================================================= */
+
+const DERIV_WS_URL =
+  "wss://ws.derivws.com/websockets/v3?app_id=1089";
+
+function getDerivSymbol(
+  appPair: string
+): string | null {
+  const n = normalizeSymbol(appPair);
+
+  if (n.includes("BOOM") && n.includes("1000")) {
+    return "BOOM1000";
+  }
+
+  if (n.includes("BOOM") && n.includes("500")) {
+    return "BOOM500";
+  }
+
+  if (n.includes("CRASH") && n.includes("1000")) {
+    return "CRASH1000";
+  }
+
+  if (n.includes("CRASH") && n.includes("500")) {
+    return "CRASH500";
+  }
+
+  if (n.includes("STEP")) {
+    return "stpRNG";
+  }
+
+  if (n.includes("JUMP")) {
+    if (n.includes("10")) return "JD10";
+    if (n.includes("25")) return "JD25";
+    if (n.includes("50")) return "JD50";
+    if (n.includes("75")) return "JD75";
+    if (n.includes("100")) return "JD100";
+    return null;
+  }
+
+  // "VOL" / "VOLATILITY" indices - check longest numbers first
+  // so "VOL100" isn't wrongly matched by the "10" check.
+  if (n.includes("VOL")) {
+    const oneSecond = n.includes("1S") || n.includes("1SEC");
+
+    if (n.includes("100")) {
+      return oneSecond ? "1HZ100V" : "R_100";
+    }
+    if (n.includes("75")) {
+      return oneSecond ? "1HZ75V" : "R_75";
+    }
+    if (n.includes("50")) {
+      return oneSecond ? "1HZ50V" : "R_50";
+    }
+    if (n.includes("25")) {
+      return oneSecond ? "1HZ25V" : "R_25";
+    }
+    if (n.includes("10")) {
+      return oneSecond ? "1HZ10V" : "R_10";
+    }
+  }
+
+  return null;
+}
+
+async function fetchDerivPrice(
+  symbol: string
+): Promise<string | null> {
+  return await new Promise((resolve) => {
+    let settled = false;
+    let ws: WebSocket;
+
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        ws?.close();
+      } catch {
+        // ignore
+      }
+      resolve(value);
+    };
+
+    const timer = setTimeout(() => {
+      console.error(`Deriv timeout: ${symbol}`);
+      finish(null);
+    }, 8000);
+
+    try {
+      ws = new WebSocket(DERIV_WS_URL);
+    } catch (error) {
+      console.error(
+        `Deriv WS init error ${symbol}:`,
+        String(error)
+      );
+      clearTimeout(timer);
+      resolve(null);
+      return;
+    }
+
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          ticks_history: symbol,
+          adjust_start_time: 1,
+          count: 1,
+          end: "latest",
+          start: 1,
+          style: "ticks",
+        })
+      );
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(
+          typeof event.data === "string"
+            ? event.data
+            : "{}"
+        );
+
+        if (data?.error) {
+          console.error(
+            `Deriv error ${symbol}:`,
+            data.error?.message || data.error
+          );
+          finish(null);
+          return;
+        }
+
+        const prices = data?.history?.prices;
+
+        if (Array.isArray(prices) && prices.length > 0) {
+          const price = Number(prices[prices.length - 1]);
+
+          if (price > 0) {
+            console.log(
+              `REAL DERIV PRICE: ${symbol} -> ${price}`
+            );
+            finish(price.toFixed(2));
+            return;
+          }
+        }
+
+        // Fallback: some responses come back as a single tick
+        const tickPrice = Number(data?.tick?.quote);
+
+        if (tickPrice > 0) {
+          console.log(
+            `REAL DERIV PRICE (tick): ${symbol} -> ${tickPrice}`
+          );
+          finish(tickPrice.toFixed(2));
+        }
+      } catch (error) {
+        console.error(
+          `Deriv parse error ${symbol}:`,
+          String(error)
+        );
+        finish(null);
+      }
+    };
+
+    ws.onerror = () => {
+      console.error(`Deriv WS error: ${symbol}`);
+      finish(null);
+    };
+  });
+}
+
+/* =========================================================
    SYMBOL ALIASES
 ========================================================= */
 
@@ -680,6 +855,54 @@ async function fetchAllPrices(
 ): Promise<Record<string, string>> {
   const prices: Record<string, string> = {};
 
+  /*
+   * STEP 1 - Deriv synthetic indices (Volatility / Boom / Crash /
+   * Step / Jump). These are NOT available on regular MT5 forex
+   * brokers, so they are priced straight from Deriv's own public
+   * API rather than through the MetaApi/MT5 broker symbol lookup.
+   */
+  const derivPairs: { pair: string; symbol: string }[] = [];
+  const remainingPairs: string[] = [];
+
+  for (const pair of pairs) {
+    const derivSymbol = getDerivSymbol(pair);
+
+    if (derivSymbol) {
+      derivPairs.push({ pair, symbol: derivSymbol });
+    } else {
+      remainingPairs.push(pair);
+    }
+  }
+
+  if (derivPairs.length > 0) {
+    await Promise.all(
+      derivPairs.map(async ({ pair, symbol }) => {
+        const price = await fetchDerivPrice(symbol);
+
+        if (price) {
+          prices[pair] = price;
+        } else {
+          console.log(
+            `Deriv price unavailable for ${pair} (${symbol})`
+          );
+        }
+      })
+    );
+  }
+
+  console.log(
+    "DERIV PRICES:",
+    JSON.stringify(prices)
+  );
+
+  /*
+   * STEP 2 - Everything else (regular forex, metals, crypto)
+   * goes through the MT5/MetaApi broker as before.
+   */
+  if (remainingPairs.length === 0) {
+    return prices;
+  }
+
   const accountId =
     await getAccountId();
 
@@ -703,7 +926,7 @@ async function fetchAllPrices(
     `Broker symbols loaded: ${brokerSymbols.length}`
   );
 
-  for (const pair of pairs) {
+  for (const pair of remainingPairs) {
     const symbol =
       await findBrokerSymbol(
         accountId,
@@ -730,7 +953,7 @@ async function fetchAllPrices(
   }
 
   console.log(
-    "FINAL MT5 PRICES:",
+    "FINAL PRICES:",
     JSON.stringify(prices)
   );
 
@@ -961,27 +1184,6 @@ serve(async (req) => {
 
       const currentPrice =
         parseFloat(current);
-
-      // Sanity check — if a symbol got mismatched/mis-resolved, the
-      // "price" that comes back can be wildly off from where the signal
-      // actually started (e.g. a Volatility 100 signal around 597
-      // suddenly showing 7166). Trusting that number was causing signals
-      // to get marked CLOSED (fake TP/SL hits) on the dashboard while the
-      // real MT5 position was still open and nowhere near those levels.
-      // Reject anything more than 5x away from Entry as bad data instead
-      // of using it.
-      const entryPrice = parseFloat(String(signal.entry));
-      if (
-        Number.isFinite(entryPrice) &&
-        entryPrice > 0 &&
-        Number.isFinite(currentPrice) &&
-        (currentPrice > entryPrice * 5 || currentPrice < entryPrice / 5)
-      ) {
-        console.error(
-          `Rejecting implausible price for ${signal.pair} (signal ${signal.id}): entry=${entryPrice}, got=${currentPrice}`
-        );
-        continue;
-      }
 
       const updates: Record<
         string,
