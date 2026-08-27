@@ -319,15 +319,35 @@ async function openTrade(
     const tradeResult = await tradeResponse.json();
     console.log("Trade result:", tradeResult);
 
-    if (!tradeResponse.ok || tradeResult.error) {
-      throw new Error(tradeResult.message || tradeResult.error || "Trade execution failed");
+    // MetaApi's /trade endpoint often returns HTTP 200 even when the
+    // BROKER rejected/requoted the order — there is no top-level "error"
+    // field in that case, only a non-success numericCode/stringCode and
+    // no positionId/orderId. Treating that as success was the actual bug:
+    // the DB row got marked "open" with mt5_ticket = NULL while nothing
+    // was really placed on the MT5 account. A trade only really opened
+    // if MetaApi gave back a positionId or orderId.
+    const ticket = tradeResult.positionId || tradeResult.orderId;
+    const isRejected =
+      !tradeResponse.ok ||
+      tradeResult.error ||
+      !ticket ||
+      (tradeResult.numericCode !== undefined && tradeResult.numericCode !== 0 && tradeResult.numericCode !== 10009) ||
+      (tradeResult.stringCode && !["TRADE_RETCODE_DONE", "TRADE_RETCODE_PLACED"].includes(tradeResult.stringCode));
+
+    if (isRejected) {
+      throw new Error(
+        tradeResult.message ||
+        tradeResult.stringCode ||
+        tradeResult.error ||
+        `Broker rejected the order (no ticket returned): ${JSON.stringify(tradeResult)}`
+      );
     }
 
     // Update trade record with success
     await supabase
       .from("mt5_demo_trades")
       .update({
-        mt5_ticket: tradeResult.positionId || tradeResult.orderId,
+        mt5_ticket: ticket,
         status: "open",
         open_time: new Date().toISOString(),
         entry_price: tradeResult.price || entry,
@@ -338,7 +358,7 @@ async function openTrade(
       JSON.stringify({
         success: true,
         trade_id: tradeRecord.id,
-        mt5_ticket: tradeResult.positionId || tradeResult.orderId,
+        mt5_ticket: ticket,
         message: "Trade opened successfully",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
