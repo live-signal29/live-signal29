@@ -969,7 +969,18 @@ serve(async (req) => {
         current_price: current,
       };
 
-      const hitEvents: string[] = [];
+      // Snapshot of the signal that we progressively update as each
+      // level is detected below - this is what actually gets sent to
+      // Telegram per event, so a TP1 post shows ONLY TP1 as done even
+      // if TP2/TP3 also got crossed later in this same price check.
+      const runningState: Record<string, any> = {
+        ...signal,
+      };
+
+      const hitEvents: {
+        type: string;
+        snapshot: Record<string, any>;
+      }[] = [];
 
       const isBuy =
         String(signal.type || "")
@@ -1056,12 +1067,23 @@ serve(async (req) => {
           updates.profit_note =
             "TP 1 Hit ✅ SL moved to B.E";
 
-          hitEvents.push("tp1_hit");
-
           if (entry > 0) {
             updates.sl =
               String(entry);
           }
+
+          runningState.tp1_hit = true;
+          runningState.profit_note =
+            updates.profit_note;
+          if (updates.sl) {
+            runningState.sl =
+              updates.sl;
+          }
+
+          hitEvents.push({
+            type: "tp1_hit",
+            snapshot: { ...runningState },
+          });
         }
       }
 
@@ -1083,7 +1105,14 @@ serve(async (req) => {
           updates.profit_note =
             "TP 2 Cleared! Secure More Profits 💰";
 
-          hitEvents.push("tp2_hit");
+          runningState.tp2_hit = true;
+          runningState.profit_note =
+            updates.profit_note;
+
+          hitEvents.push({
+            type: "tp2_hit",
+            snapshot: { ...runningState },
+          });
         }
       }
 
@@ -1108,7 +1137,14 @@ serve(async (req) => {
           updates.profit_note =
             "TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅";
 
-          hitEvents.push("tp3_hit");
+          runningState.tp3_hit = true;
+          runningState.profit_note =
+            updates.profit_note;
+
+          hitEvents.push({
+            type: "tp3_hit",
+            snapshot: { ...runningState },
+          });
         }
       }
 
@@ -1130,7 +1166,14 @@ serve(async (req) => {
           updates.profit_note =
             "TP 4 Hit 🚀";
 
-          hitEvents.push("tp4_hit");
+          runningState.tp4_hit = true;
+          runningState.profit_note =
+            updates.profit_note;
+
+          hitEvents.push({
+            type: "tp4_hit",
+            snapshot: { ...runningState },
+          });
         }
       }
 
@@ -1162,7 +1205,14 @@ serve(async (req) => {
               ? "Break-Even Exit ⚪ (TP1 was already secured)"
               : "SL Hit ❌";
 
-          hitEvents.push("sl_hit");
+          runningState.sl_hit = true;
+          runningState.profit_note =
+            updates.profit_note;
+
+          hitEvents.push({
+            type: "sl_hit",
+            snapshot: { ...runningState },
+          });
         }
       }
 
@@ -1174,13 +1224,13 @@ serve(async (req) => {
       updatedCount++;
 
       // Post every newly-hit TP/SL level to Telegram (one message per
-      // event, using the latest values so SL-moved-to-B.E after TP1
-      // shows correctly).
-      for (const eventType of hitEvents) {
+      // event, using that event's own progressive snapshot so a TP1
+      // post never shows TP2/TP3 as already done).
+      for (const event of hitEvents) {
         telegramPromises.push(
           notifyTelegramUpdate(
-            { ...signal, ...updates },
-            eventType
+            event.snapshot,
+            event.type
           )
         );
       }
