@@ -249,6 +249,52 @@ async function resolveBrokerSymbol(
   }
 }
 
+// Different symbols (especially Deriv synthetic indices like VOL75,
+// BOOM1000, CRASH500) have their own minimum/step lot size — 0.01 that
+// works fine for forex/gold gets rejected by the broker as "Invalid
+// volume" on these. Look up the broker's actual volume rules for this
+// symbol and snap the requested lot to a valid value before trading.
+async function resolveValidVolume(
+  token: string,
+  clientApi: string,
+  accountId: string,
+  brokerSymbol: string,
+  requestedVolume: number
+): Promise<number> {
+  try {
+    const response = await fetch(
+      `${clientApi}/users/current/accounts/${accountId}/symbols/${encodeURIComponent(brokerSymbol)}/specification`,
+      { headers: { "auth-token": token }, signal: AbortSignal.timeout(10000) }
+    );
+
+    if (!response.ok) return requestedVolume;
+
+    const spec = await response.json();
+    const minVolume = Number(spec?.minVolume) || 0;
+    const maxVolume = Number(spec?.maxVolume) || Infinity;
+    const step = Number(spec?.volumeStep) || minVolume || 0.01;
+
+    if (!minVolume) return requestedVolume;
+
+    let volume = requestedVolume;
+    if (volume < minVolume) volume = minVolume;
+    if (volume > maxVolume) volume = maxVolume;
+
+    // Snap to the nearest valid step above the minimum
+    if (step > 0) {
+      const steps = Math.round((volume - minVolume) / step);
+      volume = minVolume + steps * step;
+    }
+
+    volume = Number(volume.toFixed(2));
+    console.log(`Volume for ${brokerSymbol}: requested ${requestedVolume} -> broker min ${minVolume}/step ${step} -> using ${volume}`);
+    return volume;
+  } catch (error) {
+    console.error("resolveValidVolume error:", String(error));
+    return requestedVolume;
+  }
+}
+
 async function openTrade(
   supabase: any,
   token: string,
@@ -265,6 +311,8 @@ async function openTrade(
   const brokerSymbol = await resolveBrokerSymbol(token, clientApi, accountId, symbol);
   console.log(`Symbol resolved: ${symbol} -> ${brokerSymbol}`);
 
+  const validVolume = await resolveValidVolume(token, clientApi, accountId, brokerSymbol, lot_size);
+
   // Insert pending trade record
   const { data: tradeRecord, error: insertError } = await supabase
     .from("mt5_demo_trades")
@@ -275,7 +323,7 @@ async function openTrade(
       entry_price: entry,
       sl_price: sl,
       tp_price: tp,
-      lot_size,
+      lot_size: validVolume,
       status: "pending",
     })
     .select()
@@ -290,7 +338,7 @@ async function openTrade(
     const tradePayload: any = {
       actionType: trade_type.toUpperCase() === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
       symbol: brokerSymbol,
-      volume: lot_size,
+      volume: validVolume,
       // MT5 brokers cap the comment field at ~26 characters — a full
       // "Signal: <uuid>" (44+ chars) gets rejected by MetaApi with
       // "clientId and comment fields length is invalid". Keep it short;
