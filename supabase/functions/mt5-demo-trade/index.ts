@@ -291,7 +291,11 @@ async function openTrade(
       actionType: trade_type.toUpperCase() === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
       symbol: brokerSymbol,
       volume: lot_size,
-      comment: `Signal: ${signal_id || "manual"}`,
+      // MT5 brokers cap the comment field at ~26 characters — a full
+      // "Signal: <uuid>" (44+ chars) gets rejected by MetaApi with
+      // "clientId and comment fields length is invalid". Keep it short;
+      // the real signal_id is already stored in mt5_demo_trades.
+      comment: "LiveSignal",
     };
 
     // Add SL/TP if provided and valid
