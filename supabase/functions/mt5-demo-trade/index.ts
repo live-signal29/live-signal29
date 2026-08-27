@@ -217,6 +217,38 @@ async function getOrCreateMetaApiAccount(
 // symbol string fails silently with a MetaApi error, even though price
 // lookups (which already do this matching) work fine. Resolve against the
 // broker's actual symbol list before sending the trade.
+function normalizeSym(v: string): string {
+  return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+// "VOL 75" / "Volatility 75" etc need to expand to the broker's real
+// name ("Volatility 75 Index" -> normalized "VOLATILITY75INDEX") before
+// matching — a plain normalize+prefix check fails for these because
+// "VOL75" is NOT a prefix of "VOLATILITY75INDEX" (unlike "BOOM1000",
+// which IS a prefix of "BOOM1000INDEX" and so worked already). This is
+// exactly why Boom/Crash trades opened fine but Volatility ones didn't.
+function getSymbolAliases(appSymbol: string): string[] {
+  const n = normalizeSym(appSymbol);
+
+  if (n.includes("XAU") || n.includes("GOLD")) return ["XAUUSD", "GOLD", "XAUUSDM"];
+  if (n.includes("XAG") || n.includes("SILVER")) return ["XAGUSD", "SILVER"];
+
+  if (n.includes("BOOM") && n.includes("1000")) return ["BOOM1000INDEX", "BOOM1000"];
+  if (n.includes("BOOM") && n.includes("500")) return ["BOOM500INDEX", "BOOM500"];
+  if (n.includes("CRASH") && n.includes("1000")) return ["CRASH1000INDEX", "CRASH1000"];
+  if (n.includes("CRASH") && n.includes("500")) return ["CRASH500INDEX", "CRASH500"];
+
+  if (n.includes("VOL") && n.includes("75")) return ["VOLATILITY75INDEX", "VOL75", "V75"];
+  if (n.includes("VOL") && n.includes("100")) return ["VOLATILITY100INDEX", "VOL100", "V100"];
+  if (n.includes("VOL") && n.includes("50")) return ["VOLATILITY50INDEX", "VOL50", "V50"];
+  if (n.includes("VOL") && n.includes("25")) return ["VOLATILITY25INDEX", "VOL25", "V25"];
+
+  if (n.includes("STEP")) return ["STEPINDEX", "STEP"];
+  if (n.includes("JUMP")) return [n, "JUMP"];
+
+  return [n];
+}
+
 async function resolveBrokerSymbol(
   token: string,
   clientApi: string,
@@ -236,17 +268,39 @@ async function resolveBrokerSymbol(
       .map((s: any) => (typeof s === "string" ? s : s?.symbol || s?.name))
       .filter(Boolean);
 
-    const normalize = (v: string) => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const wanted = normalize(appSymbol);
+    const normalized = list.map((s) => ({ original: s, n: normalizeSym(s) }));
+    const aliases = getSymbolAliases(appSymbol);
 
-    const exact = list.find((s) => normalize(s) === wanted);
-    if (exact) return exact;
+    // EXACT match against every alias first (most reliable)
+    for (const alias of aliases) {
+      const wanted = normalizeSym(alias);
+      const exact = normalized.find((x) => x.n === wanted);
+      if (exact) {
+        console.log(`Symbol EXACT: ${appSymbol} -> ${exact.original}`);
+        return exact.original;
+      }
+    }
 
-    const prefix = list.find((s) => normalize(s).startsWith(wanted) || wanted.startsWith(normalize(s)));
-    if (prefix) return prefix;
+    // PREFIX match as fallback
+    for (const alias of aliases) {
+      const wanted = normalizeSym(alias);
+      const match = normalized.find((x) => x.n.startsWith(wanted) || wanted.startsWith(x.n));
+      if (match) {
+        console.log(`Symbol PREFIX: ${appSymbol} -> ${match.original}`);
+        return match.original;
+      }
+    }
 
-    const contains = wanted.length >= 4 ? list.find((s) => normalize(s).includes(wanted)) : null;
-    if (contains) return contains;
+    // CONTAINS match as last resort
+    for (const alias of aliases) {
+      const wanted = normalizeSym(alias);
+      if (wanted.length < 4) continue;
+      const match = normalized.find((x) => x.n.includes(wanted));
+      if (match) {
+        console.log(`Symbol CONTAINS: ${appSymbol} -> ${match.original}`);
+        return match.original;
+      }
+    }
 
     console.log(`No broker symbol match for ${appSymbol}, using as-is`);
     return appSymbol;
