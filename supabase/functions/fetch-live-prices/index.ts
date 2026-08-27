@@ -46,10 +46,7 @@ function clientApi(): string {
 async function loadCredentials() {
   if (Date.now() - credentialsLoadedAt < 30000) return;
 
-  const admin = createClient(
-    SUPABASE_URL,
-    SERVICE_KEY
-  );
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
   const { data, error } = await admin
     .from("integration_settings")
@@ -57,10 +54,7 @@ async function loadCredentials() {
     .in("key", KEYS);
 
   if (error) {
-    console.error(
-      "integration_settings error:",
-      error.message
-    );
+    console.error("integration_settings error:", error.message);
   }
 
   const values: Record<string, string> = {};
@@ -70,24 +64,10 @@ async function loadCredentials() {
   }
 
   METAAPI_TOKEN =
-    values.METAAPI_TOKEN ||
-    Deno.env.get("METAAPI_TOKEN")?.trim() ||
-    "";
-
-  MT5_LOGIN =
-    values.MT5_LOGIN ||
-    Deno.env.get("MT5_LOGIN")?.trim() ||
-    "";
-
-  MT5_SERVER =
-    values.MT5_SERVER ||
-    Deno.env.get("MT5_SERVER")?.trim() ||
-    "";
-
-  MT5_PASSWORD =
-    values.MT5_PASSWORD ||
-    Deno.env.get("MT5_PASSWORD")?.trim() ||
-    "";
+    values.METAAPI_TOKEN || Deno.env.get("METAAPI_TOKEN")?.trim() || "";
+  MT5_LOGIN = values.MT5_LOGIN || Deno.env.get("MT5_LOGIN")?.trim() || "";
+  MT5_SERVER = values.MT5_SERVER || Deno.env.get("MT5_SERVER")?.trim() || "";
+  MT5_PASSWORD = values.MT5_PASSWORD || Deno.env.get("MT5_PASSWORD")?.trim() || "";
 
   credentialsLoadedAt = Date.now();
 }
@@ -99,127 +79,75 @@ async function loadCredentials() {
 async function getAccountId(): Promise<string | null> {
   await loadCredentials();
 
-  if (
-    !METAAPI_TOKEN ||
-    !MT5_LOGIN ||
-    !MT5_SERVER
-  ) {
+  if (!METAAPI_TOKEN || !MT5_LOGIN || !MT5_SERVER) {
     console.error("MT5 credentials incomplete");
     return null;
   }
 
-  if (
-    cachedAccountId &&
-    Date.now() - cachedAccountAt < 10 * 60 * 1000
-  ) {
+  if (cachedAccountId && Date.now() - cachedAccountAt < 10 * 60 * 1000) {
     return cachedAccountId;
   }
 
   try {
-    const response = await fetch(
-      `${PROVISIONING}/users/current/accounts`,
-      {
-        headers: {
-          "auth-token": METAAPI_TOKEN,
-        },
-        signal: AbortSignal.timeout(10000),
-      }
-    );
+    const response = await fetch(`${PROVISIONING}/users/current/accounts`, {
+      headers: { "auth-token": METAAPI_TOKEN },
+      signal: AbortSignal.timeout(10000),
+    });
 
-    if (!response.ok) {
-      return null;
-    }
+    if (!response.ok) return null;
 
     const raw = await response.json();
-
-    const accounts = Array.isArray(raw)
-      ? raw
-      : raw?.items || [];
+    const accounts = Array.isArray(raw) ? raw : raw?.items || [];
 
     let account =
       accounts.find(
         (a: any) =>
           String(a.login) === String(MT5_LOGIN) &&
-          String(a.server || "").toLowerCase() ===
-            String(MT5_SERVER).toLowerCase()
-      ) ||
-      accounts.find(
-        (a: any) =>
-          String(a.login) === String(MT5_LOGIN)
-      );
+          String(a.server || "").toLowerCase() === String(MT5_SERVER).toLowerCase()
+      ) || accounts.find((a: any) => String(a.login) === String(MT5_LOGIN));
 
     if (!account && MT5_PASSWORD) {
-      const createResponse = await fetch(
-        `${PROVISIONING}/users/current/accounts`,
-        {
-          method: "POST",
-          headers: {
-            "auth-token": METAAPI_TOKEN,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: `LiveSignals-${MT5_LOGIN}`,
-            type: "cloud",
-            login: MT5_LOGIN,
-            password: MT5_PASSWORD,
-            server: MT5_SERVER,
-            platform: "mt5",
-            magic: 0,
-          }),
-          signal: AbortSignal.timeout(15000),
-        }
-      );
+      const createResponse = await fetch(`${PROVISIONING}/users/current/accounts`, {
+        method: "POST",
+        headers: {
+          "auth-token": METAAPI_TOKEN,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: `LiveSignals-${MT5_LOGIN}`,
+          type: "cloud",
+          login: MT5_LOGIN,
+          password: MT5_PASSWORD,
+          server: MT5_SERVER,
+          platform: "mt5",
+          magic: 0,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
 
-      if (!createResponse.ok) {
-        return null;
-      }
-
+      if (!createResponse.ok) return null;
       account = await createResponse.json();
     }
 
-    const accountId =
-      account?._id || account?.id;
+    const accountId = account?._id || account?.id;
+    if (!accountId) return null;
 
-    if (!accountId) {
-      return null;
-    }
-
-    const state = String(
-      account?.state || ""
-    ).toUpperCase();
-
-    if (
-      state &&
-      state !== "DEPLOYED" &&
-      state !== "DEPLOYING"
-    ) {
-      await fetch(
-        `${PROVISIONING}/users/current/accounts/${accountId}/deploy`,
-        {
-          method: "POST",
-          headers: {
-            "auth-token": METAAPI_TOKEN,
-          },
-          signal: AbortSignal.timeout(10000),
-        }
-      );
+    const state = String(account?.state || "").toUpperCase();
+    if (state && state !== "DEPLOYED" && state !== "DEPLOYING") {
+      await fetch(`${PROVISIONING}/users/current/accounts/${accountId}/deploy`, {
+        method: "POST",
+        headers: { "auth-token": METAAPI_TOKEN },
+        signal: AbortSignal.timeout(10000),
+      });
     }
 
     cachedAccountId = accountId;
-
-    cachedRegion =
-      account?.region ||
-      account?.primaryReplica?.region ||
-      null;
-
+    cachedRegion = account?.region || account?.primaryReplica?.region || null;
     cachedAccountAt = Date.now();
 
     return accountId;
   } catch (error) {
-    console.error(
-      "getAccountId error:",
-      String(error)
-    );
+    console.error("getAccountId error:", String(error));
     return null;
   }
 }
@@ -235,36 +163,19 @@ function normalizeSymbol(value: string): string {
 }
 
 /* =========================================================
-   DERIV SYNTHETIC INDICES (VOL / BOOM / CRASH / STEP / JUMP)
+   DERIV SYNTHETIC INDICES
 ========================================================= */
 
-const DERIV_WS_URL =
-  "wss://ws.derivws.com/websockets/v3?app_id=1089";
+const DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 
-function getDerivSymbol(
-  appPair: string
-): string | null {
+function getDerivSymbol(appPair: string): string | null {
   const n = normalizeSymbol(appPair);
 
-  if (n.includes("BOOM") && n.includes("1000")) {
-    return "BOOM1000";
-  }
-
-  if (n.includes("BOOM") && n.includes("500")) {
-    return "BOOM500";
-  }
-
-  if (n.includes("CRASH") && n.includes("1000")) {
-    return "CRASH1000";
-  }
-
-  if (n.includes("CRASH") && n.includes("500")) {
-    return "CRASH500";
-  }
-
-  if (n.includes("STEP")) {
-    return "stpRNG";
-  }
+  if (n.includes("BOOM") && n.includes("1000")) return "BOOM1000";
+  if (n.includes("BOOM") && n.includes("500")) return "BOOM500";
+  if (n.includes("CRASH") && n.includes("1000")) return "CRASH1000";
+  if (n.includes("CRASH") && n.includes("500")) return "CRASH500";
+  if (n.includes("STEP")) return "stpRNG";
 
   if (n.includes("JUMP")) {
     if (n.includes("10")) return "JD10";
@@ -278,29 +189,17 @@ function getDerivSymbol(
   if (n.includes("VOL")) {
     const oneSecond = n.includes("1S") || n.includes("1SEC");
 
-    if (n.includes("100")) {
-      return oneSecond ? "1HZ100V" : "R_100";
-    }
-    if (n.includes("75")) {
-      return oneSecond ? "1HZ75V" : "R_75";
-    }
-    if (n.includes("50")) {
-      return oneSecond ? "1HZ50V" : "R_50";
-    }
-    if (n.includes("25")) {
-      return oneSecond ? "1HZ25V" : "R_25";
-    }
-    if (n.includes("10")) {
-      return oneSecond ? "1HZ10V" : "R_10";
-    }
+    if (n.includes("100")) return oneSecond ? "1HZ100V" : "R_100";
+    if (n.includes("75")) return oneSecond ? "1HZ75V" : "R_75";
+    if (n.includes("50")) return oneSecond ? "1HZ50V" : "R_50";
+    if (n.includes("25")) return oneSecond ? "1HZ25V" : "R_25";
+    if (n.includes("10")) return oneSecond ? "1HZ10V" : "R_10";
   }
 
   return null;
 }
 
-async function fetchDerivPrice(
-  symbol: string
-): Promise<string | null> {
+async function fetchDerivPrice(symbol: string): Promise<string | null> {
   return await new Promise((resolve) => {
     let settled = false;
     let ws: WebSocket;
@@ -348,9 +247,7 @@ async function fetchDerivPrice(
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(
-          typeof event.data === "string"
-            ? event.data
-            : "{}"
+          typeof event.data === "string" ? event.data : "{}"
         );
 
         if (data?.error) {
@@ -385,113 +282,57 @@ async function fetchDerivPrice(
 }
 
 /* =========================================================
-   FOREX / CRYPTO SYMBOL ALIASES (DERIV EXCLUDED)
+   FOREX / CRYPTO SYMBOL ALIASES
 ========================================================= */
 
-function getSymbolAliases(
-  appPair: string
-): string[] {
+function getSymbolAliases(appPair: string): string[] {
   const n = normalizeSymbol(appPair);
 
   if (n.includes("XAU") || n.includes("GOLD")) {
-    return [
-      "XAUUSD",
-      "GOLD",
-      "XAUUSDM",
-      "XAUUSD.A",
-      "XAUUSD.M",
-    ];
+    return ["XAUUSD", "GOLD", "XAUUSDM", "XAUUSD.A", "XAUUSD.M"];
   }
 
   if (n.includes("XAG") || n.includes("SILVER")) {
-    return [
-      "XAGUSD",
-      "SILVER",
-    ];
+    return ["XAGUSD", "SILVER"];
   }
 
   const crypto: Record<string, string[]> = {
-    BTCUSD: [
-      "BTCUSD",
-      "BTCUSDT",
-      "BTCUSD.M",
-      "BTCUSDm",
-    ],
-    ETHUSD: [
-      "ETHUSD",
-      "ETHUSDT",
-      "ETHUSD.M",
-      "ETHUSDm",
-    ],
-    SOLUSD: [
-      "SOLUSD",
-      "SOLUSDT",
-      "SOLUSD.M",
-      "SOLUSDm",
-    ],
-    XRPUSD: [
-      "XRPUSD",
-      "XRPUSDT",
-      "XRPUSD.M",
-      "XRPUSDm",
-    ],
-    DOGEUSD: [
-      "DOGEUSD",
-      "DOGEUSDT",
-      "DOGEUSD.M",
-      "DOGEUSDm",
-    ],
+    BTCUSD: ["BTCUSD", "BTCUSDT", "BTCUSD.M", "BTCUSDm"],
+    ETHUSD: ["ETHUSD", "ETHUSDT", "ETHUSD.M", "ETHUSDm"],
+    SOLUSD: ["SOLUSD", "SOLUSDT", "SOLUSD.M", "SOLUSDm"],
+    XRPUSD: ["XRPUSD", "XRPUSDT", "XRPUSD.M", "XRPUSDm"],
+    DOGEUSD: ["DOGEUSD", "DOGEUSDT", "DOGEUSD.M", "DOGEUSDm"],
   };
 
-  if (crypto[n]) {
-    return crypto[n];
-  }
-
+  if (crypto[n]) return crypto[n];
   return [n];
 }
 
 /* =========================================================
-   GET BROKER SYMBOLS
+   GET BROKER SYMBOLS & MT5 FETCH
 ========================================================= */
 
-async function getBrokerSymbols(
-  accountId: string
-): Promise<string[]> {
+async function getBrokerSymbols(accountId: string): Promise<string[]> {
   try {
     const response = await fetch(
       `${clientApi()}/users/current/accounts/${accountId}/symbols`,
       {
-        headers: {
-          "auth-token": METAAPI_TOKEN,
-        },
+        headers: { "auth-token": METAAPI_TOKEN },
         signal: AbortSignal.timeout(15000),
       }
     );
 
     if (!response.ok) return [];
-
     const raw = await response.json();
-    const list = Array.isArray(raw)
-      ? raw
-      : raw?.symbols ||
-        raw?.items ||
-        [];
+    const list = Array.isArray(raw) ? raw : raw?.symbols || raw?.items || [];
 
     return list
-      .map((s: any) =>
-        typeof s === "string"
-          ? s
-          : s?.symbol || s?.name
-      )
+      .map((s: any) => (typeof s === "string" ? s : s?.symbol || s?.name))
       .filter(Boolean);
   } catch {
     return [];
   }
 }
-
-/* =========================================================
-   FIND BROKER SYMBOL
-========================================================= */
 
 async function findBrokerSymbol(
   accountId: string,
@@ -505,24 +346,20 @@ async function findBrokerSymbol(
     normalized: normalizeSymbol(symbol),
   }));
 
-  /* EXACT */
   for (const alias of aliases) {
     const wanted = normalizeSymbol(alias);
     const exact = normalizedBroker.find((x) => x.normalized === wanted);
     if (exact) return exact.original;
   }
 
-  /* STARTS WITH */
   for (const alias of aliases) {
     const wanted = normalizeSymbol(alias);
     const match = normalizedBroker.find(
-      (x) =>
-        x.normalized.startsWith(wanted) || wanted.startsWith(x.normalized)
+      (x) => x.normalized.startsWith(wanted) || wanted.startsWith(x.normalized)
     );
     if (match) return match.original;
   }
 
-  /* CONTAINS */
   for (const alias of aliases) {
     const wanted = normalizeSymbol(alias);
     if (wanted.length < 4) continue;
@@ -532,10 +369,6 @@ async function findBrokerSymbol(
 
   return null;
 }
-
-/* =========================================================
-   GET PRICE FROM MT5
-========================================================= */
 
 async function fetchMt5Price(
   accountId: string,
@@ -547,9 +380,7 @@ async function fetchMt5Price(
         symbol
       )}/current-price?keepSubscription=true`,
       {
-        headers: {
-          "auth-token": METAAPI_TOKEN,
-        },
+        headers: { "auth-token": METAAPI_TOKEN },
         signal: AbortSignal.timeout(10000),
       }
     );
@@ -560,25 +391,17 @@ async function fetchMt5Price(
     const bid = Number(data?.bid);
     const ask = Number(data?.ask);
 
-    const price =
-      bid > 0 && ask > 0
-        ? (bid + ask) / 2
-        : bid > 0
-        ? bid
-        : ask;
+    const price = bid > 0 && ask > 0 ? (bid + ask) / 2 : bid > 0 ? bid : ask;
 
     if (!price || price <= 0) return null;
 
     const n = normalizeSymbol(symbol);
     let decimals = 5;
 
-    if (n.includes("JPY")) {
-      decimals = 3;
-    } else if (n.includes("XAU") || n.includes("GOLD")) {
-      decimals = 2;
-    } else if (n.includes("XAG") || n.includes("SILVER")) {
-      decimals = 3;
-    } else if (
+    if (n.includes("JPY")) decimals = 3;
+    else if (n.includes("XAU") || n.includes("GOLD")) decimals = 2;
+    else if (n.includes("XAG") || n.includes("SILVER")) decimals = 3;
+    else if (
       n.includes("BTC") ||
       n.includes("ETH") ||
       n.includes("SOL") ||
@@ -595,45 +418,42 @@ async function fetchMt5Price(
 }
 
 /* =========================================================
-   FETCH ALL (STRICT DERIV SEPARATION)
+   FETCH ALL (DERIV MAPPING FIXED)
 ========================================================= */
 
-async function fetchAllPrices(
-  pairs: string[]
-): Promise<Record<string, string>> {
+async function fetchAllPrices(pairs: string[]): Promise<Record<string, string>> {
   const prices: Record<string, string> = {};
 
-  const derivPairs: { pair: string; symbol: string }[] = [];
+  const derivPairs: { originalPair: string; symbol: string }[] = [];
   const remainingPairs: string[] = [];
 
   for (const pair of pairs) {
     const derivSymbol = getDerivSymbol(pair);
 
     if (derivSymbol) {
-      derivPairs.push({ pair, symbol: derivSymbol });
+      derivPairs.push({ originalPair: pair, symbol: derivSymbol });
     } else {
       remainingPairs.push(pair);
     }
   }
 
-  // 1. Deriv Real-time Fetch
+  // 1. Deriv Real-time Fetch with Original Key Mapping
   if (derivPairs.length > 0) {
     await Promise.all(
-      derivPairs.map(async ({ pair, symbol }) => {
+      derivPairs.map(async ({ originalPair, symbol }) => {
         const price = await fetchDerivPrice(symbol);
         if (price) {
-          prices[pair] = price;
+          prices[originalPair] = price;
         }
       })
     );
   }
 
-  // Strictly return if no Forex/Crypto pairs requested
   if (remainingPairs.length === 0) {
     return prices;
   }
 
-  // 2. MT5 Fetch ONLY for non-Deriv Pairs
+  // 2. MT5 Fetch strictly for non-Deriv pairs
   const accountId = await getAccountId();
   if (!accountId) return prices;
 
@@ -641,12 +461,7 @@ async function fetchAllPrices(
   if (!brokerSymbols.length) return prices;
 
   for (const pair of remainingPairs) {
-    const symbol = await findBrokerSymbol(
-      accountId,
-      pair,
-      brokerSymbols
-    );
-
+    const symbol = await findBrokerSymbol(accountId, pair, brokerSymbols);
     if (!symbol) continue;
 
     const price = await fetchMt5Price(accountId, symbol);
@@ -658,19 +473,11 @@ async function fetchAllPrices(
   return prices;
 }
 
-/* =========================================================
-   PARSE PRICE
-========================================================= */
-
 function parsePrice(value: string): number {
   if (!value) return 0;
   const cleaned = String(value).replace(/[^\d.\-]/g, "");
   return parseFloat(cleaned) || 0;
 }
-
-/* =========================================================
-   TELEGRAM NOTIFICATION
-========================================================= */
 
 async function notifyTelegramUpdate(
   signal: Record<string, any>,
@@ -711,7 +518,7 @@ async function notifyTelegramUpdate(
 }
 
 /* =========================================================
-   MAIN EDGE FUNCTION SERVER
+   MAIN SERVER EXECUTION
 ========================================================= */
 
 serve(async (req) => {
@@ -745,16 +552,13 @@ serve(async (req) => {
           prices,
         }),
         {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
     /* =====================================================
-       DATABASE SIGNALS PROCESS & REAL-TIME SYNC
+       DATABASE SIGNALS PROCESS
     ===================================================== */
 
     const { data: signals, error } = await supabase
@@ -775,10 +579,7 @@ serve(async (req) => {
           prices: {},
         }),
         {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
@@ -914,9 +715,7 @@ serve(async (req) => {
       updatedCount++;
 
       for (const event of hitEvents) {
-        telegramPromises.push(
-          notifyTelegramUpdate(event.snapshot, event.type)
-        );
+        telegramPromises.push(notifyTelegramUpdate(event.snapshot, event.type));
       }
     }
 
@@ -932,10 +731,7 @@ serve(async (req) => {
         prices,
       }),
       {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
@@ -947,10 +743,7 @@ serve(async (req) => {
       }),
       {
         status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }
