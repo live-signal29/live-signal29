@@ -311,7 +311,7 @@ async function resolveBrokerSymbol(
 }
 
 // Different symbols (especially Deriv synthetic indices like VOL75,
-// BOOM1000, CRASH500) have their own minimum/step lot size — 0.51 that
+// BOOM1000, CRASH500) have their own minimum/step lot size — 0.01 that
 // works fine for forex/gold gets rejected by the broker as "Invalid
 // volume" on these. Look up the broker's actual volume rules for this
 // symbol and snap the requested lot to a valid value before trading.
@@ -333,7 +333,7 @@ async function resolveValidVolume(
     const spec = await response.json();
     const minVolume = Number(spec?.minVolume) || 0;
     const maxVolume = Number(spec?.maxVolume) || Infinity;
-    const step = Number(spec?.volumeStep) || minVolume || 0.51;
+    const step = Number(spec?.volumeStep) || minVolume || 0.01;
 
     if (!minVolume) return requestedVolume;
 
@@ -395,7 +395,7 @@ async function openMultiTrade(
   clientApi: string,
   body: TradeRequest
 ): Promise<Response> {
-  const { tp1, tp2, tp3, sl, lot_size = 0.51 } = body;
+  const { tp1, tp2, tp3, sl, lot_size = 0.50 } = body;
 
   const legs: { tp_level: number; tp: number | undefined }[] = [
     { tp_level: 1, tp: tp1 },
@@ -445,7 +445,7 @@ async function placeSingleTrade(
   clientApi: string,
   body: TradeRequest
 ): Promise<{ success: boolean; trade_id?: string; mt5_ticket?: any; error?: string }> {
-  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.51, tp_level } = body;
+  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.50, tp_level } = body;
 
   if (!symbol || !trade_type) {
     return { success: false, error: "Symbol and trade type required" };
