@@ -756,6 +756,54 @@ function parsePrice(
 }
 
 /* =========================================================
+   TELEGRAM TP/SL UPDATE NOTIFICATION
+========================================================= */
+
+async function notifyTelegramUpdate(
+  signal: Record<string, any>,
+  updateType: string
+): Promise<void> {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/telegram-signal-post`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          apikey: SERVICE_KEY,
+        },
+        body: JSON.stringify({
+          action: "update",
+          update_type: updateType,
+          signal: {
+            pair: signal.pair,
+            type: signal.type,
+            entry: signal.entry,
+            tp1: signal.tp1,
+            tp2: signal.tp2,
+            tp3: signal.tp3,
+            sl: signal.sl,
+            profit_note: signal.profit_note,
+          },
+        }),
+      }
+    );
+
+    const result = await response.json();
+    console.log(
+      `Telegram update (${updateType}) for ${signal.pair}:`,
+      JSON.stringify(result)
+    );
+  } catch (error) {
+    console.error(
+      `Telegram update notify error for ${signal.pair}:`,
+      String(error)
+    );
+  }
+}
+
+/* =========================================================
    SERVER
 ========================================================= */
 
@@ -897,6 +945,7 @@ serve(async (req) => {
 
     let updatedCount = 0;
     let activatedCount = 0;
+    const telegramPromises: Promise<void>[] = [];
 
     for (const signal of signals) {
       const current =
@@ -913,6 +962,8 @@ serve(async (req) => {
       > = {
         current_price: current,
       };
+
+      const hitEvents: string[] = [];
 
       const isBuy =
         String(signal.type || "")
@@ -999,6 +1050,8 @@ serve(async (req) => {
           updates.profit_note =
             "TP 1 Hit ✅ SL moved to B.E";
 
+          hitEvents.push("tp1_hit");
+
           if (entry > 0) {
             updates.sl =
               String(entry);
@@ -1023,6 +1076,8 @@ serve(async (req) => {
           updates.tp2_hit = true;
           updates.profit_note =
             "TP 2 Cleared! Secure More Profits 💰";
+
+          hitEvents.push("tp2_hit");
         }
       }
 
@@ -1046,6 +1101,8 @@ serve(async (req) => {
           updates.status = "close";
           updates.profit_note =
             "TP 3 Final Target Hit! 🎊 Maximum Profit Secured ✅";
+
+          hitEvents.push("tp3_hit");
         }
       }
 
@@ -1064,6 +1121,10 @@ serve(async (req) => {
             : currentPrice <= tp)
         ) {
           updates.tp4_hit = true;
+          updates.profit_note =
+            "TP 4 Hit 🚀";
+
+          hitEvents.push("tp4_hit");
         }
       }
 
@@ -1092,6 +1153,8 @@ serve(async (req) => {
           updates.status = "close";
           updates.profit_note =
             "SL Hit ❌";
+
+          hitEvents.push("sl_hit");
         }
       }
 
@@ -1101,7 +1164,21 @@ serve(async (req) => {
         .eq("id", signal.id);
 
       updatedCount++;
+
+      // Post every newly-hit TP/SL level to Telegram (one message per
+      // event, using the latest values so SL-moved-to-B.E after TP1
+      // shows correctly).
+      for (const eventType of hitEvents) {
+        telegramPromises.push(
+          notifyTelegramUpdate(
+            { ...signal, ...updates },
+            eventType
+          )
+        );
+      }
     }
+
+    await Promise.allSettled(telegramPromises);
 
     return new Response(
       JSON.stringify({
