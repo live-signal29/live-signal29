@@ -117,7 +117,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         }
         toast.success("Signal updated successfully");
       } else {
-        const { error } = await supabase.from("signals").insert([cleanedData]);
+        const { data: inserted, error } = await supabase
+          .from("signals")
+          .insert([cleanedData])
+          .select("id, pair, type, entry, tp1, sl")
+          .single();
         if (error) {
           toast.error("Failed to create signal. Please try again.");
           return;
@@ -139,6 +143,37 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
               toast.success("Posted to Telegram");
             }
           });
+
+        // Mirror every new signal onto the connected MT5 demo account —
+        // opens the same Buy/Sell with the signal's Entry/SL/TP1. Runs in
+        // the background so a slow/failed MT5 call never blocks signal
+        // creation; the auto-generate-signals function does the same.
+        if (inserted) {
+          const entryNum = parseFloat(String(inserted.entry));
+          const slNum = parseFloat(String(inserted.sl));
+          const tpNum = parseFloat(String(inserted.tp1));
+          supabase.functions
+            .invoke("mt5-demo-trade", {
+              body: {
+                action: "open",
+                signal_id: inserted.id,
+                symbol: inserted.pair,
+                trade_type: inserted.type === "Buy" ? "buy" : "sell",
+                entry: Number.isFinite(entryNum) ? entryNum : undefined,
+                sl: Number.isFinite(slNum) ? slNum : undefined,
+                tp: Number.isFinite(tpNum) ? tpNum : undefined,
+                lot_size: 0.01,
+              },
+            })
+            .then(({ error: mt5Error }) => {
+              if (mt5Error) {
+                console.error("MT5 auto-trade error:", mt5Error);
+                toast.error("Signal saved, but MT5 trade failed to open");
+              } else {
+                toast.success("MT5 trade opened");
+              }
+            });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["signals"] });
