@@ -14,12 +14,12 @@ interface TradeRequest {
   signal_id?: string;
   symbol?: string;
   trade_type?: "buy" | "sell";
-  entry?: number;
-  sl?: number;
-  tp?: number;
-  tp1?: number;
-  tp2?: number;
-  tp3?: number;
+  entry?: number | string;
+  sl?: number | string;
+  tp?: number | string;
+  tp1?: number | string;
+  tp2?: number | string;
+  tp3?: number | string;
   lot_size?: number;
   trade_id?: string;
   tp_level?: number;
@@ -242,7 +242,6 @@ async function resolveBrokerSymbol(
   }
 }
 
-// Volume Specification Adjuster
 async function resolveValidVolume(
   token: string,
   clientApi: string,
@@ -264,7 +263,6 @@ async function resolveValidVolume(
     norm.includes("US500") ||
     norm.includes("SP500");
 
-  // Commodities & Indices lot size preference (0.50 lot size)
   if (isCommodityOrIndex && (volume === 0.01 || volume < 0.40)) {
     volume = 0.50;
   }
@@ -322,7 +320,7 @@ async function openTrade(
   );
 }
 
-// Opens 3 separate trades for TP1, TP2, TP3
+// Fixed function: Opens 3 separate trades for TP1, TP2, TP3 reliably
 async function openMultiTrade(
   supabase: any,
   token: string,
@@ -330,17 +328,30 @@ async function openMultiTrade(
   clientApi: string,
   body: TradeRequest
 ): Promise<Response> {
-  const { tp1, tp2, tp3, sl, lot_size = 0.01 } = body;
+  const slNum = body.sl !== undefined && body.sl !== null ? Number(body.sl) : undefined;
+  
+  const rawTp1 = body.tp1 ?? body.tp;
+  const tp1Num = rawTp1 !== undefined && rawTp1 !== null ? Number(rawTp1) : undefined;
+  const tp2Num = body.tp2 !== undefined && body.tp2 !== null ? Number(body.tp2) : undefined;
+  const tp3Num = body.tp3 !== undefined && body.tp3 !== null ? Number(body.tp3) : undefined;
 
-  const legs: { tp_level: number; tp: number | undefined }[] = [
-    { tp_level: 1, tp: tp1 },
-    { tp_level: 2, tp: tp2 },
-    { tp_level: 3, tp: tp3 },
-  ].filter((leg) => leg.tp && leg.tp > 0);
+  const lot_size = Number(body.lot_size) || 0.01;
+
+  const legs: { tp_level: number; tp: number }[] = [];
+
+  if (tp1Num !== undefined && Number.isFinite(tp1Num) && tp1Num > 0) {
+    legs.push({ tp_level: 1, tp: tp1Num });
+  }
+  if (tp2Num !== undefined && Number.isFinite(tp2Num) && tp2Num > 0) {
+    legs.push({ tp_level: 2, tp: tp2Num });
+  }
+  if (tp3Num !== undefined && Number.isFinite(tp3Num) && tp3Num > 0) {
+    legs.push({ tp_level: 3, tp: tp3Num });
+  }
 
   if (legs.length === 0) {
     return new Response(
-      JSON.stringify({ error: "At least one of tp1/tp2/tp3 is required for open_multi" }),
+      JSON.stringify({ error: "At least one valid TP level (tp1/tp2/tp3) is required for open_multi" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
@@ -351,7 +362,7 @@ async function openMultiTrade(
     const result = await placeSingleTrade(supabase, token, accountId, clientApi, {
       ...body,
       tp: leg.tp,
-      sl,
+      sl: slNum,
       lot_size,
       tp_level: leg.tp_level,
     });
@@ -384,6 +395,10 @@ async function placeSingleTrade(
     return { success: false, error: "Symbol and trade type required" };
   }
 
+  const entryNum = entry !== undefined && entry !== null ? Number(entry) : null;
+  const slNum = sl !== undefined && sl !== null ? Number(sl) : null;
+  const tpNum = tp !== undefined && tp !== null ? Number(tp) : null;
+
   const brokerSymbol = await resolveBrokerSymbol(token, clientApi, accountId, symbol);
   const validVolume = await resolveValidVolume(token, clientApi, accountId, brokerSymbol, lot_size);
 
@@ -393,9 +408,9 @@ async function placeSingleTrade(
       signal_id,
       symbol,
       trade_type,
-      entry_price: entry,
-      sl_price: sl,
-      tp_price: tp,
+      entry_price: entryNum,
+      sl_price: slNum,
+      tp_price: tpNum,
       lot_size: validVolume,
       status: "pending",
       tp_level: tp_level ?? null,
@@ -409,14 +424,14 @@ async function placeSingleTrade(
 
   try {
     const tradePayload: any = {
-      actionType: trade_type.toUpperCase() === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
+      actionType: String(trade_type).toUpperCase() === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
       symbol: brokerSymbol,
       volume: validVolume,
       comment: tp_level ? `LiveSignal TP${tp_level}` : "LiveSignal",
     };
 
-    if (sl && sl > 0) tradePayload.stopLoss = sl;
-    if (tp && tp > 0) tradePayload.takeProfit = tp;
+    if (slNum && slNum > 0) tradePayload.stopLoss = slNum;
+    if (tpNum && tpNum > 0) tradePayload.takeProfit = tpNum;
 
     const tradeResponse = await fetch(
       `${clientApi}/users/current/accounts/${accountId}/trade`,
@@ -455,7 +470,7 @@ async function placeSingleTrade(
         mt5_ticket: ticket,
         status: "open",
         open_time: new Date().toISOString(),
-        entry_price: tradeResult.price || entry,
+        entry_price: tradeResult.price || entryNum,
       })
       .eq("id", tradeRecord.id);
 
@@ -511,7 +526,7 @@ async function checkTrades(
   let updated = 0;
 
   for (const trade of openTrades) {
-    const openPosition = positions.find((p: any) => 
+    const openPosition = Array.isArray(positions) && positions.find((p: any) => 
       p.id === trade.mt5_ticket || p.positionId === trade.mt5_ticket
     );
 
@@ -521,7 +536,7 @@ async function checkTrades(
         .update({ profit_loss: openPosition.profit })
         .eq("id", trade.id);
     } else {
-      const closedDeal = history.find((h: any) => 
+      const closedDeal = Array.isArray(history) && history.find((h: any) => 
         h.positionId === trade.mt5_ticket && h.entryType === "DEAL_ENTRY_OUT"
       );
 
@@ -552,7 +567,7 @@ async function checkTrades(
     JSON.stringify({ 
       message: "Trades checked", 
       updated,
-      open_positions: positions.length,
+      open_positions: Array.isArray(positions) ? positions.length : 0,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
@@ -580,7 +595,7 @@ async function moveSiblingsToBreakeven(
   for (const sibling of siblings) {
     if (Number(sibling.sl_price) === Number(breakevenPrice)) continue;
 
-    const position = positions.find(
+    const position = Array.isArray(positions) && positions.find(
       (p: any) => p.id === sibling.mt5_ticket || p.positionId === sibling.mt5_ticket
     );
     if (!position) continue;
