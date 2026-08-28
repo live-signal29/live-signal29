@@ -67,6 +67,9 @@ async function fetchMT5Prices(
         if (normalized.includes("NASDAQ") || normalized.includes("NAS100")) {
           result["NASDAQ"] = value;
         }
+        if (normalized.includes("VOL75") || normalized.includes("VOLATILITY75")) {
+          result["VOL 75"] = value;
+        }
       }
     }
   } catch (error) {
@@ -124,25 +127,28 @@ function generateSignal(config: SignalConfig) {
   const type = isBuy ? "Buy" : "Sell";
 
   const spread = Math.max(price.high - price.low, pipMultiplier * 20);
-  const offset = rand(-spread * 0.1, spread * 0.1);
+  const offset = rand(-spread * 0.05, spread * 0.05);
   const entry = Number((price.price + offset).toFixed(decimals));
 
-  // Fix for VOL 75 & High Volatility instruments: Room for SL buffer
+  // Safe SL Gap Adjustment specifically for VOL 75 and Deriv
   const isVol75 = pair.includes("VOL 75");
-  const slMult = isVol75 ? rand(30, 50) : rand(10, 18);
-  const tp1Mult = isVol75 ? rand(35, 60) : rand(12, 20);
-  const tp2Mult = isVol75 ? rand(70, 110) : rand(25, 38);
-  const tp3Mult = isVol75 ? rand(120, 180) : rand(45, 65);
+  const isDeriv = category === "DERIV";
 
+  // Volatility 75 gets minimum 150 to 250 points gap so noise/spread won't hit SL
+  const slMult = isVol75 ? rand(150, 250) : isDeriv ? rand(40, 80) : rand(12, 20);
+  const tp1Mult = isVol75 ? rand(150, 250) : isDeriv ? rand(40, 80) : rand(15, 25);
+  const tp2Mult = isVol75 ? rand(300, 450) : isDeriv ? rand(90, 150) : rand(30, 45);
+  const tp3Mult = isVol75 ? rand(500, 700) : isDeriv ? rand(160, 250) : rand(50, 75);
+
+  const slDistance = slMult * pipMultiplier;
   const tp1Distance = tp1Mult * pipMultiplier;
   const tp2Distance = tp2Mult * pipMultiplier;
   const tp3Distance = tp3Mult * pipMultiplier;
-  const slDistance = slMult * pipMultiplier;
 
+  const sl = Number((isBuy ? entry - slDistance : entry + slDistance).toFixed(decimals));
   const tp1 = Number((isBuy ? entry + tp1Distance : entry - tp1Distance).toFixed(decimals));
   const tp2 = Number((isBuy ? entry + tp2Distance : entry - tp2Distance).toFixed(decimals));
   const tp3 = Number((isBuy ? entry + tp3Distance : entry - tp3Distance).toFixed(decimals));
-  const sl = Number((isBuy ? entry - slDistance : entry + slDistance).toFixed(decimals));
 
   const now = new Date().toISOString();
 
@@ -253,7 +259,7 @@ Deno.serve(async (req) => {
         price: { price: p, high: p + (isGold ? 10 : 1), low: p - (isGold ? 10 : 1) },
         pipMultiplier: isGold ? 1 : isSilver ? 0.05 : 10,
         decimals: isSilver ? 3 : 2,
-        thresholdPct: 0.05, // Lower threshold to trigger priority signals more frequently
+        thresholdPct: 0.05,
       });
     }
 
@@ -284,7 +290,8 @@ Deno.serve(async (req) => {
           mainCategory: "DERIV/BINARY",
           subCategory: pair,
           price: { price: p, high: p * 1.005, low: p * 0.995 },
-          pipMultiplier: isVol75 ? 50 : 10, // Increased VOL 75 Pip multiplier to stop early SL hit
+          // Pip Multiplier 1.0 for direct point calculations in Volatility 75
+          pipMultiplier: isVol75 ? 1.0 : 10, 
           decimals: 2,
           thresholdPct: 0.25,
         });
