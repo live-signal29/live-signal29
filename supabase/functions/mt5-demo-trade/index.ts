@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -61,9 +60,9 @@ async function loadCredentials(supabase: any): Promise<Credentials> {
   return { token, login, password, server };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -320,7 +319,6 @@ async function openTrade(
   );
 }
 
-// Fixed function: Opens 3 separate trades for TP1, TP2, TP3 reliably
 async function openMultiTrade(
   supabase: any,
   token: string,
@@ -527,7 +525,7 @@ async function checkTrades(
 
   for (const trade of openTrades) {
     const openPosition = Array.isArray(positions) && positions.find((p: any) => 
-      p.id === trade.mt5_ticket || p.positionId === trade.mt5_ticket
+      String(p.id) === String(trade.mt5_ticket) || String(p.positionId) === String(trade.mt5_ticket)
     );
 
     if (openPosition) {
@@ -537,7 +535,7 @@ async function checkTrades(
         .eq("id", trade.id);
     } else {
       const closedDeal = Array.isArray(history) && history.find((h: any) => 
-        h.positionId === trade.mt5_ticket && h.entryType === "DEAL_ENTRY_OUT"
+        String(h.positionId) === String(trade.mt5_ticket) && h.entryType === "DEAL_ENTRY_OUT"
       );
 
       if (closedDeal) {
@@ -556,7 +554,8 @@ async function checkTrades(
 
         updated++;
 
-        if (trade.tp_level === 1 && result === "win" && trade.signal_id) {
+        /* Automatic Breakeven Trigger on TP1 Hit */
+        if (Number(trade.tp_level) === 1 && result === "win" && trade.signal_id) {
           await moveSiblingsToBreakeven(supabase, token, clientApi, accountId, trade, positions);
         }
       }
@@ -590,13 +589,13 @@ async function moveSiblingsToBreakeven(
 
   if (error || !siblings || siblings.length === 0) return;
 
-  const breakevenPrice = tp1Trade.entry_price;
+  const breakevenPrice = Number(tp1Trade.entry_price);
 
   for (const sibling of siblings) {
-    if (Number(sibling.sl_price) === Number(breakevenPrice)) continue;
+    if (Number(sibling.sl_price) === breakevenPrice) continue;
 
     const position = Array.isArray(positions) && positions.find(
-      (p: any) => p.id === sibling.mt5_ticket || p.positionId === sibling.mt5_ticket
+      (p: any) => String(p.id) === String(sibling.mt5_ticket) || String(p.positionId) === String(sibling.mt5_ticket)
     );
     if (!position) continue;
 
@@ -608,7 +607,7 @@ async function moveSiblingsToBreakeven(
           headers: { "auth-token": token, "Content-Type": "application/json" },
           body: JSON.stringify({
             actionType: "POSITION_MODIFY",
-            positionId: sibling.mt5_ticket,
+            positionId: String(sibling.mt5_ticket),
             stopLoss: breakevenPrice,
             takeProfit: position.takeProfit,
           }),
@@ -626,7 +625,7 @@ async function moveSiblingsToBreakeven(
           .eq("id", sibling.id);
       }
     } catch (err) {
-      console.error(`Breakeven modify error:`, String(err));
+      console.error(`Breakeven modify error for ticket ${sibling.mt5_ticket}:`, String(err));
     }
   }
 }
@@ -658,7 +657,7 @@ async function closeTrade(
       },
       body: JSON.stringify({
         actionType: "POSITION_CLOSE_ID",
-        positionId: trade.mt5_ticket,
+        positionId: String(trade.mt5_ticket),
       }),
     }
   );
