@@ -82,6 +82,10 @@ async function sendTelegramPhoto(
   }
 
   try {
+    // Telegram often rejects SVG URLs as photos. Convert the public SVG
+    // through a lightweight image proxy so Telegram receives a real PNG.
+    const pngUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}&output=png&w=1200`;
+
     const response = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
       {
@@ -91,7 +95,7 @@ async function sendTelegramPhoto(
         },
         body: JSON.stringify({
           chat_id: TELEGRAM_CHANNEL_ID,
-          photo: imageUrl,
+          photo: pngUrl,
           caption,
           parse_mode: "HTML",
         }),
