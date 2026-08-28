@@ -38,6 +38,18 @@ interface Idea {
   image_url?: string | null;
 }
 
+// FIX: Telegram's parse_mode "HTML" will reject the ENTIRE message if any
+// interpolated value contains an unescaped &, <, or > (e.g. a note like
+// "Risk & Reward" or a price string with a stray symbol). Every dynamic
+// value that gets wrapped in <b>/<code>/<i> tags below is now escaped first,
+// so a random character in signal/idea data can never silently break a post.
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 async function sendTelegramMessage(message: string): Promise<boolean> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
     console.error("Missing Telegram secrets");
@@ -120,7 +132,7 @@ async function sendTelegramPhoto(
 }
 
 function formatSignalMessage(signal: Signal): string {
-  const type = String(signal.type || "").toUpperCase();
+  const type = escapeHtml(String(signal.type || "").toUpperCase());
 
   const emoji = type === "BUY" ? "🟢" : "🔴";
 
@@ -134,36 +146,36 @@ function formatSignalMessage(signal: Signal): string {
   let message = `${emoji} <b>NEW SIGNAL</b> ${emoji}\n`;
   message += `━━━━━━━━━━━━━━━\n\n`;
 
-  message += `📊 <b>${signal.pair}</b>\n`;
+  message += `📊 <b>${escapeHtml(signal.pair)}</b>\n`;
   message += `📈 Direction: <b>${type}</b>\n\n`;
 
-  message += `💰 Entry: <code>${signal.entry}</code>\n`;
-  message += `🎯 TP1: <code>${signal.tp1}</code>\n`;
+  message += `💰 Entry: <code>${escapeHtml(signal.entry)}</code>\n`;
+  message += `🎯 TP1: <code>${escapeHtml(signal.tp1)}</code>\n`;
 
   if (signal.tp2) {
-    message += `🎯 TP2: <code>${signal.tp2}</code>\n`;
+    message += `🎯 TP2: <code>${escapeHtml(signal.tp2)}</code>\n`;
   }
 
   if (signal.tp3) {
-    message += `🎯 TP3: <code>${signal.tp3}</code>\n`;
+    message += `🎯 TP3: <code>${escapeHtml(signal.tp3)}</code>\n`;
   }
 
   if (signal.tp4) {
-    message += `🎯 TP4: <code>${signal.tp4}</code>\n`;
+    message += `🎯 TP4: <code>${escapeHtml(signal.tp4)}</code>\n`;
   }
 
-  message += `🛑 SL: <code>${signal.sl}</code>\n\n`;
+  message += `🛑 SL: <code>${escapeHtml(signal.sl)}</code>\n\n`;
 
   if (signal.risk_level) {
-    message += `${riskEmoji} Risk: ${signal.risk_level}\n`;
+    message += `${riskEmoji} Risk: ${escapeHtml(signal.risk_level)}\n`;
   }
 
   if (signal.signal_type) {
-    message += `⏱ Type: ${signal.signal_type}\n`;
+    message += `⏱ Type: ${escapeHtml(signal.signal_type)}\n`;
   }
 
   if (signal.analysis_reason) {
-    message += `\n📝 <i>${signal.analysis_reason}</i>\n`;
+    message += `\n📝 <i>${escapeHtml(signal.analysis_reason)}</i>\n`;
   }
 
   message += `\n📍 <b>Status: Position Opened</b>\n`;
@@ -199,7 +211,7 @@ function formatUpdateMessage(
   signal: Signal,
   updateType?: string
 ): string {
-  const type = String(signal.type || "").toUpperCase();
+  const type = escapeHtml(String(signal.type || "").toUpperCase());
 
   const isSl = updateType === "sl_hit";
   const isClosingEvent =
@@ -221,25 +233,25 @@ function formatUpdateMessage(
   let message = `${meta.banner} <b>${meta.headline}</b> ${meta.banner}\n`;
   message += `━━━━━━━━━━━━━━━\n\n`;
 
-  message += `📊 <b>${signal.pair}</b>  •  ${type}\n`;
-  message += `💰 Entry: <code>${signal.entry}</code>\n\n`;
+  message += `📊 <b>${escapeHtml(signal.pair)}</b>  •  ${type}\n`;
+  message += `💰 Entry: <code>${escapeHtml(signal.entry)}</code>\n\n`;
 
   message += `<b>Progress:</b>\n`;
-  message += `${signal.tp1_hit ? "✅" : "⏳"} TP1: <code>${signal.tp1}</code>\n`;
+  message += `${signal.tp1_hit ? "✅" : "⏳"} TP1: <code>${escapeHtml(signal.tp1)}</code>\n`;
   if (signal.tp2) {
-    message += `${signal.tp2_hit ? "✅" : "⏳"} TP2: <code>${signal.tp2}</code>\n`;
+    message += `${signal.tp2_hit ? "✅" : "⏳"} TP2: <code>${escapeHtml(signal.tp2)}</code>\n`;
   }
   if (signal.tp3) {
-    message += `${signal.tp3_hit ? "✅" : "⏳"} TP3: <code>${signal.tp3}</code>\n`;
+    message += `${signal.tp3_hit ? "✅" : "⏳"} TP3: <code>${escapeHtml(signal.tp3)}</code>\n`;
   }
   if (signal.tp4) {
-    message += `${signal.tp4_hit ? "✅" : "⏳"} TP4: <code>${signal.tp4}</code>\n`;
+    message += `${signal.tp4_hit ? "✅" : "⏳"} TP4: <code>${escapeHtml(signal.tp4)}</code>\n`;
   }
-  message += `${isSl ? "🛑" : "🔒"} SL: <code>${signal.sl}</code>`;
+  message += `${isSl ? "🛑" : "🔒"} SL: <code>${escapeHtml(signal.sl)}</code>`;
   message += `${signal.tp1_hit && !isSl ? " (Break-Even)" : ""}\n`;
 
   if (signal.profit_note) {
-    message += `\n📝 <i>${signal.profit_note}</i>\n`;
+    message += `\n📝 <i>${escapeHtml(signal.profit_note)}</i>\n`;
   }
 
   message += isClosingEvent
@@ -256,11 +268,13 @@ function formatIdeaMessage(idea: Idea): string {
   let message = `💡 <b>MARKET IDEA</b> 💡\n\n`;
 
   if (idea.title) {
-    message += `<b>${idea.title}</b>\n\n`;
+    message += `<b>${escapeHtml(idea.title)}</b>\n\n`;
   }
 
   if (idea.description) {
-    message += `${idea.description}\n`;
+    // Idea descriptions are already plain text (no HTML tags expected), but
+    // they're still escaped here in case they ever contain &, <, or >.
+    message += `${escapeHtml(idea.description)}\n`;
   }
 
   message += `\n━━━━━━━━━━━━━━━\n`;
