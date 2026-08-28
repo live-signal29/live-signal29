@@ -246,25 +246,10 @@ async function resolveValidVolume(
   clientApi: string,
   accountId: string,
   brokerSymbol: string,
-  requestedVolume: number
+  _requestedVolume: number
 ): Promise<number> {
-  let volume = requestedVolume;
-
-  const norm = normalizeSym(brokerSymbol);
-  const isCommodityOrIndex =
-    norm.includes("XAU") ||
-    norm.includes("GOLD") ||
-    norm.includes("XAG") ||
-    norm.includes("SILVER") ||
-    norm.includes("US30") ||
-    norm.includes("NASDAQ") ||
-    norm.includes("NAS100") ||
-    norm.includes("US500") ||
-    norm.includes("SP500");
-
-  if (isCommodityOrIndex && (volume === 0.01 || volume < 0.40)) {
-    volume = 0.50;
-  }
+  // Always default to 0.50 lot size for all symbols (Forex, Crypto, Commodities, Indices, Deriv)
+  let volume = 0.50;
 
   try {
     const response = await fetch(
@@ -333,7 +318,7 @@ async function openMultiTrade(
   const tp2Num = body.tp2 !== undefined && body.tp2 !== null ? Number(body.tp2) : undefined;
   const tp3Num = body.tp3 !== undefined && body.tp3 !== null ? Number(body.tp3) : undefined;
 
-  const lot_size = Number(body.lot_size) || 0.01;
+  const lot_size = 0.50;
 
   const legs: { tp_level: number; tp: number }[] = [];
 
@@ -387,7 +372,7 @@ async function placeSingleTrade(
   clientApi: string,
   body: TradeRequest
 ): Promise<{ success: boolean; trade_id?: string; mt5_ticket?: any; error?: string }> {
-  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.01, tp_level } = body;
+  const { signal_id, symbol, trade_type, entry, sl, tp, lot_size = 0.50, tp_level } = body;
 
   if (!symbol || !trade_type) {
     return { success: false, error: "Symbol and trade type required" };
@@ -554,7 +539,6 @@ async function checkTrades(
 
         updated++;
 
-        /* Automatic Breakeven Trigger on TP1 Hit */
         if (Number(trade.tp_level) === 1 && result === "win" && trade.signal_id) {
           await moveSiblingsToBreakeven(supabase, token, clientApi, accountId, trade, positions);
         }
