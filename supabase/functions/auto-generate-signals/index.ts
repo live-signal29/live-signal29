@@ -72,20 +72,12 @@ async function fetchMT5Prices(
 
       if (!Number.isFinite(value) || value <= 0) continue;
 
-      if (
-        normalized.includes("XAUUSD") ||
-        normalized === "GOLD"
-      ) {
+      if (normalized.includes("XAUUSD") || normalized === "GOLD") {
         result["XAU/USD (Gold)"] = value;
       }
-
-      if (
-        normalized.includes("XAGUSD") ||
-        normalized === "SILVER"
-      ) {
+      if (normalized.includes("XAGUSD") || normalized === "SILVER") {
         result["XAG/USD (Silver)"] = value;
       }
-
       if (
         normalized.includes("US30") ||
         normalized.includes("DJ30") ||
@@ -93,7 +85,6 @@ async function fetchMT5Prices(
       ) {
         result["US30"] = value;
       }
-
       if (
         normalized.includes("NASDAQ") ||
         normalized.includes("NAS100") ||
@@ -101,7 +92,6 @@ async function fetchMT5Prices(
       ) {
         result["NASDAQ"] = value;
       }
-
       if (
         normalized.includes("SP500") ||
         normalized.includes("US500") ||
@@ -109,23 +99,18 @@ async function fetchMT5Prices(
       ) {
         result["S&P500"] = value;
       }
-
       if (normalized.includes("VOL75")) {
         result["VOL 75"] = value;
       }
-
       if (normalized.includes("VOL100")) {
         result["VOL 100"] = value;
       }
-
       if (normalized.includes("BOOM1000")) {
         result["BOOM 1000"] = value;
       }
-
       if (normalized.includes("CRASH1000")) {
         result["CRASH 1000"] = value;
       }
-
       if (normalized.includes("BOOM500")) {
         result["BOOM 500"] = value;
       }
@@ -148,10 +133,6 @@ function pick<T>(array: T[]): T {
 function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
-
-/* =========================================================
-   ANALYSIS REASONS
-========================================================= */
 
 const buyReasons = [
   "Demand zone bounce with bullish confirmation",
@@ -193,30 +174,16 @@ function generateSignal(config: SignalConfig) {
   const isGold = pair === "XAU/USD (Gold)";
   const isSilver = pair === "XAG/USD (Silver)";
   const isIndex =
-    pair === "US30" ||
-    pair === "NASDAQ" ||
-    pair === "S&P500";
-
+    pair === "US30" || pair === "NASDAQ" || pair === "S&P500";
   const isVol75 = pair === "VOL 75";
   const isDeriv = category === "DERIV";
 
   const isBuy = Math.random() >= 0.5;
   const type = isBuy ? "Buy" : "Sell";
 
-  /* Entry close to live price */
-  const spread = Math.max(
-    price.high - price.low,
-    pipMultiplier * 20
-  );
-
-  const offset = rand(
-    -spread * 0.02,
-    spread * 0.02
-  );
-
-  const entry = Number(
-    (price.price + offset).toFixed(decimals)
-  );
+  const spread = Math.max(price.high - price.low, pipMultiplier * 20);
+  const offset = rand(-spread * 0.02, spread * 0.02);
+  const entry = Number((price.price + offset).toFixed(decimals));
 
   let slMult = 0;
   let tp1Mult = 0;
@@ -260,84 +227,35 @@ function generateSignal(config: SignalConfig) {
   const tp2Distance = tp2Mult * pipMultiplier;
   const tp3Distance = tp3Mult * pipMultiplier;
 
-  const sl = Number(
-    (
-      isBuy
-        ? entry - slDistance
-        : entry + slDistance
-    ).toFixed(decimals)
-  );
-
-  const tp1 = Number(
-    (
-      isBuy
-        ? entry + tp1Distance
-        : entry - tp1Distance
-    ).toFixed(decimals)
-  );
-
-  const tp2 = Number(
-    (
-      isBuy
-        ? entry + tp2Distance
-        : entry - tp2Distance
-    ).toFixed(decimals)
-  );
-
-  const tp3 = Number(
-    (
-      isBuy
-        ? entry + tp3Distance
-        : entry - tp3Distance
-    ).toFixed(decimals)
-  );
+  const sl = Number((isBuy ? entry - slDistance : entry + slDistance).toFixed(decimals));
+  const tp1 = Number((isBuy ? entry + tp1Distance : entry - tp1Distance).toFixed(decimals));
+  const tp2 = Number((isBuy ? entry + tp2Distance : entry - tp2Distance).toFixed(decimals));
+  const tp3 = Number((isBuy ? entry + tp3Distance : entry - tp3Distance).toFixed(decimals));
 
   const now = new Date().toISOString();
 
   return {
     pair,
     type,
-
     category,
     main_category: mainCategory,
     sub_category: subCategory,
-
     entry: String(entry),
     tp1: String(tp1),
     tp2: String(tp2),
     tp3: String(tp3),
     sl: String(sl),
-
     status: "open",
     signal_status: "open",
-
     is_premium: false,
-
     is_activated: true,
     activated_at: now,
-
     entry_mode: "market",
-
-    signal_type: pick([
-      "Scalping",
-      "Intraday",
-      "Swing",
-    ]),
-
-    risk_level:
-      isVol75 || isIndex
-        ? "High"
-        : isGold
-        ? "Medium"
-        : pick(["Low", "Medium"]),
-
-    analysis_reason: isBuy
-      ? pick(buyReasons)
-      : pick(sellReasons),
-
+    signal_type: pick(["Scalping", "Intraday", "Swing"]),
+    risk_level: isVol75 || isIndex ? "High" : isGold ? "Medium" : pick(["Low", "Medium"]),
+    analysis_reason: isBuy ? pick(buyReasons) : pick(sellReasons),
     published: true,
     created_at: now,
-
     tp1_hit: false,
     tp2_hit: false,
     tp3_hit: false,
@@ -345,54 +263,34 @@ function generateSignal(config: SignalConfig) {
 }
 
 /* =========================================================
-   CHECK EXISTING SIGNAL
+   EVALUATE PAIR
 ========================================================= */
 
 async function evaluatePair(
   supabase: ReturnType<typeof createClient>,
   pair: string
 ) {
-  /* Existing OPEN signal blocks duplicate */
-  const { data: active, error: activeError } =
-    await supabase
-      .from("signals")
-      .select("id")
-      .eq("pair", pair)
-      .eq("signal_status", "open")
-      .limit(1)
-      .maybeSingle();
+  const { data: active, error: activeError } = await supabase
+    .from("signals")
+    .select("id")
+    .eq("pair", pair)
+    .eq("signal_status", "open")
+    .limit(1)
+    .maybeSingle();
 
   if (activeError) {
-    console.error(
-      "Active signal check error:",
-      activeError.message
-    );
+    console.error("Active signal check error:", activeError.message);
   }
 
   if (active) {
-    return {
-      generate: false,
-      reason: "signal_still_open",
-    };
+    return { generate: false, reason: "signal_still_open" };
   }
 
-  /*
-   * IMPORTANT:
-   * No 60-minute cooldown here.
-   *
-   * Cron itself runs hourly.
-   * Therefore a closed signal can generate
-   * again on the next hourly run.
-   */
-
-  return {
-    generate: true,
-    reason: "hourly_signal_slot",
-  };
+  return { generate: true, reason: "hourly_signal_slot" };
 }
 
 /* =========================================================
-   TELEGRAM
+   POST TELEGRAM & EXECUTE MT5 DEMO TRADE
 ========================================================= */
 
 async function postTelegramSignal(
@@ -405,98 +303,85 @@ async function postTelegramSignal(
       `${supabaseUrl}/functions/v1/telegram-signal-post`,
       {
         method: "POST",
-
         headers: {
           Authorization: `Bearer ${serviceRoleKey}`,
           apikey: serviceRoleKey,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ signal, action: "new_signal" }),
+      }
+    );
+    const text = await response.text();
+    console.log("Telegram response:", response.status, text);
+    return { success: response.ok, status: response.status, response: text };
+  } catch (error) {
+    console.error("Telegram error:", String(error));
+    return { success: false, response: String(error) };
+  }
+}
 
+async function executeMT5DemoTrade(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  signal: any
+) {
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/mt5-demo-trade`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          signal,
-          action: "new_signal",
+          action: "open_multi",
+          signal_id: signal.id,
+          symbol: signal.pair,
+          trade_type: String(signal.type).toLowerCase(),
+          entry: Number(signal.entry),
+          sl: Number(signal.sl),
+          tp1: Number(signal.tp1),
+          tp2: Number(signal.tp2),
+          tp3: Number(signal.tp3),
+          lot_size: 0.01,
         }),
       }
     );
-
     const text = await response.text();
-
-    console.log(
-      "Telegram response:",
-      response.status,
-      text
-    );
-
-    return {
-      success: response.ok,
-      status: response.status,
-      response: text,
-    };
+    console.log("MT5 Auto-Trade Execution Response:", response.status, text);
+    return { success: response.ok, response: text };
   } catch (error) {
-    console.error(
-      "Telegram error:",
-      String(error)
-    );
-
-    return {
-      success: false,
-      response: String(error),
-    };
+    console.error("MT5 Auto-Trade Execution Error:", String(error));
+    return { success: false, error: String(error) };
   }
 }
 
 /* =========================================================
-   MAIN
+   MAIN DENO SERVER
 ========================================================= */
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl =
-      Deno.env.get("SUPABASE_URL")!;
-
-    const serviceRoleKey =
-      Deno.env.get(
-        "SUPABASE_SERVICE_ROLE_KEY"
-      )!;
-
-    const supabase = createClient(
-      supabaseUrl,
-      serviceRoleKey
-    );
-
-    /* =====================================================
-       DERIV DAILY LIMIT
-    ===================================================== */
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const todayStart = new Date();
-
     todayStart.setUTCHours(0, 0, 0, 0);
 
-    const { count: derivCount } =
-      await supabase
-        .from("signals")
-        .select("id", {
-          count: "exact",
-          head: true,
-        })
-        .eq("category", "DERIV")
-        .gte(
-          "created_at",
-          todayStart.toISOString()
-        );
+    const { count: derivCount } = await supabase
+      .from("signals")
+      .select("id", { count: "exact", head: true })
+      .eq("category", "DERIV")
+      .gte("created_at", todayStart.toISOString());
 
-    const allowDeriv =
-      (derivCount || 0) < 5;
-
-    /* =====================================================
-       PAIRS
-    ===================================================== */
+    const allowDeriv = (derivCount || 0) < 5;
 
     const commodities = [
       "XAU/USD (Gold)",
@@ -515,304 +400,120 @@ Deno.serve(async (req) => {
       "USD/CAD",
     ];
 
-    const crypto = [
-      "BTC/USD",
-      "ETH/USD",
-      "SOL/USD",
-    ];
+    const crypto = ["BTC/USD", "ETH/USD", "SOL/USD"];
 
     const deriv = allowDeriv
-      ? [
-          "BOOM 1000",
-          "CRASH 1000",
-          "VOL 75",
-          "BOOM 500",
-          "VOL 100",
-        ]
+      ? ["BOOM 1000", "CRASH 1000", "VOL 75", "BOOM 500", "VOL 100"]
       : [];
 
-    const allPairs = [
-      ...commodities,
-      ...forex,
-      ...crypto,
-      ...deriv,
-    ];
+    const allPairs = [...commodities, ...forex, ...crypto, ...deriv];
 
-    /* =====================================================
-       GET LIVE PRICES
-    ===================================================== */
-
-    const mt5 = await fetchMT5Prices(
-      allPairs,
-      supabaseUrl,
-      serviceRoleKey
-    );
-
-    /* =====================================================
-       BUILD CONFIGS
-    ===================================================== */
-
+    const mt5 = await fetchMT5Prices(allPairs, supabaseUrl, serviceRoleKey);
     const candidates: SignalConfig[] = [];
-
-    /* COMMODITIES / INDICES */
 
     for (const pair of commodities) {
       const p = mt5[pair];
-
       if (!p) continue;
 
-      const isGold =
-        pair === "XAU/USD (Gold)";
-
-      const isSilver =
-        pair === "XAG/USD (Silver)";
-
-      const isIndex =
-        pair === "US30" ||
-        pair === "NASDAQ" ||
-        pair === "S&P500";
+      const isGold = pair === "XAU/USD (Gold)";
+      const isSilver = pair === "XAG/USD (Silver)";
+      const isIndex = pair === "US30" || pair === "NASDAQ" || pair === "S&P500";
 
       candidates.push({
         pair,
-
         category: "COMMODITIES",
-
         mainCategory: "COMMODITIES",
-
         subCategory: pair,
-
         price: {
           price: p,
-
-          high:
-            p +
-            (
-              isGold
-                ? 10
-                : isSilver
-                ? 1
-                : isIndex
-                ? 100
-                : 1
-            ),
-
-          low:
-            p -
-            (
-              isGold
-                ? 10
-                : isSilver
-                ? 1
-                : isIndex
-                ? 100
-                : 1
-            ),
+          high: p + (isGold ? 10 : isSilver ? 1 : isIndex ? 100 : 1),
+          low: p - (isGold ? 10 : isSilver ? 1 : isIndex ? 100 : 1),
         },
-
-        pipMultiplier:
-          isGold
-            ? 1
-            : isSilver
-            ? 0.05
-            : 1,
-
-        decimals:
-          isSilver
-            ? 3
-            : 2,
-
-        thresholdPct:
-          isGold
-            ? 0.03
-            : 0.05,
+        pipMultiplier: isGold ? 1 : isSilver ? 0.05 : 1,
+        decimals: isSilver ? 3 : 2,
+        thresholdPct: isGold ? 0.03 : 0.05,
       });
     }
 
-    /* FOREX */
-
     for (const pair of forex) {
       const p = mt5[pair];
-
       if (!p) continue;
 
-      const isJPY =
-        pair.includes("JPY");
-
+      const isJPY = pair.includes("JPY");
       candidates.push({
         pair,
-
         category: "FOREX",
-
         mainCategory: "FOREX",
-
         subCategory: pair,
-
         price: {
           price: p,
-
-          high:
-            p +
-            (
-              isJPY
-                ? 0.4
-                : 0.004
-            ),
-
-          low:
-            p -
-            (
-              isJPY
-                ? 0.4
-                : 0.004
-            ),
+          high: p + (isJPY ? 0.4 : 0.004),
+          low: p - (isJPY ? 0.4 : 0.004),
         },
-
-        pipMultiplier:
-          isJPY
-            ? 0.1
-            : 0.001,
-
-        decimals:
-          isJPY
-            ? 3
-            : 5,
-
+        pipMultiplier: isJPY ? 0.1 : 0.001,
+        decimals: isJPY ? 3 : 5,
         thresholdPct: 0.1,
       });
     }
 
-    /* CRYPTO */
-
     for (const pair of crypto) {
       const p = mt5[pair];
-
       if (!p) continue;
-
       candidates.push({
         pair,
-
         category: "CRYPTO",
-
         mainCategory: "CRYPTO",
-
         subCategory: pair,
-
-        price: {
-          price: p,
-          high: p * 1.01,
-          low: p * 0.99,
-        },
-
+        price: { price: p, high: p * 1.01, low: p * 0.99 },
         pipMultiplier: 1,
-
         decimals: 2,
-
         thresholdPct: 0.25,
       });
     }
 
-    /* DERIV */
-
     if (allowDeriv) {
       for (const pair of deriv) {
         const p = mt5[pair];
-
         if (!p) continue;
 
-        const isVol75 =
-          pair === "VOL 75";
-
+        const isVol75 = pair === "VOL 75";
         candidates.push({
           pair,
-
           category: "DERIV",
-
-          mainCategory:
-            "DERIV/BINARY",
-
+          mainCategory: "DERIV/BINARY",
           subCategory: pair,
-
-          price: {
-            price: p,
-            high: p * 1.005,
-            low: p * 0.995,
-          },
-
-          pipMultiplier:
-            isVol75
-              ? 1
-              : 10,
-
+          price: { price: p, high: p * 1.005, low: p * 0.995 },
+          pipMultiplier: isVol75 ? 1 : 10,
           decimals: 2,
-
           thresholdPct: 0.25,
         });
       }
     }
 
-    /* =====================================================
-       AVAILABLE
-    ===================================================== */
-
-    const available =
-      candidates.filter(
-        x => !!mt5[x.pair]
-      );
+    const available = candidates.filter((x) => !!mt5[x.pair]);
 
     if (!available.length) {
       return new Response(
         JSON.stringify({
           success: false,
           generated: false,
-          error:
-            "No MT5 prices available",
+          error: "No MT5 prices available",
         }),
         {
           status: 503,
-          headers: {
-            ...corsHeaders,
-            "Content-Type":
-              "application/json",
-          },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    /* =====================================================
-       WEIGHTED PRIORITY
-       
-       XAU = strongest priority
-    ===================================================== */
-
     const weightedPool: SignalConfig[] = [];
-
-    function add(
-      pairName: string,
-      weight: number
-    ) {
-      const item = available.find(
-        x => x.pair === pairName
-      );
-
+    function add(pairName: string, weight: number) {
+      const item = available.find((x) => x.pair === pairName);
       if (!item) return;
-
       for (let i = 0; i < weight; i++) {
         weightedPool.push(item);
       }
     }
-
-    /*
-     * Approximate priority:
-     *
-     * XAU      55%
-     * XAG      12%
-     * US30      9%
-     * NASDAQ    8%
-     * S&P500    6%
-     * FOREX     6%
-     * CRYPTO    2%
-     * DERIV     2%
-     */
 
     add("XAU/USD (Gold)", 55);
     add("XAG/USD (Silver)", 12);
@@ -820,209 +521,93 @@ Deno.serve(async (req) => {
     add("NASDAQ", 8);
     add("S&P500", 6);
 
-    for (const pair of forex) {
-      add(pair, 1);
-    }
+    for (const pair of forex) add(pair, 1);
+    for (const pair of crypto) add(pair, 1);
+    for (const pair of deriv) add(pair, 1);
 
-    for (const pair of crypto) {
-      add(pair, 1);
-    }
-
-    for (const pair of deriv) {
-      add(pair, 1);
-    }
-
-    /*
-     * Shuffle weighted pool.
-     */
-    const shuffled =
-      [...weightedPool].sort(
-        () => Math.random() - 0.5
-      );
-
-    /*
-     * Unique pairs.
-     */
+    const shuffled = [...weightedPool].sort(() => Math.random() - 0.5);
     const orderedPairs: SignalConfig[] = [];
-
-    const seen =
-      new Set<string>();
+    const seen = new Set<string>();
 
     for (const item of shuffled) {
       if (seen.has(item.pair)) continue;
-
       seen.add(item.pair);
       orderedPairs.push(item);
     }
 
-    /*
-     * Add any available pair that somehow
-     * wasn't included.
-     */
     for (const item of available) {
       if (seen.has(item.pair)) continue;
-
       seen.add(item.pair);
       orderedPairs.push(item);
     }
 
-    /* =====================================================
-       SELECT
-    ===================================================== */
-
-    let selected:
-      | SignalConfig
-      | null = null;
-
+    let selected: SignalConfig | null = null;
     let decision: any = null;
 
     for (const config of orderedPairs) {
-      const result =
-        await evaluatePair(
-          supabase,
-          config.pair
-        );
-
-      console.log(
-        "PAIR CHECK:",
-        config.pair,
-        result
-      );
-
-      if (!result.generate) {
-        continue;
-      }
+      const result = await evaluatePair(supabase, config.pair);
+      if (!result.generate) continue;
 
       selected = config;
       decision = result;
-
       break;
     }
-
-    /* =====================================================
-       NOTHING
-    ===================================================== */
 
     if (!selected) {
       return new Response(
         JSON.stringify({
           success: true,
           generated: false,
-          reason:
-            "All available pairs already have open signals",
-          deriv_daily_count:
-            derivCount || 0,
+          reason: "All available pairs already have open signals",
+          deriv_daily_count: derivCount || 0,
         }),
         {
-          headers: {
-            ...corsHeaders,
-            "Content-Type":
-              "application/json",
-          },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    /* =====================================================
-       GENERATE
-    ===================================================== */
+    const signal = generateSignal(selected);
 
-    const signal =
-      generateSignal(selected);
-
-    console.log(
-      "GENERATING SIGNAL:",
-      signal
-    );
-
-    /* =====================================================
-       INSERT
-    ===================================================== */
-
-    const {
-      data,
-      error,
-    } = await supabase
+    const { data, error } = await supabase
       .from("signals")
       .insert(signal)
       .select("*")
       .single();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log(
-      "SIGNAL INSERTED:",
-      data?.id
-    );
-
-    /* =====================================================
-       TELEGRAM
-    ===================================================== */
-
-    const telegram =
-      await postTelegramSignal(
-        supabaseUrl,
-        serviceRoleKey,
-        data
-      );
-
-    /* =====================================================
-       RESPONSE
-    ===================================================== */
+    /* Executing both Telegram & MT5 Execution */
+    const telegram = await postTelegramSignal(supabaseUrl, serviceRoleKey, data);
+    const mt5Execution = await executeMT5DemoTrade(supabaseUrl, serviceRoleKey, data);
 
     return new Response(
       JSON.stringify({
         success: true,
-
         generated: true,
-
-        pair:
-          selected.pair,
-
-        category:
-          selected.category,
-
+        pair: selected.pair,
+        category: selected.category,
         decision,
-
         signal: data,
-
         telegram,
-
-        deriv_daily_count:
-          derivCount || 0,
+        mt5_trade: mt5Execution,
+        deriv_daily_count: derivCount || 0,
       }),
       {
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error(
-      "AUTO SIGNAL ERROR:",
-      error
-    );
-
+    console.error("AUTO SIGNAL ERROR:", error);
     return new Response(
       JSON.stringify({
         success: false,
         generated: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
+        error: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }
