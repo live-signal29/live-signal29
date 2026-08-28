@@ -13,7 +13,7 @@ interface PriceData {
 }
 
 /* =========================================================
-   MT5 PRICES
+   MT5 LIVE PRICES
 ========================================================= */
 
 async function fetchMT5Prices(
@@ -36,7 +36,10 @@ async function fetchMT5Prices(
       }
     );
 
-    if (!response.ok) return result;
+    if (!response.ok) {
+      console.error("MT5 price endpoint failed:", response.status);
+      return result;
+    }
 
     const json = await response.json();
     const prices = json?.prices || {};
@@ -44,32 +47,72 @@ async function fetchMT5Prices(
     for (const pair of pairs) {
       const value = prices[pair];
       const price = value ? parseFloat(String(value)) : NaN;
+
       if (Number.isFinite(price) && price > 0) {
         result[pair] = price;
       }
     }
 
-    const keys = Object.keys(prices);
-    for (const key of keys) {
-      const normalized = String(key).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    /* Normalize common MT5 names */
+    for (const key of Object.keys(prices)) {
+      const normalized = String(key)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+
       const value = parseFloat(String(prices[key]));
 
-      if (Number.isFinite(value) && value > 0) {
-        if (normalized.includes("XAUUSD") || normalized === "GOLD") {
-          result["XAU/USD (Gold)"] = value;
-        }
-        if (normalized.includes("XAGUSD") || normalized === "SILVER") {
-          result["XAG/USD (Silver)"] = value;
-        }
-        if (normalized.includes("US30") || normalized.includes("DJ30")) {
-          result["US30"] = value;
-        }
-        if (normalized.includes("NASDAQ") || normalized.includes("NAS100")) {
-          result["NASDAQ"] = value;
-        }
-        if (normalized.includes("VOL75") || normalized.includes("VOLATILITY75")) {
-          result["VOL 75"] = value;
-        }
+      if (!Number.isFinite(value) || value <= 0) continue;
+
+      if (normalized.includes("XAUUSD") || normalized === "GOLD") {
+        result["XAU/USD (Gold)"] = value;
+      }
+
+      if (normalized.includes("XAGUSD") || normalized === "SILVER") {
+        result["XAG/USD (Silver)"] = value;
+      }
+
+      if (
+        normalized.includes("US30") ||
+        normalized.includes("DJ30") ||
+        normalized.includes("DOW")
+      ) {
+        result["US30"] = value;
+      }
+
+      if (
+        normalized.includes("NASDAQ") ||
+        normalized.includes("NAS100") ||
+        normalized.includes("USTEC")
+      ) {
+        result["NASDAQ"] = value;
+      }
+
+      if (
+        normalized.includes("SP500") ||
+        normalized.includes("US500") ||
+        normalized.includes("SPX")
+      ) {
+        result["S&P500"] = value;
+      }
+
+      if (normalized.includes("VOL75")) {
+        result["VOL 75"] = value;
+      }
+
+      if (normalized.includes("VOL100")) {
+        result["VOL 100"] = value;
+      }
+
+      if (normalized.includes("BOOM1000")) {
+        result["BOOM 1000"] = value;
+      }
+
+      if (normalized.includes("CRASH1000")) {
+        result["CRASH 1000"] = value;
+      }
+
+      if (normalized.includes("BOOM500")) {
+        result["BOOM 500"] = value;
       }
     }
   } catch (error) {
@@ -91,24 +134,36 @@ function rand(min: number, max: number): number {
   return Math.round((min + Math.random() * (max - min)) * 100) / 100;
 }
 
+/* =========================================================
+   ANALYSIS REASONS
+========================================================= */
+
 const buyReasons = [
   "Demand zone bounce with bullish confirmation",
   "Trendline support holding",
   "Double bottom formation",
-  "RSI oversold bounce",
   "Bullish order block retest",
-  "61.8% Fibonacci support",
   "Smart Money demand zone confirmed",
+  "Bullish market structure",
+  "Support zone reaction",
+  "Liquidity sweep followed by bullish confirmation",
+  "Fair Value Gap bullish reaction",
 ];
 
 const sellReasons = [
   "Supply zone rejection",
   "Resistance rejection",
-  "RSI bearish divergence",
-  "Bearish MACD crossover",
-  "Failed breakout",
+  "Bearish market structure",
+  "Bearish order block retest",
   "Smart Money supply zone confirmed",
+  "Failed breakout",
+  "Liquidity sweep followed by bearish confirmation",
+  "Fair Value Gap bearish reaction",
 ];
+
+/* =========================================================
+   SIGNAL CONFIG
+========================================================= */
 
 interface SignalConfig {
   pair: string;
@@ -121,34 +176,131 @@ interface SignalConfig {
   thresholdPct: number;
 }
 
+/* =========================================================
+   GENERATE SIGNAL
+========================================================= */
+
 function generateSignal(config: SignalConfig) {
-  const { pair, category, mainCategory, subCategory, price, pipMultiplier, decimals } = config;
+  const {
+    pair,
+    category,
+    mainCategory,
+    subCategory,
+    price,
+    pipMultiplier,
+    decimals,
+  } = config;
+
   const isBuy = Math.random() < 0.5;
   const type = isBuy ? "Buy" : "Sell";
 
-  const spread = Math.max(price.high - price.low, pipMultiplier * 20);
-  const offset = rand(-spread * 0.05, spread * 0.05);
-  const entry = Number((price.price + offset).toFixed(decimals));
+  const isGold = pair === "XAU/USD (Gold)";
+  const isSilver = pair === "XAG/USD (Silver)";
+  const isIndex =
+    pair === "US30" ||
+    pair === "NASDAQ" ||
+    pair === "S&P500";
 
-  // Safe SL Gap Adjustment specifically for VOL 75 and Deriv
-  const isVol75 = pair.includes("VOL 75");
+  const isVol75 = pair === "VOL 75";
   const isDeriv = category === "DERIV";
 
-  // Volatility 75 gets minimum 150 to 250 points gap so noise/spread won't hit SL
-  const slMult = isVol75 ? rand(150, 250) : isDeriv ? rand(40, 80) : rand(12, 20);
-  const tp1Mult = isVol75 ? rand(150, 250) : isDeriv ? rand(40, 80) : rand(15, 25);
-  const tp2Mult = isVol75 ? rand(300, 450) : isDeriv ? rand(90, 150) : rand(30, 45);
-  const tp3Mult = isVol75 ? rand(500, 700) : isDeriv ? rand(160, 250) : rand(50, 75);
+  /*
+   * Entry stays very close to live MT5 price.
+   */
+  const spread = Math.max(
+    price.high - price.low,
+    pipMultiplier * 20
+  );
+
+  const offset = rand(
+    -spread * 0.03,
+    spread * 0.03
+  );
+
+  const entry = Number(
+    (price.price + offset).toFixed(decimals)
+  );
+
+  /* =======================================================
+     DISTANCES
+  ======================================================= */
+
+  let slMult: number;
+  let tp1Mult: number;
+  let tp2Mult: number;
+  let tp3Mult: number;
+
+  if (isGold) {
+    /*
+     * Gold gets a larger, more realistic trading range.
+     */
+    slMult = rand(25, 45);
+    tp1Mult = rand(35, 60);
+    tp2Mult = rand(65, 100);
+    tp3Mult = rand(110, 160);
+  } else if (isSilver) {
+    slMult = rand(18, 30);
+    tp1Mult = rand(28, 45);
+    tp2Mult = rand(50, 75);
+    tp3Mult = rand(85, 120);
+  } else if (isIndex) {
+    slMult = rand(20, 35);
+    tp1Mult = rand(30, 50);
+    tp2Mult = rand(55, 85);
+    tp3Mult = rand(90, 130);
+  } else if (isVol75) {
+    slMult = rand(150, 250);
+    tp1Mult = rand(150, 250);
+    tp2Mult = rand(300, 450);
+    tp3Mult = rand(500, 700);
+  } else if (isDeriv) {
+    slMult = rand(40, 80);
+    tp1Mult = rand(40, 80);
+    tp2Mult = rand(90, 150);
+    tp3Mult = rand(160, 250);
+  } else {
+    slMult = rand(12, 20);
+    tp1Mult = rand(15, 25);
+    tp2Mult = rand(30, 45);
+    tp3Mult = rand(50, 75);
+  }
 
   const slDistance = slMult * pipMultiplier;
   const tp1Distance = tp1Mult * pipMultiplier;
   const tp2Distance = tp2Mult * pipMultiplier;
   const tp3Distance = tp3Mult * pipMultiplier;
 
-  const sl = Number((isBuy ? entry - slDistance : entry + slDistance).toFixed(decimals));
-  const tp1 = Number((isBuy ? entry + tp1Distance : entry - tp1Distance).toFixed(decimals));
-  const tp2 = Number((isBuy ? entry + tp2Distance : entry - tp2Distance).toFixed(decimals));
-  const tp3 = Number((isBuy ? entry + tp3Distance : entry - tp3Distance).toFixed(decimals));
+  const sl = Number(
+    (
+      isBuy
+        ? entry - slDistance
+        : entry + slDistance
+    ).toFixed(decimals)
+  );
+
+  const tp1 = Number(
+    (
+      isBuy
+        ? entry + tp1Distance
+        : entry - tp1Distance
+    ).toFixed(decimals)
+  );
+
+  const tp2 = Number(
+    (
+      isBuy
+        ? entry + tp2Distance
+        : entry - tp2Distance
+    ).toFixed(decimals)
+  );
+
+  const tp3 = Number(
+    (
+      isBuy
+        ? entry + tp3Distance
+        : entry - tp3Distance
+    ).toFixed(decimals)
+  );
 
   const now = new Date().toISOString();
 
@@ -158,27 +310,51 @@ function generateSignal(config: SignalConfig) {
     category,
     main_category: mainCategory,
     sub_category: subCategory,
+
     entry: String(entry),
     tp1: String(tp1),
     tp2: String(tp2),
     tp3: String(tp3),
     sl: String(sl),
+
     status: "open",
     signal_status: "open",
+
+    /*
+     * Keep existing activation behaviour.
+     */
     is_premium: Math.random() < 0.2,
     is_activated: true,
     activated_at: now,
     entry_mode: "market",
-    signal_type: pick(["Scalping", "Intraday", "Swing"]),
-    risk_level: isVol75 ? "High" : pick(["Low", "Medium"]),
-    analysis_reason: isBuy ? pick(buyReasons) : pick(sellReasons),
+
+    signal_type: pick([
+      "Scalping",
+      "Intraday",
+      "Swing",
+    ]),
+
+    risk_level:
+      isVol75 || isIndex
+        ? "High"
+        : pick(["Low", "Medium"]),
+
+    analysis_reason: isBuy
+      ? pick(buyReasons)
+      : pick(sellReasons),
+
     published: true,
     created_at: now,
+
     tp1_hit: false,
     tp2_hit: false,
     tp3_hit: false,
   };
 }
+
+/* =========================================================
+   CHECK IF PAIR CAN GENERATE
+========================================================= */
 
 async function evaluatePair(
   supabase: ReturnType<typeof createClient>,
@@ -186,158 +362,778 @@ async function evaluatePair(
   currentPrice: number,
   thresholdPct: number
 ) {
+  /*
+   * IMPORTANT:
+   * Only an OPEN signal blocks a new signal.
+   *
+   * This is safer than:
+   * .not("signal_status", "ilike", "close")
+   *
+   * because NULL / old statuses could accidentally interfere.
+   */
+
   const { data: active } = await supabase
     .from("signals")
     .select("id")
     .eq("pair", pair)
-    .not("signal_status", "ilike", "close")
+    .eq("signal_status", "open")
     .limit(1)
     .maybeSingle();
 
-  if (active) return { generate: false, reason: "signal_still_open" };
+  if (active) {
+    return {
+      generate: false,
+      reason: "signal_still_open",
+    };
+  }
 
+  /*
+   * Last signal for cooldown.
+   */
   const { data: last } = await supabase
     .from("signals")
     .select("entry,created_at")
     .eq("pair", pair)
-    .order("created_at", { ascending: false })
+    .order("created_at", {
+      ascending: false,
+    })
     .limit(1)
     .maybeSingle();
 
-  if (!last?.entry) return { generate: true, reason: "no_prior_signal" };
-
-  // FIX: Deriv synthetic indices (esp. VOL 75) are so volatile that the
-  // movement threshold alone caused a brand-new signal to spawn every
-  // ~15 minutes right after the previous one closed — looking like admin's
-  // close/delete "didn't stick" when really a fresh signal had just taken
-  // its place. A minimum cooldown since the last signal (regardless of
-  // movement) is now required before another one can be generated.
-  const COOLDOWN_MINUTES = 60;
-  const lastCreatedAt = last.created_at ? new Date(last.created_at).getTime() : 0;
-  const minutesSinceLast = (Date.now() - lastCreatedAt) / 60000;
-  if (lastCreatedAt && minutesSinceLast < COOLDOWN_MINUTES) {
-    return { generate: false, reason: "cooldown", minutesSinceLast: Number(minutesSinceLast.toFixed(1)) };
+  /*
+   * No previous signal.
+   */
+  if (!last?.entry) {
+    return {
+      generate: true,
+      reason: "no_prior_signal",
+    };
   }
 
-  const lastPrice = parseFloat(String(last.entry));
-  if (!Number.isFinite(lastPrice) || lastPrice <= 0) return { generate: true, reason: "invalid_entry" };
+  /*
+   * One-hour cooldown per pair.
+   */
+  const COOLDOWN_MINUTES = 60;
 
-  const move = Math.abs((currentPrice - lastPrice) / lastPrice) * 100;
-  if (move >= thresholdPct) return { generate: true, reason: "movement_detected", pctMove: Number(move.toFixed(4)) };
+  const lastCreatedAt = last.created_at
+    ? new Date(last.created_at).getTime()
+    : 0;
 
-  return { generate: false, reason: "low_movement", pctMove: Number(move.toFixed(4)) };
+  const minutesSinceLast =
+    (Date.now() - lastCreatedAt) / 60000;
+
+  if (
+    lastCreatedAt &&
+    minutesSinceLast < COOLDOWN_MINUTES
+  ) {
+    return {
+      generate: false,
+      reason: "cooldown",
+      minutesSinceLast: Number(
+        minutesSinceLast.toFixed(1)
+      ),
+    };
+  }
+
+  const lastPrice = parseFloat(
+    String(last.entry)
+  );
+
+  if (
+    !Number.isFinite(lastPrice) ||
+    lastPrice <= 0
+  ) {
+    return {
+      generate: true,
+      reason: "invalid_entry",
+    };
+  }
+
+  const move =
+    Math.abs(
+      (currentPrice - lastPrice) /
+        lastPrice
+    ) * 100;
+
+  /*
+   * IMPORTANT FIX:
+   *
+   * Previously a pair needed a certain percentage movement.
+   * This could result in NO signals for hours.
+   *
+   * Now, after the 60-minute cooldown, the scheduler can
+   * generate a fresh market signal.
+   *
+   * Movement is still returned for logging.
+   */
+  return {
+    generate: true,
+    reason:
+      move >= thresholdPct
+        ? "movement_detected"
+        : "hourly_refresh",
+    pctMove: Number(move.toFixed(4)),
+  };
 }
 
+/* =========================================================
+   MAIN
+========================================================= */
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: corsHeaders,
+    });
+  }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabaseUrl =
+      Deno.env.get("SUPABASE_URL")!;
 
-    // Limit Deriv Signals to Max 5 Per Day
+    const serviceRoleKey =
+      Deno.env.get(
+        "SUPABASE_SERVICE_ROLE_KEY"
+      )!;
+
+    const supabase = createClient(
+      supabaseUrl,
+      serviceRoleKey
+    );
+
+    /* =====================================================
+       DERIV DAILY LIMIT
+    ===================================================== */
+
     const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
 
-    const { count: derivCount } = await supabase
+    todayStart.setUTCHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    const {
+      count: derivCount,
+    } = await supabase
       .from("signals")
-      .select("id", { count: "exact", head: true })
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
       .eq("category", "DERIV")
-      .gte("created_at", todayStart.toISOString());
+      .gte(
+        "created_at",
+        todayStart.toISOString()
+      );
 
-    const allowDeriv = (derivCount || 0) < 5;
+    const allowDeriv =
+      (derivCount || 0) < 5;
 
-    // High priority commodities & indices
-    const highPriorityPairs = ["XAU/USD (Gold)", "XAG/USD (Silver)", "US30", "NASDAQ", "S&P500"];
-    const forex = ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "GBP/JPY", "USD/CAD"];
-    const crypto = ["BTC/USD", "ETH/USD", "SOL/USD"];
-    const deriv = allowDeriv ? ["BOOM 1000", "CRASH 1000", "VOL 75", "BOOM 500", "VOL 100"] : [];
+    /* =====================================================
+       PAIRS
+       =====================================================
 
-    const allPairs = [...highPriorityPairs, ...forex, ...crypto, ...deriv];
-    const mt5 = await fetchMT5Prices(allPairs, supabaseUrl, serviceRoleKey);
+       COMMODITIES / INDICES ARE THE MAIN PRIORITY.
 
-    const candidates: SignalConfig[] = [];
+       XAU = highest priority.
+    ===================================================== */
 
-    for (const pair of highPriorityPairs) {
+    const commodities = [
+      "XAU/USD (Gold)",
+      "XAG/USD (Silver)",
+      "US30",
+      "NASDAQ",
+      "S&P500",
+    ];
+
+    const forex = [
+      "EUR/USD",
+      "GBP/USD",
+      "USD/JPY",
+      "AUD/USD",
+      "GBP/JPY",
+      "USD/CAD",
+    ];
+
+    const crypto = [
+      "BTC/USD",
+      "ETH/USD",
+      "SOL/USD",
+    ];
+
+    const deriv = allowDeriv
+      ? [
+          "BOOM 1000",
+          "CRASH 1000",
+          "VOL 75",
+          "BOOM 500",
+          "VOL 100",
+        ]
+      : [];
+
+    const allPairs = [
+      ...commodities,
+      ...forex,
+      ...crypto,
+      ...deriv,
+    ];
+
+    /* =====================================================
+       GET MT5 PRICES
+    ===================================================== */
+
+    const mt5 = await fetchMT5Prices(
+      allPairs,
+      supabaseUrl,
+      serviceRoleKey
+    );
+
+    /* =====================================================
+       BUILD CONFIG
+    ===================================================== */
+
+    const candidates: SignalConfig[] =
+      [];
+
+    /* -----------------------------------------------------
+       COMMODITIES / INDICES
+       ----------------------------------------------------- */
+
+    for (const pair of commodities) {
       if (!mt5[pair]) continue;
+
       const p = mt5[pair];
-      const isGold = pair.includes("XAU");
-      const isSilver = pair.includes("XAG");
+
+      const isGold =
+        pair === "XAU/USD (Gold)";
+
+      const isSilver =
+        pair === "XAG/USD (Silver)";
+
+      const isIndex =
+        pair === "US30" ||
+        pair === "NASDAQ" ||
+        pair === "S&P500";
+
       candidates.push({
         pair,
+
         category: "COMMODITIES",
-        mainCategory: "COMMODITIES",
+
+        mainCategory:
+          "COMMODITIES",
+
         subCategory: pair,
-        price: { price: p, high: p + (isGold ? 10 : 1), low: p - (isGold ? 10 : 1) },
-        pipMultiplier: isGold ? 1 : isSilver ? 0.05 : 10,
-        decimals: isSilver ? 3 : 2,
-        thresholdPct: 0.05,
+
+        price: {
+          price: p,
+
+          high:
+            p +
+            (
+              isGold
+                ? 10
+                : isSilver
+                ? 1
+                : isIndex
+                ? 100
+                : 1
+            ),
+
+          low:
+            p -
+            (
+              isGold
+                ? 10
+                : isSilver
+                ? 1
+                : isIndex
+                ? 100
+                : 1
+            ),
+        },
+
+        pipMultiplier:
+          isGold
+            ? 1
+            : isSilver
+            ? 0.05
+            : isIndex
+            ? 1
+            : 1,
+
+        decimals:
+          isSilver
+            ? 3
+            : 2,
+
+        thresholdPct:
+          isGold
+            ? 0.03
+            : 0.05,
       });
     }
+
+    /* -----------------------------------------------------
+       FOREX
+       ----------------------------------------------------- */
 
     for (const pair of forex) {
       if (!mt5[pair]) continue;
+
       const p = mt5[pair];
-      const isJPY = pair.includes("JPY");
+
+      const isJPY =
+        pair.includes("JPY");
+
       candidates.push({
         pair,
+
         category: "FOREX",
+
         mainCategory: "FOREX",
+
         subCategory: pair,
-        price: { price: p, high: p + (isJPY ? 0.4 : 0.004), low: p - (isJPY ? 0.4 : 0.004) },
-        pipMultiplier: isJPY ? 0.1 : 0.001,
-        decimals: isJPY ? 3 : 5,
-        thresholdPct: 0.1,
+
+        price: {
+          price: p,
+          high:
+            p +
+            (isJPY
+              ? 0.4
+              : 0.004),
+
+          low:
+            p -
+            (isJPY
+              ? 0.4
+              : 0.004),
+        },
+
+        pipMultiplier:
+          isJPY
+            ? 0.1
+            : 0.001,
+
+        decimals:
+          isJPY
+            ? 3
+            : 5,
+
+        thresholdPct:
+          0.1,
       });
     }
+
+    /* -----------------------------------------------------
+       CRYPTO
+       ----------------------------------------------------- */
+
+    for (const pair of crypto) {
+      if (!mt5[pair]) continue;
+
+      const p = mt5[pair];
+
+      candidates.push({
+        pair,
+
+        category: "CRYPTO",
+
+        mainCategory: "CRYPTO",
+
+        subCategory: pair,
+
+        price: {
+          price: p,
+          high: p * 1.01,
+          low: p * 0.99,
+        },
+
+        pipMultiplier: 1,
+
+        decimals: 2,
+
+        thresholdPct:
+          0.25,
+      });
+    }
+
+    /* -----------------------------------------------------
+       DERIV
+       ----------------------------------------------------- */
 
     if (allowDeriv) {
       for (const pair of deriv) {
         if (!mt5[pair]) continue;
+
         const p = mt5[pair];
-        const isVol75 = pair.includes("VOL 75");
+
+        const isVol75 =
+          pair === "VOL 75";
+
         candidates.push({
           pair,
+
           category: "DERIV",
-          mainCategory: "DERIV/BINARY",
+
+          mainCategory:
+            "DERIV/BINARY",
+
           subCategory: pair,
-          price: { price: p, high: p * 1.005, low: p * 0.995 },
-          // Pip Multiplier 1.0 for direct point calculations in Volatility 75
-          pipMultiplier: isVol75 ? 1.0 : 10, 
+
+          price: {
+            price: p,
+            high: p * 1.005,
+            low: p * 0.995,
+          },
+
+          pipMultiplier:
+            isVol75
+              ? 1
+              : 10,
+
           decimals: 2,
-          thresholdPct: 0.25,
+
+          thresholdPct:
+            0.25,
         });
       }
     }
 
-    const newSignals: any[] = [];
-    for (const config of candidates) {
-      const current = mt5[config.pair];
-      const decision = await evaluatePair(supabase, config.pair, current, config.thresholdPct);
+    /* =====================================================
+       WEIGHTED PRIORITY
+       =====================================================
 
-      if (decision.generate) {
-        newSignals.push(generateSignal(config));
+       XAU gets the biggest chance.
+
+       Approximate distribution:
+
+       XAU       50%
+       XAG       12%
+       US30      10%
+       NASDAQ     8%
+       S&P500     5%
+       FOREX     10%
+       CRYPTO     3%
+       DERIV      2%
+
+       If a selected pair is unavailable/open/cooldown,
+       the system automatically tries another pair.
+    ===================================================== */
+
+    const available = candidates.filter(
+      (x) => mt5[x.pair]
+    );
+
+    if (available.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          generated: false,
+          error:
+            "No MT5 prices available",
+        }),
+        {
+          status: 503,
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+    }
+
+    const gold = available.filter(
+      (x) =>
+        x.pair ===
+        "XAU/USD (Gold)"
+    );
+
+    const silver = available.filter(
+      (x) =>
+        x.pair ===
+        "XAG/USD (Silver)"
+    );
+
+    const us30 = available.filter(
+      (x) => x.pair === "US30"
+    );
+
+    const nasdaq = available.filter(
+      (x) => x.pair === "NASDAQ"
+    );
+
+    const sp500 = available.filter(
+      (x) => x.pair === "S&P500"
+    );
+
+    const commodity = available.filter(
+      (x) =>
+        x.category ===
+        "COMMODITIES" &&
+        ![
+          "XAU/USD (Gold)",
+          "XAG/USD (Silver)",
+          "US30",
+          "NASDAQ",
+          "S&P500",
+        ].includes(x.pair)
+    );
+
+    const forexAvailable =
+      available.filter(
+        (x) =>
+          x.category === "FOREX"
+      );
+
+    const cryptoAvailable =
+      available.filter(
+        (x) =>
+          x.category === "CRYPTO"
+      );
+
+    const derivAvailable =
+      available.filter(
+        (x) =>
+          x.category === "DERIV"
+      );
+
+    /*
+     * Build weighted pool.
+     */
+    const weightedPool: SignalConfig[] =
+      [];
+
+    function addMany(
+      list: SignalConfig[],
+      weight: number
+    ) {
+      for (
+        let i = 0;
+        i < weight;
+        i++
+      ) {
+        weightedPool.push(...list);
       }
     }
 
-    if (newSignals.length === 0) {
-      return new Response(JSON.stringify({ success: true, generated: false, deriv_daily_count: derivCount }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    addMany(gold, 50);
+    addMany(silver, 12);
+    addMany(us30, 10);
+    addMany(nasdaq, 8);
+    addMany(sp500, 5);
+
+    addMany(
+      commodity,
+      5
+    );
+
+    addMany(
+      forexAvailable,
+      10
+    );
+
+    addMany(
+      cryptoAvailable,
+      3
+    );
+
+    addMany(
+      derivAvailable,
+      2
+    );
+
+    /*
+     * If weighted pool is empty, use all available.
+     */
+    const selectionPool =
+      weightedPool.length > 0
+        ? weightedPool
+        : available;
+
+    /*
+     * Shuffle candidates several times so a blocked
+     * Gold signal does not cause the same fallback.
+     */
+    const shuffled =
+      [...selectionPool].sort(
+        () =>
+          Math.random() - 0.5
+      );
+
+    /*
+     * Remove duplicate pairs while preserving
+     * weighted priority.
+     */
+    const orderedPairs: SignalConfig[] =
+      [];
+
+    const seen =
+      new Set<string>();
+
+    for (const config of shuffled) {
+      if (seen.has(config.pair))
+        continue;
+
+      seen.add(config.pair);
+      orderedPairs.push(config);
     }
 
-    const { data, error } = await supabase.from("signals").insert(newSignals).select("*");
+    /* =====================================================
+       FIND ONE VALID PAIR
+    ===================================================== */
 
-    if (error) throw error;
+    let selected:
+      | SignalConfig
+      | null = null;
 
-    return new Response(JSON.stringify({ success: true, generated: true, signals: data }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    let selectedDecision:
+      | any = null;
+
+    for (const config of orderedPairs) {
+      const current =
+        mt5[config.pair];
+
+      if (!current) continue;
+
+      const decision =
+        await evaluatePair(
+          supabase,
+          config.pair,
+          current,
+          config.thresholdPct
+        );
+
+      console.log(
+        "Pair decision:",
+        config.pair,
+        decision
+      );
+
+      if (!decision.generate) {
+        continue;
+      }
+
+      selected = config;
+      selectedDecision =
+        decision;
+
+      break;
+    }
+
+    /* =====================================================
+       NO VALID PAIR
+    ===================================================== */
+
+    if (!selected) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          generated: false,
+          reason:
+            "No pair available - open signal/cooldown",
+          deriv_daily_count:
+            derivCount || 0,
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+    }
+
+    /* =====================================================
+       GENERATE SIGNAL
+    ===================================================== */
+
+    const signal =
+      generateSignal(
+        selected
+      );
+
+    console.log(
+      "GENERATING SIGNAL:",
+      selected.pair,
+      selectedDecision
+    );
+
+    /* =====================================================
+       INSERT
+    ===================================================== */
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("signals")
+      .insert(signal)
+      .select("*")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    /* =====================================================
+       RESPONSE
+    ===================================================== */
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+
+        generated: true,
+
+        pair:
+          selected.pair,
+
+        category:
+          selected.category,
+
+        decision:
+          selectedDecision,
+
+        signal: data,
+
+        deriv_daily_count:
+          derivCount || 0,
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type":
+            "application/json",
+        },
+      }
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, error: String(error) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error(
+      "AUTO SIGNAL ERROR:",
+      error
+    );
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type":
+            "application/json",
+        },
+      }
+    );
   }
 });
