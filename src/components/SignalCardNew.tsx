@@ -70,6 +70,7 @@ interface SignalCardProps {
     created_at: string;
 
     category?: string;
+    main_category?: string;
     is_premium?: boolean;
 
     current_price?: string;
@@ -149,6 +150,40 @@ const SignalCardNew = ({
 
   const isBuy =
     signal.type?.toLowerCase() === "buy";
+
+  /*
+   * ============================================================
+   * DERIV / SYNTHETIC INDEX CHECK
+   * ============================================================
+   * Temporary debug step: for Deriv category pairs (Volatility,
+   * Boom, Crash, Step, Jump indices) we keep computing/updating
+   * current_price on the backend as usual, but we HIDE the
+   * "Current" price on the frontend for now, so we can verify
+   * from the backend/DB whether the value being fetched is
+   * actually correct, independent of anything on the UI side.
+   */
+
+  const isDerivPair = (() => {
+    const cat = String(
+      signal.main_category ||
+        signal.category ||
+        ""
+    ).toUpperCase();
+
+    if (cat.includes("DERIV")) return true;
+
+    const p = String(
+      signal.pair || ""
+    ).toUpperCase();
+
+    return (
+      p.includes("VOL") ||
+      p.includes("BOOM") ||
+      p.includes("CRASH") ||
+      p.includes("STEP") ||
+      p.includes("JUMP")
+    );
+  })();
 
   /*
    * ============================================================
@@ -1072,25 +1107,30 @@ const SignalCardNew = ({
             </div>
 
             {/* CURRENT */}
+            {/* Deriv pairs: current price is still fetched and
+                saved on the backend every cycle, just not shown
+                here on the frontend for now (debug step). */}
 
-            <div className="flex flex-col items-center">
+            {!isDerivPair && (
+              <div className="flex flex-col items-center">
 
-              <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                Current
-              </span>
+                <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                  Current
+                </span>
 
-              <span
-                className={cn(
-                  "font-mono text-[11px] font-bold transition-colors duration-200",
-                  currentPriceColor
-                )}
-              >
-                {currentPriceNum > 0
-                  ? currentPriceNum.toFixed(2)
-                  : signal.entry}
-              </span>
+                <span
+                  className={cn(
+                    "font-mono text-[11px] font-bold transition-colors duration-200",
+                    currentPriceColor
+                  )}
+                >
+                  {currentPriceNum > 0
+                    ? currentPriceNum.toFixed(2)
+                    : signal.entry}
+                </span>
 
-            </div>
+              </div>
+            )}
 
             {/* TYPE / P&L */}
 
