@@ -407,12 +407,30 @@ const SignalCardNew = ({
    * ============================================================
    */
 
+  // FIX: useLivePricesFetch can emit one stale/incorrect price right when a
+  // card mounts or when the feed reconnects (the "price reverts after ~1s"
+  // bug). Previously this effect trusted the very first tick, which could
+  // instantly (and permanently) mark a signal as SL Hit / Closed on bad
+  // data — this is what was undoing admin's manual edits on Deriv/VOL
+  // signals. Now: (1) the first tick after mount/reconnect is skipped, and
+  // (2) an SL breach must be seen on 2 consecutive ticks before it's
+  // written to the database.
+  const primedForChecksRef = useRef(false);
+  const slBreachStreakRef = useRef(0);
+
   useEffect(() => {
     if (
       !isOpen ||
       !currentPriceNum ||
       parsedEntryPrice <= 0
     ) {
+      primedForChecksRef.current = false;
+      slBreachStreakRef.current = 0;
+      return;
+    }
+
+    if (!primedForChecksRef.current) {
+      primedForChecksRef.current = true;
       return;
     }
 
@@ -565,14 +583,22 @@ const SignalCardNew = ({
         !!signal.tp1_hit ||
         !!updates.tp1_hit;
 
-      if (
+      const slBreachThisTick =
         !signal.sl_hit &&
         !effectiveTP1 &&
         slPrice > 0 &&
         hasSLReached(
           currentPriceNum,
           slPrice
-        )
+        );
+
+      slBreachStreakRef.current = slBreachThisTick
+        ? slBreachStreakRef.current + 1
+        : 0;
+
+      if (
+        slBreachThisTick &&
+        slBreachStreakRef.current >= 2
       ) {
         updates.sl_hit = true;
 
