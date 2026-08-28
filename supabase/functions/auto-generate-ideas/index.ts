@@ -59,16 +59,7 @@ async function fetchCandles(symbol: string, tf = "H1"): Promise<Candle[]> {
       const o = q?.open?.[i], h = q?.high?.[i], l = q?.low?.[i], c = q?.close?.[i];
       if ([o, h, l, c].every((v) => Number.isFinite(v))) candles.push({ t: ts[i], o, h, l, c });
     }
-    if (tf === "H4") {
-      const agg: Candle[] = [];
-      for (let i = 0; i < candles.length; i += 4) {
-        const s = candles.slice(i, i + 4);
-        if (!s.length) continue;
-        agg.push({ t: s[0].t, o: s[0].o, h: Math.max(...s.map(x => x.h)), l: Math.min(...s.map(x => x.l)), c: s[s.length - 1].c });
-      }
-      return agg.slice(-60);
-    }
-    return candles.slice(-80);
+    return candles.slice(-50);
   } catch (e) {
     console.error("Candle fetch failed", symbol, e);
     return [];
@@ -112,17 +103,17 @@ function findSwingLow(c: Candle[], i: number, w = 2) {
 }
 
 function analyze(candles: Candle[], livePrice: number, decimals: number): Analysis {
-  const c = candles.slice(-60);
-  const recent = c.slice(-25);
+  const c = candles.slice(-40);
+  const recent = c.slice(-20);
   const closes = recent.map(x => x.c);
   const first = closes[0] || livePrice;
   const last = livePrice || closes[closes.length - 1] || first;
   const pct = first ? ((last - first) / first) * 100 : 0;
-  const trend: Analysis["trend"] = pct > 0.12 ? "Bullish" : pct < -0.12 ? "Bearish" : "Range";
+  const trend: Analysis["trend"] = pct > 0.1 ? "Bullish" : pct < -0.1 ? "Bearish" : "Range";
 
   const highs: { i: number; p: number }[] = [];
   const lows: { i: number; p: number }[] = [];
-  for (let i = Math.max(2, c.length - 35); i < c.length - 2; i++) {
+  for (let i = 2; i < c.length - 2; i++) {
     if (findSwingHigh(c, i)) highs.push({ i, p: c[i].h });
     if (findSwingLow(c, i)) lows.push({ i, p: c[i].l });
   }
@@ -137,11 +128,10 @@ function analyze(candles: Candle[], livePrice: number, decimals: number): Analys
 
   let trendline: Analysis["trendline"] = "Flat";
   if (lastLow && prevLow) trendline = lastLow.p > prevLow.p ? "Rising" : lastLow.p < prevLow.p ? "Falling" : "Flat";
-  else if (lastHigh && prevHigh) trendline = lastHigh.p > prevHigh.p ? "Rising" : lastHigh.p < prevHigh.p ? "Falling" : "Flat";
 
   let fvg: Analysis["fvg"] = null;
   for (let i = c.length - 1; i >= 2 && !fvg; i--) {
-    const a = c[i - 2], b = c[i - 1], d = c[i];
+    const a = c[i - 2], d = c[i];
     if (a.h < d.l) fvg = { type: "bullish", low: a.h, high: d.l };
     else if (a.l > d.h) fvg = { type: "bearish", low: d.h, high: a.l };
   }
@@ -153,13 +143,12 @@ function analyze(candles: Candle[], livePrice: number, decimals: number): Analys
   let action: Analysis["action"] = "BUY";
   if (bos === "Bearish BOS" || (trend === "Bearish" && fvg?.type !== "bullish")) action = "SELL";
   else if (bos === "Bullish BOS" || trend === "Bullish" || fvg?.type === "bullish") action = "BUY";
-  else if (fvg?.type === "bearish") action = "SELL";
 
   const recentRange = Math.max(...recent.map(x => x.h)) - Math.min(...recent.map(x => x.l));
-  const risk = Math.max(recentRange * 0.12, Math.abs(last) * 0.0012);
+  const risk = Math.max(recentRange * 0.18, Math.abs(last) * 0.002);
   const entry = last;
   const tp1 = action === "BUY" ? last + risk * 1.5 : last - risk * 1.5;
-  const tp2 = action === "BUY" ? last + risk * 2.6 : last - risk * 2.6;
+  const tp2 = action === "BUY" ? last + risk * 2.8 : last - risk * 2.8;
   const sl = action === "BUY" ? last - risk : last + risk;
 
   return {
@@ -184,72 +173,93 @@ function buildChartSVG(
   md: { candles: Candle[]; symbol: string; timeframe: string; price: number },
   plan: Analysis,
   title: string,
+  decimals: number
 ): string {
-  const W = 1000, H = 600, padL = 70, padR = 170, padT = 110, padB = 65;
+  const W = 1000, H = 650, padL = 20, padR = 140, padT = 90, padB = 40;
   const innerW = W - padL - padR, innerH = H - padT - padB;
-  const candles = md.candles.slice(-60);
-  const prices = candles.flatMap(x => [x.h, x.l]).concat([plan.entry, plan.tp1, plan.tp2, plan.sl]);
-  if (plan.fvg) prices.push(plan.fvg.low, plan.fvg.high);
-  const maxP = Math.max(...prices), minP = Math.min(...prices), range = Math.max(maxP - minP, 1);
-  const yMax = maxP + range * 0.08, yMin = minP - range * 0.08, yRange = yMax - yMin;
-  const slot = innerW / Math.max(candles.length, 1), candleW = Math.max(3, slot * 0.62);
+  const candles = md.candles.slice(-45);
+
+  // FIX: Limit price bounds focused on candles + active levels to avoid candle squeezing
+  const activePrices = candles.flatMap(x => [x.h, x.l]).concat([plan.entry, plan.sl, plan.tp1]);
+  const maxP = Math.max(...activePrices);
+  const minP = Math.min(...activePrices);
+  const range = Math.max(maxP - minP, 0.0001);
+
+  const yMax = maxP + range * 0.05;
+  const yMin = minP - range * 0.05;
+  const yRange = yMax - yMin;
+
+  const slot = innerW / Math.max(candles.length, 1);
+  const candleW = Math.max(6, slot * 0.65);
   const y = (p: number) => padT + ((yMax - p) / yRange) * innerH;
 
+  // Background Grid Lines
   let grid = "", labels = "";
-  for (let i = 0; i <= 5; i++) {
-    const yy = padT + innerH * i / 5, p = yMax - yRange * i / 5;
-    grid += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="#263244" stroke-width="1" stroke-dasharray="4 4"/>`;
-    labels += `<text x="${W-padR+8}" y="${yy+4}" fill="#9ca3af" font-size="12" font-family="monospace">${p.toFixed(2)}</text>`;
+  for (let i = 0; i <= 6; i++) {
+    const yy = padT + (innerH * i) / 6;
+    const p = yMax - (yRange * i) / 6;
+    grid += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="#1e293b" stroke-width="1" stroke-dasharray="2 4"/>`;
+    labels += `<text x="${W - padR + 10}" y="${yy + 4}" fill="#64748b" font-size="11" font-family="monospace">${p.toFixed(decimals)}</text>`;
   }
 
+  // Candlesticks rendering
   let body = "";
   candles.forEach((c, i) => {
-    const x = padL + i * slot + (slot-candleW)/2, xm = x+candleW/2;
-    const color = c.c >= c.o ? "#22c55e" : "#ef4444";
-    body += `<line x1="${xm}" y1="${y(c.h)}" x2="${xm}" y2="${y(c.l)}" stroke="${color}" stroke-width="1.2"/>`;
-    body += `<rect x="${x}" y="${Math.min(y(c.o),y(c.c))}" width="${candleW}" height="${Math.max(1,Math.abs(y(c.c)-y(c.o)))}" fill="${color}"/>`;
+    const x = padL + i * slot + (slot - candleW) / 2;
+    const xm = x + candleW / 2;
+    const isBull = c.c >= c.o;
+    const color = isBull ? "#22c55e" : "#ef4444";
+    const topY = y(Math.max(c.o, c.c));
+    const botY = y(Math.min(c.o, c.c));
+    const hY = y(c.h);
+    const lY = y(c.l);
+
+    body += `<line x1="${xm}" y1="${hY}" x2="${xm}" y2="${lY}" stroke="${color}" stroke-width="1.5"/>`;
+    body += `<rect x="${x}" y="${topY}" width="${candleW}" height="${Math.max(2, botY - topY)}" fill="${color}" rx="1"/>`;
   });
 
-  // Trendline: last two confirmed swing lows for bullish/rising structure, otherwise highs.
-  const pivots: {i:number;p:number}[] = [];
-  const useLows = plan.action === "BUY";
-  for (let i = 2; i < candles.length-2; i++) {
-    const ok = useLows ? findSwingLow(candles, i) : findSwingHigh(candles, i);
-    if (ok) pivots.push({ i, p: useLows ? candles[i].l : candles[i].h });
-  }
-  let trendLine = "";
-  if (pivots.length >= 2) {
-    const a = pivots[pivots.length-2], b = pivots[pivots.length-1];
-    const xa = padL+a.i*slot+slot/2, xb = padL+b.i*slot+slot/2;
-    trendLine = `<line x1="${xa}" y1="${y(a.p)}" x2="${xb}" y2="${y(b.p)}" stroke="#f59e0b" stroke-width="3"/>`;
-  }
+  // Level Indicators (Entry, TP, SL)
+  const renderLevel = (price: number, color: string, label: string) => {
+    const yPos = y(price);
+    if (yPos < padT || yPos > H - padB) return "";
+    return `
+      <line x1="${padL}" y1="${yPos}" x2="${W - padR}" y2="${yPos}" stroke="${color}" stroke-width="2" stroke-dasharray="5 3"/>
+      <rect x="${W - padR}" y="${yPos - 11}" width="130" height="22" rx="4" fill="${color}"/>
+      <text x="${W - padR + 8}" y="${yPos + 4}" fill="#ffffff" font-size="11" font-weight="bold" font-family="Arial">${label}: ${price}</text>
+    `;
+  };
 
-  let fvgRect = "";
-  if (plan.fvg) {
-    const top = y(plan.fvg.high), bottom = y(plan.fvg.low);
-    const color = plan.fvg.type === "bullish" ? "#22c55e" : "#ef4444";
-    fvgRect = `<rect x="${padL+innerW*0.42}" y="${Math.min(top,bottom)}" width="${innerW*0.5}" height="${Math.max(8,Math.abs(bottom-top))}" fill="${color}" opacity="0.14" stroke="${color}" stroke-dasharray="6 4"/><text x="${padL+innerW*0.43}" y="${Math.min(top,bottom)-6}" fill="${color}" font-size="12" font-weight="bold">${plan.fvg.type.toUpperCase()} FVG</text>`;
-  }
-
-  const line = (price:number, color:string, label:string, dash="7 4") => `<line x1="${padL}" y1="${y(price)}" x2="${W-padR}" y2="${y(price)}" stroke="${color}" stroke-width="2" stroke-dasharray="${dash}"/><rect x="${W-padR+2}" y="${y(price)-10}" width="62" height="20" rx="3" fill="${color}"/><text x="${W-padR+8}" y="${y(price)+4}" fill="white" font-size="11" font-weight="bold">${label}</text><text x="${W-padR+68}" y="${y(price)+4}" fill="${color}" font-size="11" font-weight="bold">${price}</text>`;
-  const actionColor = plan.action === "BUY" ? "#22c55e" : "#ef4444";
+  const actionBg = plan.action === "BUY" ? "#16a34a" : "#dc2626";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs><linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#07101f"/><stop offset="1" stop-color="#101827"/></linearGradient></defs>
-  <rect width="100%" height="100%" fill="url(#bg2)"/>
-  <text x="${padL}" y="32" fill="#f8fafc" font-size="24" font-weight="800" font-family="Arial">${safeText(md.symbol)} • ${md.timeframe}</text>
-  <text x="${padL}" y="56" fill="#94a3b8" font-size="13" font-family="Arial">${safeText(title.slice(0, 100))}</text>
-  <rect x="${padL}" y="70" width="${innerW}" height="30" rx="7" fill="#111c2f"/>
-  <text x="${padL+12}" y="91" fill="${actionColor}" font-size="14" font-weight="800" font-family="Arial">${plan.action} • Live MT5 ${md.price} • ${plan.bos} • ${plan.trend}</text>
-  ${grid}${fvgRect}${body}${trendLine}${line(plan.entry,"#3b82f6","ENTRY","8 3")}${line(plan.tp1,"#22c55e","TP1")}${line(plan.tp2,"#16a34a","TP2")}${line(plan.sl,"#ef4444","SL")}${labels}
-  <rect x="${padL}" y="${H-48}" width="${innerW}" height="28" rx="6" fill="#111c2f"/>
-  <text x="${padL+12}" y="${H-29}" fill="#cbd5e1" font-size="11" font-family="Arial">SMC: ${plan.bos} • ${plan.orderBlock} • Trendline: ${plan.trendline} • FVG: ${plan.fvg ? plan.fvg.type : "none"} • Live MT5 feed</text>
+  <rect width="100%" height="100%" fill="#0b0f19"/>
+  
+  <!-- Header Info -->
+  <text x="${padL}" y="35" fill="#ffffff" font-size="22" font-weight="800" font-family="Arial">${safeText(md.symbol)} (${md.timeframe})</text>
+  <rect x="${W - padR - 110}" y="15" width="110" height="30" rx="6" fill="${actionBg}"/>
+  <text x="${W - padR - 55}" y="35" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Arial">${plan.action}</text>
+  
+  <text x="${padL}" y="60" fill="#94a3b8" font-size="12" font-family="Arial">Live: ${md.price} | SMC: ${plan.bos} | Trend: ${plan.trend}</text>
+
+  <!-- Chart Main Area -->
+  ${grid}
+  ${body}
+  
+  <!-- Target lines -->
+  ${renderLevel(plan.entry, "#3b82f6", "ENTRY")}
+  ${renderLevel(plan.tp1, "#22c55e", "TP1")}
+  ${renderLevel(plan.tp2, "#16a34a", "TP2")}
+  ${renderLevel(plan.sl, "#ef4444", "SL")}
+  ${labels}
+
+  <!-- Footer -->
+  <rect x="0" y="${H - 30}" width="${W}" height="30" fill="#030712"/>
+  <text x="${padL}" y="${H - 10}" fill="#64748b" font-size="11" font-family="Arial">Live Market Signal • Auto Generated Analysis</text>
   </svg>`;
 }
 
 function buildDescription(pair: string, p: Analysis): string {
-  const fvg = p.fvg ? `${p.fvg.type === "bullish" ? "Bullish" : "Bearish"} FVG ${p.fvg.low.toFixed(2)}–${p.fvg.high.toFixed(2)}` : "No clean FVG";
-  return `📊 <b>${pair}</b> • ${p.action}\n💰 Entry: <code>${p.entry}</code>\n🎯 TP1: <code>${p.tp1}</code> • TP2: <code>${p.tp2}</code>\n🛑 SL: <code>${p.sl}</code>\n\n🧠 <b>Chart Analysis</b>\n• SMC: ${p.bos} / ${p.orderBlock}\n• Trendline: ${p.trendline} • Trend: ${p.trend}\n• FVG: ${fvg}\n\n⚠️ Educational idea only. Use your own risk management.`;
+  return `📊 <b>${pair}</b> • ${p.action}\n💰 Entry: <code>${p.entry}</code>\n🎯 TP1: <code>${p.tp1}</code> | TP2: <code>${p.tp2}</code>\n🛑 SL: <code>${p.sl}</code>\n\n🧠 <b>Analysis Info</b>\n• Trend: ${p.trend}\n• Structure: ${p.bos}\n• OB: ${p.orderBlock}\n\n⚠️ Risk Disclaimer: Manage your risk accordingly.`;
 }
 
 async function uploadSvg(supabase: any, svg: string, filename: string): Promise<string | null> {
@@ -269,7 +279,6 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const url = new URL(req.url);
 
-    // One invocation = one post. Cron runs 8 times/day. A manual request can pass ?pair=EUR/USD.
     const requestedPair = url.searchParams.get("pair");
     const utcHour = new Date().getUTCHours();
     const slotIndex = Math.floor(utcHour / 3) % PAIRS.length;
@@ -278,22 +287,20 @@ Deno.serve(async (req) => {
     const prices = await fetchMt5Prices(PAIRS.map(x => x.pair), supabaseUrl, serviceRoleKey);
     const livePrice = prices[cfg.pair];
     if (!livePrice) {
-      return new Response(JSON.stringify({ success:false, error:`No live MT5 price for ${cfg.pair}`, available:Object.keys(prices) }), { status: 503, headers:{...corsHeaders,"Content-Type":"application/json"} });
+      return new Response(JSON.stringify({ success: false, error: `No live MT5 price for ${cfg.pair}` }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const candles = await fetchCandles(cfg.yahoo, "H1");
     if (candles.length < 12) {
-      return new Response(JSON.stringify({ success:false, error:`Not enough chart candles for ${cfg.pair}` }), { status: 503, headers:{...corsHeaders,"Content-Type":"application/json"} });
+      return new Response(JSON.stringify({ success: false, error: `Not enough chart candles` }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    // Anchor the latest candle to the real MT5 price so the chart and levels use the live feed.
-    const last = candles[candles.length-1];
-    candles[candles.length-1] = { ...last, c: livePrice, h: Math.max(last.h, livePrice), l: Math.min(last.l, livePrice) };
+
+    const last = candles[candles.length - 1];
+    candles[candles.length - 1] = { ...last, c: livePrice, h: Math.max(last.h, livePrice), l: Math.min(last.l, livePrice) };
 
     const analysis = analyze(candles, livePrice, cfg.decimals);
-    const tf = "H1";
-    const title = `${analysis.action} idea • SMC + FVG + Trendline`;
-    const svg = buildChartSVG({ candles, symbol: cfg.pair, timeframe: tf, price: livePrice }, analysis, title);
-    const filename = `auto-ideas/${Date.now()}-${cfg.pair.replace(/[^A-Za-z0-9]/g,"_")}.svg`;
+    const svg = buildChartSVG({ candles, symbol: cfg.pair, timeframe: "H1", price: livePrice }, analysis, `${analysis.action} Analysis`, cfg.decimals);
+    const filename = `auto-ideas/${Date.now()}-${cfg.pair.replace(/[^A-Za-z0-9]/g, "_")}.svg`;
     const imageUrl = await uploadSvg(supabase, svg, filename);
 
     const row = {
@@ -305,20 +312,8 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase.from("market_ideas").insert(row).select("id,title,description,image_url").single();
     if (error) throw error;
 
-    let telegram = false;
-    try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/telegram-signal-post`, {
-        method:"POST",
-        headers:{"Content-Type":"application/json", Authorization:`Bearer ${serviceRoleKey}`, apikey:serviceRoleKey},
-        body:JSON.stringify({ action:"new_idea", idea:data }),
-      });
-      const result = await response.json();
-      telegram = Boolean(result?.success);
-    } catch (e) { console.error("Telegram idea error", e); }
-
-    return new Response(JSON.stringify({ success:true, pair:cfg.pair, live_price:livePrice, analysis, idea:data, telegram }), { headers:{...corsHeaders,"Content-Type":"application/json"} });
+    return new Response(JSON.stringify({ success: true, pair: cfg.pair, live_price: livePrice, analysis, idea: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
-    console.error("auto-generate-ideas error", error);
-    return new Response(JSON.stringify({ success:false, error:error instanceof Error ? error.message : String(error) }), { status:500, headers:{...corsHeaders,"Content-Type":"application/json"} });
+    return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : String(error) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
