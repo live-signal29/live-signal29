@@ -4,6 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
@@ -33,16 +34,36 @@ interface Signal {
 }
 
 interface Idea {
+  id?: string;
   title?: string;
   description?: string;
   image_url?: string | null;
+  chart_url?: string | null;
+
+  category?: string;
+  main_category?: string;
+  pair?: string;
+  symbol?: string;
+
+  type?: string;
+  direction?: string;
+
+  entry?: string;
+  tp?: string;
+  tp1?: string;
+  tp2?: string;
+  sl?: string;
+
+  analysis?: string;
+  analysis_reason?: string;
+  timeframe?: string;
+  risk_level?: string;
 }
 
-// FIX: Telegram's parse_mode "HTML" will reject the ENTIRE message if any
-// interpolated value contains an unescaped &, <, or > (e.g. a note like
-// "Risk & Reward" or a price string with a stray symbol). Every dynamic
-// value that gets wrapped in <b>/<code>/<i> tags below is now escaped first,
-// so a random character in signal/idea data can never silently break a post.
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
+
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -50,10 +71,36 @@ function escapeHtml(value: unknown): string {
     .replace(/>/g, "&gt;");
 }
 
-async function sendTelegramMessage(message: string): Promise<boolean> {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
-    console.error("Missing Telegram secrets");
+/* =========================================================
+   TELEGRAM CONFIG CHECK
+========================================================= */
+
+function telegramConfigured(): boolean {
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.error("TELEGRAM_BOT_TOKEN is missing");
     return false;
+  }
+
+  if (!TELEGRAM_CHANNEL_ID) {
+    console.error("TELEGRAM_CHANNEL_ID is missing");
+    return false;
+  }
+
+  return true;
+}
+
+/* =========================================================
+   SEND TELEGRAM TEXT
+========================================================= */
+
+async function sendTelegramMessage(
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!telegramConfigured()) {
+    return {
+      success: false,
+      error: "Telegram secrets are missing",
+    };
   }
 
   try {
@@ -75,28 +122,60 @@ async function sendTelegramMessage(message: string): Promise<boolean> {
 
     const result = await response.json();
 
-    console.log("Telegram response:", result);
+    console.log("Telegram sendMessage:", JSON.stringify(result));
 
-    return response.ok && result.ok === true;
+    if (response.ok && result.ok === true) {
+      return {
+        success: true,
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        result?.description ||
+        `Telegram HTTP ${response.status}`,
+    };
   } catch (error) {
     console.error("Telegram request error:", error);
-    return false;
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Telegram request failed",
+    };
   }
 }
+
+/* =========================================================
+   SEND TELEGRAM PHOTO
+========================================================= */
 
 async function sendTelegramPhoto(
   imageUrl: string,
   caption: string
-): Promise<boolean> {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
-    console.error("Missing Telegram secrets");
-    return false;
+): Promise<{ success: boolean; error?: string }> {
+  if (!telegramConfigured()) {
+    return {
+      success: false,
+      error: "Telegram secrets are missing",
+    };
+  }
+
+  if (!imageUrl) {
+    return sendTelegramMessage(caption);
   }
 
   try {
-    // Telegram often rejects SVG URLs as photos. Convert the public SVG
-    // through a lightweight image proxy so Telegram receives a real PNG.
-    const pngUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}&output=png&w=1200`;
+    /*
+     * Telegram can reject some SVG/chart URLs.
+     * weserv converts the public image into PNG.
+     */
+    const pngUrl =
+      `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}` +
+      `&output=png&w=1200`;
 
     const response = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
@@ -116,23 +195,70 @@ async function sendTelegramPhoto(
 
     const result = await response.json();
 
-    console.log("Telegram photo response:", result);
+    console.log("Telegram sendPhoto:", JSON.stringify(result));
 
     if (response.ok && result.ok === true) {
-      return true;
+      return {
+        success: true,
+      };
     }
 
-    // Photo failed (e.g. bad/unreachable URL) - fall back to a text-only post
-    console.error("Telegram sendPhoto failed, falling back to text:", result);
-    return await sendTelegramMessage(caption);
+    console.error(
+      "Telegram sendPhoto failed:",
+      JSON.stringify(result)
+    );
+
+    /*
+     * If image fails, do NOT lose the idea.
+     * Send the idea as text instead.
+     */
+    const fallback = await sendTelegramMessage(caption);
+
+    if (fallback.success) {
+      return {
+        success: true,
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        result?.description ||
+        fallback.error ||
+        "Telegram photo failed",
+    };
   } catch (error) {
-    console.error("Telegram photo request error:", error);
-    return await sendTelegramMessage(caption);
+    console.error("Telegram photo error:", error);
+
+    /*
+     * Image error should not stop the idea post.
+     */
+    const fallback = await sendTelegramMessage(caption);
+
+    if (fallback.success) {
+      return {
+        success: true,
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : fallback.error || "Telegram photo request failed",
+    };
   }
 }
 
+/* =========================================================
+   NEW SIGNAL
+========================================================= */
+
 function formatSignalMessage(signal: Signal): string {
-  const type = escapeHtml(String(signal.type || "").toUpperCase());
+  const type = escapeHtml(
+    String(signal.type || "").toUpperCase()
+  );
 
   const emoji = type === "BUY" ? "🟢" : "🔴";
 
@@ -187,35 +313,49 @@ function formatSignalMessage(signal: Signal): string {
 }
 
 /* =========================================================
-   TP/SL UPDATE MESSAGE
-   ---------------------------------------------------------
-   Deliberately built to LOOK DIFFERENT from a "new signal"
-   post at a glance: a bold status headline up top (what just
-   happened), a ✅/⏳ progress checklist of every TP level so
-   readers can see the whole trade at once, and a clear
-   running/closed status line at the bottom.
+   SIGNAL UPDATE
 ========================================================= */
 
 const UPDATE_META: Record<
   string,
   { headline: string; banner: string }
 > = {
-  tp1_hit: { headline: "✅ TP1 ACHIEVED", banner: "🟢" },
-  tp2_hit: { headline: "✅ TP2 ACHIEVED", banner: "🟢" },
-  tp3_hit: { headline: "🏆 FINAL TARGET HIT", banner: "🟢" },
-  tp4_hit: { headline: "✅ TP4 ACHIEVED", banner: "🟢" },
-  sl_hit: { headline: "🛑 STOP LOSS HIT", banner: "🔴" },
+  tp1_hit: {
+    headline: "✅ TP1 ACHIEVED",
+    banner: "🟢",
+  },
+  tp2_hit: {
+    headline: "✅ TP2 ACHIEVED",
+    banner: "🟢",
+  },
+  tp3_hit: {
+    headline: "🏆 FINAL TARGET HIT",
+    banner: "🟢",
+  },
+  tp4_hit: {
+    headline: "✅ TP4 ACHIEVED",
+    banner: "🟢",
+  },
+  sl_hit: {
+    headline: "🛑 STOP LOSS HIT",
+    banner: "🔴",
+  },
 };
 
 function formatUpdateMessage(
   signal: Signal,
   updateType?: string
 ): string {
-  const type = escapeHtml(String(signal.type || "").toUpperCase());
+  const type = escapeHtml(
+    String(signal.type || "").toUpperCase()
+  );
 
   const isSl = updateType === "sl_hit";
+
   const isClosingEvent =
-    updateType === "tp3_hit" || isSl;
+    updateType === "tp3_hit" ||
+    updateType === "tp4_hit" ||
+    isSl;
 
   let meta =
     UPDATE_META[updateType || ""] || {
@@ -223,35 +363,58 @@ function formatUpdateMessage(
       banner: "🔔",
     };
 
-  // SL hit AFTER TP1 means SL had already moved to break-even -
-  // that's an even exit, not a loss, so label it distinctly
-  // instead of a scary "STOP LOSS HIT".
   if (isSl && signal.tp1_hit) {
-    meta = { headline: "⚪ BREAK-EVEN EXIT", banner: "⚪" };
+    meta = {
+      headline: "⚪ BREAK-EVEN EXIT",
+      banner: "⚪",
+    };
   }
 
-  let message = `${meta.banner} <b>${meta.headline}</b> ${meta.banner}\n`;
+  let message =
+    `${meta.banner} <b>${meta.headline}</b> ${meta.banner}\n`;
+
   message += `━━━━━━━━━━━━━━━\n\n`;
 
-  message += `📊 <b>${escapeHtml(signal.pair)}</b>  •  ${type}\n`;
-  message += `💰 Entry: <code>${escapeHtml(signal.entry)}</code>\n\n`;
+  message +=
+    `📊 <b>${escapeHtml(signal.pair)}</b>  •  ${type}\n`;
+
+  message +=
+    `💰 Entry: <code>${escapeHtml(signal.entry)}</code>\n\n`;
 
   message += `<b>Progress:</b>\n`;
-  message += `${signal.tp1_hit ? "✅" : "⏳"} TP1: <code>${escapeHtml(signal.tp1)}</code>\n`;
+
+  message +=
+    `${signal.tp1_hit ? "✅" : "⏳"} TP1: ` +
+    `<code>${escapeHtml(signal.tp1)}</code>\n`;
+
   if (signal.tp2) {
-    message += `${signal.tp2_hit ? "✅" : "⏳"} TP2: <code>${escapeHtml(signal.tp2)}</code>\n`;
+    message +=
+      `${signal.tp2_hit ? "✅" : "⏳"} TP2: ` +
+      `<code>${escapeHtml(signal.tp2)}</code>\n`;
   }
+
   if (signal.tp3) {
-    message += `${signal.tp3_hit ? "✅" : "⏳"} TP3: <code>${escapeHtml(signal.tp3)}</code>\n`;
+    message +=
+      `${signal.tp3_hit ? "✅" : "⏳"} TP3: ` +
+      `<code>${escapeHtml(signal.tp3)}</code>\n`;
   }
+
   if (signal.tp4) {
-    message += `${signal.tp4_hit ? "✅" : "⏳"} TP4: <code>${escapeHtml(signal.tp4)}</code>\n`;
+    message +=
+      `${signal.tp4_hit ? "✅" : "⏳"} TP4: ` +
+      `<code>${escapeHtml(signal.tp4)}</code>\n`;
   }
-  message += `${isSl ? "🛑" : "🔒"} SL: <code>${escapeHtml(signal.sl)}</code>`;
-  message += `${signal.tp1_hit && !isSl ? " (Break-Even)" : ""}\n`;
+
+  message +=
+    `${isSl ? "🛑" : "🔒"} SL: ` +
+    `<code>${escapeHtml(signal.sl)}</code>`;
+
+  message +=
+    `${signal.tp1_hit && !isSl ? " (Break-Even)" : ""}\n`;
 
   if (signal.profit_note) {
-    message += `\n📝 <i>${escapeHtml(signal.profit_note)}</i>\n`;
+    message +=
+      `\n📝 <i>${escapeHtml(signal.profit_note)}</i>\n`;
   }
 
   message += isClosingEvent
@@ -264,17 +427,136 @@ function formatUpdateMessage(
   return message;
 }
 
-function formatIdeaMessage(idea: Idea): string {
-  let message = `💡 <b>MARKET IDEA</b> 💡\n\n`;
+/* =========================================================
+   NEW IDEA
+========================================================= */
 
-  if (idea.title) {
-    message += `<b>${escapeHtml(idea.title)}</b>\n\n`;
+function formatIdeaMessage(idea: Idea): string {
+  const category =
+    idea.category ||
+    idea.main_category ||
+    "Market Ideas";
+
+  const pair =
+    idea.pair ||
+    idea.symbol ||
+    "";
+
+  const direction =
+    idea.direction ||
+    idea.type ||
+    "";
+
+  let message = `💡 <b>MARKET IDEA</b> 💡\n`;
+  message += `━━━━━━━━━━━━━━━\n\n`;
+
+  /*
+   * CATEGORY
+   */
+  message += `📂 <b>Category:</b> ${escapeHtml(category)}\n`;
+
+  /*
+   * PAIR
+   */
+  if (pair) {
+    message += `📊 <b>Pair:</b> ${escapeHtml(pair)}\n`;
   }
 
+  /*
+   * DIRECTION
+   */
+  if (direction) {
+    const upperDirection =
+      String(direction).toUpperCase();
+
+    const directionEmoji =
+      upperDirection === "BUY"
+        ? "🟢"
+        : upperDirection === "SELL"
+        ? "🔴"
+        : "📈";
+
+    message +=
+      `${directionEmoji} <b>Direction:</b> ` +
+      `${escapeHtml(upperDirection)}\n`;
+  }
+
+  /*
+   * TIMEFRAME
+   */
+  if (idea.timeframe) {
+    message +=
+      `⏱ <b>Timeframe:</b> ` +
+      `${escapeHtml(idea.timeframe)}\n`;
+  }
+
+  /*
+   * ENTRY / TP / SL
+   */
+  if (idea.entry) {
+    message +=
+      `💰 <b>Entry:</b> ` +
+      `<code>${escapeHtml(idea.entry)}</code>\n`;
+  }
+
+  if (idea.tp1 || idea.tp) {
+    message +=
+      `🎯 <b>TP:</b> ` +
+      `<code>${escapeHtml(
+        idea.tp1 || idea.tp
+      )}</code>\n`;
+  }
+
+  if (idea.tp2) {
+    message +=
+      `🎯 <b>TP2:</b> ` +
+      `<code>${escapeHtml(idea.tp2)}</code>\n`;
+  }
+
+  if (idea.sl) {
+    message +=
+      `🛑 <b>SL:</b> ` +
+      `<code>${escapeHtml(idea.sl)}</code>\n`;
+  }
+
+  /*
+   * RISK
+   */
+  if (idea.risk_level) {
+    message +=
+      `⚠️ <b>Risk:</b> ` +
+      `${escapeHtml(idea.risk_level)}\n`;
+  }
+
+  /*
+   * TITLE
+   */
+  if (idea.title) {
+    message +=
+      `\n<b>${escapeHtml(idea.title)}</b>\n`;
+  }
+
+  /*
+   * DESCRIPTION
+   */
   if (idea.description) {
-    // Idea descriptions are already plain text (no HTML tags expected), but
-    // they're still escaped here in case they ever contain &, <, or >.
-    message += `${escapeHtml(idea.description)}\n`;
+    message +=
+      `\n${escapeHtml(idea.description)}\n`;
+  }
+
+  /*
+   * ANALYSIS
+   */
+  const analysis =
+    idea.analysis ||
+    idea.analysis_reason ||
+    "";
+
+  if (analysis) {
+    message +=
+      `\n📝 <b>Chart Analysis</b>\n`;
+    message +=
+      `<i>${escapeHtml(analysis)}</i>\n`;
   }
 
   message += `\n━━━━━━━━━━━━━━━\n`;
@@ -283,6 +565,35 @@ function formatIdeaMessage(idea: Idea): string {
   return message;
 }
 
+/* =========================================================
+   DETECT IDEA ACTION
+   ---------------------------------------------------------
+   Supports:
+   new_idea
+   idea
+   market_idea
+   auto_idea
+   auto_ideas
+========================================================= */
+
+function isIdeaAction(action: unknown): boolean {
+  const value = String(action || "")
+    .trim()
+    .toLowerCase();
+
+  return [
+    "new_idea",
+    "idea",
+    "market_idea",
+    "auto_idea",
+    "auto_ideas",
+  ].includes(value);
+}
+
+/* =========================================================
+   MAIN SERVER
+========================================================= */
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -290,12 +601,45 @@ serve(async (req) => {
     });
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "POST method required",
+      }),
+      {
+        status: 405,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
 
-    const { signal, idea, action, update_type } = body;
+    console.log(
+      "Telegram function received:",
+      JSON.stringify(body)
+    );
 
-    let success = false;
+    const {
+      signal,
+      idea,
+      action,
+      update_type,
+    } = body;
+
+    let result: {
+      success: boolean;
+      error?: string;
+    };
+
+    /* =====================================================
+       NEW SIGNAL
+    ===================================================== */
 
     if (action === "new_signal") {
       if (!signal) {
@@ -314,9 +658,18 @@ serve(async (req) => {
         );
       }
 
-      const message = formatSignalMessage(signal);
-      success = await sendTelegramMessage(message);
-    } else if (action === "update") {
+      const message =
+        formatSignalMessage(signal);
+
+      result =
+        await sendTelegramMessage(message);
+    }
+
+    /* =====================================================
+       SIGNAL UPDATE
+    ===================================================== */
+
+    else if (action === "update") {
       if (!signal) {
         return new Response(
           JSON.stringify({
@@ -333,9 +686,24 @@ serve(async (req) => {
         );
       }
 
-      const message = formatUpdateMessage(signal, update_type);
-      success = await sendTelegramMessage(message);
-    } else if (action === "new_idea") {
+      const message =
+        formatUpdateMessage(
+          signal,
+          update_type
+        );
+
+      result =
+        await sendTelegramMessage(message);
+    }
+
+    /* =====================================================
+       NEW / AUTO IDEA
+    ===================================================== */
+
+    else if (
+      isIdeaAction(action) ||
+      idea
+    ) {
       if (!idea) {
         return new Response(
           JSON.stringify({
@@ -352,16 +720,57 @@ serve(async (req) => {
         );
       }
 
-      const message = formatIdeaMessage(idea);
+      const message =
+        formatIdeaMessage(idea);
 
-      success = idea.image_url
-        ? await sendTelegramPhoto(idea.image_url, message)
-        : await sendTelegramMessage(message);
-    } else {
+      /*
+       * Support both image_url and chart_url.
+       */
+      const imageUrl =
+        idea.image_url ||
+        idea.chart_url ||
+        null;
+
+      console.log(
+        "Auto idea detected:",
+        JSON.stringify({
+          action,
+          category:
+            idea.category ||
+            idea.main_category ||
+            null,
+          pair:
+            idea.pair ||
+            idea.symbol ||
+            null,
+          imageUrl,
+        })
+      );
+
+      if (imageUrl) {
+        result =
+          await sendTelegramPhoto(
+            imageUrl,
+            message
+          );
+      } else {
+        result =
+          await sendTelegramMessage(message);
+      }
+    }
+
+    /* =====================================================
+       INVALID ACTION
+    ===================================================== */
+
+    else {
       return new Response(
         JSON.stringify({
           success: false,
           error: "Invalid action",
+          received_action: action || null,
+          hint:
+            "Use new_signal, update, or new_idea",
         }),
         {
           status: 400,
@@ -373,15 +782,21 @@ serve(async (req) => {
       );
     }
 
+    console.log(
+      "Telegram final result:",
+      JSON.stringify(result)
+    );
+
     return new Response(
       JSON.stringify({
-        success,
-        message: success
-          ? "Telegram post sent"
+        success: result.success,
+        message: result.success
+          ? "Telegram post sent successfully"
           : "Telegram post failed",
+        error: result.error || null,
       }),
       {
-        status: success ? 200 : 500,
+        status: result.success ? 200 : 500,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
@@ -389,7 +804,10 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Telegram function error:", error);
+    console.error(
+      "Telegram function error:",
+      error
+    );
 
     return new Response(
       JSON.stringify({
