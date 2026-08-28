@@ -36,12 +36,57 @@ const CATEGORIES = [
 // Helper: Ticker clean function to ensure "XAU/USD (Gold)" maps correctly to "XAUUSD" for WebSockets
 const normalizeSymbolKey = (symbolStr: string): string => {
   if (!symbolStr) return "";
-  const upper = symbolStr.toUpperCase();
-  if (upper.includes("XAUUSD") || upper.includes("GOLD") || upper.includes("XAU/USD")) return "XAUUSD";
-  if (upper.includes("EURUSD") || upper.includes("EUR/USD")) return "EURUSD";
-  if (upper.includes("GBPUSD") || upper.includes("GBP/USD")) return "GBPUSD";
-  if (upper.includes("BTCUSD") || upper.includes("BITCOIN") || upper.includes("BTC/USD")) return "BTCUSD";
-  return symbolStr.split(" ")[0].replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+  // Normalize the signal name to ONE canonical key.
+  // IMPORTANT: Deriv symbols must keep their numeric suffix.
+  // The old code used only the first space-separated word, so:
+  // BOOM 500 -> BOOM
+  // BOOM 1000 -> BOOM
+  // VOL 50 -> VOL
+  // VOL 75 -> VOL
+  // This caused different Deriv pairs to share the same live price.
+  const upper = String(symbolStr)
+    .trim()
+    .toUpperCase()
+    .replace(/_/g, " ");
+
+  const compact = upper.replace(/[^A-Z0-9]/g, "");
+
+  // Forex / Commodities
+  if (compact.includes("XAUUSD") || compact.includes("GOLD")) return "XAUUSD";
+  if (compact.includes("XAGUSD") || compact.includes("SILVER")) return "XAGUSD";
+  if (compact.includes("EURUSD")) return "EURUSD";
+  if (compact.includes("GBPUSD")) return "GBPUSD";
+  if (compact.includes("USDJPY")) return "USDJPY";
+  if (compact.includes("CHFJPY")) return "CHFJPY";
+  if (compact.includes("CADJPY")) return "CADJPY";
+  if (compact.includes("AUDUSD")) return "AUDUSD";
+  if (compact.includes("NZDUSD")) return "NZDUSD";
+  if (compact.includes("USDCAD")) return "USDCAD";
+  if (compact.includes("USDCHF")) return "USDCHF";
+
+  // Crypto
+  if (compact.includes("BTCUSD") || compact.includes("BITCOIN")) return "BTCUSD";
+  if (compact.includes("ETHUSD") || compact.includes("ETHEREUM")) return "ETHUSD";
+  if (compact.includes("XRPUSD")) return "XRPUSD";
+  if (compact.includes("LTCUSD")) return "LTCUSD";
+  if (compact.includes("ADAUSD")) return "ADAUSD";
+  if (compact.includes("SOLUSD") || compact.includes("SOLANA")) return "SOLUSD";
+
+  // Deriv / Synthetic Indices.
+  // Keep the number so every pair gets its own price key.
+  if (/BOOM\s*1000/.test(upper) || compact.includes("BOOM1000")) return "BOOM1000";
+  if (/BOOM\s*500/.test(upper) || compact.includes("BOOM500")) return "BOOM500";
+  if (/CRASH\s*1000/.test(upper) || compact.includes("CRASH1000")) return "CRASH1000";
+  if (/CRASH\s*500/.test(upper) || compact.includes("CRASH500")) return "CRASH500";
+  if (/VOL(?:ATILITY)?\s*100/.test(upper) || compact.includes("VOLATILITY100") || compact === "V100") return "VOL100";
+  if (/VOL(?:ATILITY)?\s*75/.test(upper) || compact.includes("VOLATILITY75") || compact === "V75") return "VOL75";
+  if (/VOL(?:ATILITY)?\s*50/.test(upper) || compact.includes("VOLATILITY50") || compact === "V50") return "VOL50";
+  if (/VOL(?:ATILITY)?\s*25/.test(upper) || compact.includes("VOLATILITY25") || compact === "V25") return "VOL25";
+
+  // Generic fallback: remove separators, but DO NOT throw away
+  // everything after the first space.
+  return compact;
 };
 
 // Formats time to Real Time 12-Hour format (e.g. 05:02 PM)
