@@ -1107,30 +1107,25 @@ const SignalCardNew = ({
             </div>
 
             {/* CURRENT */}
-            {/* Deriv pairs: current price is still fetched and
-                saved on the backend every cycle, just not shown
-                here on the frontend for now (debug step). */}
 
-            {!isDerivPair && (
-              <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center">
 
-                <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                  Current
-                </span>
+              <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                Current
+              </span>
 
-                <span
-                  className={cn(
-                    "font-mono text-[11px] font-bold transition-colors duration-200",
-                    currentPriceColor
-                  )}
-                >
-                  {currentPriceNum > 0
-                    ? currentPriceNum.toFixed(2)
-                    : signal.entry}
-                </span>
+              <span
+                className={cn(
+                  "font-mono text-[11px] font-bold transition-colors duration-200",
+                  currentPriceColor
+                )}
+              >
+                {currentPriceNum > 0
+                  ? currentPriceNum.toFixed(2)
+                  : signal.entry}
+              </span>
 
-              </div>
-            )}
+            </div>
 
             {/* TYPE / P&L */}
 
