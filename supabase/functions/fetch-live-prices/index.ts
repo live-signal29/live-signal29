@@ -267,6 +267,213 @@ function normalizeSymbol(value: string): string {
 }
 
 /* =========================================================
+   DERIV SYNTHETIC INDICES (VOL / BOOM / CRASH / STEP / JUMP)
+   These symbols do NOT exist on regular MT5 forex brokers
+   (they are only offered on Deriv's own platform), so they
+   must be priced directly from Deriv's public API instead
+   of going through the MetaApi/MT5 broker symbol lookup.
+========================================================= */
+
+const DERIV_WS_URL =
+  "wss://ws.derivws.com/websockets/v3?app_id=1089";
+
+function getDerivSymbol(
+  appPair: string
+): string | null {
+  const n = normalizeSymbol(appPair);
+
+  if (n.includes("BOOM") && n.includes("1000")) {
+    return "BOOM1000";
+  }
+
+  if (n.includes("BOOM") && n.includes("500")) {
+    return "BOOM500";
+  }
+
+  if (n.includes("CRASH") && n.includes("1000")) {
+    return "CRASH1000";
+  }
+
+  if (n.includes("CRASH") && n.includes("500")) {
+    return "CRASH500";
+  }
+
+  if (n.includes("STEP")) {
+    return "stpRNG";
+  }
+
+  if (n.includes("JUMP")) {
+    if (n.includes("10")) return "JD10";
+    if (n.includes("25")) return "JD25";
+    if (n.includes("50")) return "JD50";
+    if (n.includes("75")) return "JD75";
+    if (n.includes("100")) return "JD100";
+    return null;
+  }
+
+  // "VOL" / "VOLATILITY" indices - check longest numbers first
+  // so "VOL100" isn't wrongly matched by the "10" check.
+  if (n.includes("VOL")) {
+    const oneSecond = n.includes("1S") || n.includes("1SEC");
+
+    if (n.includes("100")) {
+      return oneSecond ? "1HZ100V" : "R_100";
+    }
+    if (n.includes("75")) {
+      return oneSecond ? "1HZ75V" : "R_75";
+    }
+    if (n.includes("50")) {
+      return oneSecond ? "1HZ50V" : "R_50";
+    }
+    if (n.includes("25")) {
+      return oneSecond ? "1HZ25V" : "R_25";
+    }
+    if (n.includes("10")) {
+      return oneSecond ? "1HZ10V" : "R_10";
+    }
+  }
+
+  return null;
+}
+
+/*
+ * Fetches prices for MULTIPLE Deriv symbols over a SINGLE
+ * WebSocket connection (one request per symbol, matched back
+ * by req_id). Opening one connection per symbol in parallel
+ * triggers Deriv's per-IP/app connection & rate limits, which
+ * is why only some synthetic indices (e.g. VOL 25/50/100)
+ * were updating while others (CRASH 500, BOOM 500, VOL 75,
+ * etc.) kept silently failing and stayed frozen on their old
+ * value. A single shared connection avoids that entirely.
+ */
+async function fetchDerivPricesBatch(
+  symbols: string[]
+): Promise<Record<string, string>> {
+  const results: Record<string, string> = {};
+
+  if (symbols.length === 0) {
+    return results;
+  }
+
+  return await new Promise((resolve) => {
+    let settled = false;
+    let ws: WebSocket;
+
+    // req_id -> symbol, so we know which response belongs to which symbol
+    const pending = new Map<number, string>();
+    let reqCounter = 1;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(overallTimer);
+      try {
+        ws?.close();
+      } catch {
+        // ignore
+      }
+      resolve(results);
+    };
+
+    const overallTimer = setTimeout(() => {
+      console.error(
+        "Deriv batch timeout, still pending:",
+        [...pending.values()].join(", ")
+      );
+      finish();
+    }, 12000);
+
+    try {
+      ws = new WebSocket(DERIV_WS_URL);
+    } catch (error) {
+      console.error(
+        "Deriv WS init error (batch):",
+        String(error)
+      );
+      clearTimeout(overallTimer);
+      resolve(results);
+      return;
+    }
+
+    ws.onopen = () => {
+      for (const symbol of symbols) {
+        const reqId = reqCounter++;
+        pending.set(reqId, symbol);
+
+        ws.send(
+          JSON.stringify({
+            ticks_history: symbol,
+            adjust_start_time: 1,
+            count: 1,
+            end: "latest",
+            start: 1,
+            style: "ticks",
+            req_id: reqId,
+          })
+        );
+      }
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(
+          typeof event.data === "string"
+            ? event.data
+            : "{}"
+        );
+
+        const reqId = Number(data?.req_id) || 0;
+        const symbol = pending.get(reqId);
+
+        if (!symbol) return;
+
+        if (data?.error) {
+          console.error(
+            `Deriv error ${symbol}:`,
+            data.error?.message || data.error
+          );
+        } else {
+          const prices = data?.history?.prices;
+
+          if (Array.isArray(prices) && prices.length > 0) {
+            const price = Number(
+              prices[prices.length - 1]
+            );
+
+            if (price > 0) {
+              results[symbol] = price.toFixed(2);
+              console.log(
+                `REAL DERIV PRICE: ${symbol} -> ${price}`
+              );
+            }
+          }
+        }
+
+        pending.delete(reqId);
+
+        if (pending.size === 0) {
+          finish();
+        }
+      } catch (error) {
+        console.error(
+          "Deriv batch parse error:",
+          String(error)
+        );
+      }
+    };
+
+    ws.onerror = () => {
+      console.error("Deriv WS error (batch)");
+      finish();
+    };
+
+    ws.onclose = () => {
+      finish();
+    };
+  });
+}
+
+/* =========================================================
    SYMBOL ALIASES
 ========================================================= */
 
@@ -680,6 +887,63 @@ async function fetchAllPrices(
 ): Promise<Record<string, string>> {
   const prices: Record<string, string> = {};
 
+  /*
+   * STEP 1 - Deriv synthetic indices (Volatility / Boom / Crash /
+   * Step / Jump). These are NOT available on regular MT5 forex
+   * brokers, so they are priced straight from Deriv's own public
+   * API rather than through the MetaApi/MT5 broker symbol lookup.
+   */
+  const derivPairs: { pair: string; symbol: string }[] = [];
+  const remainingPairs: string[] = [];
+
+  for (const pair of pairs) {
+    const derivSymbol = getDerivSymbol(pair);
+
+    if (derivSymbol) {
+      derivPairs.push({ pair, symbol: derivSymbol });
+    } else {
+      remainingPairs.push(pair);
+    }
+  }
+
+  if (derivPairs.length > 0) {
+    const uniqueSymbols = [
+      ...new Set(
+        derivPairs.map((d) => d.symbol)
+      ),
+    ];
+
+    const symbolPrices =
+      await fetchDerivPricesBatch(
+        uniqueSymbols
+      );
+
+    for (const { pair, symbol } of derivPairs) {
+      const price = symbolPrices[symbol];
+
+      if (price) {
+        prices[pair] = price;
+      } else {
+        console.log(
+          `Deriv price unavailable for ${pair} (${symbol})`
+        );
+      }
+    }
+  }
+
+  console.log(
+    "DERIV PRICES:",
+    JSON.stringify(prices)
+  );
+
+  /*
+   * STEP 2 - Everything else (regular forex, metals, crypto)
+   * goes through the MT5/MetaApi broker as before.
+   */
+  if (remainingPairs.length === 0) {
+    return prices;
+  }
+
   const accountId =
     await getAccountId();
 
@@ -703,7 +967,7 @@ async function fetchAllPrices(
     `Broker symbols loaded: ${brokerSymbols.length}`
   );
 
-  for (const pair of pairs) {
+  for (const pair of remainingPairs) {
     const symbol =
       await findBrokerSymbol(
         accountId,
@@ -730,7 +994,7 @@ async function fetchAllPrices(
   }
 
   console.log(
-    "FINAL MT5 PRICES:",
+    "FINAL PRICES:",
     JSON.stringify(prices)
   );
 
