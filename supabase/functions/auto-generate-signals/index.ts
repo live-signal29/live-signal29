@@ -206,6 +206,19 @@ async function evaluatePair(
 
   if (!last?.entry) return { generate: true, reason: "no_prior_signal" };
 
+  // FIX: Deriv synthetic indices (esp. VOL 75) are so volatile that the
+  // movement threshold alone caused a brand-new signal to spawn every
+  // ~15 minutes right after the previous one closed — looking like admin's
+  // close/delete "didn't stick" when really a fresh signal had just taken
+  // its place. A minimum cooldown since the last signal (regardless of
+  // movement) is now required before another one can be generated.
+  const COOLDOWN_MINUTES = 60;
+  const lastCreatedAt = last.created_at ? new Date(last.created_at).getTime() : 0;
+  const minutesSinceLast = (Date.now() - lastCreatedAt) / 60000;
+  if (lastCreatedAt && minutesSinceLast < COOLDOWN_MINUTES) {
+    return { generate: false, reason: "cooldown", minutesSinceLast: Number(minutesSinceLast.toFixed(1)) };
+  }
+
   const lastPrice = parseFloat(String(last.entry));
   if (!Number.isFinite(lastPrice) || lastPrice <= 0) return { generate: true, reason: "invalid_entry" };
 
