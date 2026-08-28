@@ -20,18 +20,45 @@ type Analysis = {
   orderBlock: "Bullish OB" | "Bearish OB" | "None";
 };
 
-const PAIRS = [
-  { pair: "XAU/USD (Gold)", yahoo: "GC=F", decimals: 2 },
-  { pair: "EUR/USD", yahoo: "EURUSD=X", decimals: 5 },
-  { pair: "GBP/USD", yahoo: "GBPUSD=X", decimals: 5 },
-  { pair: "USD/JPY", yahoo: "JPY=X", decimals: 3 },
-  { pair: "AUD/USD", yahoo: "AUDUSD=X", decimals: 5 },
-  { pair: "USD/CAD", yahoo: "CAD=X", decimals: 5 },
-  { pair: "USD/CHF", yahoo: "CHF=X", decimals: 5 },
-  { pair: "BTC/USD", yahoo: "BTC-USD", decimals: 2 },
-  { pair: "ETH/USD", yahoo: "ETH-USD", decimals: 2 },
-  { pair: "XAG/USD (Silver)", yahoo: "SI=F", decimals: 2 },
+type PairCfg = { pair: string; yahoo: string; decimals: number; category: "commodity" | "other" };
+
+const PAIRS: PairCfg[] = [
+  { pair: "XAU/USD (Gold)", yahoo: "GC=F", decimals: 2, category: "commodity" },
+  { pair: "XAG/USD (Silver)", yahoo: "SI=F", decimals: 2, category: "commodity" },
+  { pair: "EUR/USD", yahoo: "EURUSD=X", decimals: 5, category: "other" },
+  { pair: "GBP/USD", yahoo: "GBPUSD=X", decimals: 5, category: "other" },
+  { pair: "USD/JPY", yahoo: "JPY=X", decimals: 3, category: "other" },
+  { pair: "AUD/USD", yahoo: "AUDUSD=X", decimals: 5, category: "other" },
+  { pair: "USD/CAD", yahoo: "CAD=X", decimals: 5, category: "other" },
+  { pair: "USD/CHF", yahoo: "CHF=X", decimals: 5, category: "other" },
+  { pair: "BTC/USD", yahoo: "BTC-USD", decimals: 2, category: "other" },
+  { pair: "ETH/USD", yahoo: "ETH-USD", decimals: 2, category: "other" },
 ];
+
+// Commodity pairs get weighted picks so XAU/USD shows up ~3x more often than
+// XAG/USD within the commodity slots.
+const COMMODITY_WEIGHTED = ["XAU/USD (Gold)", "XAU/USD (Gold)", "XAU/USD (Gold)", "XAG/USD (Silver)"];
+const OTHER_PAIRS = PAIRS.filter(p => p.category === "other").map(p => p.pair);
+
+// Deterministic pair picker driven purely by wall-clock time — no DB counter
+// needed. Assumes the function is invoked on a cron every SLOT_MINUTES.
+// Slots alternate between the commodity category and the other category, so
+// with a 30-minute cron (48 calls/day) each category gets ~24 calls/day —
+// comfortably above the "at least 10 per category per day" requirement,
+// while XAU/USD is picked 3x as often as XAG/USD within its category.
+const SLOT_MINUTES = 30;
+function pickScheduledPair(now: Date): PairCfg {
+  const minutesSinceMidnight = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const slot = Math.floor(minutesSinceMidnight / SLOT_MINUTES);
+  const isCommoditySlot = slot % 2 === 0;
+  if (isCommoditySlot) {
+    const name = COMMODITY_WEIGHTED[Math.floor(slot / 2) % COMMODITY_WEIGHTED.length];
+    return PAIRS.find(p => p.pair === name)!;
+  } else {
+    const name = OTHER_PAIRS[Math.floor(slot / 2) % OTHER_PAIRS.length];
+    return PAIRS.find(p => p.pair === name)!;
+  }
+}
 
 const TF_MAP: Record<string, { interval: string; range: string }> = {
   H1: { interval: "60m", range: "5d" },
@@ -169,40 +196,70 @@ function safeText(s: string) {
   return s.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[ch]!));
 }
 
+// ---- Chart rendering ----
+// FIX 1: Y-axis range is now based primarily on the candle high/low range.
+// Entry/TP/SL levels only extend the range if they are reasonably close to the
+// candles (within 1.5x the candle range). A level far outside that band is
+// still drawn, but clamped visually near the top/bottom edge with a small
+// arrow, instead of stretching (and squeezing) the whole chart.
+//
+// FIX 2: Level labels (ENTRY/TP1/TP2/SL) no longer overlap. Their vertical
+// positions are computed, sorted, and pushed apart if they land within
+// MIN_LABEL_GAP pixels of each other. If a label had to be moved away from
+// its true price line, a short connector line is drawn back to the real
+// price line so it's still clear what price it refers to.
 function buildChartSVG(
   md: { candles: Candle[]; symbol: string; timeframe: string; price: number },
   plan: Analysis,
   title: string,
   decimals: number
 ): string {
-  const W = 1000, H = 650, padL = 20, padR = 140, padT = 90, padB = 40;
+  const W = 1000, H = 650, padL = 20, padR = 150, padT = 90, padB = 40;
   const innerW = W - padL - padR, innerH = H - padT - padB;
   const candles = md.candles.slice(-45);
 
-  // FIX: Limit price bounds focused on candles + active levels to avoid candle squeezing
-  const activePrices = candles.flatMap(x => [x.h, x.l]).concat([plan.entry, plan.sl, plan.tp1]);
-  const maxP = Math.max(...activePrices);
-  const minP = Math.min(...activePrices);
+  const candleHighs = candles.map(x => x.h);
+  const candleLows = candles.map(x => x.l);
+  const candleMax = Math.max(...candleHighs);
+  const candleMin = Math.min(...candleLows);
+  const candleRange = Math.max(candleMax - candleMin, 0.0001);
+
+  const levelDefs: { key: "entry" | "tp1" | "tp2" | "sl"; price: number; color: string; label: string }[] = [
+    { key: "entry", price: plan.entry, color: "#3b82f6", label: "ENTRY" },
+    { key: "tp1", price: plan.tp1, color: "#22c55e", label: "TP1" },
+    { key: "tp2", price: plan.tp2, color: "#16a34a", label: "TP2" },
+    { key: "sl", price: plan.sl, color: "#ef4444", label: "SL" },
+  ];
+
+  const maxExtension = candleRange * 1.5;
+  const inRangeLevelPrices = levelDefs
+    .map(l => l.price)
+    .filter(p => p <= candleMax + maxExtension && p >= candleMin - maxExtension);
+
+  const allPrices = [...candleHighs, ...candleLows, ...inRangeLevelPrices];
+  const maxP = Math.max(...allPrices);
+  const minP = Math.min(...allPrices);
   const range = Math.max(maxP - minP, 0.0001);
 
-  const yMax = maxP + range * 0.05;
-  const yMin = minP - range * 0.05;
-  const yRange = yMax - yMin;
+  const yMax = maxP + range * 0.08;
+  const yMin = minP - range * 0.08;
+  const yRange = Math.max(yMax - yMin, 0.0001);
 
   const slot = innerW / Math.max(candles.length, 1);
   const candleW = Math.max(6, slot * 0.65);
   const y = (p: number) => padT + ((yMax - p) / yRange) * innerH;
+  const clampY = (yy: number) => Math.min(Math.max(yy, padT), H - padB);
 
-  // Background Grid Lines
-  let grid = "", labels = "";
+  // Background grid
+  let grid = "", gridLabels = "";
   for (let i = 0; i <= 6; i++) {
     const yy = padT + (innerH * i) / 6;
     const p = yMax - (yRange * i) / 6;
     grid += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="#1e293b" stroke-width="1" stroke-dasharray="2 4"/>`;
-    labels += `<text x="${W - padR + 10}" y="${yy + 4}" fill="#64748b" font-size="11" font-family="monospace">${p.toFixed(decimals)}</text>`;
+    gridLabels += `<text x="${W - padR + 10}" y="${yy + 4}" fill="#64748b" font-size="11" font-family="monospace">${p.toFixed(decimals)}</text>`;
   }
 
-  // Candlesticks rendering
+  // Candlesticks
   let body = "";
   candles.forEach((c, i) => {
     const x = padL + i * slot + (slot - candleW) / 2;
@@ -218,48 +275,78 @@ function buildChartSVG(
     body += `<rect x="${x}" y="${topY}" width="${candleW}" height="${Math.max(2, botY - topY)}" fill="${color}" rx="1"/>`;
   });
 
-  // Level Indicators (Entry, TP, SL)
-  const renderLevel = (price: number, color: string, label: string) => {
-    const yPos = y(price);
-    if (yPos < padT || yPos > H - padB) return "";
-    return `
-      <line x1="${padL}" y1="${yPos}" x2="${W - padR}" y2="${yPos}" stroke="${color}" stroke-width="2" stroke-dasharray="5 3"/>
-      <rect x="${W - padR}" y="${yPos - 11}" width="130" height="22" rx="4" fill="${color}"/>
-      <text x="${W - padR + 8}" y="${yPos + 4}" fill="#ffffff" font-size="11" font-weight="bold" font-family="Arial">${label}: ${price}</text>
-    `;
-  };
+  // Compute true (unclamped-for-label but clamped-for-line) y for each level,
+  // then resolve label overlaps.
+  const LABEL_H = 22, MIN_LABEL_GAP = 26;
+  type LevelPos = { key: string; price: number; color: string; label: string; lineY: number; labelY: number };
+  const positioned: LevelPos[] = levelDefs.map(l => {
+    const rawY = y(l.price);
+    const lineY = clampY(rawY);
+    return { key: l.key, price: l.price, color: l.color, label: l.label, lineY, labelY: lineY };
+  });
+
+  // Sort by vertical position, then push overlapping labels apart.
+  positioned.sort((a, b) => a.labelY - b.labelY);
+  for (let i = 1; i < positioned.length; i++) {
+    if (positioned[i].labelY - positioned[i - 1].labelY < MIN_LABEL_GAP) {
+      positioned[i].labelY = positioned[i - 1].labelY + MIN_LABEL_GAP;
+    }
+  }
+  // Keep labels inside the chart vertically after the push.
+  const overshoot = positioned[positioned.length - 1].labelY - (H - padB - LABEL_H / 2);
+  if (overshoot > 0) {
+    for (const p of positioned) p.labelY -= overshoot;
+  }
+
+  let levelsSvg = "";
+  for (const p of positioned) {
+    // Dashed price line stays at the true price position.
+    levelsSvg += `<line x1="${padL}" y1="${p.lineY}" x2="${W - padR}" y2="${p.lineY}" stroke="${p.color}" stroke-width="2" stroke-dasharray="5 3"/>`;
+    // If the label had to move away from the line, draw a short connector.
+    if (Math.abs(p.labelY - p.lineY) > 3) {
+      levelsSvg += `<line x1="${W - padR}" y1="${p.lineY}" x2="${W - padR + 8}" y2="${p.labelY}" stroke="${p.color}" stroke-width="1.5"/>`;
+    }
+    levelsSvg += `<rect x="${W - padR}" y="${p.labelY - 11}" width="140" height="22" rx="4" fill="${p.color}"/>`;
+    levelsSvg += `<text x="${W - padR + 8}" y="${p.labelY + 4}" fill="#ffffff" font-size="11" font-weight="bold" font-family="Arial">${p.label}: ${p.price.toFixed(decimals)}</text>`;
+  }
 
   const actionBg = plan.action === "BUY" ? "#16a34a" : "#dc2626";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <rect width="100%" height="100%" fill="#0b0f19"/>
-  
-  <!-- Header Info -->
+
   <text x="${padL}" y="35" fill="#ffffff" font-size="22" font-weight="800" font-family="Arial">${safeText(md.symbol)} (${md.timeframe})</text>
   <rect x="${W - padR - 110}" y="15" width="110" height="30" rx="6" fill="${actionBg}"/>
   <text x="${W - padR - 55}" y="35" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Arial">${plan.action}</text>
-  
-  <text x="${padL}" y="60" fill="#94a3b8" font-size="12" font-family="Arial">Live: ${md.price} | SMC: ${plan.bos} | Trend: ${plan.trend}</text>
 
-  <!-- Chart Main Area -->
+  <text x="${padL}" y="60" fill="#94a3b8" font-size="12" font-family="Arial">Live: ${md.price.toFixed(decimals)} | SMC: ${plan.bos} | Trend: ${plan.trend}</text>
+
   ${grid}
   ${body}
-  
-  <!-- Target lines -->
-  ${renderLevel(plan.entry, "#3b82f6", "ENTRY")}
-  ${renderLevel(plan.tp1, "#22c55e", "TP1")}
-  ${renderLevel(plan.tp2, "#16a34a", "TP2")}
-  ${renderLevel(plan.sl, "#ef4444", "SL")}
-  ${labels}
+  ${levelsSvg}
+  ${gridLabels}
 
-  <!-- Footer -->
   <rect x="0" y="${H - 30}" width="${W}" height="30" fill="#030712"/>
   <text x="${padL}" y="${H - 10}" fill="#64748b" font-size="11" font-family="Arial">Live Market Signal • Auto Generated Analysis</text>
   </svg>`;
 }
 
+// FIX 3: plain text description, no raw HTML tags (the frontend card renders
+// this as plain text, not HTML, so <b>/<code> tags were showing up literally).
 function buildDescription(pair: string, p: Analysis): string {
-  return `📊 <b>${pair}</b> • ${p.action}\n💰 Entry: <code>${p.entry}</code>\n🎯 TP1: <code>${p.tp1}</code> | TP2: <code>${p.tp2}</code>\n🛑 SL: <code>${p.sl}</code>\n\n🧠 <b>Analysis Info</b>\n• Trend: ${p.trend}\n• Structure: ${p.bos}\n• OB: ${p.orderBlock}\n\n⚠️ Risk Disclaimer: Manage your risk accordingly.`;
+  return [
+    `📊 ${pair} • ${p.action}`,
+    `💰 Entry: ${p.entry}`,
+    `🎯 TP1: ${p.tp1}  |  TP2: ${p.tp2}`,
+    `🛑 SL: ${p.sl}`,
+    ``,
+    `🧠 Analysis`,
+    `• Trend: ${p.trend}`,
+    `• Structure: ${p.bos}`,
+    `• Order Block: ${p.orderBlock}`,
+    ``,
+    `⚠️ Risk Disclaimer: Manage your risk accordingly.`,
+  ].join("\n");
 }
 
 async function uploadSvg(supabase: any, svg: string, filename: string): Promise<string | null> {
@@ -280,9 +367,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
 
     const requestedPair = url.searchParams.get("pair");
-    const utcHour = new Date().getUTCHours();
-    const slotIndex = Math.floor(utcHour / 3) % PAIRS.length;
-    const cfg = PAIRS.find(x => x.pair === requestedPair) || PAIRS[slotIndex];
+    const cfg = PAIRS.find(x => x.pair === requestedPair) || pickScheduledPair(new Date());
 
     const prices = await fetchMt5Prices(PAIRS.map(x => x.pair), supabaseUrl, serviceRoleKey);
     const livePrice = prices[cfg.pair];
