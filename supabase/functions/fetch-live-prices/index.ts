@@ -913,10 +913,32 @@ async function fetchAllPrices(
       ),
     ];
 
-    const symbolPrices =
+    let symbolPrices =
       await fetchDerivPricesBatch(
         uniqueSymbols
       );
+
+    // Retry once for any symbols that didn't come back the first
+    // time (transient WS hiccup / Deriv momentarily busy), instead
+    // of leaving that pair frozen on its old price for this cycle.
+    const missing = uniqueSymbols.filter(
+      (s) => !symbolPrices[s]
+    );
+
+    if (missing.length > 0) {
+      console.log(
+        "Retrying Deriv fetch for:",
+        missing.join(", ")
+      );
+
+      const retryPrices =
+        await fetchDerivPricesBatch(missing);
+
+      symbolPrices = {
+        ...symbolPrices,
+        ...retryPrices,
+      };
+    }
 
     for (const { pair, symbol } of derivPairs) {
       const price = symbolPrices[symbol];
