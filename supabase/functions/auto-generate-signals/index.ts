@@ -48,7 +48,7 @@ async function fetchMT5Prices(
     );
 
     if (!response.ok) {
-      console.error("MT5 price endpoint failed:", response.status);
+      console.error("MT5 price endpoint:", response.status);
       return result;
     }
 
@@ -56,11 +56,10 @@ async function fetchMT5Prices(
     const prices = json?.prices || {};
 
     for (const pair of pairs) {
-      const value = prices[pair];
-      const price = value ? parseFloat(String(value)) : NaN;
+      const value = Number(prices[pair]);
 
-      if (Number.isFinite(price) && price > 0) {
-        result[pair] = price;
+      if (Number.isFinite(value) && value > 0) {
+        result[pair] = value;
       }
     }
 
@@ -69,15 +68,21 @@ async function fetchMT5Prices(
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, "");
 
-      const value = parseFloat(String(prices[key]));
+      const value = Number(prices[key]);
 
       if (!Number.isFinite(value) || value <= 0) continue;
 
-      if (normalized.includes("XAUUSD") || normalized === "GOLD") {
+      if (
+        normalized.includes("XAUUSD") ||
+        normalized === "GOLD"
+      ) {
         result["XAU/USD (Gold)"] = value;
       }
 
-      if (normalized.includes("XAGUSD") || normalized === "SILVER") {
+      if (
+        normalized.includes("XAGUSD") ||
+        normalized === "SILVER"
+      ) {
         result["XAG/USD (Silver)"] = value;
       }
 
@@ -126,7 +131,7 @@ async function fetchMT5Prices(
       }
     }
   } catch (error) {
-    console.error("MT5 fetch error:", String(error));
+    console.error("MT5 price error:", String(error));
   }
 
   return result;
@@ -141,17 +146,16 @@ function pick<T>(array: T[]): T {
 }
 
 function rand(min: number, max: number): number {
-  return Math.round((min + Math.random() * (max - min)) * 100) / 100;
+  return min + Math.random() * (max - min);
 }
 
 /* =========================================================
-   ANALYSIS
+   ANALYSIS REASONS
 ========================================================= */
 
 const buyReasons = [
   "Demand zone bounce with bullish confirmation",
   "Trendline support holding",
-  "Double bottom formation",
   "Bullish order block retest",
   "Smart Money demand zone confirmed",
   "Bullish market structure",
@@ -186,9 +190,6 @@ function generateSignal(config: SignalConfig) {
     decimals,
   } = config;
 
-  const isBuy = Math.random() < 0.5;
-  const type = isBuy ? "Buy" : "Sell";
-
   const isGold = pair === "XAU/USD (Gold)";
   const isSilver = pair === "XAG/USD (Silver)";
   const isIndex =
@@ -199,24 +200,28 @@ function generateSignal(config: SignalConfig) {
   const isVol75 = pair === "VOL 75";
   const isDeriv = category === "DERIV";
 
+  const isBuy = Math.random() >= 0.5;
+  const type = isBuy ? "Buy" : "Sell";
+
+  /* Entry close to live price */
   const spread = Math.max(
     price.high - price.low,
     pipMultiplier * 20
   );
 
   const offset = rand(
-    -spread * 0.03,
-    spread * 0.03
+    -spread * 0.02,
+    spread * 0.02
   );
 
   const entry = Number(
     (price.price + offset).toFixed(decimals)
   );
 
-  let slMult: number;
-  let tp1Mult: number;
-  let tp2Mult: number;
-  let tp3Mult: number;
+  let slMult = 0;
+  let tp1Mult = 0;
+  let tp2Mult = 0;
+  let tp3Mult = 0;
 
   if (isGold) {
     slMult = rand(25, 45);
@@ -292,6 +297,7 @@ function generateSignal(config: SignalConfig) {
   return {
     pair,
     type,
+
     category,
     main_category: mainCategory,
     sub_category: subCategory,
@@ -305,9 +311,11 @@ function generateSignal(config: SignalConfig) {
     status: "open",
     signal_status: "open",
 
-    is_premium: Math.random() < 0.2,
+    is_premium: false,
+
     is_activated: true,
     activated_at: now,
+
     entry_mode: "market",
 
     signal_type: pick([
@@ -319,6 +327,8 @@ function generateSignal(config: SignalConfig) {
     risk_level:
       isVol75 || isIndex
         ? "High"
+        : isGold
+        ? "Medium"
         : pick(["Low", "Medium"]),
 
     analysis_reason: isBuy
@@ -335,22 +345,29 @@ function generateSignal(config: SignalConfig) {
 }
 
 /* =========================================================
-   CHECK PAIR
+   CHECK EXISTING SIGNAL
 ========================================================= */
 
 async function evaluatePair(
   supabase: ReturnType<typeof createClient>,
-  pair: string,
-  currentPrice: number,
-  thresholdPct: number
+  pair: string
 ) {
-  const { data: active } = await supabase
-    .from("signals")
-    .select("id")
-    .eq("pair", pair)
-    .eq("signal_status", "open")
-    .limit(1)
-    .maybeSingle();
+  /* Existing OPEN signal blocks duplicate */
+  const { data: active, error: activeError } =
+    await supabase
+      .from("signals")
+      .select("id")
+      .eq("pair", pair)
+      .eq("signal_status", "open")
+      .limit(1)
+      .maybeSingle();
+
+  if (activeError) {
+    console.error(
+      "Active signal check error:",
+      activeError.message
+    );
+  }
 
   if (active) {
     return {
@@ -359,77 +376,23 @@ async function evaluatePair(
     };
   }
 
-  const { data: last } = await supabase
-    .from("signals")
-    .select("entry,created_at")
-    .eq("pair", pair)
-    .order("created_at", {
-      ascending: false,
-    })
-    .limit(1)
-    .maybeSingle();
-
-  if (!last?.entry) {
-    return {
-      generate: true,
-      reason: "no_prior_signal",
-    };
-  }
-
-  const COOLDOWN_MINUTES = 60;
-
-  const lastCreatedAt = last.created_at
-    ? new Date(last.created_at).getTime()
-    : 0;
-
-  const minutesSinceLast =
-    (Date.now() - lastCreatedAt) / 60000;
-
-  if (
-    lastCreatedAt &&
-    minutesSinceLast < COOLDOWN_MINUTES
-  ) {
-    return {
-      generate: false,
-      reason: "cooldown",
-      minutesSinceLast: Number(
-        minutesSinceLast.toFixed(1)
-      ),
-    };
-  }
-
-  const lastPrice = parseFloat(
-    String(last.entry)
-  );
-
-  if (
-    !Number.isFinite(lastPrice) ||
-    lastPrice <= 0
-  ) {
-    return {
-      generate: true,
-      reason: "invalid_entry",
-    };
-  }
-
-  const move =
-    Math.abs(
-      (currentPrice - lastPrice) /
-        lastPrice
-    ) * 100;
+  /*
+   * IMPORTANT:
+   * No 60-minute cooldown here.
+   *
+   * Cron itself runs hourly.
+   * Therefore a closed signal can generate
+   * again on the next hourly run.
+   */
 
   return {
     generate: true,
-    reason:
-      move >= thresholdPct
-        ? "movement_detected"
-        : "hourly_refresh",
-    pctMove: Number(move.toFixed(4)),
+    reason: "hourly_signal_slot",
   };
 }
 
 /* =========================================================
-   TELEGRAM POST
+   TELEGRAM
 ========================================================= */
 
 async function postTelegramSignal(
@@ -442,11 +405,13 @@ async function postTelegramSignal(
       `${supabaseUrl}/functions/v1/telegram-signal-post`,
       {
         method: "POST",
+
         headers: {
           Authorization: `Bearer ${serviceRoleKey}`,
           apikey: serviceRoleKey,
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           signal,
           action: "new_signal",
@@ -456,32 +421,20 @@ async function postTelegramSignal(
 
     const text = await response.text();
 
-    if (!response.ok) {
-      console.error(
-        "Telegram signal post failed:",
-        response.status,
-        text
-      );
-
-      return {
-        success: false,
-        status: response.status,
-        response: text,
-      };
-    }
-
     console.log(
-      "Telegram signal posted:",
+      "Telegram response:",
+      response.status,
       text
     );
 
     return {
-      success: true,
+      success: response.ok,
+      status: response.status,
       response: text,
     };
   } catch (error) {
     console.error(
-      "Telegram trigger error:",
+      "Telegram error:",
       String(error)
     );
 
@@ -523,26 +476,20 @@ Deno.serve(async (req) => {
 
     const todayStart = new Date();
 
-    todayStart.setUTCHours(
-      0,
-      0,
-      0,
-      0
-    );
+    todayStart.setUTCHours(0, 0, 0, 0);
 
-    const {
-      count: derivCount,
-    } = await supabase
-      .from("signals")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("category", "DERIV")
-      .gte(
-        "created_at",
-        todayStart.toISOString()
-      );
+    const { count: derivCount } =
+      await supabase
+        .from("signals")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("category", "DERIV")
+        .gte(
+          "created_at",
+          todayStart.toISOString()
+        );
 
     const allowDeriv =
       (derivCount || 0) < 5;
@@ -592,7 +539,7 @@ Deno.serve(async (req) => {
     ];
 
     /* =====================================================
-       MT5 PRICES
+       GET LIVE PRICES
     ===================================================== */
 
     const mt5 = await fetchMT5Prices(
@@ -602,15 +549,17 @@ Deno.serve(async (req) => {
     );
 
     /* =====================================================
-       BUILD CANDIDATES
+       BUILD CONFIGS
     ===================================================== */
 
     const candidates: SignalConfig[] = [];
 
-    for (const pair of commodities) {
-      if (!mt5[pair]) continue;
+    /* COMMODITIES / INDICES */
 
+    for (const pair of commodities) {
       const p = mt5[pair];
+
+      if (!p) continue;
 
       const isGold =
         pair === "XAU/USD (Gold)";
@@ -625,8 +574,11 @@ Deno.serve(async (req) => {
 
       candidates.push({
         pair,
+
         category: "COMMODITIES",
+
         mainCategory: "COMMODITIES",
+
         subCategory: pair,
 
         price: {
@@ -676,31 +628,43 @@ Deno.serve(async (req) => {
       });
     }
 
-    for (const pair of forex) {
-      if (!mt5[pair]) continue;
+    /* FOREX */
 
+    for (const pair of forex) {
       const p = mt5[pair];
+
+      if (!p) continue;
+
       const isJPY =
         pair.includes("JPY");
 
       candidates.push({
         pair,
+
         category: "FOREX",
+
         mainCategory: "FOREX",
+
         subCategory: pair,
 
         price: {
           price: p,
+
           high:
             p +
-            (isJPY
-              ? 0.4
-              : 0.004),
+            (
+              isJPY
+                ? 0.4
+                : 0.004
+            ),
+
           low:
             p -
-            (isJPY
-              ? 0.4
-              : 0.004),
+            (
+              isJPY
+                ? 0.4
+                : 0.004
+            ),
         },
 
         pipMultiplier:
@@ -717,15 +681,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    for (const pair of crypto) {
-      if (!mt5[pair]) continue;
+    /* CRYPTO */
 
+    for (const pair of crypto) {
       const p = mt5[pair];
+
+      if (!p) continue;
 
       candidates.push({
         pair,
+
         category: "CRYPTO",
+
         mainCategory: "CRYPTO",
+
         subCategory: pair,
 
         price: {
@@ -735,23 +704,32 @@ Deno.serve(async (req) => {
         },
 
         pipMultiplier: 1,
+
         decimals: 2,
+
         thresholdPct: 0.25,
       });
     }
 
+    /* DERIV */
+
     if (allowDeriv) {
       for (const pair of deriv) {
-        if (!mt5[pair]) continue;
-
         const p = mt5[pair];
+
+        if (!p) continue;
+
         const isVol75 =
           pair === "VOL 75";
 
         candidates.push({
           pair,
+
           category: "DERIV",
-          mainCategory: "DERIV/BINARY",
+
+          mainCategory:
+            "DERIV/BINARY",
+
           subCategory: pair,
 
           price: {
@@ -761,21 +739,24 @@ Deno.serve(async (req) => {
           },
 
           pipMultiplier:
-            isVol75 ? 1 : 10,
+            isVol75
+              ? 1
+              : 10,
 
           decimals: 2,
+
           thresholdPct: 0.25,
         });
       }
     }
 
     /* =====================================================
-       WEIGHTED PRIORITY
+       AVAILABLE
     ===================================================== */
 
     const available =
       candidates.filter(
-        (x) => mt5[x.pair]
+        x => !!mt5[x.pair]
       );
 
     if (!available.length) {
@@ -797,138 +778,130 @@ Deno.serve(async (req) => {
       );
     }
 
-    const gold = available.filter(
-      x =>
-        x.pair ===
-        "XAU/USD (Gold)"
-    );
+    /* =====================================================
+       WEIGHTED PRIORITY
+       
+       XAU = strongest priority
+    ===================================================== */
 
-    const silver = available.filter(
-      x =>
-        x.pair ===
-        "XAG/USD (Silver)"
-    );
+    const weightedPool: SignalConfig[] = [];
 
-    const us30 = available.filter(
-      x => x.pair === "US30"
-    );
-
-    const nasdaq = available.filter(
-      x => x.pair === "NASDAQ"
-    );
-
-    const sp500 = available.filter(
-      x => x.pair === "S&P500"
-    );
-
-    const forexAvailable =
-      available.filter(
-        x => x.category === "FOREX"
-      );
-
-    const cryptoAvailable =
-      available.filter(
-        x => x.category === "CRYPTO"
-      );
-
-    const derivAvailable =
-      available.filter(
-        x => x.category === "DERIV"
-      );
-
-    const weightedPool: SignalConfig[] =
-      [];
-
-    function addMany(
-      list: SignalConfig[],
+    function add(
+      pairName: string,
       weight: number
     ) {
-      for (
-        let i = 0;
-        i < weight;
-        i++
-      ) {
-        weightedPool.push(...list);
+      const item = available.find(
+        x => x.pair === pairName
+      );
+
+      if (!item) return;
+
+      for (let i = 0; i < weight; i++) {
+        weightedPool.push(item);
       }
     }
 
     /*
-     * XAU = highest priority
+     * Approximate priority:
+     *
+     * XAU      55%
+     * XAG      12%
+     * US30      9%
+     * NASDAQ    8%
+     * S&P500    6%
+     * FOREX     6%
+     * CRYPTO    2%
+     * DERIV     2%
      */
-    addMany(gold, 50);
-    addMany(silver, 12);
-    addMany(us30, 10);
-    addMany(nasdaq, 8);
-    addMany(sp500, 5);
 
-    addMany(forexAvailable, 10);
-    addMany(cryptoAvailable, 3);
-    addMany(derivAvailable, 2);
+    add("XAU/USD (Gold)", 55);
+    add("XAG/USD (Silver)", 12);
+    add("US30", 9);
+    add("NASDAQ", 8);
+    add("S&P500", 6);
 
+    for (const pair of forex) {
+      add(pair, 1);
+    }
+
+    for (const pair of crypto) {
+      add(pair, 1);
+    }
+
+    for (const pair of deriv) {
+      add(pair, 1);
+    }
+
+    /*
+     * Shuffle weighted pool.
+     */
     const shuffled =
-      [
-        ...(weightedPool.length
-          ? weightedPool
-          : available),
-      ].sort(
-        () =>
-          Math.random() - 0.5
+      [...weightedPool].sort(
+        () => Math.random() - 0.5
       );
 
-    const orderedPairs: SignalConfig[] =
-      [];
+    /*
+     * Unique pairs.
+     */
+    const orderedPairs: SignalConfig[] = [];
 
     const seen =
       new Set<string>();
 
-    for (const config of shuffled) {
-      if (seen.has(config.pair))
-        continue;
+    for (const item of shuffled) {
+      if (seen.has(item.pair)) continue;
 
-      seen.add(config.pair);
-      orderedPairs.push(config);
+      seen.add(item.pair);
+      orderedPairs.push(item);
+    }
+
+    /*
+     * Add any available pair that somehow
+     * wasn't included.
+     */
+    for (const item of available) {
+      if (seen.has(item.pair)) continue;
+
+      seen.add(item.pair);
+      orderedPairs.push(item);
     }
 
     /* =====================================================
-       SELECT PAIR
+       SELECT
     ===================================================== */
 
     let selected:
       | SignalConfig
       | null = null;
 
-    let selectedDecision:
-      | any = null;
+    let decision: any = null;
 
     for (const config of orderedPairs) {
-      const current =
-        mt5[config.pair];
-
-      if (!current) continue;
-
-      const decision =
+      const result =
         await evaluatePair(
           supabase,
-          config.pair,
-          current,
-          config.thresholdPct
+          config.pair
         );
 
       console.log(
-        "PAIR:",
+        "PAIR CHECK:",
         config.pair,
-        decision
+        result
       );
 
-      if (!decision.generate)
+      if (!result.generate) {
         continue;
+      }
 
       selected = config;
-      selectedDecision =
-        decision;
+      decision = result;
 
       break;
     }
+
+    /* =====================================================
+       NOTHING
+    ===================================================== */
 
     if (!selected) {
       return new Response(
@@ -936,7 +909,7 @@ Deno.serve(async (req) => {
           success: true,
           generated: false,
           reason:
-            "No pair available - open signal/cooldown",
+            "All available pairs already have open signals",
           deriv_daily_count:
             derivCount || 0,
         }),
@@ -958,13 +931,12 @@ Deno.serve(async (req) => {
       generateSignal(selected);
 
     console.log(
-      "GENERATING:",
-      selected.pair,
-      selectedDecision
+      "GENERATING SIGNAL:",
+      signal
     );
 
     /* =====================================================
-       INSERT INTO DATABASE
+       INSERT
     ===================================================== */
 
     const {
@@ -980,11 +952,16 @@ Deno.serve(async (req) => {
       throw error;
     }
 
+    console.log(
+      "SIGNAL INSERTED:",
+      data?.id
+    );
+
     /* =====================================================
        TELEGRAM
     ===================================================== */
 
-    const telegramResult =
+    const telegram =
       await postTelegramSignal(
         supabaseUrl,
         serviceRoleKey,
@@ -992,12 +969,13 @@ Deno.serve(async (req) => {
       );
 
     /* =====================================================
-       FINAL RESPONSE
+       RESPONSE
     ===================================================== */
 
     return new Response(
       JSON.stringify({
         success: true,
+
         generated: true,
 
         pair:
@@ -1006,13 +984,11 @@ Deno.serve(async (req) => {
         category:
           selected.category,
 
-        decision:
-          selectedDecision,
+        decision,
 
         signal: data,
 
-        telegram:
-          telegramResult,
+        telegram,
 
         deriv_daily_count:
           derivCount || 0,
@@ -1034,6 +1010,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
+        generated: false,
         error:
           error instanceof Error
             ? error.message
