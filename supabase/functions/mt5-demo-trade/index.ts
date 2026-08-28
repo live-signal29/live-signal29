@@ -32,13 +32,6 @@ interface Credentials {
   server: string;
 }
 
-// Credentials can live in TWO places depending on how they were entered:
-// 1. The admin "MT5 Connection Settings" UI -> saved to the
-//    `integration_settings` table (this is how fetch-live-prices reads
-//    them, which is why live prices already work).
-// 2. Supabase Edge Function secrets (METAAPI_TOKEN / MT5_LOGIN / etc).
-// Check the table FIRST, fall back to secrets, so this function always
-// sees the same credentials the rest of the app is using.
 async function loadCredentials(supabase: any): Promise<Credentials> {
   const keys = ["METAAPI_TOKEN", "MT5_LOGIN", "MT5_PASSWORD", "MT5_SERVER"];
   const values: Record<string, string> = {};
@@ -65,14 +58,6 @@ async function loadCredentials(supabase: any): Promise<Credentials> {
   const password = values.MT5_PASSWORD || Deno.env.get("MT5_PASSWORD")?.trim() || "";
   const server = values.MT5_SERVER || Deno.env.get("MT5_SERVER")?.trim() || "";
 
-  console.log(
-    "MT5 credentials loaded:",
-    "token=" + Boolean(token),
-    "login=" + Boolean(login),
-    "password=" + Boolean(password),
-    "server=" + Boolean(server)
-  );
-
   return { token, login, password, server };
 }
 
@@ -88,21 +73,12 @@ serve(async (req) => {
 
     const creds = await loadCredentials(supabase);
 
-    if (!creds.token) {
-      throw new Error("MetaApi token not configured (checked integration_settings table and secrets)");
-    }
-    if (!creds.login || !creds.server) {
-      throw new Error("MT5 login/server not configured (checked integration_settings table and secrets)");
+    if (!creds.token || !creds.login || !creds.server) {
+      throw new Error("MetaApi credentials incomplete");
     }
 
     const body: TradeRequest = await req.json();
     
-    console.log("MT5 Demo Trade request:", body.action);
-
-    // Get or create MetaApi account (also resolves the region-specific
-    // client-api host, same as fetch-live-prices does — the generic host
-    // works for provisioning but trade/position calls need the region
-    // host or they silently fail / 404).
     const { accountId, clientApi } = await getOrCreateMetaApiAccount(
       creds.token,
       creds.login,
@@ -144,7 +120,6 @@ async function getOrCreateMetaApiAccount(
   password: string,
   server: string
 ): Promise<{ accountId: string; clientApi: string }> {
-  // Check if account already exists
   const listResponse = await fetch(`${PROVISIONING}/users/current/accounts`, {
     headers: { "auth-token": token },
   });
@@ -159,8 +134,6 @@ async function getOrCreateMetaApiAccount(
     || accounts.find((acc: any) => String(acc.login) === String(login));
 
   if (!account) {
-    // Create new account
-    console.log("Creating new MetaApi account...");
     const createResponse = await fetch(`${PROVISIONING}/users/current/accounts`, {
       method: "POST",
       headers: {
@@ -183,21 +156,16 @@ async function getOrCreateMetaApiAccount(
     }
 
     account = await createResponse.json();
-    console.log("Created MetaApi account:", account._id || account.id);
-  } else {
-    console.log("Using existing MetaApi account:", account._id || account.id);
   }
 
   const accountId = account._id || account.id;
   const state = String(account?.state || "").toUpperCase();
 
-  // Deploy if not deployed
   if (state && state !== "DEPLOYED" && state !== "DEPLOYING") {
     await fetch(`${PROVISIONING}/users/current/accounts/${accountId}/deploy`, {
       method: "POST",
       headers: { "auth-token": token },
     });
-    // Wait for deployment
     await new Promise(resolve => setTimeout(resolve, 5000));
   }
 
@@ -206,32 +174,22 @@ async function getOrCreateMetaApiAccount(
     ? `https://mt-client-api-v1.${region}.agiliumtrade.ai`
     : DEFAULT_CLIENT_API;
 
-  console.log("MT5 account ready:", accountId, "region:", region || "default");
-
   return { accountId, clientApi };
 }
 
-// Broker MT5 accounts often list symbols with a suffix/prefix that differs
-// from the plain pair name used in our signals (e.g. our "XAUUSD" might be
-// the broker's "XAUUSDm" or "GOLD"). Placing a trade with the wrong exact
-// symbol string fails silently with a MetaApi error, even though price
-// lookups (which already do this matching) work fine. Resolve against the
-// broker's actual symbol list before sending the trade.
 function normalizeSym(v: string): string {
   return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-// "VOL 75" / "Volatility 75" etc need to expand to the broker's real
-// name ("Volatility 75 Index" -> normalized "VOLATILITY75INDEX") before
-// matching — a plain normalize+prefix check fails for these because
-// "VOL75" is NOT a prefix of "VOLATILITY75INDEX" (unlike "BOOM1000",
-// which IS a prefix of "BOOM1000INDEX" and so worked already). This is
-// exactly why Boom/Crash trades opened fine but Volatility ones didn't.
 function getSymbolAliases(appSymbol: string): string[] {
   const n = normalizeSym(appSymbol);
 
   if (n.includes("XAU") || n.includes("GOLD")) return ["XAUUSD", "GOLD", "XAUUSDM"];
   if (n.includes("XAG") || n.includes("SILVER")) return ["XAGUSD", "SILVER"];
+
+  if (n.includes("US30") || n.includes("DJ30")) return ["US30", "DJ30", "WS30"];
+  if (n.includes("NASDAQ") || n.includes("NAS100")) return ["NASDAQ", "NAS100", "US100"];
+  if (n.includes("SP500") || n.includes("US500")) return ["US500", "SP500", "SPX500"];
 
   if (n.includes("BOOM") && n.includes("1000")) return ["BOOM1000INDEX", "BOOM1000"];
   if (n.includes("BOOM") && n.includes("500")) return ["BOOM500INDEX", "BOOM500"];
@@ -240,11 +198,6 @@ function getSymbolAliases(appSymbol: string): string[] {
 
   if (n.includes("VOL") && n.includes("75")) return ["VOLATILITY75INDEX", "VOL75", "V75"];
   if (n.includes("VOL") && n.includes("100")) return ["VOLATILITY100INDEX", "VOL100", "V100"];
-  if (n.includes("VOL") && n.includes("50")) return ["VOLATILITY50INDEX", "VOL50", "V50"];
-  if (n.includes("VOL") && n.includes("25")) return ["VOLATILITY25INDEX", "VOL25", "V25"];
-
-  if (n.includes("STEP")) return ["STEPINDEX", "STEP"];
-  if (n.includes("JUMP")) return [n, "JUMP"];
 
   return [n];
 }
@@ -271,50 +224,25 @@ async function resolveBrokerSymbol(
     const normalized = list.map((s) => ({ original: s, n: normalizeSym(s) }));
     const aliases = getSymbolAliases(appSymbol);
 
-    // EXACT match against every alias first (most reliable)
     for (const alias of aliases) {
       const wanted = normalizeSym(alias);
       const exact = normalized.find((x) => x.n === wanted);
-      if (exact) {
-        console.log(`Symbol EXACT: ${appSymbol} -> ${exact.original}`);
-        return exact.original;
-      }
+      if (exact) return exact.original;
     }
 
-    // PREFIX match as fallback
     for (const alias of aliases) {
       const wanted = normalizeSym(alias);
       const match = normalized.find((x) => x.n.startsWith(wanted) || wanted.startsWith(x.n));
-      if (match) {
-        console.log(`Symbol PREFIX: ${appSymbol} -> ${match.original}`);
-        return match.original;
-      }
+      if (match) return match.original;
     }
 
-    // CONTAINS match as last resort
-    for (const alias of aliases) {
-      const wanted = normalizeSym(alias);
-      if (wanted.length < 4) continue;
-      const match = normalized.find((x) => x.n.includes(wanted));
-      if (match) {
-        console.log(`Symbol CONTAINS: ${appSymbol} -> ${match.original}`);
-        return match.original;
-      }
-    }
-
-    console.log(`No broker symbol match for ${appSymbol}, using as-is`);
     return appSymbol;
   } catch (error) {
-    console.error("resolveBrokerSymbol error:", String(error));
     return appSymbol;
   }
 }
 
-// Different symbols (especially Deriv synthetic indices like VOL75,
-// BOOM1000, CRASH500) have their own minimum/step lot size — 0.01 that
-// works fine for forex/gold gets rejected by the broker as "Invalid
-// volume" on these. Look up the broker's actual volume rules for this
-// symbol and snap the requested lot to a valid value before trading.
+// Volume Specification Adjuster
 async function resolveValidVolume(
   token: string,
   clientApi: string,
@@ -322,37 +250,50 @@ async function resolveValidVolume(
   brokerSymbol: string,
   requestedVolume: number
 ): Promise<number> {
+  let volume = requestedVolume;
+
+  const norm = normalizeSym(brokerSymbol);
+  const isCommodityOrIndex =
+    norm.includes("XAU") ||
+    norm.includes("GOLD") ||
+    norm.includes("XAG") ||
+    norm.includes("SILVER") ||
+    norm.includes("US30") ||
+    norm.includes("NASDAQ") ||
+    norm.includes("NAS100") ||
+    norm.includes("US500") ||
+    norm.includes("SP500");
+
+  // Commodities & Indices lot size preference (0.50 lot size)
+  if (isCommodityOrIndex && (volume === 0.01 || volume < 0.40)) {
+    volume = 0.50;
+  }
+
   try {
     const response = await fetch(
       `${clientApi}/users/current/accounts/${accountId}/symbols/${encodeURIComponent(brokerSymbol)}/specification`,
       { headers: { "auth-token": token }, signal: AbortSignal.timeout(10000) }
     );
 
-    if (!response.ok) return requestedVolume;
+    if (!response.ok) return volume;
 
     const spec = await response.json();
     const minVolume = Number(spec?.minVolume) || 0;
     const maxVolume = Number(spec?.maxVolume) || Infinity;
     const step = Number(spec?.volumeStep) || minVolume || 0.01;
 
-    if (!minVolume) return requestedVolume;
-
-    let volume = requestedVolume;
     if (volume < minVolume) volume = minVolume;
     if (volume > maxVolume) volume = maxVolume;
 
-    // Snap to the nearest valid step above the minimum
     if (step > 0) {
       const steps = Math.round((volume - minVolume) / step);
       volume = minVolume + steps * step;
     }
 
     volume = Number(volume.toFixed(2));
-    console.log(`Volume for ${brokerSymbol}: requested ${requestedVolume} -> broker min ${minVolume}/step ${step} -> using ${volume}`);
     return volume;
   } catch (error) {
-    console.error("resolveValidVolume error:", String(error));
-    return requestedVolume;
+    return volume;
   }
 }
 
@@ -381,13 +322,7 @@ async function openTrade(
   );
 }
 
-// Opens 3 separate MT5 positions for one signal — same symbol/entry/SL,
-// but each targeting a different take-profit level (TP1, TP2, TP3). This
-// is how partial profit-taking is done on MT5: since a single position
-// can't have three TPs, we open three smaller positions instead, so each
-// one can close independently as price reaches that level. Once the
-// TP1-tagged trade closes in profit, checkTrades() below moves the SL of
-// the remaining two positions to break-even automatically.
+// Opens 3 separate trades for TP1, TP2, TP3
 async function openMultiTrade(
   supabase: any,
   token: string,
@@ -412,8 +347,6 @@ async function openMultiTrade(
 
   const results: any[] = [];
 
-  // Placed one at a time (not in parallel) — MT5/MetaApi can reject
-  // rapid-fire simultaneous orders on the same symbol from one account.
   for (const leg of legs) {
     const result = await placeSingleTrade(supabase, token, accountId, clientApi, {
       ...body,
@@ -452,11 +385,8 @@ async function placeSingleTrade(
   }
 
   const brokerSymbol = await resolveBrokerSymbol(token, clientApi, accountId, symbol);
-  console.log(`Symbol resolved: ${symbol} -> ${brokerSymbol}`);
-
   const validVolume = await resolveValidVolume(token, clientApi, accountId, brokerSymbol, lot_size);
 
-  // Insert pending trade record
   const { data: tradeRecord, error: insertError } = await supabase
     .from("mt5_demo_trades")
     .insert({
@@ -478,23 +408,15 @@ async function placeSingleTrade(
   }
 
   try {
-    // Place trade via MetaApi
     const tradePayload: any = {
       actionType: trade_type.toUpperCase() === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
       symbol: brokerSymbol,
       volume: validVolume,
-      // MT5 brokers cap the comment field at ~26 characters — a full
-      // "Signal: <uuid>" (44+ chars) gets rejected by MetaApi with
-      // "clientId and comment fields length is invalid". Keep it short;
-      // the real signal_id is already stored in mt5_demo_trades.
       comment: tp_level ? `LiveSignal TP${tp_level}` : "LiveSignal",
     };
 
-    // Add SL/TP if provided and valid
     if (sl && sl > 0) tradePayload.stopLoss = sl;
     if (tp && tp > 0) tradePayload.takeProfit = tp;
-
-    console.log("Opening MT5 trade:", tradePayload);
 
     const tradeResponse = await fetch(
       `${clientApi}/users/current/accounts/${accountId}/trade`,
@@ -509,15 +431,7 @@ async function placeSingleTrade(
     );
 
     const tradeResult = await tradeResponse.json();
-    console.log("Trade result:", tradeResult);
 
-    // MetaApi's /trade endpoint often returns HTTP 200 even when the
-    // BROKER rejected/requoted the order — there is no top-level "error"
-    // field in that case, only a non-success numericCode/stringCode and
-    // no positionId/orderId. Treating that as success was the actual bug:
-    // the DB row got marked "open" with mt5_ticket = NULL while nothing
-    // was really placed on the MT5 account. A trade only really opened
-    // if MetaApi gave back a positionId or orderId.
     const ticket = tradeResult.positionId || tradeResult.orderId;
     const isRejected =
       !tradeResponse.ok ||
@@ -531,11 +445,10 @@ async function placeSingleTrade(
         tradeResult.message ||
         tradeResult.stringCode ||
         tradeResult.error ||
-        `Broker rejected the order (no ticket returned): ${JSON.stringify(tradeResult)}`
+        `Broker rejected order: ${JSON.stringify(tradeResult)}`
       );
     }
 
-    // Update trade record with success
     await supabase
       .from("mt5_demo_trades")
       .update({
@@ -548,7 +461,6 @@ async function placeSingleTrade(
 
     return { success: true, trade_id: tradeRecord.id, mt5_ticket: ticket };
   } catch (error) {
-    // Update trade record with error
     await supabase
       .from("mt5_demo_trades")
       .update({
@@ -567,7 +479,6 @@ async function checkTrades(
   accountId: string,
   clientApi: string
 ): Promise<Response> {
-  // Get all open trades from database
   const { data: openTrades, error } = await supabase
     .from("mt5_demo_trades")
     .select("*")
@@ -584,42 +495,32 @@ async function checkTrades(
     );
   }
 
-  // Get positions from MetaApi
   const positionsResponse = await fetch(
     `${clientApi}/users/current/accounts/${accountId}/positions`,
     { headers: { "auth-token": token } }
   );
 
   const positions = await positionsResponse.json();
-  console.log("Current positions:", positions);
 
-  // Get closed positions (history)
   const historyResponse = await fetch(
     `${clientApi}/users/current/accounts/${accountId}/history-deals?startTime=${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}`,
     { headers: { "auth-token": token } }
   );
 
   const history = await historyResponse.json();
-  console.log("Recent history:", history);
-
   let updated = 0;
 
   for (const trade of openTrades) {
-    // Check if position is still open
     const openPosition = positions.find((p: any) => 
       p.id === trade.mt5_ticket || p.positionId === trade.mt5_ticket
     );
 
     if (openPosition) {
-      // Position still open - update profit/loss
       await supabase
         .from("mt5_demo_trades")
-        .update({
-          profit_loss: openPosition.profit,
-        })
+        .update({ profit_loss: openPosition.profit })
         .eq("id", trade.id);
     } else {
-      // Position closed - find in history
       const closedDeal = history.find((h: any) => 
         h.positionId === trade.mt5_ticket && h.entryType === "DEAL_ENTRY_OUT"
       );
@@ -639,12 +540,7 @@ async function checkTrades(
           .eq("id", trade.id);
 
         updated++;
-        console.log(`Trade ${trade.id} closed with ${result}: $${closedDeal.profit}`);
 
-        // Scale-out logic: when the TP1 leg of a multi-TP signal closes
-        // in profit, move the SL of the still-open TP2/TP3 legs (same
-        // signal_id) to break-even (the shared entry price) so they can
-        // no longer turn into a loss.
         if (trade.tp_level === 1 && result === "win" && trade.signal_id) {
           await moveSiblingsToBreakeven(supabase, token, clientApi, accountId, trade, positions);
         }
@@ -682,7 +578,6 @@ async function moveSiblingsToBreakeven(
   const breakevenPrice = tp1Trade.entry_price;
 
   for (const sibling of siblings) {
-    // Already moved (avoid redundant MetaApi calls on every cron run)
     if (Number(sibling.sl_price) === Number(breakevenPrice)) continue;
 
     const position = positions.find(
@@ -714,12 +609,9 @@ async function moveSiblingsToBreakeven(
           .from("mt5_demo_trades")
           .update({ sl_price: breakevenPrice })
           .eq("id", sibling.id);
-        console.log(`Moved TP${sibling.tp_level} trade ${sibling.id} SL to breakeven (${breakevenPrice})`);
-      } else {
-        console.error(`Failed to move SL to breakeven for trade ${sibling.id}:`, result);
       }
     } catch (err) {
-      console.error(`Breakeven modify error for trade ${sibling.id}:`, String(err));
+      console.error(`Breakeven modify error:`, String(err));
     }
   }
 }
@@ -731,22 +623,16 @@ async function closeTrade(
   clientApi: string,
   tradeId: string
 ): Promise<Response> {
-  // Get trade from database
   const { data: trade, error } = await supabase
     .from("mt5_demo_trades")
     .select("*")
     .eq("id", tradeId)
     .single();
 
-  if (error || !trade) {
-    throw new Error("Trade not found");
+  if (error || !trade || trade.status !== "open") {
+    throw new Error("Trade not found or not open");
   }
 
-  if (trade.status !== "open") {
-    throw new Error("Trade is not open");
-  }
-
-  // Close position via MetaApi
   const closeResponse = await fetch(
     `${clientApi}/users/current/accounts/${accountId}/trade`,
     {
@@ -763,13 +649,11 @@ async function closeTrade(
   );
 
   const closeResult = await closeResponse.json();
-  console.log("Close result:", closeResult);
 
   if (!closeResponse.ok) {
     throw new Error(closeResult.message || "Failed to close trade");
   }
 
-  // Update trade record
   await supabase
     .from("mt5_demo_trades")
     .update({
