@@ -296,6 +296,41 @@ async function uploadSvg(supabase: any, svg: string, filename: string): Promise<
   } catch (e) { console.error("Upload exception:", e); return null; }
 }
 
+async function fetchLiveMt5GoldPrice(
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(
+        "XAU/USD (Gold)"
+      )}`,
+      {
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+        },
+      }
+    );
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const raw =
+      data?.prices?.["XAU/USD (Gold)"];
+
+    const price = Number(raw);
+
+    return price > 0 ? price : null;
+  } catch (e) {
+    console.log(
+      "Live MT5 gold price fetch failed:",
+      e
+    );
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -313,15 +348,57 @@ Deno.serve(async (req) => {
     }
     const slotLabel = slot === "morning" ? "🌅 Morning" : slot === "afternoon" ? "☀️ Afternoon" : "🌙 Evening";
 
-    // Use H1 base for price summary
+    // Use H1 base for price summary (candle shape / trend context)
     const base = await fetchCandles("GC=F", "H1");
-    console.log(`[${slot}] Gold $${base.price}, change ${base.change}`);
+
+    // Override the anchor price with the app's own REAL live MT5
+    // broker price (the same one shown on the Signals/Gold tab),
+    // instead of Yahoo's GC=F futures price - these can drift apart
+    // by a noticeable margin, so ideas were being generated around
+    // a slightly different price than what users actually see live
+    // in the app.
+    const livePrice = await fetchLiveMt5GoldPrice(
+      supabaseUrl,
+      serviceRoleKey
+    );
+
+    if (livePrice) {
+      const priceDiff = livePrice - base.price;
+      base.price = livePrice;
+      // Shift the whole candle series by the same offset so the
+      // chart still ends exactly at the real live price instead of
+      // jumping/mismatching on the last candle.
+      base.candles = base.candles.map((c) => ({
+        ...c,
+        o: +(c.o + priceDiff).toFixed(2),
+        h: +(c.h + priceDiff).toFixed(2),
+        l: +(c.l + priceDiff).toFixed(2),
+        c: +(c.c + priceDiff).toFixed(2),
+      }));
+      base.high = +(base.high + priceDiff).toFixed(2);
+      base.low = +(base.low + priceDiff).toFixed(2);
+    }
+
+    console.log(`[${slot}] Gold $${base.price} (live MT5: ${livePrice ?? "unavailable, used Yahoo"}), change ${base.change}`);
 
     const { ideas: allIdeas, plan } = generateIdeas(base.price, base.high, base.low, base.change);
     const idea = allIdeas[0];
 
     const tf = tfForKind(idea.kind);
     const md = await fetchCandles("GC=F", tf);
+    if (livePrice) {
+      const mdDiff = livePrice - md.price;
+      md.price = livePrice;
+      md.candles = md.candles.map((c) => ({
+        ...c,
+        o: +(c.o + mdDiff).toFixed(2),
+        h: +(c.h + mdDiff).toFixed(2),
+        l: +(c.l + mdDiff).toFixed(2),
+        c: +(c.c + mdDiff).toFixed(2),
+      }));
+      md.high = +(md.high + mdDiff).toFixed(2);
+      md.low = +(md.low + mdDiff).toFixed(2);
+    }
     md.symbol = "XAU/USD";
     const svg = buildCandleSVG(md, idea.title, plan);
     const filename = `auto-ideas/${Date.now()}-${slot}-${tf}.svg`;
