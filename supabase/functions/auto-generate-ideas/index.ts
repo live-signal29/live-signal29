@@ -14,12 +14,6 @@ type Candle = {
   c: number;
 };
 
-type FVG = {
-  type: "bullish" | "bearish";
-  low: number;
-  high: number;
-};
-
 type Analysis = {
   action: "BUY" | "SELL";
   entry: number;
@@ -27,24 +21,41 @@ type Analysis = {
   tp2: number;
   sl: number;
 
+  fvg: {
+    type: "bullish" | "bearish";
+    low: number;
+    high: number;
+  } | null;
+
+  bos:
+    | "Bullish BOS"
+    | "Bearish BOS"
+    | "No clear BOS";
+
+  trend:
+    | "Bullish"
+    | "Bearish"
+    | "Range";
+
+  trendline:
+    | "Rising"
+    | "Falling"
+    | "Flat";
+
+  orderBlock:
+    | "Bullish OB"
+    | "Bearish OB"
+    | "None";
+
   support: number | null;
   resistance: number | null;
-
-  fvg: FVG | null;
-
-  bos: "Bullish BOS" | "Bearish BOS" | "No clear BOS";
-  trend: "Bullish" | "Bearish" | "Range";
-  trendline: "Rising" | "Falling" | "Flat";
-  orderBlock: "Bullish OB" | "Bearish OB" | "None";
-
-  ideaText: string;
 };
 
 type PairCfg = {
   pair: string;
   yahoo: string;
   decimals: number;
-  category: "commodity" | "forex" | "crypto";
+  category: "commodity" | "other";
 };
 
 /* =========================================================
@@ -68,94 +79,81 @@ const PAIRS: PairCfg[] = [
     pair: "EUR/USD",
     yahoo: "EURUSD=X",
     decimals: 5,
-    category: "forex",
+    category: "other",
   },
   {
     pair: "GBP/USD",
     yahoo: "GBPUSD=X",
     decimals: 5,
-    category: "forex",
+    category: "other",
   },
   {
     pair: "USD/JPY",
     yahoo: "JPY=X",
     decimals: 3,
-    category: "forex",
+    category: "other",
   },
   {
     pair: "AUD/USD",
     yahoo: "AUDUSD=X",
     decimals: 5,
-    category: "forex",
+    category: "other",
   },
   {
     pair: "USD/CAD",
     yahoo: "CAD=X",
     decimals: 5,
-    category: "forex",
+    category: "other",
   },
   {
     pair: "USD/CHF",
     yahoo: "CHF=X",
     decimals: 5,
-    category: "forex",
+    category: "other",
   },
   {
     pair: "BTC/USD",
     yahoo: "BTC-USD",
     decimals: 2,
-    category: "crypto",
+    category: "other",
   },
   {
     pair: "ETH/USD",
     yahoo: "ETH-USD",
     decimals: 2,
-    category: "crypto",
+    category: "other",
   },
 ];
 
 /* =========================================================
-   HOURLY PAIR ROTATION
-   ---------------------------------------------------------
-   XAU gets the highest weight.
-
-   10 slots:
-   XAU x 6
-   XAG x 1
-   Other pairs x 3
-
-   So XAU appears approximately 60% of the ideas.
+   XAU PRIORITY
+   Hourly cron = 24 ideas/day.
+   XAU is selected more often than other pairs.
 ========================================================= */
 
-const HOURLY_WEIGHTED_PAIRS = [
+const HOURLY_SEQUENCE = [
   "XAU/USD (Gold)",
-  "XAU/USD (Gold)",
-  "XAU/USD (Gold)",
-  "XAU/USD (Gold)",
-  "XAU/USD (Gold)",
-  "XAU/USD (Gold)",
-
-  "XAG/USD (Silver)",
-
   "EUR/USD",
+  "XAU/USD (Gold)",
   "GBP/USD",
+  "XAU/USD (Gold)",
+  "USD/JPY",
+  "XAU/USD (Gold)",
+  "XAG/USD (Silver)",
+  "XAU/USD (Gold)",
+  "AUD/USD",
+  "XAU/USD (Gold)",
   "BTC/USD",
 ];
 
 function pickScheduledPair(now: Date): PairCfg {
-  const hourSlot =
-    now.getUTCFullYear() * 1000000 +
-    (now.getUTCMonth() + 1) * 10000 +
-    now.getUTCDate() * 100 +
-    now.getUTCHours();
+  const hourIndex = now.getUTCHours();
 
-  const index =
-    Math.abs(hourSlot) % HOURLY_WEIGHTED_PAIRS.length;
-
-  const pairName = HOURLY_WEIGHTED_PAIRS[index];
+  const name =
+    HOURLY_SEQUENCE[hourIndex % HOURLY_SEQUENCE.length];
 
   return (
-    PAIRS.find((p) => p.pair === pairName) ||
+    PAIRS.find((p) => p.pair === name) ||
     PAIRS[0]
   );
 }
@@ -172,40 +170,46 @@ const TF_MAP: Record<
     interval: "60m",
     range: "5d",
   },
+
+  H4: {
+    interval: "60m",
+    range: "1mo",
+  },
 };
 
 function roundPrice(
   n: number,
   decimals: number
-): number {
+) {
   return Number(n.toFixed(decimals));
 }
 
 /* =========================================================
-   FETCH CANDLES
+   YAHOO CANDLES
 ========================================================= */
 
 async function fetchCandles(
   symbol: string,
   tf = "H1"
 ): Promise<Candle[]> {
-  const cfg = TF_MAP[tf] || TF_MAP.H1;
+  const cfg =
+    TF_MAP[tf] || TF_MAP.H1;
 
   try {
-    const url =
-      `https://query1.finance.yahoo.com/v8/finance/chart/` +
-      `${encodeURIComponent(symbol)}` +
-      `?interval=${cfg.interval}&range=${cfg.range}`;
-
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
-    });
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+        symbol
+      )}?interval=${cfg.interval}&range=${cfg.range}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      }
+    );
 
     if (!res.ok) {
       console.error(
-        "Yahoo candle request failed:",
+        "Yahoo candle response failed",
         res.status
       );
       return [];
@@ -214,7 +218,7 @@ async function fetchCandles(
     const data = await res.json();
 
     const result =
-      data?.chart?.result?.[0];
+      data.chart?.result?.[0];
 
     const ts: number[] =
       result?.timestamp || [];
@@ -224,15 +228,20 @@ async function fetchCandles(
 
     const candles: Candle[] = [];
 
-    for (let i = 0; i < ts.length; i++) {
+    for (
+      let i = 0;
+      i < ts.length;
+      i++
+    ) {
       const o = q?.open?.[i];
       const h = q?.high?.[i];
       const l = q?.low?.[i];
       const c = q?.close?.[i];
 
       if (
-        [o, h, l, c].every((v) =>
-          Number.isFinite(v)
+        [o, h, l, c].every(
+          (v) =>
+            Number.isFinite(v)
         )
       ) {
         candles.push({
@@ -245,10 +254,10 @@ async function fetchCandles(
       }
     }
 
-    return candles.slice(-60);
+    return candles.slice(-50);
   } catch (error) {
     console.error(
-      "Candle fetch exception:",
+      "Candle fetch failed",
       symbol,
       error
     );
@@ -258,7 +267,7 @@ async function fetchCandles(
 }
 
 /* =========================================================
-   MT5 LIVE PRICES
+   MT5 LIVE PRICE
 ========================================================= */
 
 async function fetchMt5Prices(
@@ -282,21 +291,28 @@ async function fetchMt5Prices(
 
     if (!response.ok) {
       console.error(
-        "MT5 prices failed:",
+        "MT5 price HTTP error",
         response.status
       );
 
       return {};
     }
 
-    const json = await response.json();
+    const json =
+      await response.json();
 
-    const raw = json?.prices || {};
+    const raw =
+      json?.prices || {};
 
-    const out: Record<string, number> = {};
+    const out: Record<
+      string,
+      number
+    > = {};
 
     for (const pair of pairs) {
-      const n = Number(raw[pair]);
+      const n = Number(
+        raw[pair]
+      );
 
       if (
         Number.isFinite(n) &&
@@ -309,7 +325,7 @@ async function fetchMt5Prices(
     return out;
   } catch (error) {
     console.error(
-      "MT5 price fetch exception:",
+      "MT5 price fetch failed",
       error
     );
 
@@ -318,25 +334,31 @@ async function fetchMt5Prices(
 }
 
 /* =========================================================
-   SWING DETECTION
+   SWINGS
 ========================================================= */
 
 function findSwingHigh(
-  candles: Candle[],
+  c: Candle[],
   i: number,
   w = 2
-): boolean {
+) {
   if (
     i < w ||
-    i + w >= candles.length
+    i + w >= c.length
   ) {
     return false;
   }
 
-  for (let j = 1; j <= w; j++) {
+  for (
+    let j = 1;
+    j <= w;
+    j++
+  ) {
     if (
-      candles[i].h <= candles[i - j].h ||
-      candles[i].h <= candles[i + j].h
+      c[i].h <=
+        c[i - j].h ||
+      c[i].h <=
+        c[i + j].h
     ) {
       return false;
     }
@@ -346,21 +368,27 @@ function findSwingHigh(
 }
 
 function findSwingLow(
-  candles: Candle[],
+  c: Candle[],
   i: number,
   w = 2
-): boolean {
+) {
   if (
     i < w ||
-    i + w >= candles.length
+    i + w >= c.length
   ) {
     return false;
   }
 
-  for (let j = 1; j <= w; j++) {
+  for (
+    let j = 1;
+    j <= w;
+    j++
+  ) {
     if (
-      candles[i].l >= candles[i - j].l ||
-      candles[i].l >= candles[i + j].l
+      c[i].l >=
+        c[i - j].l ||
+      c[i].l >=
+        c[i + j].l
     ) {
       return false;
     }
@@ -370,20 +398,87 @@ function findSwingLow(
 }
 
 /* =========================================================
-   HTML SAFE TEXT
+   SUPPORT / RESISTANCE
 ========================================================= */
 
-function safeText(value: unknown): string {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+function getSupportResistance(
+  candles: Candle[],
+  livePrice: number
+) {
+  const swingsHigh: number[] = [];
+  const swingsLow: number[] = [];
+
+  for (
+    let i = 2;
+    i < candles.length - 2;
+    i++
+  ) {
+    if (
+      findSwingHigh(
+        candles,
+        i,
+        2
+      )
+    ) {
+      swingsHigh.push(
+        candles[i].h
+      );
+    }
+
+    if (
+      findSwingLow(
+        candles,
+        i,
+        2
+      )
+    ) {
+      swingsLow.push(
+        candles[i].l
+      );
+    }
+  }
+
+  const supports =
+    swingsLow
+      .filter(
+        (p) => p < livePrice
+      )
+      .sort(
+        (a, b) =>
+          b - a
+      );
+
+  const resistances =
+    swingsHigh
+      .filter(
+        (p) => p > livePrice
+      )
+      .sort(
+        (a, b) =>
+          a - b
+      );
+
+  return {
+    support:
+      supports[0] ??
+      Math.min(
+        ...candles
+          .slice(-10)
+          .map((x) => x.l)
+      ),
+
+    resistance:
+      resistances[0] ??
+      Math.max(
+        ...candles
+          .slice(-10)
+          .map((x) => x.h)
+      ),
+  };
 }
 
 /* =========================================================
-   MARKET ANALYSIS
+   ANALYSIS
 ========================================================= */
 
 function analyze(
@@ -391,37 +486,41 @@ function analyze(
   livePrice: number,
   decimals: number
 ): Analysis {
-  const c = candles.slice(-45);
+  const c =
+    candles.slice(-40);
 
-  const recent = c.slice(-20);
+  const recent =
+    c.slice(-20);
 
-  const closes = recent.map(
-    (x) => x.c
-  );
+  const closes =
+    recent.map(
+      (x) => x.c
+    );
 
   const first =
-    closes[0] || livePrice;
+    closes[0] ||
+    livePrice;
 
   const last =
     livePrice ||
-    closes[closes.length - 1] ||
+    closes[
+      closes.length - 1
+    ] ||
     first;
 
   const pct =
-    first !== 0
-      ? ((last - first) / first) * 100
+    first
+      ? ((last - first) /
+          first) *
+        100
       : 0;
 
   const trend: Analysis["trend"] =
-    pct > 0.15
+    pct > 0.1
       ? "Bullish"
-      : pct < -0.15
+      : pct < -0.1
       ? "Bearish"
       : "Range";
-
-  /* -------------------------------------------------------
-     SWINGS
-  ------------------------------------------------------- */
 
   const highs: {
     i: number;
@@ -438,14 +537,18 @@ function analyze(
     i < c.length - 2;
     i++
   ) {
-    if (findSwingHigh(c, i)) {
+    if (
+      findSwingHigh(c, i)
+    ) {
       highs.push({
         i,
         p: c[i].h,
       });
     }
 
-    if (findSwingLow(c, i)) {
+    if (
+      findSwingLow(c, i)
+    ) {
       lows.push({
         i,
         p: c[i].l,
@@ -454,63 +557,44 @@ function analyze(
   }
 
   const lastHigh =
-    highs[highs.length - 1];
+    highs[
+      highs.length - 1
+    ];
 
   const prevHigh =
-    highs[highs.length - 2];
+    highs[
+      highs.length - 2
+    ];
 
   const lastLow =
-    lows[lows.length - 1];
+    lows[
+      lows.length - 1
+    ];
 
   const prevLow =
-    lows[lows.length - 2];
+    lows[
+      lows.length - 2
+    ];
 
-  /* -------------------------------------------------------
-     SUPPORT / RESISTANCE
-  ------------------------------------------------------- */
-
-  let support:
-    number | null =
-    lastLow?.p || null;
-
-  let resistance:
-    number | null =
-    lastHigh?.p || null;
-
-  if (!support) {
-    support = Math.min(
-      ...recent.map((x) => x.l)
-    );
-  }
-
-  if (!resistance) {
-    resistance = Math.max(
-      ...recent.map((x) => x.h)
-    );
-  }
-
-  /* -------------------------------------------------------
-     BOS
-  ------------------------------------------------------- */
-
-  let bos: Analysis["bos"] =
+  let bos:
+    Analysis["bos"] =
     "No clear BOS";
 
   if (
     lastHigh &&
-    last > lastHigh.p
+    last >
+      lastHigh.p
   ) {
-    bos = "Bullish BOS";
+    bos =
+      "Bullish BOS";
   } else if (
     lastLow &&
-    last < lastLow.p
+    last <
+      lastLow.p
   ) {
-    bos = "Bearish BOS";
+    bos =
+      "Bearish BOS";
   }
-
-  /* -------------------------------------------------------
-     TRENDLINE
-  ------------------------------------------------------- */
 
   let trendline:
     Analysis["trendline"] =
@@ -520,37 +604,42 @@ function analyze(
     lastLow &&
     prevLow
   ) {
-    if (
+    trendline =
       lastLow.p >
       prevLow.p
-    ) {
-      trendline = "Rising";
-    } else if (
-      lastLow.p <
-      prevLow.p
-    ) {
-      trendline = "Falling";
-    }
+        ? "Rising"
+        : lastLow.p <
+          prevLow.p
+        ? "Falling"
+        : "Flat";
   }
 
-  /* -------------------------------------------------------
+  /* =========================
      FVG
-  ------------------------------------------------------- */
+  ========================= */
 
   let fvg:
-    Analysis["fvg"] = null;
+    Analysis["fvg"] =
+    null;
 
   for (
-    let i = c.length - 1;
+    let i =
+      c.length - 1;
     i >= 2 && !fvg;
     i--
   ) {
-    const a = c[i - 2];
-    const d = c[i];
+    const a =
+      c[i - 2];
 
-    if (a.h < d.l) {
+    const d =
+      c[i];
+
+    if (
+      a.h < d.l
+    ) {
       fvg = {
-        type: "bullish",
+        type:
+          "bullish",
         low: a.h,
         high: d.l,
       };
@@ -558,62 +647,84 @@ function analyze(
       a.l > d.h
     ) {
       fvg = {
-        type: "bearish",
+        type:
+          "bearish",
         low: d.h,
         high: a.l,
       };
     }
   }
 
-  /* -------------------------------------------------------
+  /* =========================
      ORDER BLOCK
-  ------------------------------------------------------- */
+  ========================= */
 
   let orderBlock:
     Analysis["orderBlock"] =
     "None";
 
   if (
-    bos === "Bullish BOS"
+    bos ===
+    "Bullish BOS"
   ) {
     orderBlock =
       "Bullish OB";
   }
 
   if (
-    bos === "Bearish BOS"
+    bos ===
+    "Bearish BOS"
   ) {
     orderBlock =
       "Bearish OB";
   }
 
-  /* -------------------------------------------------------
+  /* =========================
      ACTION
-  ------------------------------------------------------- */
+  ========================= */
 
   let action:
     Analysis["action"] =
     "BUY";
 
   if (
-    bos === "Bearish BOS" ||
+    bos ===
+      "Bearish BOS" ||
     (
-      trend === "Bearish" &&
-      fvg?.type !== "bullish"
+      trend ===
+        "Bearish" &&
+      fvg?.type !==
+        "bullish"
     )
   ) {
     action = "SELL";
   } else if (
-    bos === "Bullish BOS" ||
-    trend === "Bullish" ||
-    fvg?.type === "bullish"
+    bos ===
+      "Bullish BOS" ||
+    trend ===
+      "Bullish" ||
+    fvg?.type ===
+      "bullish"
   ) {
     action = "BUY";
   }
 
-  /* -------------------------------------------------------
-     TARGET / RISK
-  ------------------------------------------------------- */
+  /* =========================
+     SUPPORT / RESISTANCE
+  ========================= */
+
+  const {
+    support,
+    resistance,
+  } =
+    getSupportResistance(
+      c,
+      last
+    );
+
+  /* =========================
+     RISK / LEVELS
+  ========================= */
 
   const recentRange =
     Math.max(
@@ -629,129 +740,60 @@ function analyze(
 
   const risk =
     Math.max(
-      recentRange * 0.18,
-      Math.abs(last) * 0.002
+      recentRange *
+        0.18,
+      Math.abs(last) *
+        0.002
     );
 
-  const entry = last;
+  const entry =
+    last;
 
   const tp1 =
     action === "BUY"
-      ? last + risk * 1.5
-      : last - risk * 1.5;
+      ? last +
+        risk * 1.5
+      : last -
+        risk * 1.5;
 
   const tp2 =
     action === "BUY"
-      ? last + risk * 2.8
-      : last - risk * 2.8;
+      ? last +
+        risk * 2.8
+      : last -
+        risk * 2.8;
 
   const sl =
     action === "BUY"
       ? last - risk
       : last + risk;
 
-  /* -------------------------------------------------------
-     IDEA DESCRIPTION
-     IMPORTANT:
-     This is NOT a signal.
-     It explains what the chart is suggesting.
-  ------------------------------------------------------- */
-
-  let ideaText = "";
-
-  if (
-    action === "BUY"
-  ) {
-    if (
-      resistance &&
-      last > resistance
-    ) {
-      ideaText =
-        `Price has broken above the recent resistance. ` +
-        `If the breakout holds, the pair may continue higher. ` +
-        `The bullish structure and ${trendline.toLowerCase()} trendline support the upside idea.`;
-    } else if (
-      support &&
-      Math.abs(last - support) <=
-        recentRange * 0.35
-    ) {
-      ideaText =
-        `Price is trading near the recent support zone. ` +
-        `A bullish reaction from support could push price higher. ` +
-        `The ${trendline.toLowerCase()} trendline and bullish structure add support to this idea.`;
-    } else {
-      ideaText =
-        `The chart structure is currently leaning bullish. ` +
-        `Price may continue higher if buyers defend the nearby support and break the next resistance.`;
-    }
-  } else {
-    if (
-      support &&
-      last < support
-    ) {
-      ideaText =
-        `Price has broken below the recent support. ` +
-        `If the breakdown holds, the pair may continue lower. ` +
-        `The bearish structure and ${trendline.toLowerCase()} trendline support the downside idea.`;
-    } else if (
-      resistance &&
-      Math.abs(last - resistance) <=
-        recentRange * 0.35
-    ) {
-      ideaText =
-        `Price is approaching the recent resistance zone. ` +
-        `A rejection from resistance could send price lower. ` +
-        `The bearish structure increases the probability of downside movement.`;
-    } else {
-      ideaText =
-        `The chart structure is currently leaning bearish. ` +
-        `Price may move lower if sellers defend the nearby resistance and break the next support.`;
-    }
-  }
-
-  if (fvg) {
-    ideaText +=
-      fvg.type === "bullish"
-        ? ` A bullish FVG is also visible on the chart.`
-        : ` A bearish FVG is also visible on the chart.`;
-  }
-
   return {
     action,
 
-    entry: roundPrice(
-      entry,
-      decimals
-    ),
+    entry:
+      roundPrice(
+        entry,
+        decimals
+      ),
 
-    tp1: roundPrice(
-      tp1,
-      decimals
-    ),
+    tp1:
+      roundPrice(
+        tp1,
+        decimals
+      ),
 
-    tp2: roundPrice(
-      tp2,
-      decimals
-    ),
+    tp2:
+      roundPrice(
+        tp2,
+        decimals
+      ),
 
-    sl: roundPrice(
-      sl,
-      decimals
-    ),
-
-    support: support
-      ? roundPrice(
-          support,
-          decimals
-        )
-      : null,
-
-    resistance: resistance
-      ? roundPrice(
-          resistance,
-          decimals
-        )
-      : null,
+    sl:
+      roundPrice(
+        sl,
+        decimals
+      ),
 
     fvg,
 
@@ -763,8 +805,138 @@ function analyze(
 
     orderBlock,
 
-    ideaText,
+    support:
+      support !== null
+        ? roundPrice(
+            support,
+            decimals
+          )
+        : null,
+
+    resistance:
+      resistance !== null
+        ? roundPrice(
+            resistance,
+            decimals
+          )
+        : null,
   };
+}
+
+/* =========================================================
+   HTML SAFE TEXT
+========================================================= */
+
+function safeText(
+  s: string
+) {
+  return s.replace(
+    /[&<>"']/g,
+    (ch) =>
+      ({
+        "&":
+          "&amp;",
+        "<":
+          "&lt;",
+        ">":
+          "&gt;",
+        '"':
+          "&quot;",
+        "'":
+          "&apos;",
+      }[
+        ch
+      ]!
+  );
+}
+
+/* =========================================================
+   IDEA DESCRIPTION
+
+   This is NOT a signal.
+   It explains what the chart is suggesting.
+========================================================= */
+
+function buildIdeaDescription(
+  pair: string,
+  p: Analysis,
+  decimals: number
+): string {
+  const supportText =
+    p.support !== null
+      ? p.support.toFixed(
+          decimals
+        )
+      : "N/A";
+
+  const resistanceText =
+    p.resistance !== null
+      ? p.resistance.toFixed(
+          decimals
+        )
+      : "N/A";
+
+  let setup = "";
+
+  if (
+    p.action === "BUY"
+  ) {
+    if (
+      p.support !== null
+    ) {
+      setup =
+        `Price is holding above support near ${supportText}. ` +
+        `If the support continues to hold, the pair may push higher toward the next resistance around ${resistanceText}.`;
+    } else {
+      setup =
+        `The bullish structure suggests further upside while buyers maintain control.`;
+    }
+  } else {
+    if (
+      p.resistance !== null
+    ) {
+      setup =
+        `Price is reacting below resistance near ${resistanceText}. ` +
+        `If resistance holds, the pair may move lower toward support around ${supportText}.`;
+    } else {
+      setup =
+        `The bearish structure suggests further downside while sellers remain in control.`;
+    }
+  }
+
+  const structure =
+    p.bos !==
+    "No clear BOS"
+      ? `${p.bos} confirms the current market structure.`
+      : `Market structure is developing without a clear BOS.`;
+
+  const fvgText =
+    p.fvg
+      ? `${p.fvg.type === "bullish" ? "Bullish" : "Bearish"} FVG detected.`
+      : `No clear FVG is currently confirmed.`;
+
+  const obText =
+    p.orderBlock !==
+    "None"
+      ? `${p.orderBlock} supports the setup.`
+      : `No clear order block is confirmed.`;
+
+  return [
+    `📊 ${pair}`,
+    ``,
+    `💡 ${setup}`,
+    ``,
+    `🧠 ${structure}`,
+    `• Trend: ${p.trend}`,
+    `• Trendline: ${p.trendline}`,
+    `• ${fvgText}`,
+    `• ${obText}`,
+    ``,
+    `📍 Support: ${supportText}`,
+    `📍 Resistance: ${resistanceText}`,
+    ``,
+    `⚠️ This is a market idea based on chart structure, not a guaranteed trade.`,
+  ].join("\n");
 }
 
 /* =========================================================
@@ -779,40 +951,49 @@ function buildChartSVG(
     price: number;
   },
   plan: Analysis,
+  title: string,
   decimals: number
 ): string {
   const W = 1000;
   const H = 650;
 
   const padL = 20;
-  const padR = 190;
+  const padR = 150;
   const padT = 90;
   const padB = 40;
 
   const innerW =
-    W - padL - padR;
+    W -
+    padL -
+    padR;
 
   const innerH =
-    H - padT - padB;
+    H -
+    padT -
+    padB;
 
   const candles =
     md.candles.slice(-45);
 
-  const highs =
+  const candleHighs =
     candles.map(
       (x) => x.h
     );
 
-  const lows =
+  const candleLows =
     candles.map(
       (x) => x.l
     );
 
   const candleMax =
-    Math.max(...highs);
+    Math.max(
+      ...candleHighs
+    );
 
   const candleMin =
-    Math.min(...lows);
+    Math.min(
+      ...candleLows
+    );
 
   const candleRange =
     Math.max(
@@ -821,86 +1002,59 @@ function buildChartSVG(
       0.0001
     );
 
-  /* -------------------------------------------------------
-     CHART LEVELS
-  ------------------------------------------------------- */
-
   const levelDefs = [
     {
-      price: plan.entry,
-      color: "#3b82f6",
-      label: "LIVE",
-    },
-    {
-      price: plan.tp1,
+      key: "support",
+      price:
+        plan.support ??
+        candleMin,
       color: "#22c55e",
-      label: "TP1",
+      label: "SUPPORT",
     },
     {
-      price: plan.tp2,
-      color: "#16a34a",
-      label: "TP2",
-    },
-    {
-      price: plan.sl,
+      key: "resistance",
+      price:
+        plan.resistance ??
+        candleMax,
       color: "#ef4444",
-      label: "RISK",
+      label: "RESISTANCE",
     },
-  ];
-
-  const structureLevels = [
-    ...(plan.support
-      ? [
-          {
-            price: plan.support,
-            color: "#f59e0b",
-            label: "SUPPORT",
-          },
-        ]
-      : []),
-
-    ...(plan.resistance
-      ? [
-          {
-            price: plan.resistance,
-            color: "#a855f7",
-            label: "RESISTANCE",
-          },
-        ]
-      : []),
   ];
 
   const maxExtension =
     candleRange * 1.5;
 
-  const validLevels = [
-    ...levelDefs,
-    ...structureLevels,
-  ]
-    .map(
-      (x) => x.price
-    )
-    .filter(
-      (p) =>
-        p <=
-          candleMax +
-            maxExtension &&
-        p >=
-          candleMin -
-            maxExtension
-    );
+  const inRangeLevels =
+    levelDefs
+      .map(
+        (l) =>
+          l.price
+      )
+      .filter(
+        (p) =>
+          p <=
+            candleMax +
+              maxExtension &&
+          p >=
+            candleMin -
+              maxExtension
+      );
 
   const allPrices = [
-    ...highs,
-    ...lows,
-    ...validLevels,
+    ...candleHighs,
+    ...candleLows,
+    ...inRangeLevels,
   ];
 
   const maxP =
-    Math.max(...allPrices);
+    Math.max(
+      ...allPrices
+    );
 
   const minP =
-    Math.min(...allPrices);
+    Math.min(
+      ...allPrices
+    );
 
   const range =
     Math.max(
@@ -909,10 +1063,12 @@ function buildChartSVG(
     );
 
   const yMax =
-    maxP + range * 0.08;
+    maxP +
+    range * 0.08;
 
   const yMin =
-    minP - range * 0.08;
+    minP -
+    range * 0.08;
 
   const yRange =
     Math.max(
@@ -933,28 +1089,24 @@ function buildChartSVG(
       slot * 0.65
     );
 
-  const y = (
-    price: number
-  ) =>
+  const y = (p: number) =>
     padT +
-    ((yMax - price) /
+    ((yMax - p) /
       yRange) *
       innerH;
 
   const clampY = (
-    value: number
+    yy: number
   ) =>
     Math.min(
       Math.max(
-        value,
+        yy,
         padT
       ),
       H - padB
     );
 
-  /* -------------------------------------------------------
-     GRID
-  ------------------------------------------------------- */
+  /* GRID */
 
   let grid = "";
   let gridLabels = "";
@@ -985,13 +1137,12 @@ function buildChartSVG(
       `y="${yy + 4}" ` +
       `fill="#64748b" font-size="11" ` +
       `font-family="monospace">` +
-      `${p.toFixed(decimals)}` +
-      `</text>`;
+      `${p.toFixed(
+        decimals
+      )}</text>`;
   }
 
-  /* -------------------------------------------------------
-     CANDLESTICKS
-  ------------------------------------------------------- */
+  /* CANDLES */
 
   let body = "";
 
@@ -1000,7 +1151,8 @@ function buildChartSVG(
       const x =
         padL +
         i * slot +
-        (slot - candleW) /
+        (slot -
+          candleW) /
           2;
 
       const xm =
@@ -1015,33 +1167,32 @@ function buildChartSVG(
           ? "#22c55e"
           : "#ef4444";
 
-      const topY = y(
-        Math.max(
-          c.o,
-          c.c
-        )
-      );
+      const topY =
+        y(
+          Math.max(
+            c.o,
+            c.c
+          )
+        );
 
-      const botY = y(
-        Math.min(
-          c.o,
-          c.c
-        )
-      );
+      const botY =
+        y(
+          Math.min(
+            c.o,
+            c.c
+          )
+        );
 
-      const hY = y(
-        c.h
-      );
+      const hY =
+        y(c.h);
 
-      const lY = y(
-        c.l
-      );
+      const lY =
+        y(c.l);
 
       body +=
         `<line x1="${xm}" y1="${hY}" ` +
         `x2="${xm}" y2="${lY}" ` +
-        `stroke="${color}" ` +
-        `stroke-width="1.5"/>`;
+        `stroke="${color}" stroke-width="1.5"/>`;
 
       body +=
         `<rect x="${x}" y="${topY}" ` +
@@ -1054,61 +1205,18 @@ function buildChartSVG(
     }
   );
 
-  /* -------------------------------------------------------
-     FVG ZONE
-  ------------------------------------------------------- */
-
-  let fvgSvg = "";
-
-  if (plan.fvg) {
-    const top =
-      y(
-        Math.max(
-          plan.fvg.low,
-          plan.fvg.high
-        )
-      );
-
-    const bottom =
-      y(
-        Math.min(
-          plan.fvg.low,
-          plan.fvg.high
-        )
-      );
-
-    const fvgColor =
-      plan.fvg.type ===
-      "bullish"
-        ? "#22c55e"
-        : "#ef4444";
-
-    fvgSvg =
-      `<rect x="${padL}" ` +
-      `y="${top}" ` +
-      `width="${innerW}" ` +
-      `height="${Math.max(
-        2,
-        bottom - top
-      )}" ` +
-      `fill="${fvgColor}" ` +
-      `fill-opacity="0.10" ` +
-      `stroke="${fvgColor}" ` +
-      `stroke-opacity="0.45" ` +
-      `stroke-dasharray="6 4"/>`;
-  }
-
-  /* -------------------------------------------------------
-     PRICE LEVELS
-  ------------------------------------------------------- */
+  /* SUPPORT / RESISTANCE */
 
   let levelsSvg = "";
 
-  for (const level of levelDefs) {
+  for (
+    const level of levelDefs
+  ) {
+    const rawY =
+      y(level.price);
+
     const lineY =
-      clampY(
-        y(level.price)
-      );
+      clampY(rawY);
 
     levelsSvg +=
       `<line x1="${padL}" ` +
@@ -1117,12 +1225,12 @@ function buildChartSVG(
       `y2="${lineY}" ` +
       `stroke="${level.color}" ` +
       `stroke-width="2" ` +
-      `stroke-dasharray="5 3"/>`;
+      `stroke-dasharray="6 4"/>`;
 
     levelsSvg +=
       `<rect x="${W - padR}" ` +
       `y="${lineY - 11}" ` +
-      `width="175" ` +
+      `width="140" ` +
       `height="22" ` +
       `rx="4" ` +
       `fill="${level.color}"/>`;
@@ -1134,62 +1242,14 @@ function buildChartSVG(
       `font-size="11" ` +
       `font-weight="bold" ` +
       `font-family="Arial">` +
-      `${level.label}: ` +
-      `${level.price.toFixed(
+      `${level.label}: ${level.price.toFixed(
         decimals
-      )}` +
-      `</text>`;
+      )}</text>`;
   }
-
-  /* -------------------------------------------------------
-     SUPPORT / RESISTANCE
-  ------------------------------------------------------- */
-
-  for (
-    const level of structureLevels
-  ) {
-    const lineY =
-      clampY(
-        y(level.price)
-      );
-
-    levelsSvg +=
-      `<line x1="${padL}" ` +
-      `y1="${lineY}" ` +
-      `x2="${W - padR}" ` +
-      `y2="${lineY}" ` +
-      `stroke="${level.color}" ` +
-      `stroke-width="1.5" ` +
-      `stroke-dasharray="8 5"/>`;
-
-    levelsSvg +=
-      `<rect x="${W - padR}" ` +
-      `y="${lineY - 11}" ` +
-      `width="175" ` +
-      `height="22" ` +
-      `rx="4" ` +
-      `fill="${level.color}"/>`;
-
-    levelsSvg +=
-      `<text x="${W - padR + 8}" ` +
-      `y="${lineY + 4}" ` +
-      `fill="#ffffff" ` +
-      `font-size="10" ` +
-      `font-weight="bold" ` +
-      `font-family="Arial">` +
-      `${level.label}: ` +
-      `${level.price.toFixed(
-        decimals
-      )}` +
-      `</text>`;
-  }
-
-  /* -------------------------------------------------------
-     ACTION
-  ------------------------------------------------------- */
 
   const actionBg =
-    plan.action === "BUY"
+    plan.action ===
+    "BUY"
       ? "#16a34a"
       : "#dc2626";
 
@@ -1200,146 +1260,94 @@ function buildChartSVG(
   height="${H}"
   viewBox="0 0 ${W} ${H}"
 >
-  <rect
-    width="100%"
-    height="100%"
-    fill="#0b0f19"
-  />
 
-  <text
-    x="${padL}"
-    y="35"
-    fill="#ffffff"
-    font-size="22"
-    font-weight="800"
-    font-family="Arial"
-  >
-    ${safeText(
-      md.symbol
-    )} (${md.timeframe})
-  </text>
+<rect
+  width="100%"
+  height="100%"
+  fill="#0b0f19"
+/>
 
-  <rect
-    x="${W - padR - 110}"
-    y="15"
-    width="110"
-    height="30"
-    rx="6"
-    fill="${actionBg}"
-  />
+<text
+  x="${padL}"
+  y="35"
+  fill="#ffffff"
+  font-size="22"
+  font-weight="800"
+  font-family="Arial"
+>
+${safeText(
+  md.symbol
+)} (${md.timeframe})
+</text>
 
-  <text
-    x="${W - padR - 55}"
-    y="35"
-    fill="#ffffff"
-    font-size="14"
-    font-weight="bold"
-    text-anchor="middle"
-    font-family="Arial"
-  >
-    ${plan.action}
-  </text>
+<rect
+  x="${W - padR - 110}"
+  y="15"
+  width="110"
+  height="30"
+  rx="6"
+  fill="${actionBg}"
+/>
 
-  <text
-    x="${padL}"
-    y="60"
-    fill="#94a3b8"
-    font-size="12"
-    font-family="Arial"
-  >
-    Live: ${md.price.toFixed(
-      decimals
-    )}
-    | BOS: ${safeText(
-      plan.bos
-    )}
-    | Trend: ${safeText(
-      plan.trend
-    )}
-    | OB: ${safeText(
-      plan.orderBlock
-    )}
-  </text>
+<text
+  x="${W - padR - 55}"
+  y="35"
+  fill="#ffffff"
+  font-size="14"
+  font-weight="bold"
+  text-anchor="middle"
+  font-family="Arial"
+>
+${plan.action}
+</text>
 
-  ${grid}
+<text
+  x="${padL}"
+  y="60"
+  fill="#94a3b8"
+  font-size="12"
+  font-family="Arial"
+>
+Live: ${md.price.toFixed(
+  decimals
+)}
+ | ${plan.bos}
+ | Trend: ${plan.trend}
+ | FVG: ${
+    plan.fvg
+      ? plan.fvg.type
+      : "None"
+  }
+</text>
 
-  ${fvgSvg}
+${grid}
+${body}
+${levelsSvg}
+${gridLabels}
 
-  ${body}
+<rect
+  x="0"
+  y="${H - 30}"
+  width="${W}"
+  height="30"
+  fill="#030712"
+/>
 
-  ${levelsSvg}
+<text
+  x="${padL}"
+  y="${H - 10}"
+  fill="#64748b"
+  font-size="11"
+  font-family="Arial"
+>
+Forex 7 StarZ • Live Market Idea • SMC / FVG Analysis
+</text>
 
-  ${gridLabels}
-
-  <rect
-    x="0"
-    y="${H - 30}"
-    width="${W}"
-    height="30"
-    fill="#030712"
-  />
-
-  <text
-    x="${padL}"
-    y="${H - 10}"
-    fill="#64748b"
-    font-size="11"
-    font-family="Arial"
-  >
-    Live Market Idea • FVG • SMC • BOS • Trendline
-  </text>
-</svg>
-`;
+</svg>`;
 }
 
 /* =========================================================
-   DASHBOARD IDEA DESCRIPTION
-========================================================= */
-
-function buildDescription(
-  pair: string,
-  p: Analysis,
-  decimals: number
-): string {
-  const supportText =
-    p.support !== null
-      ? p.support.toFixed(decimals)
-      : "N/A";
-
-  const resistanceText =
-    p.resistance !== null
-      ? p.resistance.toFixed(
-          decimals
-        )
-      : "N/A";
-
-  const fvgText =
-    p.fvg
-      ? p.fvg.type ===
-        "bullish"
-        ? "Bullish FVG"
-        : "Bearish FVG"
-      : "No clear FVG";
-
-  return [
-    `💡 ${pair} — Market Idea`,
-    ``,
-    p.ideaText,
-    ``,
-    `📌 Support: ${supportText}`,
-    `📌 Resistance: ${resistanceText}`,
-    `🧠 Trend: ${p.trend}`,
-    `📐 Trendline: ${p.trendline}`,
-    `📊 Structure: ${p.bos}`,
-    `🏦 Order Block: ${p.orderBlock}`,
-    `🧩 FVG: ${fvgText}`,
-    ``,
-    `⚠️ This is a market idea based on current chart structure, not a guaranteed trade.`,
-  ].join("\n");
-}
-
-/* =========================================================
-   UPLOAD CHART
+   SUPABASE STORAGE
 ========================================================= */
 
 async function uploadSvg(
@@ -1349,11 +1357,17 @@ async function uploadSvg(
 ): Promise<string | null> {
   try {
     const bytes =
-      new TextEncoder().encode(svg);
+      new TextEncoder().encode(
+        svg
+      );
 
-    const { error } =
+    const {
+      error,
+    } =
       await supabase.storage
-        .from("chart-images")
+        .from(
+          "chart-images"
+        )
         .upload(
           filename,
           bytes,
@@ -1366,25 +1380,24 @@ async function uploadSvg(
 
     if (error) {
       console.error(
-        "Chart upload error:",
+        "Chart upload error",
         error
       );
 
       return null;
     }
 
-    const publicUrl =
-      supabase.storage
-        .from("chart-images")
-        .getPublicUrl(
-          filename
-        )
-        .data.publicUrl;
-
-    return publicUrl;
+    return supabase.storage
+      .from(
+        "chart-images"
+      )
+      .getPublicUrl(
+        filename
+      )
+      .data.publicUrl;
   } catch (error) {
     console.error(
-      "Chart upload exception:",
+      "Chart upload exception",
       error
     );
 
@@ -1393,13 +1406,7 @@ async function uploadSvg(
 }
 
 /* =========================================================
-   TELEGRAM AUTO IDEA POST
-   ---------------------------------------------------------
-   IMPORTANT:
-   This calls the EXISTING telegram-signal-post function
-   ONLY with action = new_idea.
-
-   Existing new_signal/update actions remain untouched.
+   TELEGRAM AUTO POST
 ========================================================= */
 
 async function postIdeaToTelegram(
@@ -1412,37 +1419,37 @@ async function postIdeaToTelegram(
   }
 ): Promise<boolean> {
   try {
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/telegram-signal-post`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json",
-          Authorization:
-            `Bearer ${serviceRoleKey}`,
-          apikey:
-            serviceRoleKey,
-        },
-        body: JSON.stringify({
-          action: "new_idea",
+    const response =
+      await fetch(
+        `${supabaseUrl}/functions/v1/telegram-signal-post`,
+        {
+          method: "POST",
 
-          idea: {
-            title: idea.title,
-            description:
-              idea.description,
-            image_url:
-              idea.image_url,
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${serviceRoleKey}`,
+
+            apikey:
+              serviceRoleKey,
           },
-        }),
-      }
-    );
+
+          body: JSON.stringify({
+            action:
+              "new_idea",
+
+            idea,
+          }),
+        }
+      );
 
     const result =
       await response.json();
 
     console.log(
-      "Telegram idea response:",
+      "Telegram idea result:",
       result
     );
 
@@ -1461,121 +1468,321 @@ async function postIdeaToTelegram(
 }
 
 /* =========================================================
-   MAIN
+   MAIN FUNCTION
 ========================================================= */
 
-Deno.serve(async (req) => {
-  if (
-    req.method === "OPTIONS"
-  ) {
-    return new Response(
-      "ok",
-      {
-        headers:
-          corsHeaders,
-      }
-    );
-  }
-
-  try {
-    const supabaseUrl =
-      Deno.env.get(
-        "SUPABASE_URL"
-      )!;
-
-    const serviceRoleKey =
-      Deno.env.get(
-        "SUPABASE_SERVICE_ROLE_KEY"
-      )!;
-
-    const supabase =
-      createClient(
-        supabaseUrl,
-        serviceRoleKey
-      );
-
-    const url =
-      new URL(req.url);
-
-    /* -------------------------------------------------------
-       MANUAL PAIR OPTION
-    ------------------------------------------------------- */
-
-    const requestedPair =
-      url.searchParams.get(
-        "pair"
-      );
-
-    const cfg =
-      PAIRS.find(
-        (x) =>
-          x.pair ===
-          requestedPair
-      ) ||
-      pickScheduledPair(
-        new Date()
-      );
-
-    console.log(
-      "Selected idea pair:",
-      cfg.pair
-    );
-
-    /* -------------------------------------------------------
-       LIVE MT5 PRICE
-    ------------------------------------------------------- */
-
-    const prices =
-      await fetchMt5Prices(
-        PAIRS.map(
-          (x) => x.pair
-        ),
-        supabaseUrl,
-        serviceRoleKey
-      );
-
-    const livePrice =
-      prices[cfg.pair];
-
-    if (!livePrice) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error:
-            `No live MT5 price for ${cfg.pair}`,
-        }),
-        {
-          status: 503,
-          headers: {
-            ...corsHeaders,
-            "Content-Type":
-              "application/json",
-          },
-        }
-      );
-    }
-
-    /* -------------------------------------------------------
-       CANDLES
-    ------------------------------------------------------- */
-
-    const candles =
-      await fetchCandles(
-        cfg.yahoo,
-        "H1"
-      );
-
+Deno.serve(
+  async (req) => {
     if (
-      candles.length < 12
+      req.method ===
+      "OPTIONS"
     ) {
       return new Response(
+        "ok",
+        {
+          headers:
+            corsHeaders,
+        }
+      );
+    }
+
+    try {
+      const supabaseUrl =
+        Deno.env.get(
+          "SUPABASE_URL"
+        )!;
+
+      const serviceRoleKey =
+        Deno.env.get(
+          "SUPABASE_SERVICE_ROLE_KEY"
+        )!;
+
+      const supabase =
+        createClient(
+          supabaseUrl,
+          serviceRoleKey
+        );
+
+      const url =
+        new URL(
+          req.url
+        );
+
+      /* =========================
+         PAIR SELECTION
+      ========================= */
+
+      const requestedPair =
+        url.searchParams.get(
+          "pair"
+        );
+
+      const cfg =
+        PAIRS.find(
+          (x) =>
+            x.pair ===
+            requestedPair
+        ) ||
+        pickScheduledPair(
+          new Date()
+        );
+
+      console.log(
+        "Generating idea for:",
+        cfg.pair
+      );
+
+      /* =========================
+         LIVE MT5 PRICE
+      ========================= */
+
+      const prices =
+        await fetchMt5Prices(
+          PAIRS.map(
+            (x) => x.pair
+          ),
+          supabaseUrl,
+          serviceRoleKey
+        );
+
+      const livePrice =
+        prices[cfg.pair];
+
+      if (!livePrice) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              `No live MT5 price for ${cfg.pair}`,
+          }),
+          {
+            status: 503,
+            headers: {
+              ...corsHeaders,
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+      }
+
+      /* =========================
+         CANDLES
+      ========================= */
+
+      const candles =
+        await fetchCandles(
+          cfg.yahoo,
+          "H1"
+        );
+
+      if (
+        candles.length <
+        12
+      ) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "Not enough chart candles",
+          }),
+          {
+            status: 503,
+            headers: {
+              ...corsHeaders,
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+      }
+
+      /* =========================
+         MERGE LIVE PRICE
+      ========================= */
+
+      const last =
+        candles[
+          candles.length - 1
+        ];
+
+      candles[
+        candles.length - 1
+      ] = {
+        ...last,
+        c: livePrice,
+        h: Math.max(
+          last.h,
+          livePrice
+        ),
+        l: Math.min(
+          last.l,
+          livePrice
+        ),
+      };
+
+      /* =========================
+         ANALYSIS
+      ========================= */
+
+      const analysis =
+        analyze(
+          candles,
+          livePrice,
+          cfg.decimals
+        );
+
+      /* =========================
+         CHART IMAGE
+      ========================= */
+
+      const svg =
+        buildChartSVG(
+          {
+            candles,
+            symbol:
+              cfg.pair,
+            timeframe:
+              "H1",
+            price:
+              livePrice,
+          },
+          analysis,
+          `${analysis.action} Market Idea`,
+          cfg.decimals
+        );
+
+      const filename =
+        `auto-ideas/${Date.now()}-${cfg.pair.replace(
+          /[^A-Za-z0-9]/g,
+          "_"
+        )}.svg`;
+
+      const imageUrl =
+        await uploadSvg(
+          supabase,
+          svg,
+          filename
+        );
+
+      /* =========================
+         IDEA DESCRIPTION
+      ========================= */
+
+      const description =
+        buildIdeaDescription(
+          cfg.pair,
+          analysis,
+          cfg.decimals
+        );
+
+      const title =
+        `${analysis.action === "BUY" ? "🟢" : "🔴"} ` +
+        `${cfg.pair} — Market Idea`;
+
+      /* =========================
+         DATABASE
+      ========================= */
+
+      const row = {
+        title,
+        description,
+        published:
+          true,
+        image_url:
+          imageUrl,
+      };
+
+      const {
+        data,
+        error,
+      } =
+        await supabase
+          .from(
+            "market_ideas"
+          )
+          .insert(row)
+          .select(
+            "id,title,description,image_url"
+          )
+          .single();
+
+      if (error) {
+        throw error;
+      }
+
+      /* =========================
+         TELEGRAM
+
+         This is the important fix:
+         generated idea -> Telegram
+         with same chart image.
+      ========================= */
+
+      const telegramSent =
+        await postIdeaToTelegram(
+          supabaseUrl,
+          serviceRoleKey,
+          {
+            title,
+            description,
+            image_url:
+              imageUrl,
+          }
+        );
+
+      console.log(
+        "Idea saved:",
+        data?.id
+      );
+
+      console.log(
+        "Telegram sent:",
+        telegramSent
+      );
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+
+          pair:
+            cfg.pair,
+
+          live_price:
+            livePrice,
+
+          analysis,
+
+          idea:
+            data,
+
+          telegram_sent:
+            telegramSent,
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Auto ideas error:",
+        error
+      );
+
+      return new Response(
         JSON.stringify({
           success: false,
           error:
-            "Not enough chart candles",
+            error instanceof Error
+              ? error.message
+              : String(error),
         }),
         {
-          status: 503,
+          status: 500,
           headers: {
             ...corsHeaders,
             "Content-Type":
@@ -1584,192 +1791,5 @@ Deno.serve(async (req) => {
         }
       );
     }
-
-    /* -------------------------------------------------------
-       REPLACE LAST CLOSE WITH LIVE MT5 PRICE
-    ------------------------------------------------------- */
-
-    const last =
-      candles[
-        candles.length - 1
-      ];
-
-    candles[
-      candles.length - 1
-    ] = {
-      ...last,
-      c: livePrice,
-      h: Math.max(
-        last.h,
-        livePrice
-      ),
-      l: Math.min(
-        last.l,
-        livePrice
-      ),
-    };
-
-    /* -------------------------------------------------------
-       ANALYSIS
-    ------------------------------------------------------- */
-
-    const analysis =
-      analyze(
-        candles,
-        livePrice,
-        cfg.decimals
-      );
-
-    console.log(
-      "Idea analysis:",
-      analysis
-    );
-
-    /* -------------------------------------------------------
-       CHART
-    ------------------------------------------------------- */
-
-    const svg =
-      buildChartSVG(
-        {
-          candles,
-          symbol:
-            cfg.pair,
-          timeframe:
-            "H1",
-          price:
-            livePrice,
-        },
-        analysis,
-        cfg.decimals
-      );
-
-    const filename =
-      `auto-ideas/${Date.now()}-${cfg.pair.replace(
-        /[^A-Za-z0-9]/g,
-        "_"
-      )}.svg`;
-
-    const imageUrl =
-      await uploadSvg(
-        supabase,
-        svg,
-        filename
-      );
-
-    /* -------------------------------------------------------
-       IDEA TEXT
-    ------------------------------------------------------- */
-
-    const title =
-      `${analysis.action === "BUY" ? "🟢" : "🔴"} ` +
-      `Market Idea — ${cfg.pair}`;
-
-    const description =
-      buildDescription(
-        cfg.pair,
-        analysis,
-        cfg.decimals
-      );
-
-    /* -------------------------------------------------------
-       SAVE TO DASHBOARD
-    ------------------------------------------------------- */
-
-    const row = {
-      title,
-      description,
-      published: true,
-      image_url:
-        imageUrl,
-    };
-
-    const {
-      data,
-      error,
-    } =
-      await supabase
-        .from(
-          "market_ideas"
-        )
-        .insert(row)
-        .select(
-          "id,title,description,image_url"
-        )
-        .single();
-
-    if (error) {
-      throw error;
-    }
-
-    /* -------------------------------------------------------
-       TELEGRAM
-    ------------------------------------------------------- */
-
-    const telegramSent =
-      await postIdeaToTelegram(
-        supabaseUrl,
-        serviceRoleKey,
-        {
-          title,
-          description,
-          image_url:
-            imageUrl,
-        }
-      );
-
-    /* -------------------------------------------------------
-       RESPONSE
-    ------------------------------------------------------- */
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-
-        pair:
-          cfg.pair,
-
-        live_price:
-          livePrice,
-
-        analysis,
-
-        idea: data,
-
-        telegram_sent:
-          telegramSent,
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
-  } catch (error) {
-    console.error(
-      "Auto ideas error:",
-      error
-    );
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
   }
-});
+);
