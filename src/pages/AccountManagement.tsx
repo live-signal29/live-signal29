@@ -202,6 +202,12 @@ const AccountManagement = () => {
 
       if (error) throw error;
 
+      // Notify admin's Telegram bot. Fire-and-forget: a notify failure
+      // shouldn't block the user from seeing their application succeeded.
+      supabase.functions
+        .invoke('account-management-notify', { body: validated })
+        .catch((notifyErr) => console.error('Telegram notify failed:', notifyErr));
+
       toast.success("Application submitted successfully!", {
         description: "We'll contact you on WhatsApp shortly."
       });

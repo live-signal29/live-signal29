@@ -18,6 +18,7 @@ import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
 import { startOfDay, format } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
+import { MT5CopierBanner } from "@/components/MT5CopierBanner";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
@@ -472,6 +473,7 @@ const SignalsDashboard = () => {
                                     {(i + 1) % 3 === 0 && (
                                       <div className="md:col-span-2">
                                         <AffiliateBannerCarousel />
+                                        <MT5CopierBanner />
                                       </div>
                                     )}
                                   </React.Fragment>
