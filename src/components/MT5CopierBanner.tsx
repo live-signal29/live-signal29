@@ -124,21 +124,21 @@ export const MT5CopierBanner = () => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary/70 px-4 py-3.5 text-left shadow-md shadow-primary/20 transition-transform active:scale-[0.98]"
+        className="mb-4 flex w-full items-center gap-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/70 px-3 py-2.5 text-left shadow-sm shadow-primary/20 transition-transform active:scale-[0.98]"
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15 text-primary-foreground p-2">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/15 text-primary-foreground p-1.5">
           <CopierLogo />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-extrabold leading-tight text-primary-foreground">
+          <div className="text-[13px] font-bold leading-tight text-primary-foreground truncate">
             MT5 Copier — Connect Your Account
           </div>
-          <div className="text-[11px] leading-tight text-primary-foreground/85">
-            Every signal auto-copied straight to your MT5 trading account
+          <div className="text-[10px] leading-tight text-primary-foreground/85 truncate">
+            Auto-copy every signal to your MT5 account
           </div>
         </div>
-        <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary-foreground px-3 py-1.5 text-[11px] font-extrabold text-primary">
-          Connect <ArrowRight className="h-3 w-3" />
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary-foreground px-2.5 py-1 text-[10px] font-extrabold text-primary">
+          Connect <ArrowRight className="h-2.5 w-2.5" />
         </span>
       </button>
 
