@@ -454,13 +454,21 @@ const SignalsDashboard = () => {
                         groupedSignals[date].push(signal);
                       });
 
+                      // Running counter across ALL day groups combined, so the
+                      // banner shows every 3 signals overall — not reset to 0
+                      // at the start of each day (which could hide it entirely
+                      // on days with fewer than 3 signals).
+                      let globalSignalIndex = 0;
+
                       return Object.entries(groupedSignals).map(([date, daySignals]) => (
                         <div key={date}>
                           <div className="space-y-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                              {daySignals.map((signal, i) => {
+                              {daySignals.map((signal) => {
                                 const key = normalizeSymbolKey(signal.pair);
                                 const currentLivePrice = livePrices[key] ? parseFloat(livePrices[key]) : undefined;
+                                globalSignalIndex += 1;
+                                const showBanner = globalSignalIndex % 3 === 0;
 
                                 return (
                                   <React.Fragment key={signal.id}>
@@ -470,7 +478,7 @@ const SignalsDashboard = () => {
                                       subscriptionStatus={subscriptionStatus}
                                       livePrice={currentLivePrice}
                                     />
-                                    {(i + 1) % 3 === 0 && (
+                                    {showBanner && (
                                       <div className="md:col-span-2">
                                         <AffiliateBannerCarousel />
                                         <MT5CopierBanner />
