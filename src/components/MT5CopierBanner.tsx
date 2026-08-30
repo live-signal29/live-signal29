@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, Link2, Loader2, ShieldAlert } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,10 +40,35 @@ const fieldLabelClass = "text-xs font-medium";
 const fieldInputClass = "h-9 text-sm";
 
 /**
- * Banner shown between signal cards. Opens a dialog where a user can submit
- * their MT5 account details so it can be manually connected to the
- * Telegram-to-MT5 copier. On submit, an edge function saves the request and
- * pings the admin's Telegram notification bot.
+ * Simple stacked-candlestick "copier" mark — stands in as a lightweight
+ * logo badge for the MT5 Copier feature without using any broker/MetaTrader
+ * trademarked artwork.
+ */
+const CopierLogo = () => (
+  <svg viewBox="0 0 40 40" className="h-full w-full" aria-hidden="true">
+    <rect width="40" height="40" rx="10" fill="currentColor" opacity="0.15" />
+    <rect x="9" y="20" width="5" height="12" rx="1.5" fill="currentColor" />
+    <rect x="17.5" y="12" width="5" height="20" rx="1.5" fill="currentColor" />
+    <rect x="26" y="16" width="5" height="16" rx="1.5" fill="currentColor" />
+    <path
+      d="M9 15 L17 9 L25 12 L31 7"
+      stroke="currentColor"
+      strokeWidth="2"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M26 7 L31 7 L31 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/**
+ * Promotional banner shown once near the top of the signals feed (above the
+ * signal cards, visible without scrolling, in every category). Opens a
+ * dialog where a user can submit their MT5 account details so it can be
+ * manually connected to the Telegram-to-MT5 copier. On submit, an edge
+ * function saves the request and pings the admin's Telegram notification
+ * bot.
  */
 export const MT5CopierBanner = () => {
   const [open, setOpen] = useState(false);
@@ -99,23 +124,21 @@ export const MT5CopierBanner = () => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="my-3 flex w-full items-center justify-between gap-3 rounded-[14px] border border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3 text-left shadow-[0_1px_3px_hsl(var(--foreground)/0.05)] transition-transform active:scale-[0.98]"
+        className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary/70 px-4 py-3.5 text-left shadow-md shadow-primary/20 transition-transform active:scale-[0.98]"
       >
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15">
-            <Link2 className="h-4 w-4 text-primary" />
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15 text-primary-foreground p-2">
+          <CopierLogo />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-extrabold leading-tight text-primary-foreground">
+            MT5 Copier — Connect Your Account
           </div>
-          <div>
-            <div className="text-sm font-bold leading-tight">
-              Connect MT5 to Telegram Copier
-            </div>
-            <div className="text-xs text-muted-foreground leading-tight">
-              Auto-copy every signal directly to your trading account
-            </div>
+          <div className="text-[11px] leading-tight text-primary-foreground/85">
+            Every signal auto-copied straight to your MT5 trading account
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-extrabold text-primary-foreground">
-          <Zap className="h-3 w-3" /> Connect
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary-foreground px-3 py-1.5 text-[11px] font-extrabold text-primary">
+          Connect <ArrowRight className="h-3 w-3" />
         </span>
       </button>
 
@@ -125,7 +148,12 @@ export const MT5CopierBanner = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="space-y-1 pb-1">
-            <DialogTitle className="text-base">Connect Your MT5 Account</DialogTitle>
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary p-1.5">
+                <CopierLogo />
+              </div>
+              <DialogTitle className="text-base">Connect to MT5 Copier</DialogTitle>
+            </div>
             <DialogDescription className="text-xs">
               Share your MT5 details and our team will link your account to the signal copier.
             </DialogDescription>
@@ -191,18 +219,18 @@ export const MT5CopierBanner = () => {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="mt5_password" className={fieldLabelClass}>MT5 Password</Label>
+              <Label htmlFor="mt5_password" className={fieldLabelClass}>Trading Password</Label>
               <Input
                 id="mt5_password"
                 type="password"
-                placeholder="Investor (read-only) password recommended"
+                placeholder="Enter your MT5 trading password"
                 value={form.mt5_password}
                 onChange={update("mt5_password")}
                 className={fieldInputClass}
               />
               <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
-                <ShieldAlert className="h-3 w-3 shrink-0 mt-0.5" />
-                Use the investor (read-only) password if your broker provides one.
+                <ShieldCheck className="h-3 w-3 shrink-0 mt-0.5" />
+                Used only to connect your account to the copier — kept private and secure.
               </p>
             </div>
 
