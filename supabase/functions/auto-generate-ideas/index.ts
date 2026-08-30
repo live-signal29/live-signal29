@@ -846,7 +846,7 @@ function safeText(
           "&apos;",
       }[
         ch
-      ]!
+      ]!)
   );
 }
 
