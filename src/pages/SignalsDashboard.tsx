@@ -343,6 +343,10 @@ const SignalsDashboard = () => {
             </div>
           </div>
 
+          {/* MT5 Copier Banner — shown once near the top, above the first
+              signal card, in every category */}
+          <MT5CopierBanner />
+
           {/* Top Ad */}
           {subscriptionStatus !== "premium" && (
             <div className="mb-4">
@@ -481,7 +485,6 @@ const SignalsDashboard = () => {
                                     {showBanner && (
                                       <div className="md:col-span-2">
                                         <AffiliateBannerCarousel />
-                                        <MT5CopierBanner />
                                       </div>
                                     )}
                                   </React.Fragment>

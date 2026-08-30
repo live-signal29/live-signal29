@@ -439,7 +439,7 @@ const AccountManagement = () => {
         </section>
 
         {/* Apply Now Form */}
-        <section id="apply-form" className="max-w-2xl mx-auto space-y-6">
+        <section id="apply-form" className="max-w-2xl mx-auto space-y-6 scroll-mt-20">
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-2">Apply Now</h2>
             <p className="text-muted-foreground">Fill in your details and we'll contact you shortly</p>
