@@ -23,7 +23,6 @@ import { CopierLeaderboard } from "@/components/CopierLeaderboard";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
-import { StreakStatsRow } from "@/components/StreakStatsRow";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -32,7 +31,6 @@ const CATEGORIES = [
   "FOREX",
   "CRYPTO",
   "DERIV/BINARY",
-  "MARKET IDEAS",
   "COPIER",
 ];
 
@@ -285,8 +283,7 @@ const SignalsDashboard = () => {
     { key: "FOREX", label: "Forex" },
     { key: "CRYPTO", label: "Crypto" },
     { key: "DERIV/BINARY", label: "Deriv" },
-    { key: "MARKET IDEAS", label: "Ideas" },
-    { key: "COPIER", label: "Copier List" },
+    { key: "COPIER", label: "Copier" },
   ];
 
   return (
@@ -519,11 +516,6 @@ const SignalsDashboard = () => {
               )}
             </>
           )}
-
-          {/* Stats */}
-          <div className="mt-3">
-            <StreakStatsRow />
-          </div>
 
           {/* Bottom Ad */}
           {subscriptionStatus !== "premium" && (
