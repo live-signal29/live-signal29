@@ -172,6 +172,14 @@ serve(async (req) => {
         broker_server,
         mt5_password,
         note,
+        // Show up on the public Copier List immediately with 0% stats.
+        // Real profit/loss numbers get filled in (by the admin, from
+        // actual trade results) once the account starts trading.
+        is_public: true,
+        profit_amount: 0,
+        loss_amount: 0,
+        profit_percent: 0,
+        loss_percent: 0,
       })
       .select()
       .single();
