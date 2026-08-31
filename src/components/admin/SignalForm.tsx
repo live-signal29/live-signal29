@@ -186,15 +186,15 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
   const isBuy = formData.type === 'Buy';
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-3">
       {/* Trade Setup Section */}
-      <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
-        <h3 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2">
+      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+        <h3 className="text-xs font-semibold text-primary mb-2 flex items-center gap-1.5">
           <Zap className="h-4 w-4" />
           Trade Setup
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           <div>
             <Label className="text-xs text-muted-foreground">Market</Label>
             <Select 
@@ -234,14 +234,14 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
       </div>
 
       {/* Order Type Section */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2.5">
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Trade Type</Label>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setFormData({ ...formData, type: "Buy" })}
-              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+              className={`flex items-center justify-center gap-2 p-2 text-sm rounded-lg border-2 transition-all font-semibold ${
                 isBuy 
                   ? 'bg-success/20 border-success text-success' 
                   : 'border-border hover:border-success/50 text-muted-foreground hover:text-success'
@@ -253,7 +253,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             <button
               type="button"
               onClick={() => setFormData({ ...formData, type: "Sell" })}
-              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+              className={`flex items-center justify-center gap-2 p-2 text-sm rounded-lg border-2 transition-all font-semibold ${
                 !isBuy 
                   ? 'bg-destructive/20 border-destructive text-destructive' 
                   : 'border-border hover:border-destructive/50 text-muted-foreground hover:text-destructive'
@@ -271,7 +271,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             <button
               type="button"
               onClick={() => setFormData({ ...formData, entry_mode: "market" })}
-              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+              className={`flex items-center justify-center gap-2 p-2 text-sm rounded-lg border-2 transition-all font-semibold ${
                 isMarket 
                   ? 'bg-blue-500/20 border-blue-500 text-blue-500' 
                   : 'border-border hover:border-blue-500/50 text-muted-foreground hover:text-blue-500'
@@ -283,7 +283,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
             <button
               type="button"
               onClick={() => setFormData({ ...formData, entry_mode: "limit" })}
-              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all font-semibold ${
+              className={`flex items-center justify-center gap-2 p-2 text-sm rounded-lg border-2 transition-all font-semibold ${
                 !isMarket 
                   ? 'bg-orange-500/20 border-orange-500 text-orange-500' 
                   : 'border-border hover:border-orange-500/50 text-muted-foreground hover:text-orange-500'
@@ -296,7 +296,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         </div>
       </div>
 
-      <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+      <div className={`p-2 rounded-lg text-xs flex items-center gap-2 ${
         isMarket 
           ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
           : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
@@ -315,10 +315,10 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
       </div>
 
       {/* Price Levels Section */}
-      <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-4">
+      <div className="p-3 rounded-xl bg-muted/30 border border-border space-y-2.5">
         <h3 className="text-sm font-semibold text-foreground">Price Levels</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           <div>
             <Label className="text-xs text-muted-foreground">Entry Price</Label>
             <Input
@@ -326,7 +326,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
               placeholder="e.g., 2650.00 or Gold Buy Zone"
               value={formData.entry}
               onChange={(e) => setFormData({ ...formData, entry: e.target.value })}
-              className="mt-1 font-mono text-lg"
+              className="mt-1 h-9 font-mono text-sm"
               required
             />
           </div>
@@ -337,13 +337,13 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
               placeholder="e.g., 2640.00"
               value={formData.sl}
               onChange={(e) => setFormData({ ...formData, sl: e.target.value })}
-              className="mt-1 font-mono text-lg border-destructive/30"
+              className="mt-1 h-9 font-mono text-sm border-destructive/30"
               required
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
           <div>
             <Label className="text-xs text-success">Take Profit 1 (TP1)</Label>
             <Input
@@ -379,7 +379,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
       </div>
 
       {/* Signal Details Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         <div>
           <Label className="text-xs text-muted-foreground">Signal Type</Label>
           <Select value={formData.signal_type} onValueChange={(value) => setFormData({ ...formData, signal_type: value })}>
@@ -416,10 +416,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
           value={formData.analysis_reason}
           onChange={(e) => setFormData({ ...formData, analysis_reason: e.target.value })}
           className="mt-1"
+          rows={2}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         <div>
           <Label className="text-xs text-muted-foreground">Profit Note (Optional)</Label>
           <Input
@@ -441,8 +442,8 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
       </div>
 
       {/* Tag Field */}
-      <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/5 to-pink-500/10 border border-purple-500/20">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/5 to-pink-500/10 border border-purple-500/20">
+        <div className="flex items-center gap-1.5 mb-2">
           <Tag className="h-4 w-4 text-purple-500" />
           <Label className="text-sm font-semibold text-purple-400">Event Tag (Optional)</Label>
         </div>
@@ -455,11 +456,11 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
       </div>
 
       {/* Premium Toggle */}
-      <div className="flex items-center justify-between p-4 border border-yellow-500/30 rounded-xl bg-gradient-to-r from-yellow-500/5 to-yellow-500/10">
+      <div className="flex items-center justify-between p-3 border border-yellow-500/30 rounded-xl bg-gradient-to-r from-yellow-500/5 to-yellow-500/10">
         <div className="flex items-center gap-3">
-          <Crown className="h-5 w-5 text-yellow-500" />
+          <Crown className="h-4 w-4 text-yellow-500" />
           <div>
-            <Label className="text-base font-semibold">Premium Signal</Label>
+            <Label className="text-sm font-semibold">Premium Signal</Label>
             <p className="text-xs text-muted-foreground">Lock for premium users only</p>
           </div>
         </div>
@@ -469,7 +470,7 @@ const SignalForm = ({ onSuccess, editSignal }: SignalFormProps) => {
         />
       </div>
 
-      <Button type="submit" className="w-full btn-glow text-base py-6" disabled={loading}>
+      <Button type="submit" className="w-full btn-glow text-sm py-4" disabled={loading}>
         {loading ? "Processing..." : editSignal ? "Update Signal" : "Create Signal"}
       </Button>
     </form>
