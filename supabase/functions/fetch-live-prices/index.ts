@@ -919,7 +919,20 @@ function getRapidSymbol(appPair: string): string | null {
     DOGEUSD: "DOGE/USD",
   };
 
-  return map[n] || null;
+  if (map[n]) return map[n];
+  if (n.includes("XAU") || n.includes("GOLD")) return "XAU/USD";
+  if (n.includes("XAG") || n.includes("SILVER")) return "XAG/USD";
+  if (n.includes("EURUSD")) return "EUR/USD";
+  if (n.includes("GBPUSD")) return "GBP/USD";
+  if (n.includes("USDJPY")) return "USD/JPY";
+  if (n.includes("AUDUSD")) return "AUD/USD";
+  if (n.includes("GBPJPY")) return "GBP/JPY";
+  if (n.includes("USDCAD")) return "USD/CAD";
+  if (n.includes("USDCHF")) return "USD/CHF";
+  if (n.includes("BTCUSD")) return "BTC/USD";
+  if (n.includes("ETHUSD")) return "ETH/USD";
+  if (n.includes("SOLUSD")) return "SOL/USD";
+  return null;
 }
 
 function rapidDecimals(pair: string): number {
@@ -999,6 +1012,100 @@ async function fetchRapidApiPrices(
   }
 
   return prices;
+}
+
+
+/* =========================================================
+   YAHOO FINANCE FALLBACK
+   Uses Yahoo chart data directly. This is the final fallback when
+   the RapidAPI provider is unavailable or not subscribed.
+========================================================= */
+
+function getYahooSymbol(appPair: string): string | null {
+  const n = normalizeSymbol(appPair);
+  if (n.includes("XAU") || n.includes("GOLD")) return "GC=F";
+  if (n.includes("XAG") || n.includes("SILVER")) return "SI=F";
+  if (n.includes("US30")) return "^DJI";
+  if (n.includes("NASDAQ") || n.includes("NAS100")) return "^IXIC";
+  if (n.includes("SP500") || n.includes("S&P500")) return "^GSPC";
+  if (n.includes("EURUSD")) return "EURUSD=X";
+  if (n.includes("GBPUSD")) return "GBPUSD=X";
+  if (n.includes("USDJPY")) return "JPY=X";
+  if (n.includes("AUDUSD")) return "AUDUSD=X";
+  if (n.includes("GBPJPY")) return "GBPJPY=X";
+  if (n.includes("USDCAD")) return "CAD=X";
+  if (n.includes("USDCHF")) return "CHF=X";
+  if (n.includes("BTCUSD")) return "BTC-USD";
+  if (n.includes("ETHUSD")) return "ETH-USD";
+  if (n.includes("SOLUSD")) return "SOL-USD";
+  return null;
+}
+
+async function fetchYahooChartPrice(appPair: string): Promise<string | null> {
+  const symbol = getYahooSymbol(appPair);
+  if (!symbol) return null;
+
+  try {
+    const url =
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1m`;
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Forex7StarZ/1.0)",
+        "Accept": "application/json",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      console.error(`Yahoo fallback failed ${appPair}:`, response.status, text.slice(0, 250));
+      return null;
+    }
+
+    const data = JSON.parse(text);
+    const result = data?.chart?.result?.[0];
+    const metaPrice = Number(result?.meta?.regularMarketPrice);
+    const closes = result?.indicators?.quote?.[0]?.close;
+    let price = Number.isFinite(metaPrice) && metaPrice > 0 ? metaPrice : NaN;
+
+    if (!Number.isFinite(price) && Array.isArray(closes)) {
+      for (let i = closes.length - 1; i >= 0; i--) {
+        const v = Number(closes[i]);
+        if (Number.isFinite(v) && v > 0) {
+          price = v;
+          break;
+        }
+      }
+    }
+
+    if (!Number.isFinite(price) || price <= 0) return null;
+
+    const decimals = rapidDecimals(appPair);
+    const fixed = price.toFixed(decimals);
+    console.log(`YAHOO LIVE PRICE: ${appPair} (${symbol}) -> ${fixed}`);
+    return fixed;
+  } catch (error) {
+    console.error(`Yahoo fallback error ${appPair}:`, String(error));
+    return null;
+  }
+}
+
+async function fetchYahooPrices(pairs: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  if (!pairs.length) return out;
+
+  const results = await Promise.all(
+    pairs.map(async (pair) => {
+      const price = await fetchYahooChartPrice(pair);
+      return price ? { pair, price } : null;
+    })
+  );
+
+  for (const item of results) {
+    if (item) out[item.pair] = item.price;
+  }
+  return out;
 }
 
 /* =========================================================
@@ -1090,6 +1197,15 @@ async function fetchAllPrices(
   if (remainingPairs.length > 0) {
     const rapidPrices = await fetchRapidApiPrices(remainingPairs);
     Object.assign(prices, rapidPrices);
+  }
+
+  // STEP 2B - Direct Yahoo chart fallback.
+  // This keeps the generator working even when the RapidAPI subscription
+  // or provider is temporarily unavailable.
+  const rapidMissing = remainingPairs.filter((pair) => !prices[pair]);
+  if (rapidMissing.length > 0) {
+    const yahooPrices = await fetchYahooPrices(rapidMissing);
+    Object.assign(prices, yahooPrices);
   }
 
   const stillMissing = remainingPairs.filter(
