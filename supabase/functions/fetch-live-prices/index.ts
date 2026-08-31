@@ -32,6 +32,8 @@ let credentialsLoadedAt = 0;
 let cachedAccountId: string | null = null;
 let cachedRegion: string | null = null;
 let cachedAccountAt = 0;
+let cachedConnectionStatus = "";
+let lastMt5Error = "";
 
 function clientApi(): string {
   return cachedRegion
@@ -107,47 +109,43 @@ async function loadCredentials() {
 async function getAccountId(): Promise<string | null> {
   await loadCredentials();
 
-  if (
-    !METAAPI_TOKEN ||
-    !MT5_LOGIN ||
-    !MT5_SERVER
-  ) {
-    console.error("MT5 credentials incomplete");
+  if (!METAAPI_TOKEN || !MT5_LOGIN || !MT5_SERVER) {
+    lastMt5Error =
+      "MT5 credentials incomplete. Check METAAPI_TOKEN, MT5_LOGIN and MT5_SERVER.";
+    console.error(lastMt5Error);
     return null;
   }
 
+  // Do not keep using a cached account which was previously DEPLOYING/DISCONNECTED.
   if (
     cachedAccountId &&
-    Date.now() - cachedAccountAt < 10 * 60 * 1000
+    cachedConnectionStatus === "CONNECTED" &&
+    Date.now() - cachedAccountAt < 2 * 60 * 1000
   ) {
     return cachedAccountId;
   }
 
   try {
     const response = await fetch(
-      `${PROVISIONING}/users/current/accounts`,
+      `${PROVISIONING}/users/current/accounts?limit=1000`,
       {
         headers: {
           "auth-token": METAAPI_TOKEN,
+          Accept: "application/json",
         },
         signal: AbortSignal.timeout(10000),
       }
     );
 
     if (!response.ok) {
-      console.error(
-        "Account list failed:",
-        response.status,
-        (await response.text()).slice(0, 500)
-      );
+      const body = (await response.text()).slice(0, 800);
+      lastMt5Error = `MetaApi account list failed (${response.status}): ${body}`;
+      console.error(lastMt5Error);
       return null;
     }
 
     const raw = await response.json();
-
-    const accounts = Array.isArray(raw)
-      ? raw
-      : raw?.items || [];
+    const accounts = Array.isArray(raw) ? raw : raw?.items || [];
 
     let account =
       accounts.find(
@@ -157,8 +155,7 @@ async function getAccountId(): Promise<string | null> {
             String(MT5_SERVER).toLowerCase()
       ) ||
       accounts.find(
-        (a: any) =>
-          String(a.login) === String(MT5_LOGIN)
+        (a: any) => String(a.login) === String(MT5_LOGIN)
       );
 
     if (!account && MT5_PASSWORD) {
@@ -181,77 +178,141 @@ async function getAccountId(): Promise<string | null> {
             platform: "mt5",
             magic: 0,
           }),
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(20000),
         }
       );
 
       if (!createResponse.ok) {
-        console.error(
-          "Account creation failed:",
-          createResponse.status,
-          (await createResponse.text()).slice(0, 500)
-        );
+        const body = (await createResponse.text()).slice(0, 1000);
+        lastMt5Error =
+          `MetaApi account creation failed (${createResponse.status}): ${body}`;
+        console.error(lastMt5Error);
         return null;
       }
 
       account = await createResponse.json();
     }
 
-    const accountId =
-      account?._id || account?.id;
+    const accountId = account?._id || account?.id;
 
     if (!accountId) {
-      console.error("No MetaApi account ID");
+      lastMt5Error =
+        `No MetaApi account found for MT5 login ${MT5_LOGIN} / server ${MT5_SERVER}.`;
+      console.error(lastMt5Error);
       return null;
     }
 
-    const state = String(
-      account?.state || ""
-    ).toUpperCase();
+    // A MetaApi account can be DEPLOYED while the terminal is still connecting.
+    // Wait briefly for CONNECTED before asking the client API for symbols/prices.
+    const maxAttempts = 8;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      let state = String(account?.state || "").toUpperCase();
+      let connectionStatus = String(
+        account?.connectionStatus || ""
+      ).toUpperCase();
 
-    if (
-      state &&
-      state !== "DEPLOYED" &&
-      state !== "DEPLOYING"
-    ) {
-      const deploy = await fetch(
-        `${PROVISIONING}/users/current/accounts/${accountId}/deploy`,
+      if (state !== "DEPLOYED") {
+        const deploy = await fetch(
+          `${PROVISIONING}/users/current/accounts/${accountId}/deploy`,
+          {
+            method: "POST",
+            headers: {
+              "auth-token": METAAPI_TOKEN,
+            },
+            signal: AbortSignal.timeout(10000),
+          }
+        );
+
+        if (!deploy.ok && deploy.status !== 204) {
+          const body = (await deploy.text()).slice(0, 800);
+          console.error(
+            "Deploy request failed:",
+            deploy.status,
+            body
+          );
+        }
+      }
+
+      // Refresh account state/connection status after deploy or while connecting.
+      const statusResponse = await fetch(
+        `${PROVISIONING}/users/current/accounts/${accountId}`,
         {
-          method: "POST",
           headers: {
             "auth-token": METAAPI_TOKEN,
+            Accept: "application/json",
           },
           signal: AbortSignal.timeout(10000),
         }
       );
 
-      console.log(
-        "Deploy status:",
-        deploy.status
-      );
+      if (statusResponse.ok) {
+        account = await statusResponse.json();
+        state = String(account?.state || "").toUpperCase();
+        connectionStatus = String(
+          account?.connectionStatus || ""
+        ).toUpperCase();
+
+        console.log(
+          `MetaApi account ${accountId}: state=${state}, connection=${connectionStatus}, attempt=${attempt + 1}/${maxAttempts}`
+        );
+
+        if (
+          state === "DEPLOYED" &&
+          connectionStatus === "CONNECTED"
+        ) {
+          cachedAccountId = accountId;
+          cachedRegion =
+            account?.region ||
+            account?.primaryReplica?.region ||
+            null;
+          cachedAccountAt = Date.now();
+          cachedConnectionStatus = connectionStatus;
+          lastMt5Error = "";
+          return accountId;
+        }
+
+        if (
+          connectionStatus === "DISCONNECTED_FROM_BROKER" ||
+          state === "DEPLOY_FAILED" ||
+          state === "UNDEPLOYED"
+        ) {
+          lastMt5Error =
+            `MetaApi broker connection failed: state=${state}, connection=${connectionStatus}. Check MT5 login, password and exact server name.`;
+          console.error(lastMt5Error);
+          break;
+        }
+      } else {
+        console.error(
+          "MetaApi account status failed:",
+          statusResponse.status,
+          (await statusResponse.text()).slice(0, 500)
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
 
+    // Even if CONNECTED was not observed during the short wait, keep the account
+    // id and let the symbol/price retries below have a chance to succeed.
     cachedAccountId = accountId;
-
     cachedRegion =
       account?.region ||
       account?.primaryReplica?.region ||
       null;
-
     cachedAccountAt = Date.now();
+    cachedConnectionStatus = String(
+      account?.connectionStatus || ""
+    ).toUpperCase();
 
-    console.log(
-      "MT5 account ready:",
-      accountId,
-      cachedRegion || "default"
-    );
+    if (!lastMt5Error) {
+      lastMt5Error =
+        `MetaApi account is not connected yet: ${cachedConnectionStatus || "UNKNOWN"}.`;
+    }
 
     return accountId;
   } catch (error) {
-    console.error(
-      "getAccountId error:",
-      String(error)
-    );
+    lastMt5Error = `getAccountId error: ${String(error)}`;
+    console.error(lastMt5Error);
     return null;
   }
 }
@@ -662,47 +723,62 @@ function getSymbolAliases(
 async function getBrokerSymbols(
   accountId: string
 ): Promise<string[]> {
-  try {
-    const response = await fetch(
-      `${clientApi()}/users/current/accounts/${accountId}/symbols`,
-      {
-        headers: {
-          "auth-token": METAAPI_TOKEN,
-        },
-        signal: AbortSignal.timeout(15000),
-      }
-    );
+  let lastStatus = "";
 
-    if (!response.ok) {
-      console.error(
-        "Broker symbols failed:",
-        response.status
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const response = await fetch(
+        `${clientApi()}/users/current/accounts/${accountId}/symbols`,
+        {
+          headers: {
+            "auth-token": METAAPI_TOKEN,
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(15000),
+        }
       );
-      return [];
+
+      if (!response.ok) {
+        lastStatus = `${response.status}: ${(await response.text()).slice(0, 500)}`;
+        console.error(
+          `Broker symbols failed (attempt ${attempt}/4):`,
+          lastStatus
+        );
+      } else {
+        const raw = await response.json();
+
+        const list = Array.isArray(raw)
+          ? raw
+          : raw?.symbols || raw?.items || [];
+
+        const symbols = list
+          .map((s: any) =>
+            typeof s === "string" ? s : s?.symbol || s?.name
+          )
+          .filter(Boolean);
+
+        if (symbols.length > 0) {
+          return symbols;
+        }
+
+        lastStatus = "MetaApi returned an empty broker symbol list";
+        console.error(lastStatus);
+      }
+    } catch (error) {
+      lastStatus = String(error);
+      console.error(
+        `getBrokerSymbols error (attempt ${attempt}/4):`,
+        lastStatus
+      );
     }
 
-    const raw = await response.json();
-
-    const list = Array.isArray(raw)
-      ? raw
-      : raw?.symbols ||
-        raw?.items ||
-        [];
-
-    return list
-      .map((s: any) =>
-        typeof s === "string"
-          ? s
-          : s?.symbol || s?.name
-      )
-      .filter(Boolean);
-  } catch (error) {
-    console.error(
-      "getBrokerSymbols error:",
-      String(error)
-    );
-    return [];
+    if (attempt < 4) {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+    }
   }
+
+  lastMt5Error = `No broker symbols received. ${lastStatus}`.trim();
+  return [];
 }
 
 /* =========================================================
@@ -796,86 +872,87 @@ async function fetchMt5Price(
   accountId: string,
   symbol: string
 ): Promise<string | null> {
-  try {
-    const response = await fetch(
-      `${clientApi()}/users/current/accounts/${accountId}/symbols/${encodeURIComponent(
-        symbol
-      )}/current-price?keepSubscription=true`,
-      {
-        headers: {
-          "auth-token": METAAPI_TOKEN,
-        },
-        signal: AbortSignal.timeout(10000),
-      }
-    );
-
-    if (!response.ok) {
-      console.error(
-        `Price failed ${symbol}:`,
-        response.status
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(
+        `${clientApi()}/users/current/accounts/${accountId}/symbols/${encodeURIComponent(
+          symbol
+        )}/current-price?keepSubscription=true`,
+        {
+          headers: {
+            "auth-token": METAAPI_TOKEN,
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(10000),
+        }
       );
-      return null;
+
+      if (!response.ok) {
+        const body = (await response.text()).slice(0, 500);
+        console.error(
+          `Price failed ${symbol} (attempt ${attempt}/3):`,
+          response.status,
+          body
+        );
+        lastMt5Error =
+          `Price request failed for ${symbol}: HTTP ${response.status}`;
+      } else {
+        const data = await response.json();
+
+        const bid = Number(data?.bid);
+        const ask = Number(data?.ask);
+
+        const price =
+          bid > 0 && ask > 0
+            ? (bid + ask) / 2
+            : bid > 0
+            ? bid
+            : ask;
+
+        if (price > 0) {
+          const n = normalizeSymbol(symbol);
+
+          let decimals = 5;
+
+          if (n.includes("JPY")) {
+            decimals = 3;
+          } else if (n.includes("XAU") || n.includes("GOLD")) {
+            decimals = 2;
+          } else if (n.includes("XAG") || n.includes("SILVER")) {
+            decimals = 3;
+          } else if (
+            n.includes("BTC") ||
+            n.includes("ETH") ||
+            n.includes("SOL") ||
+            n.includes("XRP") ||
+            n.includes("DOGE") ||
+            n.includes("VOL") ||
+            n.includes("BOOM") ||
+            n.includes("CRASH") ||
+            n.includes("STEP") ||
+            n.includes("JUMP")
+          ) {
+            decimals = 2;
+          }
+
+          console.log(`REAL MT5 PRICE: ${symbol} -> ${price}`);
+          lastMt5Error = "";
+          return price.toFixed(decimals);
+        }
+
+        lastMt5Error = `MetaApi returned no valid bid/ask for ${symbol}`;
+      }
+    } catch (error) {
+      lastMt5Error = `Price error ${symbol}: ${String(error)}`;
+      console.error(lastMt5Error);
     }
 
-    const data = await response.json();
-
-    const bid = Number(data?.bid);
-    const ask = Number(data?.ask);
-
-    const price =
-      bid > 0 && ask > 0
-        ? (bid + ask) / 2
-        : bid > 0
-        ? bid
-        : ask;
-
-    if (!price || price <= 0) {
-      return null;
+    if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-
-    const n = normalizeSymbol(symbol);
-
-    let decimals = 5;
-
-    if (n.includes("JPY")) {
-      decimals = 3;
-    } else if (
-      n.includes("XAU") ||
-      n.includes("GOLD")
-    ) {
-      decimals = 2;
-    } else if (
-      n.includes("XAG") ||
-      n.includes("SILVER")
-    ) {
-      decimals = 3;
-    } else if (
-      n.includes("BTC") ||
-      n.includes("ETH") ||
-      n.includes("SOL") ||
-      n.includes("XRP") ||
-      n.includes("DOGE") ||
-      n.includes("VOL") ||
-      n.includes("BOOM") ||
-      n.includes("CRASH") ||
-      n.includes("STEP") ||
-      n.includes("JUMP")
-    ) {
-      decimals = 2;
-    }
-
-    console.log(
-      `REAL MT5 PRICE: ${symbol} -> ${price}`
-    );
-
-    return price.toFixed(decimals);
-  } catch (error) {
-    console.error(
-      `Price error ${symbol}:`,
-      String(error)
-    );
-    return null;
   }
+
+  return null;
 }
 
 /* =========================================================
@@ -1162,17 +1239,20 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          success:
-            Object.keys(prices)
-              .length > 0,
-          source: "MT5",
+          success: Object.keys(prices).length > 0,
+          source: Object.keys(prices).some((key) => getDerivSymbol(key))
+            ? "MT5+DERIV"
+            : "MT5",
           prices,
+          diagnostics: Object.keys(prices).length > 0
+            ? null
+            : lastMt5Error || "No live prices returned by MetaApi/Deriv",
         }),
         {
+          status: Object.keys(prices).length > 0 ? 200 : 503,
           headers: {
             ...corsHeaders,
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
         }
       );
