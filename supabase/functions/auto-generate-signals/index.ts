@@ -1,9 +1,9 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform",
 };
 
 interface PriceData {
@@ -27,7 +27,6 @@ interface SignalConfig {
    FREE FALLBACK PRICE FETCHERS (Deriv & Crypto)
 ========================================================= */
 
-// Direct Deriv WebSocket Price Fetcher (100% Free)
 async function fetchDerivPrice(symbol: string): Promise<number | null> {
   return new Promise((resolve) => {
     try {
@@ -35,19 +34,31 @@ async function fetchDerivPrice(symbol: string): Promise<number | null> {
       const timeout = setTimeout(() => {
         try { ws.close(); } catch (_) {}
         resolve(null);
-      }, 3000);
+      }, 4000);
 
       ws.onopen = () => {
-        ws.send(JSON.stringify({ ticks: symbol }));
+        ws.send(
+          JSON.stringify({
+            ticks_history: symbol,
+            adjust_start_time: 1,
+            count: 1,
+            end: "latest",
+            start: 1,
+            style: "ticks",
+          })
+        );
       };
 
       ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.tick && data.tick.quote) {
-          clearTimeout(timeout);
-          try { ws.close(); } catch (_) {}
-          resolve(Number(data.tick.quote));
-        }
+        try {
+          const data = JSON.parse(event.data);
+          const prices = data?.history?.prices;
+          if (Array.isArray(prices) && prices.length > 0) {
+            clearTimeout(timeout);
+            try { ws.close(); } catch (_) {}
+            resolve(Number(prices[prices.length - 1]));
+          }
+        } catch (_) {}
       };
 
       ws.onerror = () => {
@@ -61,11 +72,12 @@ async function fetchDerivPrice(symbol: string): Promise<number | null> {
   });
 }
 
-// Direct Free Binance Price Fetcher for BTC/ETH/SOL
 async function fetchCryptoPrice(symbol: string): Promise<number | null> {
   try {
     const formattedSymbol = symbol.replace("/", "").toUpperCase();
-    const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${formattedSymbol}`);
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${formattedSymbol}`, {
+      signal: AbortSignal.timeout(3000),
+    });
     if (res.ok) {
       const json = await res.json();
       return Number(json.price);
@@ -75,10 +87,10 @@ async function fetchCryptoPrice(symbol: string): Promise<number | null> {
 }
 
 /* =========================================================
-   MT5 LIVE PRICES (With Automatic Free Fallback)
+   FETCH LIVE PRICES FROM EDGE FUNCTION + FALLBACKS
 ========================================================= */
 
-async function fetchMT5Prices(
+async function fetchPricesFromService(
   pairs: string[],
   supabaseUrl: string,
   serviceRoleKey: string
@@ -95,6 +107,7 @@ async function fetchMT5Prices(
           Authorization: `Bearer ${serviceRoleKey}`,
           apikey: serviceRoleKey,
         },
+        signal: AbortSignal.timeout(15000),
       }
     );
 
@@ -102,61 +115,56 @@ async function fetchMT5Prices(
       const json = await response.json();
       const prices = json?.prices || {};
 
-      for (const pair of pairs) {
-        const value = Number(prices[pair]);
-        if (Number.isFinite(value) && value > 0) {
-          result[pair] = value;
+      for (const [pairKey, rawVal] of Object.entries(prices)) {
+        const val = Number(rawVal);
+        if (Number.isFinite(val) && val > 0) {
+          result[pairKey] = val;
         }
-      }
-
-      for (const key of Object.keys(prices)) {
-        const normalized = String(key).toUpperCase().replace(/[^A-Z0-9]/g, "");
-        const value = Number(prices[key]);
-        if (!Number.isFinite(value) || value <= 0) continue;
-
-        if (normalized.includes("XAUUSD") || normalized === "GOLD") result["XAU/USD (Gold)"] = value;
-        if (normalized.includes("XAGUSD") || normalized === "SILVER") result["XAG/USD (Silver)"] = value;
-        if (normalized.includes("US30") || normalized.includes("DJ30")) result["US30"] = value;
-        if (normalized.includes("NASDAQ") || normalized.includes("NAS100")) result["NASDAQ"] = value;
-        if (normalized.includes("SP500") || normalized.includes("US500")) result["S&P500"] = value;
-        if (normalized.includes("VOL75")) result["VOL 75"] = value;
-        if (normalized.includes("VOL100")) result["VOL 100"] = value;
-        if (normalized.includes("BOOM1000")) result["BOOM 1000"] = value;
-        if (normalized.includes("CRASH1000")) result["CRASH 1000"] = value;
-        if (normalized.includes("BOOM500")) result["BOOM 500"] = value;
       }
     }
   } catch (error) {
-    console.error("MT5 price fetch error, switching to Fallback APIs:", String(error));
+    console.error("fetch-live-prices service call error:", String(error));
   }
 
-  // --- FREE FALLBACK LOGIC IF METAMAPI FAILS ---
+  // Fallbacks for critical assets if primary fetch returns missing
   if (!result["XAU/USD (Gold)"]) {
-    const goldPrice = await fetchDerivPrice("frxXAUUSD");
-    if (goldPrice) result["XAU/USD (Gold)"] = goldPrice;
+    const gold = await fetchDerivPrice("frxXAUUSD");
+    if (gold) result["XAU/USD (Gold)"] = gold;
   }
   if (!result["EUR/USD"]) {
-    const eurPrice = await fetchDerivPrice("frxEURUSD");
-    if (eurPrice) result["EUR/USD"] = eurPrice;
+    const eur = await fetchDerivPrice("frxEURUSD");
+    if (eur) result["EUR/USD"] = eur;
   }
   if (!result["GBP/USD"]) {
-    const gbpPrice = await fetchDerivPrice("frxGBPUSD");
-    if (gbpPrice) result["GBP/USD"] = gbpPrice;
+    const gbp = await fetchDerivPrice("frxGBPUSD");
+    if (gbp) result["GBP/USD"] = gbp;
   }
   if (!result["BTC/USD"]) {
-    const btcPrice = await fetchCryptoPrice("BTCUSDT");
-    if (btcPrice) result["BTC/USD"] = btcPrice;
+    const btc = await fetchCryptoPrice("BTCUSDT");
+    if (btc) result["BTC/USD"] = btc;
+  }
+  if (!result["ETH/USD"]) {
+    const eth = await fetchCryptoPrice("ETHUSDT");
+    if (eth) result["ETH/USD"] = eth;
   }
   if (!result["VOL 75"]) {
-    const vol75Price = await fetchDerivPrice("R_75");
-    if (vol75Price) result["VOL 75"] = vol75Price;
+    const v75 = await fetchDerivPrice("R_75");
+    if (v75) result["VOL 75"] = v75;
+  }
+  if (!result["BOOM 1000"]) {
+    const b1000 = await fetchDerivPrice("BOOM1000");
+    if (b1000) result["BOOM 1000"] = b1000;
+  }
+  if (!result["CRASH 1000"]) {
+    const c1000 = await fetchDerivPrice("CRASH1000");
+    if (c1000) result["CRASH 1000"] = c1000;
   }
 
   return result;
 }
 
 /* =========================================================
-   HELPERS
+   HELPERS & SIGNAL GENERATOR
 ========================================================= */
 
 function pick<T>(array: T[]): T {
@@ -188,10 +196,6 @@ const sellReasons = [
   "Liquidity sweep followed by bearish confirmation",
   "Fair Value Gap bearish reaction",
 ];
-
-/* =========================================================
-   GENERATE SIGNAL
-========================================================= */
 
 function generateSignal(config: SignalConfig) {
   const {
@@ -295,7 +299,7 @@ function generateSignal(config: SignalConfig) {
 }
 
 /* =========================================================
-   EVALUATE PAIR
+   EVALUATE PAIR & NOTIFICATIONS
 ========================================================= */
 
 async function evaluatePair(
@@ -311,7 +315,7 @@ async function evaluatePair(
     .maybeSingle();
 
   if (activeError) {
-    console.error("Active signal check error:", activeError.message);
+    console.error("Active signal evaluation error:", activeError.message);
   }
 
   if (active) {
@@ -320,10 +324,6 @@ async function evaluatePair(
 
   return { generate: true, reason: "hourly_signal_slot" };
 }
-
-/* =========================================================
-   POST TELEGRAM & EXECUTE MT5 DEMO TRADE
-========================================================= */
 
 async function postTelegramSignal(
   supabaseUrl: string,
@@ -344,7 +344,7 @@ async function postTelegramSignal(
       }
     );
     const text = await response.text();
-    return { success: response.ok, status: response.status, response: text };
+    return { success: response.ok, response: text };
   } catch (error) {
     return { success: false, response: String(error) };
   }
@@ -436,11 +436,11 @@ Deno.serve(async (req) => {
 
     const allPairs = [...commodities, ...forex, ...crypto, ...deriv];
 
-    const mt5 = await fetchMT5Prices(allPairs, supabaseUrl, serviceRoleKey);
+    const prices = await fetchPricesFromService(allPairs, supabaseUrl, serviceRoleKey);
     const candidates: SignalConfig[] = [];
 
     for (const pair of commodities) {
-      const p = mt5[pair];
+      const p = prices[pair];
       if (!p) continue;
 
       const isGold = pair === "XAU/USD (Gold)";
@@ -464,7 +464,7 @@ Deno.serve(async (req) => {
     }
 
     for (const pair of forex) {
-      const p = mt5[pair];
+      const p = prices[pair];
       if (!p) continue;
 
       const isJPY = pair.includes("JPY");
@@ -485,7 +485,7 @@ Deno.serve(async (req) => {
     }
 
     for (const pair of crypto) {
-      const p = mt5[pair];
+      const p = prices[pair];
       if (!p) continue;
       candidates.push({
         pair,
@@ -501,7 +501,7 @@ Deno.serve(async (req) => {
 
     if (allowDeriv) {
       for (const pair of deriv) {
-        const p = mt5[pair];
+        const p = prices[pair];
         if (!p) continue;
 
         const isVol75 = pair === "VOL 75";
@@ -518,14 +518,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    const available = candidates.filter((x) => !!mt5[x.pair]);
+    const available = candidates.filter((x) => !!prices[x.pair]);
 
     if (!available.length) {
       return new Response(
         JSON.stringify({
           success: false,
           generated: false,
-          error: "No prices available from MT5 or Fallback APIs",
+          error: "No live prices available from MT5 or Fallback APIs",
         }),
         {
           status: 503,
