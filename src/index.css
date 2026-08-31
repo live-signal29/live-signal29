@@ -203,4 +203,67 @@
   .animate-pulse-slow {
     animation: pulse-slow 3s ease-in-out infinite;
   }
+
+  /* ===== Dashboard glow/animation refresh ===== */
+
+  @keyframes fade-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-fade-slide-in {
+    animation: fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 12px hsl(var(--primary) / 0.35), 0 0 0 hsl(var(--primary) / 0);
+    }
+    50% {
+      box-shadow: 0 0 26px hsl(var(--primary) / 0.6), 0 0 10px hsl(var(--primary) / 0.35);
+    }
+  }
+
+  .glow-pulse {
+    animation: glow-pulse 2.6s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse-secondary {
+    0%, 100% {
+      box-shadow: 0 0 12px hsl(var(--secondary) / 0.35), 0 0 0 hsl(var(--secondary) / 0);
+    }
+    50% {
+      box-shadow: 0 0 26px hsl(var(--secondary) / 0.6), 0 0 10px hsl(var(--secondary) / 0.35);
+    }
+  }
+
+  .glow-pulse-secondary {
+    animation: glow-pulse-secondary 2.6s ease-in-out infinite;
+  }
+
+  /* Active category tab pill — subtle 3D glow */
+  .tab-pill-active {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45), inset 0 0 10px hsl(var(--primary) / 0.15);
+    transform: translateY(-1px);
+  }
+
+  /* 3D glowing hover for cards (signal cards, copier cards, banners) */
+  .card-3d-hover {
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+  }
+
+  .card-3d-hover:hover {
+    transform: translateY(-4px) scale(1.015);
+    box-shadow: 0 16px 32px -12px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.25);
+  }
+
+  .card-3d-hover:active {
+    transform: translateY(-1px) scale(0.995);
+  }
 }
