@@ -39,5 +39,8 @@ verify_jwt = false
 [functions.account-management-notify]
 verify_jwt = false
 
+[functions.mt5-copier-sync]
+verify_jwt = false
+
 [functions.admin-delete-user]
 verify_jwt = false
