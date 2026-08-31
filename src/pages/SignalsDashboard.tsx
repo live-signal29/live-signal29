@@ -318,10 +318,10 @@ const SignalsDashboard = () => {
                     key={tab.key}
                     onClick={() => handleCategoryChange(tab.key)}
                     className={cn(
-                      "relative flex items-center gap-1.5 px-4 py-1.5 text-xs sm:text-sm font-semibold rounded-full whitespace-nowrap transition-all duration-200",
+                      "relative flex items-center gap-1.5 px-4 py-1.5 text-xs sm:text-sm font-semibold rounded-full whitespace-nowrap transition-all duration-300",
                       "border-2",
                       isActive
-                        ? "border-primary bg-primary/10 text-primary shadow-sm"
+                        ? "border-primary bg-primary/10 text-primary shadow-sm tab-pill-active"
                         : "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -346,6 +346,10 @@ const SignalsDashboard = () => {
           {/* MT5 Copier Banner — shown once near the top, above the first
               signal card, in every category */}
           <MT5CopierBanner />
+
+          {/* Wrapping key={mainCategory} forces a remount + replays the
+              fade-slide-in animation every time the category tab changes */}
+          <div key={mainCategory} className="animate-fade-slide-in">
 
           {/* Top Ad */}
           {subscriptionStatus !== "premium" && (
@@ -516,6 +520,8 @@ const SignalsDashboard = () => {
               )}
             </>
           )}
+
+          </div>
 
           {/* Bottom Ad */}
           {subscriptionStatus !== "premium" && (
