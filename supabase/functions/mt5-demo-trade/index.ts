@@ -31,6 +31,13 @@ interface Credentials {
   server: string;
 }
 
+// MT5 auto-trading is restricted to Gold (XAU/USD) and BTCUSD only — every
+// other pair's signal is skipped silently (not treated as an error).
+function isAllowedAutoTradeSymbol(appSymbol: string): boolean {
+  const n = normalizeSym(appSymbol);
+  return n.includes("XAU") || n.includes("GOLD") || n.includes("BTC");
+}
+
 async function loadCredentials(supabase: any): Promise<Credentials> {
   const keys = ["METAAPI_TOKEN", "MT5_LOGIN", "MT5_PASSWORD", "MT5_SERVER"];
   const values: Record<string, string> = {};
@@ -60,6 +67,37 @@ async function loadCredentials(supabase: any): Promise<Credentials> {
   return { token, login, password, server };
 }
 
+// Optional secondary/fallback MT5 login. If the primary account fails to
+// provision or deploy (auth issue, MetaApi hiccup, account limit, etc.),
+// we retry the whole trade using this second login instead of failing
+// outright. Configure MT5_LOGIN2 / MT5_PASSWORD2 / MT5_SERVER2 as edge
+// function secrets to enable it — if unset, this is simply skipped.
+async function loadFallbackCredentials(supabase: any): Promise<Credentials | null> {
+  const keys = ["MT5_LOGIN2", "MT5_PASSWORD2", "MT5_SERVER2"];
+  const values: Record<string, string> = {};
+
+  try {
+    const { data } = await supabase
+      .from("integration_settings")
+      .select("key,value")
+      .in("key", keys);
+    for (const row of data || []) {
+      values[row.key] = String(row.value || "").trim();
+    }
+  } catch (_error) {
+    // ignore — fall through to env vars
+  }
+
+  const login = values.MT5_LOGIN2 || Deno.env.get("MT5_LOGIN2")?.trim() || "";
+  const password = values.MT5_PASSWORD2 || Deno.env.get("MT5_PASSWORD2")?.trim() || "";
+  const server = values.MT5_SERVER2 || Deno.env.get("MT5_SERVER2")?.trim() || "";
+
+  if (!login || !password || !server) return null;
+
+  const token = values.METAAPI_TOKEN || Deno.env.get("METAAPI_TOKEN")?.trim() || "";
+  return { token, login, password, server };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -77,13 +115,44 @@ Deno.serve(async (req) => {
     }
 
     const body: TradeRequest = await req.json();
-    
-    const { accountId, clientApi } = await getOrCreateMetaApiAccount(
-      creds.token,
-      creds.login,
-      creds.password,
-      creds.server
-    );
+
+    // Auto-trading is limited to Gold and BTCUSD signals — everything else
+    // is skipped quietly (not an error) so the admin/auto-signal flow
+    // doesn't show a failure toast for pairs that were never meant to
+    // trade here.
+    if ((body.action === "open" || body.action === "open_multi") && body.symbol && !isAllowedAutoTradeSymbol(body.symbol)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          skipped: true,
+          message: `MT5 auto-trade is limited to Gold and BTCUSD — skipped for ${body.symbol}`,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let accountId: string;
+    let clientApi: string;
+
+    try {
+      const primary = await getOrCreateMetaApiAccount(creds.token, creds.login, creds.password, creds.server);
+      accountId = primary.accountId;
+      clientApi = primary.clientApi;
+    } catch (primaryError) {
+      console.error("Primary MT5 account failed, trying fallback login:", String(primaryError));
+      const fallbackCreds = await loadFallbackCredentials(supabase);
+
+      if (!fallbackCreds) throw primaryError;
+
+      const fallback = await getOrCreateMetaApiAccount(
+        fallbackCreds.token,
+        fallbackCreds.login,
+        fallbackCreds.password,
+        fallbackCreds.server
+      );
+      accountId = fallback.accountId;
+      clientApi = fallback.clientApi;
+    }
 
     switch (body.action) {
       case "open":
@@ -341,14 +410,33 @@ async function openMultiTrade(
 
   const results: any[] = [];
 
+  // Each leg gets up to 3 attempts with a short delay between tries, so a
+  // transient broker rejection (requote, momentary connectivity blip, etc.)
+  // doesn't silently leave you with only 1 or 2 of the 3 trades open.
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 1500;
+
   for (const leg of legs) {
-    const result = await placeSingleTrade(supabase, token, accountId, clientApi, {
-      ...body,
-      tp: leg.tp,
-      sl: slNum,
-      lot_size,
-      tp_level: leg.tp_level,
-    });
+    let result: any = { success: false, error: "Not attempted" };
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      result = await placeSingleTrade(supabase, token, accountId, clientApi, {
+        ...body,
+        tp: leg.tp,
+        sl: slNum,
+        lot_size,
+        tp_level: leg.tp_level,
+      });
+
+      if (result.success) break;
+
+      console.error(`TP${leg.tp_level} attempt ${attempt}/${MAX_ATTEMPTS} failed:`, result.error);
+
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      }
+    }
+
     results.push({ tp_level: leg.tp_level, ...result });
   }
 
