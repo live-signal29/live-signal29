@@ -57,6 +57,7 @@ const MT5CopierManagement = () => {
   const queryClient = useQueryClient();
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<CopierRequest>>>({});
 
   const togglePasswordVisibility = (id: string) =>
@@ -128,6 +129,24 @@ const MT5CopierManagement = () => {
         loss_percent: d.loss_percent !== undefined ? Number(d.loss_percent) || null : req.loss_percent,
       },
     });
+  };
+
+  const saveConnectionDetails = (req: CopierRequest) => {
+    const d = drafts[req.id] || {};
+    updateMutation.mutate({
+      id: req.id,
+      updates: {
+        mt5_login: d.mt5_login !== undefined ? String(d.mt5_login) : req.mt5_login,
+        broker_name: d.broker_name !== undefined ? String(d.broker_name) : req.broker_name,
+        broker_server: d.broker_server !== undefined ? String(d.broker_server) : req.broker_server,
+        mt5_password: d.mt5_password !== undefined ? String(d.mt5_password) : req.mt5_password,
+        // Clear any old sync error and force a fresh MetaApi account
+        // lookup, since the login/server may have just changed.
+        sync_error: null,
+        meta_account_id: null,
+      } as any,
+    });
+    setEditingConnId(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -217,42 +236,110 @@ const MT5CopierManagement = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-                      {req.contact_number && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="h-4 w-4" />
-                          <span>{req.contact_number}</span>
+                    {editingConnId === req.id ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 rounded-lg bg-muted/30 border border-border/30">
+                        <div className="space-y-1">
+                          <Label className="text-[11px]">MT5 Login</Label>
+                          <Input
+                            className="h-8 text-sm font-mono"
+                            value={getDraft(req, "mt5_login") ?? ""}
+                            onChange={(e) => setDraft(req.id, "mt5_login", e.target.value)}
+                          />
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Server className="h-4 w-4 text-primary" />
-                        <span className="font-mono text-xs">{req.broker_name} — {req.broker_server}</span>
+                        <div className="space-y-1">
+                          <Label className="text-[11px]">Broker Name</Label>
+                          <Input
+                            className="h-8 text-sm"
+                            value={getDraft(req, "broker_name") ?? ""}
+                            onChange={(e) => setDraft(req.id, "broker_name", e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px]">Broker Server</Label>
+                          <Input
+                            className="h-8 text-sm font-mono"
+                            placeholder="e.g., Exness-MT5Trial15"
+                            value={getDraft(req, "broker_server") ?? ""}
+                            onChange={(e) => setDraft(req.id, "broker_server", e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px]">Trading Password</Label>
+                          <Input
+                            className="h-8 text-sm font-mono"
+                            value={getDraft(req, "mt5_password") ?? ""}
+                            onChange={(e) => setDraft(req.id, "mt5_password", e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-1 sm:col-span-2 flex gap-2">
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={() => saveConnectionDetails(req)}
+                            disabled={updateMutation.isPending}
+                          >
+                            {updateMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            ) : null}
+                            Save Connection Details
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs"
+                            onClick={() => setEditingConnId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Key className="h-4 w-4 text-emerald-500" />
-                        <span className="font-mono text-xs">Login: <span className="font-bold text-foreground">{req.mt5_login}</span></span>
-                      </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                          {req.contact_number && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Phone className="h-4 w-4" />
+                              <span>{req.contact_number}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Server className="h-4 w-4 text-primary" />
+                            <span className="font-mono text-xs">{req.broker_name} — {req.broker_server}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Key className="h-4 w-4 text-emerald-500" />
+                            <span className="font-mono text-xs">Login: <span className="font-bold text-foreground">{req.mt5_login}</span></span>
+                          </div>
+                        </div>
 
-                    <div className="flex items-center gap-2 text-sm">
-                      <Lock className="h-4 w-4 text-amber-500" />
-                      <span className="font-mono text-xs text-muted-foreground">
-                        Pass: <span className="font-bold text-foreground">
-                          {visiblePasswords[req.id] ? req.mt5_password : "••••••••"}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => togglePasswordVisibility(req.id)}
-                        className="p-1 hover:bg-muted rounded transition-colors"
-                      >
-                        {visiblePasswords[req.id] ? (
-                          <EyeOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                        ) : (
-                          <Eye className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                        )}
-                      </button>
-                    </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Lock className="h-4 w-4 text-amber-500" />
+                          <span className="font-mono text-xs text-muted-foreground">
+                            Pass: <span className="font-bold text-foreground">
+                              {visiblePasswords[req.id] ? req.mt5_password : "••••••••"}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(req.id)}
+                            className="p-1 hover:bg-muted rounded transition-colors"
+                          >
+                            {visiblePasswords[req.id] ? (
+                              <EyeOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                            ) : (
+                              <Eye className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingConnId(req.id)}
+                            className="ml-1 text-xs font-medium text-primary underline underline-offset-2"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </>
+                    )}
 
                     {req.note && (
                       <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-2">{req.note}</p>
