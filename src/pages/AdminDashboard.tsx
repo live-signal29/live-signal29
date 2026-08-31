@@ -20,6 +20,7 @@ const UserActivityDashboard = lazy(() => import("@/components/admin/UserActivity
 const AccountApplications = lazy(() => import("@/components/admin/AccountApplications"));
 const PerformanceManagement = lazy(() => import("@/components/admin/PerformanceManagement"));
 const HeadlinesManagement = lazy(() => import("@/components/admin/HeadlinesManagement"));
+const MT5CopierManagement = lazy(() => import("@/components/admin/MT5CopierManagement"));
 
 // Tab Loading Fallback Component
 const TabLoader = () => (
@@ -114,12 +115,13 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 h-auto gap-1">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-11 h-auto gap-1">
             <TabsTrigger value="signals" className="text-xs sm:text-sm py-2">Signals</TabsTrigger>
             <TabsTrigger value="ideas" className="text-xs sm:text-sm py-2">Ideas</TabsTrigger>
             <TabsTrigger value="headlines" className="text-xs sm:text-sm py-2">Headlines</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Users</TabsTrigger>
             <TabsTrigger value="accounts" className="text-xs sm:text-sm py-2">Accounts</TabsTrigger>
+            <TabsTrigger value="copier" className="text-xs sm:text-sm py-2">Copier</TabsTrigger>
             <TabsTrigger value="performance" className="text-xs sm:text-sm py-2">Performance</TabsTrigger>
             <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2">Coupons</TabsTrigger>
             <TabsTrigger value="offers" className="text-xs sm:text-sm py-2">Offers</TabsTrigger>
@@ -187,6 +189,12 @@ const AdminDashboard = () => {
             {activeTab === "accounts" && (
               <TabsContent value="accounts" className="space-y-4">
                 <AccountApplications />
+              </TabsContent>
+            )}
+
+            {activeTab === "copier" && (
+              <TabsContent value="copier" className="space-y-4">
+                <MT5CopierManagement />
               </TabsContent>
             )}
 

@@ -19,6 +19,7 @@ import ChartLightbox from "@/components/ChartLightbox";
 import { startOfDay, format } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
+import { CopierLeaderboard } from "@/components/CopierLeaderboard";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
@@ -32,6 +33,7 @@ const CATEGORIES = [
   "CRYPTO",
   "DERIV/BINARY",
   "MARKET IDEAS",
+  "COPIER",
 ];
 
 // Helper: Ticker clean function to ensure "XAU/USD (Gold)" maps correctly to "XAUUSD" for WebSockets
@@ -198,7 +200,7 @@ const SignalsDashboard = () => {
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
-    enabled: mainCategory !== "MARKET IDEAS",
+    enabled: mainCategory !== "MARKET IDEAS" && mainCategory !== "COPIER",
     staleTime: 0, // Stale time set to 0 for instant live updates
   });
 
@@ -209,7 +211,7 @@ const SignalsDashboard = () => {
 
   // Count open/active signals per category
   const getActiveSignalsCount = (category: string) => {
-    if (category === "MARKET IDEAS") return 0;
+    if (category === "MARKET IDEAS" || category === "COPIER") return 0;
     return signals?.filter(
       (signal) => signal.main_category === category && signal.signal_status !== "CLOSE"
     ).length || 0;
@@ -284,6 +286,7 @@ const SignalsDashboard = () => {
     { key: "CRYPTO", label: "Crypto" },
     { key: "DERIV/BINARY", label: "Deriv" },
     { key: "MARKET IDEAS", label: "Ideas" },
+    { key: "COPIER", label: "Copier List" },
   ];
 
   return (
@@ -355,7 +358,7 @@ const SignalsDashboard = () => {
           )}
 
           {/* Subcategory Filter */}
-          {mainCategory !== "MARKET IDEAS" && subCategoryOptions[mainCategory] && (
+          {mainCategory !== "MARKET IDEAS" && mainCategory !== "COPIER" && subCategoryOptions[mainCategory] && (
             <div className="mb-4">
               <select
                 value={subCategory}
@@ -442,8 +445,14 @@ const SignalsDashboard = () => {
             </>
           )}
 
+          {/* Copier List — public, read-only leaderboard of connected MT5
+              copier accounts. Anyone can view every account's performance;
+              nobody (including the account owner) can edit from here —
+              edits only happen from the admin panel. */}
+          {mainCategory === "COPIER" && <CopierLeaderboard />}
+
           {/* Signals */}
-          {mainCategory !== "MARKET IDEAS" && (
+          {mainCategory !== "MARKET IDEAS" && mainCategory !== "COPIER" && (
             <>
               {isLoading ? (
                 <SignalsSkeleton />
