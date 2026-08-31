@@ -81,7 +81,7 @@ export const CopierLeaderboard = () => {
               key={s.id}
               type="button"
               onClick={() => setSelected(s)}
-              className="text-left rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-transform active:scale-[0.98] hover:border-primary/40"
+              className="text-left rounded-2xl border border-border/60 bg-card p-4 shadow-sm card-3d-hover"
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">

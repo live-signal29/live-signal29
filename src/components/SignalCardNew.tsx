@@ -937,7 +937,7 @@ const SignalCardNew = ({
   return (
     <div
       ref={cardRef}
-      className="relative mb-2 w-full rounded-[12px] bg-card border border-border/50 p-2.5 text-foreground shadow-sm hover:border-border hover:shadow-md transition-all duration-300 overflow-hidden"
+      className="relative mb-2 w-full rounded-[12px] bg-card border border-border/50 p-2.5 text-foreground shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-300 overflow-hidden card-3d-hover"
     >
       {/* ======================================================
           HEADER
