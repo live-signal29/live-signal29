@@ -46,7 +46,7 @@ export const CopierLeaderboard = () => {
       const { data, error } = await db
         .from("mt5_copier_public_stats")
         .select("*")
-        .order("profit_percent", { ascending: false, nullsFirst: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data as PublicCopierStat[];
     },
