@@ -34,89 +34,124 @@ async function fetchMT5Prices(
 ): Promise<Record<string, number>> {
   const result: Record<string, number> = {};
 
-  try {
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(
-        pairs.join(",")
-      )}`,
-      {
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          apikey: serviceRoleKey,
-        },
-      }
-    );
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(
+          pairs.join(",")
+        )}`,
+        {
+          headers: {
+            Authorization: `Bearer ${serviceRoleKey}`,
+            apikey: serviceRoleKey,
+            "Content-Type": "application/json",
+          },
+          signal: AbortSignal.timeout(30000),
+        }
+      );
 
-    if (!response.ok) {
-      console.error("MT5 price endpoint:", response.status);
+      const text = await response.text();
+      let json: any = {};
+
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        console.error(
+          "MT5 price endpoint returned non-JSON:",
+          response.status,
+          text.slice(0, 1000)
+        );
+      }
+
+      if (!response.ok) {
+        console.error(
+          `MT5 price endpoint failed (attempt ${attempt}/2):`,
+          response.status,
+          json?.diagnostics || text.slice(0, 1000)
+        );
+
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          continue;
+        }
+
+        return result;
+      }
+
+      const prices = json?.prices || {};
+
+      for (const pair of pairs) {
+        const value = Number(prices[pair]);
+
+        if (Number.isFinite(value) && value > 0) {
+          result[pair] = value;
+        }
+      }
+
+      for (const key of Object.keys(prices)) {
+        const normalized = String(key)
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "");
+
+        const value = Number(prices[key]);
+
+        if (!Number.isFinite(value) || value <= 0) continue;
+
+        if (normalized.includes("XAUUSD") || normalized === "GOLD") {
+          result["XAU/USD (Gold)"] = value;
+        }
+        if (normalized.includes("XAGUSD") || normalized === "SILVER") {
+          result["XAG/USD (Silver)"] = value;
+        }
+        if (
+          normalized.includes("US30") ||
+          normalized.includes("DJ30") ||
+          normalized.includes("DOW")
+        ) {
+          result["US30"] = value;
+        }
+        if (
+          normalized.includes("NASDAQ") ||
+          normalized.includes("NAS100") ||
+          normalized.includes("USTEC")
+        ) {
+          result["NASDAQ"] = value;
+        }
+        if (
+          normalized.includes("SP500") ||
+          normalized.includes("US500") ||
+          normalized.includes("SPX")
+        ) {
+          result["S&P500"] = value;
+        }
+        if (normalized.includes("VOL75")) {
+          result["VOL 75"] = value;
+        }
+        if (normalized.includes("VOL100")) {
+          result["VOL 100"] = value;
+        }
+        if (normalized.includes("BOOM1000")) {
+          result["BOOM 1000"] = value;
+        }
+        if (normalized.includes("CRASH1000")) {
+          result["CRASH 1000"] = value;
+        }
+        if (normalized.includes("BOOM500")) {
+          result["BOOM 500"] = value;
+        }
+      }
+
       return result;
-    }
+    } catch (error) {
+      console.error(
+        `MT5 price endpoint error (attempt ${attempt}/2):`,
+        String(error)
+      );
 
-    const json = await response.json();
-    const prices = json?.prices || {};
-
-    for (const pair of pairs) {
-      const value = Number(prices[pair]);
-
-      if (Number.isFinite(value) && value > 0) {
-        result[pair] = value;
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     }
-
-    for (const key of Object.keys(prices)) {
-      const normalized = String(key)
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, "");
-
-      const value = Number(prices[key]);
-
-      if (!Number.isFinite(value) || value <= 0) continue;
-
-      if (normalized.includes("XAUUSD") || normalized === "GOLD") {
-        result["XAU/USD (Gold)"] = value;
-      }
-      if (normalized.includes("XAGUSD") || normalized === "SILVER") {
-        result["XAG/USD (Silver)"] = value;
-      }
-      if (
-        normalized.includes("US30") ||
-        normalized.includes("DJ30") ||
-        normalized.includes("DOW")
-      ) {
-        result["US30"] = value;
-      }
-      if (
-        normalized.includes("NASDAQ") ||
-        normalized.includes("NAS100") ||
-        normalized.includes("USTEC")
-      ) {
-        result["NASDAQ"] = value;
-      }
-      if (
-        normalized.includes("SP500") ||
-        normalized.includes("US500") ||
-        normalized.includes("SPX")
-      ) {
-        result["S&P500"] = value;
-      }
-      if (normalized.includes("VOL75")) {
-        result["VOL 75"] = value;
-      }
-      if (normalized.includes("VOL100")) {
-        result["VOL 100"] = value;
-      }
-      if (normalized.includes("BOOM1000")) {
-        result["BOOM 1000"] = value;
-      }
-      if (normalized.includes("CRASH1000")) {
-        result["CRASH 1000"] = value;
-      }
-      if (normalized.includes("BOOM500")) {
-        result["BOOM 500"] = value;
-      }
-    }
-  } catch (error) {
-    console.error("MT5 price error:", String(error));
   }
 
   return result;
@@ -497,7 +532,10 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           generated: false,
-          error: "No MT5 prices available",
+          error:
+            "No live prices available from MT5/MetaApi or Deriv. Check the fetch-live-prices function logs and MT5 credentials.",
+          requested_pairs: allPairs,
+          deriv_daily_count: derivCount || 0,
         }),
         {
           status: 503,
