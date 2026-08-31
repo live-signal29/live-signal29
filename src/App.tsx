@@ -115,13 +115,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Realtime dynamic signals fetch configuration
+// Global defaults — kept reasonably cached so switching tabs (especially in
+// the Admin Dashboard) doesn't refetch every query from scratch every time.
+// The live signals feed in SignalsDashboard.tsx sets its own staleTime: 0
+// override where instant real-time updates are actually needed, so this
+// change doesn't affect that.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Live real-time stream sync (0ms)
+      staleTime: 30_000, // Reuse cached data for 30s before refetching
       gcTime: 1000 * 60 * 5,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false, // Was causing full refetch storms on every app/tab focus
       refetchOnMount: true,
       retry: 2,
     },
