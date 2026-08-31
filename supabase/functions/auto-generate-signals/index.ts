@@ -24,7 +24,58 @@ interface SignalConfig {
 }
 
 /* =========================================================
-   MT5 LIVE PRICES
+   FREE FALLBACK PRICE FETCHERS (Deriv & Crypto)
+========================================================= */
+
+// Direct Deriv WebSocket Price Fetcher (100% Free)
+async function fetchDerivPrice(symbol: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    try {
+      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+      const timeout = setTimeout(() => {
+        try { ws.close(); } catch (_) {}
+        resolve(null);
+      }, 3000);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ ticks: symbol }));
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.tick && data.tick.quote) {
+          clearTimeout(timeout);
+          try { ws.close(); } catch (_) {}
+          resolve(Number(data.tick.quote));
+        }
+      };
+
+      ws.onerror = () => {
+        clearTimeout(timeout);
+        try { ws.close(); } catch (_) {}
+        resolve(null);
+      };
+    } catch (_) {
+      resolve(null);
+    }
+  });
+}
+
+// Direct Free Binance Price Fetcher for BTC/ETH/SOL
+async function fetchCryptoPrice(symbol: string): Promise<number | null> {
+  try {
+    const formattedSymbol = symbol.replace("/", "").toUpperCase();
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${formattedSymbol}`);
+    if (res.ok) {
+      const json = await res.json();
+      return Number(json.price);
+    }
+  } catch (_) {}
+  return null;
+}
+
+/* =========================================================
+   MT5 LIVE PRICES (With Automatic Free Fallback)
 ========================================================= */
 
 async function fetchMT5Prices(
@@ -47,76 +98,58 @@ async function fetchMT5Prices(
       }
     );
 
-    if (!response.ok) {
-      console.error("MT5 price endpoint:", response.status);
-      return result;
-    }
+    if (response.ok) {
+      const json = await response.json();
+      const prices = json?.prices || {};
 
-    const json = await response.json();
-    const prices = json?.prices || {};
+      for (const pair of pairs) {
+        const value = Number(prices[pair]);
+        if (Number.isFinite(value) && value > 0) {
+          result[pair] = value;
+        }
+      }
 
-    for (const pair of pairs) {
-      const value = Number(prices[pair]);
+      for (const key of Object.keys(prices)) {
+        const normalized = String(key).toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const value = Number(prices[key]);
+        if (!Number.isFinite(value) || value <= 0) continue;
 
-      if (Number.isFinite(value) && value > 0) {
-        result[pair] = value;
-      }
-    }
-
-    for (const key of Object.keys(prices)) {
-      const normalized = String(key)
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, "");
-
-      const value = Number(prices[key]);
-
-      if (!Number.isFinite(value) || value <= 0) continue;
-
-      if (normalized.includes("XAUUSD") || normalized === "GOLD") {
-        result["XAU/USD (Gold)"] = value;
-      }
-      if (normalized.includes("XAGUSD") || normalized === "SILVER") {
-        result["XAG/USD (Silver)"] = value;
-      }
-      if (
-        normalized.includes("US30") ||
-        normalized.includes("DJ30") ||
-        normalized.includes("DOW")
-      ) {
-        result["US30"] = value;
-      }
-      if (
-        normalized.includes("NASDAQ") ||
-        normalized.includes("NAS100") ||
-        normalized.includes("USTEC")
-      ) {
-        result["NASDAQ"] = value;
-      }
-      if (
-        normalized.includes("SP500") ||
-        normalized.includes("US500") ||
-        normalized.includes("SPX")
-      ) {
-        result["S&P500"] = value;
-      }
-      if (normalized.includes("VOL75")) {
-        result["VOL 75"] = value;
-      }
-      if (normalized.includes("VOL100")) {
-        result["VOL 100"] = value;
-      }
-      if (normalized.includes("BOOM1000")) {
-        result["BOOM 1000"] = value;
-      }
-      if (normalized.includes("CRASH1000")) {
-        result["CRASH 1000"] = value;
-      }
-      if (normalized.includes("BOOM500")) {
-        result["BOOM 500"] = value;
+        if (normalized.includes("XAUUSD") || normalized === "GOLD") result["XAU/USD (Gold)"] = value;
+        if (normalized.includes("XAGUSD") || normalized === "SILVER") result["XAG/USD (Silver)"] = value;
+        if (normalized.includes("US30") || normalized.includes("DJ30")) result["US30"] = value;
+        if (normalized.includes("NASDAQ") || normalized.includes("NAS100")) result["NASDAQ"] = value;
+        if (normalized.includes("SP500") || normalized.includes("US500")) result["S&P500"] = value;
+        if (normalized.includes("VOL75")) result["VOL 75"] = value;
+        if (normalized.includes("VOL100")) result["VOL 100"] = value;
+        if (normalized.includes("BOOM1000")) result["BOOM 1000"] = value;
+        if (normalized.includes("CRASH1000")) result["CRASH 1000"] = value;
+        if (normalized.includes("BOOM500")) result["BOOM 500"] = value;
       }
     }
   } catch (error) {
-    console.error("MT5 price error:", String(error));
+    console.error("MT5 price fetch error, switching to Fallback APIs:", String(error));
+  }
+
+  // --- FREE FALLBACK LOGIC IF METAMAPI FAILS ---
+  if (!result["XAU/USD (Gold)"]) {
+    const goldPrice = await fetchDerivPrice("frxXAUUSD");
+    if (goldPrice) result["XAU/USD (Gold)"] = goldPrice;
+  }
+  if (!result["EUR/USD"]) {
+    const eurPrice = await fetchDerivPrice("frxEURUSD");
+    if (eurPrice) result["EUR/USD"] = eurPrice;
+  }
+  if (!result["GBP/USD"]) {
+    const gbpPrice = await fetchDerivPrice("frxGBPUSD");
+    if (gbpPrice) result["GBP/USD"] = gbpPrice;
+  }
+  if (!result["BTC/USD"]) {
+    const btcPrice = await fetchCryptoPrice("BTCUSDT");
+    if (btcPrice) result["BTC/USD"] = btcPrice;
+  }
+  if (!result["VOL 75"]) {
+    const vol75Price = await fetchDerivPrice("R_75");
+    if (vol75Price) result["VOL 75"] = vol75Price;
   }
 
   return result;
@@ -173,8 +206,7 @@ function generateSignal(config: SignalConfig) {
 
   const isGold = pair === "XAU/USD (Gold)";
   const isSilver = pair === "XAG/USD (Silver)";
-  const isIndex =
-    pair === "US30" || pair === "NASDAQ" || pair === "S&P500";
+  const isIndex = pair === "US30" || pair === "NASDAQ" || pair === "S&P500";
   const isVol75 = pair === "VOL 75";
   const isDeriv = category === "DERIV";
 
@@ -312,10 +344,8 @@ async function postTelegramSignal(
       }
     );
     const text = await response.text();
-    console.log("Telegram response:", response.status, text);
     return { success: response.ok, status: response.status, response: text };
   } catch (error) {
-    console.error("Telegram error:", String(error));
     return { success: false, response: String(error) };
   }
 }
@@ -350,10 +380,8 @@ async function executeMT5DemoTrade(
       }
     );
     const text = await response.text();
-    console.log("MT5 Auto-Trade Execution Response:", response.status, text);
     return { success: response.ok, response: text };
   } catch (error) {
-    console.error("MT5 Auto-Trade Execution Error:", String(error));
     return { success: false, error: String(error) };
   }
 }
@@ -497,7 +525,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           generated: false,
-          error: "No MT5 prices available",
+          error: "No prices available from MT5 or Fallback APIs",
         }),
         {
           status: 503,
@@ -577,7 +605,6 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    /* Executing both Telegram & MT5 Execution */
     const telegram = await postTelegramSignal(supabaseUrl, serviceRoleKey, data);
     const mt5Execution = await executeMT5DemoTrade(supabaseUrl, serviceRoleKey, data);
 
