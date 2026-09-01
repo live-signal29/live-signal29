@@ -24,8 +24,6 @@ import {
   Gauge,
   ChevronDown,
   ChevronUp,
-  RefreshCw,
-  AlertTriangle,
 } from "lucide-react";
 
 // The generated Supabase types haven't been regenerated to include this
@@ -89,25 +87,6 @@ const MT5CopierManagement = () => {
     },
     onError: (err: any) => {
       toast.error("Failed to save", { description: err?.message });
-    },
-  });
-
-  const syncMutation = useMutation({
-    mutationFn: async (requestId: string) => {
-      const { data, error } = await supabase.functions.invoke("mt5-copier-sync", {
-        body: { request_id: requestId },
-      });
-      if (error) throw error;
-      const result = data?.results?.[0];
-      if (result && !result.success) throw new Error(result.error || "Sync failed");
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mt5-copier-requests"] });
-      toast.success("Synced with the real MT5 account");
-    },
-    onError: (err: any) => {
-      toast.error("Sync failed", { description: err?.message });
     },
   });
 
@@ -181,10 +160,9 @@ const MT5CopierManagement = () => {
           )}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Performance numbers now sync automatically every 15 minutes from each user's own
-          MT5 account (real profit/loss). Use "Sync Now" to check immediately, or edit the
-          numbers by hand below if needed. Flip "Show on public Copier List" to control
-          visibility — login, password, broker and contact stay admin-only either way.
+          Enter each account's performance numbers by hand in "Performance details" below.
+          Flip "Show on public Copier List" to control visibility — login, password, broker
+          and contact stay admin-only either way.
         </p>
       </CardHeader>
       <CardContent>
@@ -347,17 +325,7 @@ const MT5CopierManagement = () => {
 
                     <p className="text-xs text-muted-foreground">
                       Submitted: {format(new Date(req.created_at), "PPp")}
-                      {req.last_synced_at && (
-                        <> · Last synced: {format(new Date(req.last_synced_at), "PPp")}</>
-                      )}
                     </p>
-
-                    {req.sync_error && (
-                      <div className="flex items-start gap-1.5 text-xs text-destructive bg-destructive/10 rounded-lg p-2">
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                        <span>Last sync failed: {req.sync_error}</span>
-                      </div>
-                    )}
 
                     <div className="flex items-center gap-3">
                       <button
@@ -370,15 +338,6 @@ const MT5CopierManagement = () => {
                         {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => syncMutation.mutate(req.id)}
-                        disabled={syncMutation.isPending}
-                        className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-                      >
-                        <RefreshCw className={`h-3.5 w-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-                        Sync Now
-                      </button>
                     </div>
 
                     {isExpanded && (
