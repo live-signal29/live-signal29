@@ -72,8 +72,21 @@ Deno.serve(async (req) => {
 
     const creds = await loadCredentials(supabase);
 
+    // Enhanced Error Check for Debugging Missing Credentials
     if (!creds.token || !creds.login || !creds.server) {
-      throw new Error("MetaApi credentials incomplete");
+      const missingKeys = [];
+      if (!creds.token) missingKeys.push("METAAPI_TOKEN");
+      if (!creds.login) missingKeys.push("MT5_LOGIN");
+      if (!creds.server) missingKeys.push("MT5_SERVER");
+
+      console.error("Missing Credentials Details:", {
+        missing: missingKeys.join(", "),
+        hasToken: Boolean(creds.token),
+        hasLogin: Boolean(creds.login),
+        hasServer: Boolean(creds.server),
+      });
+
+      throw new Error(`MetaApi credentials incomplete. Missing: ${missingKeys.join(", ")}`);
     }
 
     const body: TradeRequest = await req.json();
@@ -248,7 +261,6 @@ async function resolveValidVolume(
   brokerSymbol: string,
   _requestedVolume: number
 ): Promise<number> {
-  // Always default to 0.50 lot size for all symbols (Forex, Crypto, Commodities, Indices, Deriv)
   let volume = 0.50;
 
   try {
