@@ -24,10 +24,10 @@ interface SignalConfig {
 }
 
 /* =========================================================
-   MT5 LIVE PRICES
+   LIVE PRICES (FINNHUB + DERIV)
 ========================================================= */
 
-async function fetchMT5Prices(
+async function fetchLivePrices(
   pairs: string[],
   supabaseUrl: string,
   serviceRoleKey: string
@@ -48,75 +48,54 @@ async function fetchMT5Prices(
     );
 
     if (!response.ok) {
-      console.error("MT5 price endpoint:", response.status);
+      console.error("Price endpoint error:", response.status);
       return result;
     }
 
     const json = await response.json();
     const prices = json?.prices || {};
 
-    for (const pair of pairs) {
-      const value = Number(prices[pair]);
-
-      if (Number.isFinite(value) && value > 0) {
-        result[pair] = value;
-      }
-    }
-
     for (const key of Object.keys(prices)) {
+      const value = Number(prices[key]);
+      if (!Number.isFinite(value) || value <= 0) continue;
+
       const normalized = String(key)
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, "");
 
-      const value = Number(prices[key]);
-
-      if (!Number.isFinite(value) || value <= 0) continue;
-
       if (normalized.includes("XAUUSD") || normalized === "GOLD") {
         result["XAU/USD (Gold)"] = value;
-      }
-      if (normalized.includes("XAGUSD") || normalized === "SILVER") {
+      } else if (normalized.includes("XAGUSD") || normalized === "SILVER") {
         result["XAG/USD (Silver)"] = value;
-      }
-      if (
-        normalized.includes("US30") ||
-        normalized.includes("DJ30") ||
-        normalized.includes("DOW")
-      ) {
+      } else if (normalized.includes("BTCUSD") || normalized.includes("BTCUSDT")) {
+        result["BTC/USD"] = value;
+      } else if (normalized.includes("ETHUSD") || normalized.includes("ETHUSDT")) {
+        result["ETH/USD"] = value;
+      } else if (normalized.includes("SOLUSD") || normalized.includes("SOLUSDT")) {
+        result["SOL/USD"] = value;
+      } else if (normalized.includes("US30") || normalized.includes("DJ30")) {
         result["US30"] = value;
-      }
-      if (
-        normalized.includes("NASDAQ") ||
-        normalized.includes("NAS100") ||
-        normalized.includes("USTEC")
-      ) {
+      } else if (normalized.includes("NASDAQ") || normalized.includes("NAS100")) {
         result["NASDAQ"] = value;
-      }
-      if (
-        normalized.includes("SP500") ||
-        normalized.includes("US500") ||
-        normalized.includes("SPX")
-      ) {
+      } else if (normalized.includes("SP500") || normalized.includes("US500")) {
         result["S&P500"] = value;
-      }
-      if (normalized.includes("VOL75")) {
+      } else if (normalized.includes("VOL75")) {
         result["VOL 75"] = value;
-      }
-      if (normalized.includes("VOL100")) {
+      } else if (normalized.includes("VOL100")) {
         result["VOL 100"] = value;
-      }
-      if (normalized.includes("BOOM1000")) {
+      } else if (normalized.includes("BOOM1000")) {
         result["BOOM 1000"] = value;
-      }
-      if (normalized.includes("CRASH1000")) {
+      } else if (normalized.includes("CRASH1000")) {
         result["CRASH 1000"] = value;
-      }
-      if (normalized.includes("BOOM500")) {
+      } else if (normalized.includes("BOOM500")) {
         result["BOOM 500"] = value;
+      } else {
+        // Direct Mapping for EUR/USD, GBP/USD, etc.
+        result[key] = value;
       }
     }
   } catch (error) {
-    console.error("MT5 price error:", String(error));
+    console.error("Live price error:", String(error));
   }
 
   return result;
@@ -290,7 +269,7 @@ async function evaluatePair(
 }
 
 /* =========================================================
-   POST TELEGRAM & EXECUTE MT5 DEMO TRADE
+   POST TELEGRAM
 ========================================================= */
 
 async function postTelegramSignal(
@@ -317,44 +296,6 @@ async function postTelegramSignal(
   } catch (error) {
     console.error("Telegram error:", String(error));
     return { success: false, response: String(error) };
-  }
-}
-
-async function executeMT5DemoTrade(
-  supabaseUrl: string,
-  serviceRoleKey: string,
-  signal: any
-) {
-  try {
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/mt5-demo-trade`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          apikey: serviceRoleKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "open_multi",
-          signal_id: signal.id,
-          symbol: signal.pair,
-          trade_type: String(signal.type).toLowerCase(),
-          entry: Number(signal.entry),
-          sl: Number(signal.sl),
-          tp1: Number(signal.tp1),
-          tp2: Number(signal.tp2),
-          tp3: Number(signal.tp3),
-          lot_size: 0.01,
-        }),
-      }
-    );
-    const text = await response.text();
-    console.log("MT5 Auto-Trade Execution Response:", response.status, text);
-    return { success: response.ok, response: text };
-  } catch (error) {
-    console.error("MT5 Auto-Trade Execution Error:", String(error));
-    return { success: false, error: String(error) };
   }
 }
 
@@ -408,11 +349,11 @@ Deno.serve(async (req) => {
 
     const allPairs = [...commodities, ...forex, ...crypto, ...deriv];
 
-    const mt5 = await fetchMT5Prices(allPairs, supabaseUrl, serviceRoleKey);
+    const prices = await fetchLivePrices(allPairs, supabaseUrl, serviceRoleKey);
     const candidates: SignalConfig[] = [];
 
     for (const pair of commodities) {
-      const p = mt5[pair];
+      const p = prices[pair];
       if (!p) continue;
 
       const isGold = pair === "XAU/USD (Gold)";
@@ -436,7 +377,7 @@ Deno.serve(async (req) => {
     }
 
     for (const pair of forex) {
-      const p = mt5[pair];
+      const p = prices[pair];
       if (!p) continue;
 
       const isJPY = pair.includes("JPY");
@@ -457,7 +398,7 @@ Deno.serve(async (req) => {
     }
 
     for (const pair of crypto) {
-      const p = mt5[pair];
+      const p = prices[pair];
       if (!p) continue;
       candidates.push({
         pair,
@@ -473,7 +414,7 @@ Deno.serve(async (req) => {
 
     if (allowDeriv) {
       for (const pair of deriv) {
-        const p = mt5[pair];
+        const p = prices[pair];
         if (!p) continue;
 
         const isVol75 = pair === "VOL 75";
@@ -490,14 +431,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    const available = candidates.filter((x) => !!mt5[x.pair]);
+    const available = candidates.filter((x) => !!prices[x.pair]);
 
     if (!available.length) {
       return new Response(
         JSON.stringify({
           success: false,
           generated: false,
-          error: "No MT5 prices available",
+          error: "No live prices available",
         }),
         {
           status: 503,
@@ -577,9 +518,8 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    /* Executing both Telegram & MT5 Execution */
+    /* Execute Telegram posting */
     const telegram = await postTelegramSignal(supabaseUrl, serviceRoleKey, data);
-    const mt5Execution = await executeMT5DemoTrade(supabaseUrl, serviceRoleKey, data);
 
     return new Response(
       JSON.stringify({
@@ -590,7 +530,6 @@ Deno.serve(async (req) => {
         decision,
         signal: data,
         telegram,
-        mt5_trade: mt5Execution,
         deriv_daily_count: derivCount || 0,
       }),
       {
