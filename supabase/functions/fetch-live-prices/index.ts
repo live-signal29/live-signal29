@@ -1189,90 +1189,81 @@ async function fetchAllPrices(
   );
 
   /*
-   * STEP 2 - RAPIDAPI / TWELVE DATA
+   * STEP 2 - MT5 / MetaApi (PRIMARY for forex/metals/crypto)
    *
-   * Use RapidAPI first for normal forex/metals/crypto. This removes
-   * the hard dependency on a healthy MetaAPI/MT5 connection.
+   * This is the user's own broker feed, so it is tried FIRST for every
+   * remaining pair. This makes the displayed "current price" match what
+   * the user actually sees in their MT5 terminal, instead of a generic
+   * third-party quote that can differ from their broker by a few pips
+   * (or a few dollars on gold).
    */
+  let mt5Missing = [...remainingPairs];
+
   if (remainingPairs.length > 0) {
-    const rapidPrices = await fetchRapidApiPrices(remainingPairs);
-    Object.assign(prices, rapidPrices);
+    const accountId = await getAccountId();
+
+    if (!accountId) {
+      console.log(
+        "MT5/MetaApi unavailable (missing METAAPI_TOKEN or account not provisioned); will use RapidAPI/Yahoo fallback"
+      );
+    } else {
+      const brokerSymbols = await getBrokerSymbols(accountId);
+
+      if (!brokerSymbols.length) {
+        console.error(
+          "No broker symbols received from MT5 account; will use RapidAPI/Yahoo fallback"
+        );
+      } else {
+        console.log(`Broker symbols loaded: ${brokerSymbols.length}`);
+
+        for (const pair of remainingPairs) {
+          const symbol = await findBrokerSymbol(
+            accountId,
+            pair,
+            brokerSymbols
+          );
+
+          if (!symbol) {
+            console.log(`Skipping ${pair}: broker symbol not found`);
+            continue;
+          }
+
+          const price = await fetchMt5Price(accountId, symbol);
+
+          if (price) {
+            prices[pair] = price;
+          }
+        }
+      }
+    }
+
+    mt5Missing = remainingPairs.filter((pair) => !prices[pair]);
   }
 
-  // STEP 2B - Direct Yahoo chart fallback.
-  // This keeps the generator working even when the RapidAPI subscription
-  // or provider is temporarily unavailable.
-  const rapidMissing = remainingPairs.filter((pair) => !prices[pair]);
-  if (rapidMissing.length > 0) {
-    const yahooPrices = await fetchYahooPrices(rapidMissing);
+  if (mt5Missing.length === 0) {
+    console.log("FINAL PRICES (MT5):", JSON.stringify(prices));
+    return prices;
+  }
+
+  /*
+   * STEP 3 - RAPIDAPI / TWELVE DATA (fallback)
+   *
+   * Only used for pairs the MT5 broker feed could not price (account
+   * not connected, symbol not offered by this broker, etc.).
+   */
+  const rapidPrices = await fetchRapidApiPrices(mt5Missing);
+  Object.assign(prices, rapidPrices);
+
+  // STEP 4 - Direct Yahoo chart fallback.
+  // Final safety net when neither MT5 nor RapidAPI could price a pair.
+  const stillMissing = mt5Missing.filter((pair) => !prices[pair]);
+  if (stillMissing.length > 0) {
+    const yahooPrices = await fetchYahooPrices(stillMissing);
     Object.assign(prices, yahooPrices);
   }
 
-  const stillMissing = remainingPairs.filter(
-    (pair) => !prices[pair]
-  );
-
-  /*
-   * STEP 3 - MT5/MetaAPI fallback
-   *
-   * MT5 is still used for any symbol that RapidAPI could not provide,
-   * so the existing broker feed is preserved as a secondary source.
-   */
-  if (stillMissing.length === 0) {
-    console.log("FINAL PRICES (RapidAPI):", JSON.stringify(prices));
-    return prices;
-  }
-
-  const accountId =
-    await getAccountId();
-
-  if (!accountId) {
-    console.log("MT5 unavailable; returning RapidAPI prices");
-    return prices;
-  }
-
-  const brokerSymbols =
-    await getBrokerSymbols(
-      accountId
-    );
-
-  if (!brokerSymbols.length) {
-    console.error("No broker symbols received; returning RapidAPI prices");
-    return prices;
-  }
-
   console.log(
-    `Broker symbols loaded: ${brokerSymbols.length}`
-  );
-
-  for (const pair of stillMissing) {
-    const symbol =
-      await findBrokerSymbol(
-        accountId,
-        pair,
-        brokerSymbols
-      );
-
-    if (!symbol) {
-      console.log(
-        `Skipping ${pair}: broker symbol not found`
-      );
-      continue;
-    }
-
-    const price =
-      await fetchMt5Price(
-        accountId,
-        symbol
-      );
-
-    if (price) {
-      prices[pair] = price;
-    }
-  }
-
-  console.log(
-    "FINAL PRICES:",
+    "FINAL PRICES (MT5+RapidAPI+Yahoo):",
     JSON.stringify(prices)
   );
 
@@ -1421,7 +1412,7 @@ serve(async (req) => {
           success:
             Object.keys(prices)
               .length > 0,
-          source: "RAPIDAPI+MT5",
+          source: "MT5+RAPIDAPI",
           prices,
         }),
         {
@@ -1809,7 +1800,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        source: "RAPIDAPI+MT5",
+        source: "MT5+RAPIDAPI",
         error:
           error instanceof Error
             ? error.message
