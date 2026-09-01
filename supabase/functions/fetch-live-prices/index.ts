@@ -878,236 +878,6 @@ async function fetchMt5Price(
   }
 }
 
-
-/* =========================================================
-   RAPIDAPI / TWELVE DATA FALLBACK
-   Primary external market-data source when MT5/MetaAPI is
-   unavailable. Keep the RapidAPI key in Supabase Secrets as
-   RAPIDAPI_KEY.
-========================================================= */
-
-const RAPIDAPI_KEY =
-  Deno.env.get("RAPIDAPI_KEY")?.trim() || "";
-
-const RAPIDAPI_HOST =
-  Deno.env.get("RAPIDAPI_HOST")?.trim() ||
-  "twelve-data1.p.rapidapi.com";
-
-const RAPIDAPI_BASE =
-  `https://${RAPIDAPI_HOST}`;
-
-function getRapidSymbol(appPair: string): string | null {
-  const n = normalizeSymbol(appPair);
-
-  const map: Record<string, string> = {
-    XAUUSD: "XAU/USD",
-    GOLD: "XAU/USD",
-    XAGUSD: "XAG/USD",
-    SILVER: "XAG/USD",
-    EURUSD: "EUR/USD",
-    GBPUSD: "GBP/USD",
-    USDJPY: "USD/JPY",
-    AUDUSD: "AUD/USD",
-    GBPJPY: "GBP/JPY",
-    USDCAD: "USD/CAD",
-    USDCHF: "USD/CHF",
-    NZDUSD: "NZD/USD",
-    BTCUSD: "BTC/USD",
-    ETHUSD: "ETH/USD",
-    SOLUSD: "SOL/USD",
-    XRPUSD: "XRP/USD",
-    DOGEUSD: "DOGE/USD",
-  };
-
-  if (map[n]) return map[n];
-  if (n.includes("XAU") || n.includes("GOLD")) return "XAU/USD";
-  if (n.includes("XAG") || n.includes("SILVER")) return "XAG/USD";
-  if (n.includes("EURUSD")) return "EUR/USD";
-  if (n.includes("GBPUSD")) return "GBP/USD";
-  if (n.includes("USDJPY")) return "USD/JPY";
-  if (n.includes("AUDUSD")) return "AUD/USD";
-  if (n.includes("GBPJPY")) return "GBP/JPY";
-  if (n.includes("USDCAD")) return "USD/CAD";
-  if (n.includes("USDCHF")) return "USD/CHF";
-  if (n.includes("BTCUSD")) return "BTC/USD";
-  if (n.includes("ETHUSD")) return "ETH/USD";
-  if (n.includes("SOLUSD")) return "SOL/USD";
-  return null;
-}
-
-function rapidDecimals(pair: string): number {
-  const n = normalizeSymbol(pair);
-  if (n.includes("JPY")) return 3;
-  if (n.includes("XAU") || n.includes("GOLD")) return 2;
-  if (n.includes("XAG") || n.includes("SILVER")) return 3;
-  if (n.includes("BTC") || n.includes("ETH") || n.includes("SOL") ||
-      n.includes("XRP") || n.includes("DOGE")) return 2;
-  return 5;
-}
-
-async function fetchRapidApiPrice(appPair: string): Promise<string | null> {
-  if (!RAPIDAPI_KEY) {
-    console.warn("RAPIDAPI_KEY is not configured");
-    return null;
-  }
-
-  const symbol = getRapidSymbol(appPair);
-  if (!symbol) return null;
-
-  try {
-    const url =
-      `${RAPIDAPI_BASE}/price?symbol=${encodeURIComponent(symbol)}&dp=${rapidDecimals(appPair)}`;
-
-    const response = await fetch(url, {
-      headers: {
-        "x-rapidapi-key": RAPIDAPI_KEY,
-        "x-rapidapi-host": RAPIDAPI_HOST,
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    const text = await response.text();
-
-    if (!response.ok) {
-      console.error(
-        `RapidAPI price failed ${appPair}:`,
-        response.status,
-        text.slice(0, 300)
-      );
-      return null;
-    }
-
-    const data = JSON.parse(text);
-    const price = Number(data?.price);
-
-    if (!Number.isFinite(price) || price <= 0) {
-      console.error(`RapidAPI invalid price ${appPair}:`, text.slice(0, 300));
-      return null;
-    }
-
-    const fixed = price.toFixed(rapidDecimals(appPair));
-    console.log(`RAPIDAPI LIVE PRICE: ${appPair} -> ${fixed}`);
-    return fixed;
-  } catch (error) {
-    console.error(`RapidAPI error ${appPair}:`, String(error));
-    return null;
-  }
-}
-
-async function fetchRapidApiPrices(
-  pairs: string[]
-): Promise<Record<string, string>> {
-  const prices: Record<string, string> = {};
-  if (!RAPIDAPI_KEY || pairs.length === 0) return prices;
-
-  const results = await Promise.all(
-    pairs.map(async (pair) => {
-      const price = await fetchRapidApiPrice(pair);
-      return price ? { pair, price } : null;
-    })
-  );
-
-  for (const item of results) {
-    if (item) prices[item.pair] = item.price;
-  }
-
-  return prices;
-}
-
-
-/* =========================================================
-   YAHOO FINANCE FALLBACK
-   Uses Yahoo chart data directly. This is the final fallback when
-   the RapidAPI provider is unavailable or not subscribed.
-========================================================= */
-
-function getYahooSymbol(appPair: string): string | null {
-  const n = normalizeSymbol(appPair);
-  if (n.includes("XAU") || n.includes("GOLD")) return "GC=F";
-  if (n.includes("XAG") || n.includes("SILVER")) return "SI=F";
-  if (n.includes("US30")) return "^DJI";
-  if (n.includes("NASDAQ") || n.includes("NAS100")) return "^IXIC";
-  if (n.includes("SP500") || n.includes("S&P500")) return "^GSPC";
-  if (n.includes("EURUSD")) return "EURUSD=X";
-  if (n.includes("GBPUSD")) return "GBPUSD=X";
-  if (n.includes("USDJPY")) return "JPY=X";
-  if (n.includes("AUDUSD")) return "AUDUSD=X";
-  if (n.includes("GBPJPY")) return "GBPJPY=X";
-  if (n.includes("USDCAD")) return "CAD=X";
-  if (n.includes("USDCHF")) return "CHF=X";
-  if (n.includes("BTCUSD")) return "BTC-USD";
-  if (n.includes("ETHUSD")) return "ETH-USD";
-  if (n.includes("SOLUSD")) return "SOL-USD";
-  return null;
-}
-
-async function fetchYahooChartPrice(appPair: string): Promise<string | null> {
-  const symbol = getYahooSymbol(appPair);
-  if (!symbol) return null;
-
-  try {
-    const url =
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1m`;
-
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Forex7StarZ/1.0)",
-        "Accept": "application/json",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    const text = await response.text();
-    if (!response.ok) {
-      console.error(`Yahoo fallback failed ${appPair}:`, response.status, text.slice(0, 250));
-      return null;
-    }
-
-    const data = JSON.parse(text);
-    const result = data?.chart?.result?.[0];
-    const metaPrice = Number(result?.meta?.regularMarketPrice);
-    const closes = result?.indicators?.quote?.[0]?.close;
-    let price = Number.isFinite(metaPrice) && metaPrice > 0 ? metaPrice : NaN;
-
-    if (!Number.isFinite(price) && Array.isArray(closes)) {
-      for (let i = closes.length - 1; i >= 0; i--) {
-        const v = Number(closes[i]);
-        if (Number.isFinite(v) && v > 0) {
-          price = v;
-          break;
-        }
-      }
-    }
-
-    if (!Number.isFinite(price) || price <= 0) return null;
-
-    const decimals = rapidDecimals(appPair);
-    const fixed = price.toFixed(decimals);
-    console.log(`YAHOO LIVE PRICE: ${appPair} (${symbol}) -> ${fixed}`);
-    return fixed;
-  } catch (error) {
-    console.error(`Yahoo fallback error ${appPair}:`, String(error));
-    return null;
-  }
-}
-
-async function fetchYahooPrices(pairs: string[]): Promise<Record<string, string>> {
-  const out: Record<string, string> = {};
-  if (!pairs.length) return out;
-
-  const results = await Promise.all(
-    pairs.map(async (pair) => {
-      const price = await fetchYahooChartPrice(pair);
-      return price ? { pair, price } : null;
-    })
-  );
-
-  for (const item of results) {
-    if (item) out[item.pair] = item.price;
-  }
-  return out;
-}
-
 /* =========================================================
    FETCH ALL
 ========================================================= */
@@ -1189,81 +959,64 @@ async function fetchAllPrices(
   );
 
   /*
-   * STEP 2 - MT5 / MetaApi (PRIMARY for forex/metals/crypto)
-   *
-   * This is the user's own broker feed, so it is tried FIRST for every
-   * remaining pair. This makes the displayed "current price" match what
-   * the user actually sees in their MT5 terminal, instead of a generic
-   * third-party quote that can differ from their broker by a few pips
-   * (or a few dollars on gold).
+   * STEP 2 - Everything else (regular forex, metals, crypto)
+   * goes through the MT5/MetaApi broker as before.
    */
-  let mt5Missing = [...remainingPairs];
-
-  if (remainingPairs.length > 0) {
-    const accountId = await getAccountId();
-
-    if (!accountId) {
-      console.log(
-        "MT5/MetaApi unavailable (missing METAAPI_TOKEN or account not provisioned); will use RapidAPI/Yahoo fallback"
-      );
-    } else {
-      const brokerSymbols = await getBrokerSymbols(accountId);
-
-      if (!brokerSymbols.length) {
-        console.error(
-          "No broker symbols received from MT5 account; will use RapidAPI/Yahoo fallback"
-        );
-      } else {
-        console.log(`Broker symbols loaded: ${brokerSymbols.length}`);
-
-        for (const pair of remainingPairs) {
-          const symbol = await findBrokerSymbol(
-            accountId,
-            pair,
-            brokerSymbols
-          );
-
-          if (!symbol) {
-            console.log(`Skipping ${pair}: broker symbol not found`);
-            continue;
-          }
-
-          const price = await fetchMt5Price(accountId, symbol);
-
-          if (price) {
-            prices[pair] = price;
-          }
-        }
-      }
-    }
-
-    mt5Missing = remainingPairs.filter((pair) => !prices[pair]);
-  }
-
-  if (mt5Missing.length === 0) {
-    console.log("FINAL PRICES (MT5):", JSON.stringify(prices));
+  if (remainingPairs.length === 0) {
     return prices;
   }
 
-  /*
-   * STEP 3 - RAPIDAPI / TWELVE DATA (fallback)
-   *
-   * Only used for pairs the MT5 broker feed could not price (account
-   * not connected, symbol not offered by this broker, etc.).
-   */
-  const rapidPrices = await fetchRapidApiPrices(mt5Missing);
-  Object.assign(prices, rapidPrices);
+  const accountId =
+    await getAccountId();
 
-  // STEP 4 - Direct Yahoo chart fallback.
-  // Final safety net when neither MT5 nor RapidAPI could price a pair.
-  const stillMissing = mt5Missing.filter((pair) => !prices[pair]);
-  if (stillMissing.length > 0) {
-    const yahooPrices = await fetchYahooPrices(stillMissing);
-    Object.assign(prices, yahooPrices);
+  if (!accountId) {
+    return prices;
+  }
+
+  const brokerSymbols =
+    await getBrokerSymbols(
+      accountId
+    );
+
+  if (!brokerSymbols.length) {
+    console.error(
+      "No broker symbols received"
+    );
+    return prices;
   }
 
   console.log(
-    "FINAL PRICES (MT5+RapidAPI+Yahoo):",
+    `Broker symbols loaded: ${brokerSymbols.length}`
+  );
+
+  for (const pair of remainingPairs) {
+    const symbol =
+      await findBrokerSymbol(
+        accountId,
+        pair,
+        brokerSymbols
+      );
+
+    if (!symbol) {
+      console.log(
+        `Skipping ${pair}: broker symbol not found`
+      );
+      continue;
+    }
+
+    const price =
+      await fetchMt5Price(
+        accountId,
+        symbol
+      );
+
+    if (price) {
+      prices[pair] = price;
+    }
+  }
+
+  console.log(
+    "FINAL PRICES:",
     JSON.stringify(prices)
   );
 
@@ -1412,7 +1165,7 @@ serve(async (req) => {
           success:
             Object.keys(prices)
               .length > 0,
-          source: "MT5+RAPIDAPI",
+          source: "MT5",
           prices,
         }),
         {
@@ -1800,7 +1553,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        source: "MT5+RAPIDAPI",
+        source: "MT5",
         error:
           error instanceof Error
             ? error.message
