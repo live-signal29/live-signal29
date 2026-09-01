@@ -13,6 +13,23 @@ const DEFAULT_PAIRS = [
   "BOOM 1000", "CRASH 1000", "VOL 75", "BOOM 500", "VOL 100"
 ];
 
+// Map App Pairs to Twelve Data Standard Symbols
+function mapToTwelveDataSymbol(pair: string): string | null {
+  const upper = pair.toUpperCase();
+  if (upper.includes("XAU") || upper.includes("GOLD")) return "XAU/USD";
+  if (upper.includes("XAG") || upper.includes("SILVER")) return "XAG/USD";
+  if (upper.includes("EUR")) return "EUR/USD";
+  if (upper.includes("GBP/USD")) return "GBP/USD";
+  if (upper.includes("USD/JPY")) return "USD/JPY";
+  if (upper.includes("AUD/USD")) return "AUD/USD";
+  if (upper.includes("GBP/JPY")) return "GBP/JPY";
+  if (upper.includes("USD/CAD")) return "USD/CAD";
+  if (upper.includes("US30")) return "US30";
+  if (upper.includes("NASDAQ")) return "IXIC"; // NASDAQ Index
+  if (upper.includes("S&P500")) return "SPX";   // S&P 500
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -23,11 +40,11 @@ Deno.serve(async (req) => {
     const queryPairs = url.searchParams.get("pairs");
     const requestedPairs = queryPairs ? queryPairs.split(",") : DEFAULT_PAIRS;
 
-    const ALPHA_KEY = Deno.env.get("ALPHAVANTAGE_API_KEY") || "";
-    const FINNHUB_KEY = Deno.env.get("FINNHUB_API_KEY") || "";
+    // Secret key for Twelve Data API
+    const TWELVE_KEY = Deno.env.get("TWELVE_DATA_API_KEY") || "";
     const prices: Record<string, number> = {};
 
-    // 1. Fetch Live Crypto Rates (Binance Public API - Free, Unlimited & Fast)
+    // 1. Fetch Crypto Rates (Binance Public API - Fast & Unlimited)
     for (const pair of requestedPairs) {
       const upper = pair.toUpperCase();
       if (upper.includes("BTC") || upper.includes("ETH") || upper.includes("SOL")) {
@@ -36,7 +53,7 @@ Deno.serve(async (req) => {
           const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
           const data = await res.json();
           if (data && data.price) {
-            prices[pair] = Number(data.price);
+            prices[pair] = Number(parseFloat(data.price).toFixed(2));
           }
         } catch (e) {
           console.error("Crypto API error:", e);
@@ -44,56 +61,68 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Fetch Gold (XAUUSD), Silver (XAGUSD) & Forex via AlphaVantage Key
-    for (const pair of requestedPairs) {
-      const upper = pair.toUpperCase();
-      let fromSymbol = "";
-      
-      if (upper.includes("XAU") || upper.includes("GOLD")) fromSymbol = "XAU";
-      else if (upper.includes("XAG") || upper.includes("SILVER")) fromSymbol = "XAG";
-      else if (upper.includes("EUR")) fromSymbol = "EUR";
-      else if (upper.includes("GBP")) fromSymbol = "GBP";
-      else if (upper.includes("AUD")) fromSymbol = "AUD";
+    // 2. Fetch Forex, Gold, Silver & Indices via Twelve Data API
+    if (TWELVE_KEY) {
+      const symbolsToFetch: string[] = [];
+      const pairMap: Record<string, string> = {};
 
-      if (fromSymbol && !prices[pair] && ALPHA_KEY) {
+      for (const pair of requestedPairs) {
+        if (!prices[pair]) {
+          const apiSymbol = mapToTwelveDataSymbol(pair);
+          if (apiSymbol) {
+            symbolsToFetch.push(apiSymbol);
+            pairMap[apiSymbol] = pair;
+          }
+        }
+      }
+
+      if (symbolsToFetch.length > 0) {
         try {
           const res = await fetch(
-            `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${fromSymbol}&to_currency=USD&apikey=${ALPHA_KEY}`
+            `https://api.twelvedata.com/price?symbol=${encodeURIComponent(
+              symbolsToFetch.join(",")
+            )}&apikey=${TWELVE_KEY}`
           );
           const data = await res.json();
-          const rate = data["Realtime Currency Exchange Rate"]?["5. Exchange Rate"];
-          if (rate && !isNaN(Number(rate))) {
-            prices[pair] = Number(rate);
+
+          // Single symbol response
+          if (data.price) {
+            const appPair = pairMap[symbolsToFetch[0]];
+            if (appPair) prices[appPair] = Number(parseFloat(data.price).toFixed(4));
+          } 
+          // Multiple symbols response
+          else {
+            for (const sym of symbolsToFetch) {
+              if (data[sym] && data[sym].price) {
+                const appPair = pairMap[sym];
+                if (appPair) {
+                  prices[appPair] = Number(parseFloat(data[sym].price).toFixed(sym.includes("XAU") ? 2 : 4));
+                }
+              }
+            }
           }
         } catch (e) {
-          console.error(`AlphaVantage error on ${pair}:`, e);
+          console.error("Twelve Data API error:", e);
         }
       }
     }
 
-    // 3. Fallbacks for Stock Indices & Deriv Synthetic Pairs
+    // 3. Fallbacks for Deriv Synthetic Pairs (Deriv APIs / Hardcoded base rates)
     for (const pair of requestedPairs) {
       if (!prices[pair]) {
         const p = pair.toUpperCase();
-        if (p.includes("XAU")) prices[pair] = 2502.40;
-        if (p.includes("XAG")) prices[pair] = 28.50;
-        if (p.includes("US30")) prices[pair] = 41250.00;
-        if (p.includes("NASDAQ")) prices[pair] = 19820.50;
-        if (p.includes("S&P500")) prices[pair] = 5620.10;
         if (p.includes("BOOM 1000")) prices[pair] = 10120.50;
         if (p.includes("BOOM 500")) prices[pair] = 4595.43;
         if (p.includes("CRASH 1000")) prices[pair] = 5840.10;
         if (p.includes("VOL 75")) prices[pair] = 425100.20;
         if (p.includes("VOL 100")) prices[pair] = 1250.80;
-        if (p.includes("EUR")) prices[pair] = 1.1050;
-        if (p.includes("GBP")) prices[pair] = 1.3120;
       }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        source: "AlphaVantage + Crypto + Deriv",
+        source: "TwelveData + Binance + Deriv",
         pricesUpdated: Object.keys(prices).length,
         pairs: Object.keys(prices),
         prices,
