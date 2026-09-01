@@ -48,7 +48,7 @@ async function fetchMT5Prices(
     );
 
     if (!response.ok) {
-      console.error("Live price endpoint:", response.status);
+      console.error("MT5 price endpoint:", response.status);
       return result;
     }
 
@@ -116,7 +116,7 @@ async function fetchMT5Prices(
       }
     }
   } catch (error) {
-    console.error("Live price error:", String(error));
+    console.error("MT5 price error:", String(error));
   }
 
   return result;
@@ -497,7 +497,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           generated: false,
-          error: "No live prices available (RapidAPI + MT5)",
+          error: "No MT5 prices available",
         }),
         {
           status: 503,
