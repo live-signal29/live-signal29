@@ -24,7 +24,7 @@ interface SignalConfig {
 }
 
 /* =========================================================
-   LIVE PRICES (FINNHUB + DERIV)
+   LIVE PRICES FETCH & MAPPING
 ========================================================= */
 
 async function fetchLivePrices(
@@ -63,9 +63,9 @@ async function fetchLivePrices(
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, "");
 
-      if (normalized.includes("XAUUSD") || normalized === "GOLD") {
+      if (normalized.includes("XAUUSD") || normalized.includes("GOLD")) {
         result["XAU/USD (Gold)"] = value;
-      } else if (normalized.includes("XAGUSD") || normalized === "SILVER") {
+      } else if (normalized.includes("XAGUSD") || normalized.includes("SILVER")) {
         result["XAG/USD (Silver)"] = value;
       } else if (normalized.includes("BTCUSD") || normalized.includes("BTCUSDT")) {
         result["BTC/USD"] = value;
@@ -90,12 +90,11 @@ async function fetchLivePrices(
       } else if (normalized.includes("BOOM500")) {
         result["BOOM 500"] = value;
       } else {
-        // Direct Mapping for EUR/USD, GBP/USD, etc.
         result[key] = value;
       }
     }
   } catch (error) {
-    console.error("Live price error:", String(error));
+    console.error("Live price fetch error:", String(error));
   }
 
   return result;
@@ -136,7 +135,7 @@ const sellReasons = [
 ];
 
 /* =========================================================
-   GENERATE SIGNAL
+   GENERATE SIGNAL (WITH CURRENT LIVE PRICE)
 ========================================================= */
 
 function generateSignal(config: SignalConfig) {
@@ -163,6 +162,7 @@ function generateSignal(config: SignalConfig) {
   const spread = Math.max(price.high - price.low, pipMultiplier * 20);
   const offset = rand(-spread * 0.02, spread * 0.02);
   const entry = Number((price.price + offset).toFixed(decimals));
+  const currentPrice = price.price;
 
   let slMult = 0;
   let tp1Mult = 0;
@@ -220,6 +220,7 @@ function generateSignal(config: SignalConfig) {
     main_category: mainCategory,
     sub_category: subCategory,
     entry: String(entry),
+    current_price: String(currentPrice),
     tp1: String(tp1),
     tp2: String(tp2),
     tp3: String(tp3),
@@ -300,7 +301,7 @@ async function postTelegramSignal(
 }
 
 /* =========================================================
-   MAIN DENO SERVER
+   MAIN SERVER ROUTINE
 ========================================================= */
 
 Deno.serve(async (req) => {
@@ -447,6 +448,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // UPDATE EXISTING OPEN SIGNALS CURRENT PRICE
+    for (const item of available) {
+      await supabase
+        .from("signals")
+        .update({ current_price: String(item.price.price) })
+        .eq("pair", item.pair)
+        .eq("signal_status", "open");
+    }
+
     const weightedPool: SignalConfig[] = [];
     function add(pairName: string, weight: number) {
       const item = available.find((x) => x.pair === pairName);
@@ -518,7 +528,6 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    /* Execute Telegram posting */
     const telegram = await postTelegramSignal(supabaseUrl, serviceRoleKey, data);
 
     return new Response(
