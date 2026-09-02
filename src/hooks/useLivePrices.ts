@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 // =========================================================
+// CONFIG
+// =========================================================
+
+const PRICE_POLL_MS = 1000;
+const INITIAL_FETCH_MS = 100;
+
+// =========================================================
 // HELPERS
 // =========================================================
 
@@ -39,7 +46,6 @@ const getPriceFromResponse = (
     requestedPair,
     normalized,
 
-    // Gold aliases
     ...(normalized === 'XAU/USD (Gold)'
       ? [
           'XAU/USD',
@@ -51,7 +57,6 @@ const getPriceFromResponse = (
         ]
       : []),
 
-    // Silver aliases
     ...(normalized === 'XAG/USD (Silver)'
       ? [
           'XAG/USD',
@@ -64,6 +69,7 @@ const getPriceFromResponse = (
       : []),
   ];
 
+  // Direct match
   for (const key of candidates) {
     const raw = prices[key];
 
@@ -80,7 +86,7 @@ const getPriceFromResponse = (
     }
   }
 
-  // Last fallback: case-insensitive key matching
+  // Case-insensitive match
   const wanted = candidates.map((x) =>
     String(x).trim().toUpperCase()
   );
@@ -109,11 +115,7 @@ const getPriceFromResponse = (
 };
 
 // =========================================================
-// Parse entry price
-// Handles:
-// 4280
-// 4280-4282
-// 4280 – 4282
+// PARSE ENTRY PRICE
 // =========================================================
 
 export const parseEntryPrice = (
@@ -144,7 +146,7 @@ export const parseEntryPrice = (
 };
 
 // =========================================================
-// Calculate running P/L
+// CALCULATE RUNNING P/L
 // =========================================================
 
 export const calculateRunningPL = (
@@ -186,7 +188,7 @@ export const calculateRunningPL = (
 };
 
 // =========================================================
-// Check TP / SL
+// CHECK TP / SL
 // =========================================================
 
 export const checkTPSLHit = (
@@ -235,8 +237,17 @@ export const useLivePricesFetch = (
   const [error, setError] =
     useState<string | null>(null);
 
-  const intervalRef =
-    useRef<ReturnType<typeof setInterval> | null>(
+  // -------------------------------------------------------
+  // IMPORTANT:
+  // No overlapping requests
+  // -------------------------------------------------------
+
+  const isFetchingRef =
+    useRef(false);
+
+  // Recursive polling timer
+  const timeoutRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
       null
     );
 
@@ -246,7 +257,13 @@ export const useLivePricesFetch = (
   const retryAfterRef =
     useRef(0);
 
+  const mountedRef =
+    useRef(true);
+
+  // -------------------------------------------------------
   // Stable pair list
+  // -------------------------------------------------------
+
   const pairsKey = pairs
     .map((pair) =>
       String(pair).trim()
@@ -255,11 +272,12 @@ export const useLivePricesFetch = (
     .join('\u0001');
 
   // =======================================================
-  // FETCH
+  // FETCH LIVE PRICES
   // =======================================================
 
   const fetchPrices =
     useCallback(async () => {
+
       if (
         !enabled ||
         !pairsKey
@@ -267,6 +285,12 @@ export const useLivePricesFetch = (
         return;
       }
 
+      // Prevent overlapping requests
+      if (isFetchingRef.current) {
+        return;
+      }
+
+      // Backoff after repeated failures
       if (
         Date.now() <
         retryAfterRef.current
@@ -282,24 +306,20 @@ export const useLivePricesFetch = (
           )
           .filter(Boolean);
 
-      setLoading(true);
-      setError(null);
+      if (
+        requestedPairs.length === 0
+      ) {
+        return;
+      }
+
+      isFetchingRef.current = true;
+
+      if (mountedRef.current) {
+        setLoading(true);
+        setError(null);
+      }
 
       try {
-        /*
-         * IMPORTANT:
-         *
-         * Your Edge Function currently reads:
-         *
-         * url.searchParams.get("pairs")
-         *
-         * Supabase invoke body does NOT become
-         * a URL query parameter.
-         *
-         * We therefore send the pairs in the body
-         * AND the function should support body fallback.
-         */
-
         const {
           data,
           error: invokeError,
@@ -345,10 +365,9 @@ export const useLivePricesFetch = (
           string
         > = {};
 
-        // =================================================
-        // MATCH EVERY REQUESTED PAIR
-        // INCLUDING XAU/XAG ALIASES
-        // =================================================
+        // ---------------------------------------------------
+        // Match requested pairs
+        // ---------------------------------------------------
 
         for (
           const pair of requestedPairs
@@ -363,31 +382,19 @@ export const useLivePricesFetch = (
             Number.isFinite(numeric) &&
             numeric > 0
           ) {
-            /*
-             * IMPORTANT:
-             * Store using the ORIGINAL pair name
-             * because UI components normally ask
-             * for the original symbol.
-             */
             validPrices[pair] =
               String(numeric);
           }
         }
 
-        // =================================================
-        // ALSO CREATE GOLD/SILVER ALIASES
-        // =================================================
+        // ---------------------------------------------------
+        // GOLD ALIASES
+        // ---------------------------------------------------
 
         const goldPrice =
           getPriceFromResponse(
             responsePrices,
             'XAU/USD (Gold)'
-          );
-
-        const silverPrice =
-          getPriceFromResponse(
-            responsePrices,
-            'XAG/USD (Silver)'
           );
 
         if (
@@ -410,6 +417,16 @@ export const useLivePricesFetch = (
             String(goldPrice);
         }
 
+        // ---------------------------------------------------
+        // SILVER ALIASES
+        // ---------------------------------------------------
+
+        const silverPrice =
+          getPriceFromResponse(
+            responsePrices,
+            'XAG/USD (Silver)'
+          );
+
         if (
           Number.isFinite(silverPrice) &&
           silverPrice > 0
@@ -430,6 +447,10 @@ export const useLivePricesFetch = (
             String(silverPrice);
         }
 
+        // ---------------------------------------------------
+        // No valid price
+        // ---------------------------------------------------
+
         if (
           Object.keys(validPrices)
             .length === 0
@@ -439,43 +460,49 @@ export const useLivePricesFetch = (
           );
         }
 
-        // =================================================
-        // UPDATE STATE ONLY IF CHANGED
-        // =================================================
+        // ---------------------------------------------------
+        // Update only changed prices
+        // ---------------------------------------------------
 
-        setPrices((previous) => {
-          let changed = false;
+        if (mountedRef.current) {
+          setPrices((previous) => {
+            let changed = false;
 
-          const next = {
-            ...previous,
-          };
+            const next = {
+              ...previous,
+            };
 
-          for (
-            const [
-              pair,
-              value,
-            ] of Object.entries(
-              validPrices
-            )) {
-            if (
-              next[pair] !== value
-            ) {
-              next[pair] = value;
-              changed = true;
+            for (
+              const [
+                pair,
+                value,
+              ] of Object.entries(
+                validPrices
+              )) {
+              if (
+                next[pair] !== value
+              ) {
+                next[pair] = value;
+                changed = true;
+              }
             }
-          }
 
-          return changed
-            ? next
-            : previous;
-        });
+            return changed
+              ? next
+              : previous;
+          });
+        }
 
+        // Success
         failedAttemptsRef.current = 0;
         retryAfterRef.current = 0;
 
       } catch (err) {
+
         failedAttemptsRef.current++;
 
+        // After 5 consecutive failures,
+        // wait 30 seconds before retrying.
         if (
           failedAttemptsRef.current >= 5
         ) {
@@ -492,14 +519,28 @@ export const useLivePricesFetch = (
           );
         }
 
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Network error'
-        );
+        // IMPORTANT:
+        // Do NOT clear previous good prices.
+        // The last valid price remains visible
+        // during temporary network/API errors.
+
+        if (mountedRef.current) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Network error'
+          );
+        }
+
       } finally {
-        setLoading(false);
+
+        isFetchingRef.current = false;
+
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
+
     }, [
       pairsKey,
       enabled,
@@ -507,9 +548,29 @@ export const useLivePricesFetch = (
 
   // =======================================================
   // POLLING
+  //
+  // We use recursive setTimeout instead of setInterval.
+  //
+  // This guarantees:
+  //
+  // Request 1 finishes
+  //       ↓
+  // wait 1 second
+  //       ↓
+  // Request 2
+  //
+  // NEVER:
+  //
+  // Request 1
+  // Request 2
+  // Request 3
+  // overlapping
   // =======================================================
 
   useEffect(() => {
+
+    mountedRef.current = true;
+
     if (
       !enabled ||
       !pairsKey
@@ -517,41 +578,86 @@ export const useLivePricesFetch = (
       return;
     }
 
-    // Immediate fetch
-    const initTimeout =
-      setTimeout(
-        fetchPrices,
-        100
-      );
+    let stopped = false;
 
-    // Every 1 seconds
-    intervalRef.current =
-      setInterval(
-        fetchPrices,
-        1000
-      );
+    const scheduleNext =
+      () => {
+
+        if (
+          stopped ||
+          !mountedRef.current
+        ) {
+          return;
+        }
+
+        timeoutRef.current =
+          setTimeout(async () => {
+
+            if (
+              stopped ||
+              !mountedRef.current
+            ) {
+              return;
+            }
+
+            await fetchPrices();
+
+            scheduleNext();
+
+          }, PRICE_POLL_MS);
+      };
+
+    // -----------------------------------------------------
+    // Initial fetch
+    // -----------------------------------------------------
+
+    timeoutRef.current =
+      setTimeout(async () => {
+
+        if (
+          stopped ||
+          !mountedRef.current
+        ) {
+          return;
+        }
+
+        await fetchPrices();
+
+        scheduleNext();
+
+      }, INITIAL_FETCH_MS);
+
+    // -----------------------------------------------------
+    // Cleanup
+    // -----------------------------------------------------
 
     return () => {
-      clearTimeout(
-        initTimeout
-      );
+
+      stopped = true;
+
+      mountedRef.current = false;
 
       if (
-        intervalRef.current
+        timeoutRef.current
       ) {
-        clearInterval(
-          intervalRef.current
+        clearTimeout(
+          timeoutRef.current
         );
 
-        intervalRef.current =
-          null;
+        timeoutRef.current = null;
       }
+
     };
+
   }, [
     fetchPrices,
     enabled,
     pairsKey,
   ]);
+
+  // =======================================================
+  // RETURN
+  // =======================================================
 
   return {
     prices,
@@ -581,10 +687,12 @@ export const useAutoTPSLUpdate = (
   tp4Hit: boolean,
   slHit: boolean
 ) => {
+
   const lastUpdateRef =
     useRef<string>('');
 
   useEffect(() => {
+
     if (
       !currentPrice ||
       slHit
@@ -607,7 +715,10 @@ export const useAutoTPSLUpdate = (
       any
     > = {};
 
+    // -------------------------------------------------------
     // TP1
+    // -------------------------------------------------------
+
     if (
       !tp1Hit &&
       tp1
@@ -627,7 +738,10 @@ export const useAutoTPSLUpdate = (
       }
     }
 
+    // -------------------------------------------------------
     // TP2
+    // -------------------------------------------------------
+
     if (
       !tp2Hit &&
       tp2
@@ -647,7 +761,10 @@ export const useAutoTPSLUpdate = (
       }
     }
 
+    // -------------------------------------------------------
     // TP3
+    // -------------------------------------------------------
+
     if (
       !tp3Hit &&
       tp3
@@ -667,7 +784,10 @@ export const useAutoTPSLUpdate = (
       }
     }
 
+    // -------------------------------------------------------
     // TP4
+    // -------------------------------------------------------
+
     if (
       !tp4Hit &&
       tp4
@@ -687,9 +807,9 @@ export const useAutoTPSLUpdate = (
       }
     }
 
-    // =====================================================
-    // SL
-    // =====================================================
+    // -------------------------------------------------------
+    // CHECK TP STATUS BEFORE SL
+    // -------------------------------------------------------
 
     const anyTPHit =
       tp1Hit ||
@@ -700,6 +820,10 @@ export const useAutoTPSLUpdate = (
       updates.tp2_hit ||
       updates.tp3_hit ||
       updates.tp4_hit;
+
+    // -------------------------------------------------------
+    // SL
+    // -------------------------------------------------------
 
     if (
       !slHit &&
@@ -718,19 +842,21 @@ export const useAutoTPSLUpdate = (
         )
       ) {
         updates.sl_hit = true;
+
         updates.signal_status =
           'CLOSE';
       }
     }
 
-    // =====================================================
+    // -------------------------------------------------------
     // DATABASE UPDATE
-    // =====================================================
+    // -------------------------------------------------------
 
     if (
       Object.keys(updates)
         .length > 0
     ) {
+
       const updateKey =
         JSON.stringify(updates);
 
@@ -738,6 +864,7 @@ export const useAutoTPSLUpdate = (
         lastUpdateRef.current !==
         updateKey
       ) {
+
         lastUpdateRef.current =
           updateKey;
 
@@ -750,16 +877,19 @@ export const useAutoTPSLUpdate = (
           )
           .then(
             ({ error }) => {
+
               if (error) {
                 console.error(
                   'Error updating signal:',
                   error
                 );
               }
+
             }
           );
       }
     }
+
   }, [
     currentPrice,
     signalId,
