@@ -528,7 +528,7 @@ export const useLivePricesFetch = (
     intervalRef.current =
       setInterval(
         fetchPrices,
-        3000
+        1000
       );
 
     return () => {
