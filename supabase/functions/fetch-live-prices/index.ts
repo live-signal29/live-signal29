@@ -24,13 +24,47 @@ Deno.serve(async (req) => {
 
     const prices: Record<string, number> = {};
 
-    // 1. Fetch Gold (PAXGUSDT token = exact Gold 1oz price), Silver & Crypto via Binance (Unlimited & Free)
+    // 1a. Real spot Gold (XAU) & Silver (XAG) — matches MT5/broker prices.
+    // IMPORTANT: We do NOT use Binance PAXGUSDT for gold anymore. PAXG is a
+    // tokenized crypto asset that trades at its own premium/discount vs real
+    // spot gold, which was causing a ~$100-150 mismatch vs MT5.
     for (const pair of requestedPairs) {
+      const upper = pair.toUpperCase();
+
+      if (upper.includes("XAU") || upper.includes("GOLD")) {
+        try {
+          const res = await fetch("https://api.gold-api.com/price/XAU");
+          const data = await res.json();
+          if (data && data.price) {
+            prices[pair] = Number(parseFloat(data.price).toFixed(2));
+          }
+        } catch (e) {
+          console.error(`Gold spot API error on ${pair}:`, e);
+        }
+      }
+
+      if (upper.includes("XAG") || upper.includes("SILVER")) {
+        try {
+          const res = await fetch("https://api.gold-api.com/price/XAG");
+          const data = await res.json();
+          if (data && data.price) {
+            prices[pair] = Number(parseFloat(data.price).toFixed(2));
+          }
+        } catch (e) {
+          console.error(`Silver spot API error on ${pair}:`, e);
+        }
+      }
+    }
+
+    // 1b. Crypto (BTC, ETH, SOL) via Binance (Unlimited & Free) — these are
+    // genuinely crypto pairs so the Binance price is correct here.
+    for (const pair of requestedPairs) {
+      if (prices[pair]) continue;
+
       const upper = pair.toUpperCase();
       let binanceSymbol = "";
 
-      if (upper.includes("XAU") || upper.includes("GOLD")) binanceSymbol = "PAXGUSDT";
-      else if (upper.includes("BTC")) binanceSymbol = "BTCUSDT";
+      if (upper.includes("BTC")) binanceSymbol = "BTCUSDT";
       else if (upper.includes("ETH")) binanceSymbol = "ETHUSDT";
       else if (upper.includes("SOL")) binanceSymbol = "SOLUSDT";
 
