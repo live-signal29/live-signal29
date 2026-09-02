@@ -524,7 +524,7 @@ export const useLivePricesFetch = (
         100
       );
 
-    // Every 3 seconds
+    // Every 1 seconds
     intervalRef.current =
       setInterval(
         fetchPrices,
