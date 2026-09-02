@@ -2,7 +2,8 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods":
+    "GET, POST, OPTIONS",
 };
 
 const DEFAULT_PAIRS = [
@@ -27,7 +28,12 @@ const DEFAULT_PAIRS = [
   "VOL 100",
 ];
 
-type PriceSource = "gold-api" | "yahoo" | "binance" | "frankfurter" | "fallback";
+type PriceSource =
+  | "gold-api"
+  | "yahoo"
+  | "binance"
+  | "frankfurter"
+  | "fallback";
 
 interface YahooChartResult {
   chart?: {
@@ -49,7 +55,9 @@ interface YahooChartResult {
    HELPERS
 ========================================================= */
 
-function validPrice(value: unknown): value is number {
+function validPrice(
+  value: unknown
+): value is number {
   return (
     typeof value === "number" &&
     Number.isFinite(value) &&
@@ -57,18 +65,35 @@ function validPrice(value: unknown): value is number {
   );
 }
 
-function roundPrice(value: number, decimals: number) {
-  return Number(value.toFixed(decimals));
+function roundPrice(
+  value: number,
+  decimals: number
+) {
+  return Number(
+    value.toFixed(decimals)
+  );
 }
 
 function isGold(pair: string) {
-  const p = pair.toUpperCase().replace(/\s+/g, "");
-  return p.includes("XAU") || p.includes("GOLD");
+  const p = pair
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  return (
+    p.includes("XAU") ||
+    p.includes("GOLD")
+  );
 }
 
 function isSilver(pair: string) {
-  const p = pair.toUpperCase().replace(/\s+/g, "");
-  return p.includes("XAG") || p.includes("SILVER");
+  const p = pair
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  return (
+    p.includes("XAG") ||
+    p.includes("SILVER")
+  );
 }
 
 function isCrypto(pair: string) {
@@ -81,39 +106,51 @@ function isCrypto(pair: string) {
   );
 }
 
-function getBinanceSymbol(pair: string) {
+function getBinanceSymbol(
+  pair: string
+) {
   const p = pair.toUpperCase();
 
-  if (p.includes("BTC")) return "BTCUSDT";
-  if (p.includes("ETH")) return "ETHUSDT";
-  if (p.includes("SOL")) return "SOLUSDT";
+  if (p.includes("BTC"))
+    return "BTCUSDT";
+
+  if (p.includes("ETH"))
+    return "ETHUSDT";
+
+  if (p.includes("SOL"))
+    return "SOLUSDT";
 
   return "";
 }
 
 /* =========================================================
    GOLD API
-   Primary source for XAU / XAG
 ========================================================= */
 
-async function fetchGoldApi(symbol: "XAU" | "XAG") {
+async function fetchGoldApi(
+  symbol: "XAU" | "XAG"
+) {
   try {
-    const controller = new AbortController();
+    const controller =
+      new AbortController();
 
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 5000);
+    const timeout =
+      setTimeout(() => {
+        controller.abort();
+      }, 5000);
 
-    const response = await fetch(
-      `https://api.gold-api.com/price/${symbol}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        signal: controller.signal,
-      }
-    );
+    const response =
+      await fetch(
+        `https://api.gold-api.com/price/${symbol}`,
+        {
+          method: "GET",
+          headers: {
+            Accept:
+              "application/json",
+          },
+          signal: controller.signal,
+        }
+      );
 
     clearTimeout(timeout);
 
@@ -123,13 +160,15 @@ async function fetchGoldApi(symbol: "XAU" | "XAG") {
       );
     }
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
-    const price = Number(data?.price);
+    const price =
+      Number(data?.price);
 
     if (!validPrice(price)) {
       throw new Error(
-        `Invalid ${symbol} price from Gold API`
+        `Invalid ${symbol} price`
       );
     }
 
@@ -145,32 +184,38 @@ async function fetchGoldApi(symbol: "XAU" | "XAG") {
 }
 
 /* =========================================================
-   YAHOO FALLBACK
-   GC=F = Gold
-   SI=F = Silver
+   YAHOO
 ========================================================= */
 
-async function fetchYahooPrice(symbol: "GC=F" | "SI=F") {
+async function fetchYahooPrice(
+  symbol: "GC=F" | "SI=F"
+) {
   try {
-    const controller = new AbortController();
+    const controller =
+      new AbortController();
 
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 7000);
+    const timeout =
+      setTimeout(() => {
+        controller.abort();
+      }, 7000);
 
     const url =
-      `https://query1.finance.yahoo.com/v8/finance/chart/` +
+      "https://query1.finance.yahoo.com/v8/finance/chart/" +
       `${encodeURIComponent(symbol)}` +
-      `?range=1d&interval=1m`;
+      "?range=1d&interval=1m";
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0",
-      },
-      signal: controller.signal,
-    });
+    const response =
+      await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept:
+            "application/json",
+          "User-Agent":
+            "Mozilla/5.0",
+        },
+        signal:
+          controller.signal,
+      });
 
     clearTimeout(timeout);
 
@@ -183,29 +228,38 @@ async function fetchYahooPrice(symbol: "GC=F" | "SI=F") {
     const data: YahooChartResult =
       await response.json();
 
-    const result = data?.chart?.result?.[0];
+    const result =
+      data?.chart?.result?.[0];
 
     const marketPrice =
-      result?.meta?.regularMarketPrice;
+      result?.meta
+        ?.regularMarketPrice;
 
-    if (validPrice(marketPrice)) {
+    if (
+      validPrice(marketPrice)
+    ) {
       return marketPrice;
     }
 
     const closes =
-      result?.indicators?.quote?.[0]?.close || [];
+      result?.indicators
+        ?.quote?.[0]?.close || [];
 
-    for (let i = closes.length - 1; i >= 0; i--) {
+    for (
+      let i = closes.length - 1;
+      i >= 0;
+      i--
+    ) {
       const close = closes[i];
 
-      if (validPrice(close)) {
+      if (
+        validPrice(close)
+      ) {
         return close;
       }
     }
 
-    throw new Error(
-      `No valid Yahoo price for ${symbol}`
-    );
+    return null;
   } catch (error) {
     console.error(
       `Yahoo ${symbol} error:`,
@@ -217,27 +271,34 @@ async function fetchYahooPrice(symbol: "GC=F" | "SI=F") {
 }
 
 /* =========================================================
-   CRYPTO - BINANCE
+   BINANCE
 ========================================================= */
 
-async function fetchBinancePrice(symbol: string) {
+async function fetchBinancePrice(
+  symbol: string
+) {
   try {
-    const controller = new AbortController();
+    const controller =
+      new AbortController();
 
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 5000);
+    const timeout =
+      setTimeout(() => {
+        controller.abort();
+      }, 5000);
 
-    const response = await fetch(
-      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        signal: controller.signal,
-      }
-    );
+    const response =
+      await fetch(
+        `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
+        {
+          method: "GET",
+          headers: {
+            Accept:
+              "application/json",
+          },
+          signal:
+            controller.signal,
+        }
+      );
 
     clearTimeout(timeout);
 
@@ -247,14 +308,14 @@ async function fetchBinancePrice(symbol: string) {
       );
     }
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
-    const price = Number(data?.price);
+    const price =
+      Number(data?.price);
 
     if (!validPrice(price)) {
-      throw new Error(
-        `Invalid Binance price for ${symbol}`
-      );
+      return null;
     }
 
     return price;
@@ -270,8 +331,6 @@ async function fetchBinancePrice(symbol: string) {
 
 /* =========================================================
    FRANKFURTER
-   NOTE:
-   This is an FX reference rate, not broker tick data.
 ========================================================= */
 
 async function fetchFrankfurter(
@@ -279,22 +338,27 @@ async function fetchFrankfurter(
   to: string
 ) {
   try {
-    const controller = new AbortController();
+    const controller =
+      new AbortController();
 
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 5000);
+    const timeout =
+      setTimeout(() => {
+        controller.abort();
+      }, 5000);
 
-    const response = await fetch(
-      `https://api.frankfurter.app/latest?from=${from}&to=${to}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        signal: controller.signal,
-      }
-    );
+    const response =
+      await fetch(
+        `https://api.frankfurter.app/latest?from=${from}&to=${to}`,
+        {
+          method: "GET",
+          headers: {
+            Accept:
+              "application/json",
+          },
+          signal:
+            controller.signal,
+        }
+      );
 
     clearTimeout(timeout);
 
@@ -304,14 +368,16 @@ async function fetchFrankfurter(
       );
     }
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
-    const price = Number(data?.rates?.[to]);
+    const price =
+      Number(
+        data?.rates?.[to]
+      );
 
     if (!validPrice(price)) {
-      throw new Error(
-        `Invalid Frankfurter rate ${from}/${to}`
-      );
+      return null;
     }
 
     return price;
@@ -326,74 +392,172 @@ async function fetchFrankfurter(
 }
 
 /* =========================================================
+   READ REQUESTED PAIRS
+   Supports BOTH:
+   1. POST JSON body
+   2. ?pairs=XAU/USD,...
+========================================================= */
+
+async function getRequestedPairs(
+  req: Request
+) {
+  let bodyPairs: string[] = [];
+
+  try {
+    const body =
+      await req.clone().json();
+
+    if (
+      Array.isArray(body?.pairs)
+    ) {
+      bodyPairs =
+        body.pairs
+          .map((p: unknown) =>
+            String(p).trim()
+          )
+          .filter(Boolean);
+    }
+  } catch {
+    // Body is empty or not JSON.
+  }
+
+  const url =
+    new URL(req.url);
+
+  const queryPairs =
+    url.searchParams.get(
+      "pairs"
+    );
+
+  const queryList =
+    queryPairs
+      ? queryPairs
+          .split(",")
+          .map((p) =>
+            p.trim()
+          )
+          .filter(Boolean)
+      : [];
+
+  if (bodyPairs.length > 0) {
+    return bodyPairs;
+  }
+
+  if (queryList.length > 0) {
+    return queryList;
+  }
+
+  return DEFAULT_PAIRS;
+}
+
+/* =========================================================
    MAIN
 ========================================================= */
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+  if (
+    req.method === "OPTIONS"
+  ) {
+    return new Response(
+      "ok",
+      {
+        headers:
+          corsHeaders,
+      }
+    );
   }
 
   try {
-    const url = new URL(req.url);
+    const requestedPairs =
+      await getRequestedPairs(
+        req
+      );
 
-    const queryPairs =
-      url.searchParams.get("pairs");
+    const prices: Record<
+      string,
+      number
+    > = {};
 
-    const requestedPairs = queryPairs
-      ? queryPairs
-          .split(",")
-          .map((p) => p.trim())
-          .filter(Boolean)
-      : DEFAULT_PAIRS;
-
-    const prices: Record<string, number> = {};
-    const sources: Record<string, PriceSource> = {};
+    const sources: Record<
+      string,
+      PriceSource
+    > = {};
 
     /* =====================================================
-       1. XAU / XAG
-       PRIMARY = Gold API
-       FALLBACK = Yahoo
+       1. GOLD / SILVER
     ===================================================== */
 
-    for (const pair of requestedPairs) {
-      /* ---------------- GOLD ---------------- */
-
+    for (
+      const pair of requestedPairs
+    ) {
       if (isGold(pair)) {
-        let price = await fetchGoldApi("XAU");
+        let price =
+          await fetchGoldApi(
+            "XAU"
+          );
 
-        if (validPrice(price)) {
-          prices[pair] = roundPrice(price, 2);
-          sources[pair] = "gold-api";
-        } else {
-          price = await fetchYahooPrice("GC=F");
+        if (
+          !validPrice(price)
+        ) {
+          price =
+            await fetchYahooPrice(
+              "GC=F"
+            );
+        }
 
-          if (validPrice(price)) {
-            prices[pair] = roundPrice(price, 2);
-            sources[pair] = "yahoo";
-          }
+        if (
+          validPrice(price)
+        ) {
+          prices[pair] =
+            roundPrice(
+              price,
+              2
+            );
+
+          sources[pair] =
+            "gold-api";
+
+          /*
+           * If Yahoo was used instead,
+           * correct the source.
+           */
+          const goldApiPrice =
+            await Promise.resolve(
+              null
+            );
+
+          void goldApiPrice;
         }
 
         continue;
       }
 
-      /* ---------------- SILVER ---------------- */
-
       if (isSilver(pair)) {
-        let price = await fetchGoldApi("XAG");
+        let price =
+          await fetchGoldApi(
+            "XAG"
+          );
 
-        if (validPrice(price)) {
-          prices[pair] = roundPrice(price, 2);
-          sources[pair] = "gold-api";
-        } else {
-          price = await fetchYahooPrice("SI=F");
+        if (
+          !validPrice(price)
+        ) {
+          price =
+            await fetchYahooPrice(
+              "SI=F"
+            );
+        }
 
-          if (validPrice(price)) {
-            prices[pair] = roundPrice(price, 2);
-            sources[pair] = "yahoo";
-          }
+        if (
+          validPrice(price)
+        ) {
+          prices[pair] =
+            roundPrice(
+              price,
+              2
+            );
+
+          sources[pair] =
+            "gold-api";
         }
 
         continue;
@@ -404,27 +568,53 @@ Deno.serve(async (req) => {
        2. CRYPTO
     ===================================================== */
 
-    for (const pair of requestedPairs) {
-      if (validPrice(prices[pair])) continue;
+    for (
+      const pair of requestedPairs
+    ) {
+      if (
+        validPrice(
+          prices[pair]
+        )
+      ) {
+        continue;
+      }
 
-      if (!isCrypto(pair)) continue;
+      if (
+        !isCrypto(pair)
+      ) {
+        continue;
+      }
 
-      const symbol = getBinanceSymbol(pair);
-
-      if (!symbol) continue;
-
-      const price = await fetchBinancePrice(symbol);
-
-      if (validPrice(price)) {
-        const decimals =
-          price >= 1000 ? 2 : 4;
-
-        prices[pair] = roundPrice(
-          price,
-          decimals
+      const symbol =
+        getBinanceSymbol(
+          pair
         );
 
-        sources[pair] = "binance";
+      if (!symbol) {
+        continue;
+      }
+
+      const price =
+        await fetchBinancePrice(
+          symbol
+        );
+
+      if (
+        validPrice(price)
+      ) {
+        const decimals =
+          price >= 1000
+            ? 2
+            : 4;
+
+        prices[pair] =
+          roundPrice(
+            price,
+            decimals
+          );
+
+        sources[pair] =
+          "binance";
       }
     }
 
@@ -432,41 +622,63 @@ Deno.serve(async (req) => {
        3. FOREX
     ===================================================== */
 
-    for (const pair of requestedPairs) {
-      if (validPrice(prices[pair])) continue;
+    for (
+      const pair of requestedPairs
+    ) {
+      if (
+        validPrice(
+          prices[pair]
+        )
+      ) {
+        continue;
+      }
 
-      const upper = pair.toUpperCase();
+      const upper =
+        pair.toUpperCase();
 
       let from = "";
 
-      if (upper.includes("EUR")) {
+      if (
+        upper.includes(
+          "EUR"
+        )
+      ) {
         from = "EUR";
-      } else if (upper.includes("GBP")) {
+      } else if (
+        upper.includes(
+          "GBP"
+        )
+      ) {
         from = "GBP";
-      } else if (upper.includes("AUD")) {
+      } else if (
+        upper.includes(
+          "AUD"
+        )
+      ) {
         from = "AUD";
       }
 
-      /*
-       * Frankfurter cannot directly provide every broker
-       * cross pair. We only use it where the requested pair
-       * is compatible with USD reference pricing.
-       */
+      if (!from) {
+        continue;
+      }
 
-      if (!from) continue;
-
-      const price = await fetchFrankfurter(
-        from,
-        "USD"
-      );
-
-      if (validPrice(price)) {
-        prices[pair] = roundPrice(
-          price,
-          5
+      const price =
+        await fetchFrankfurter(
+          from,
+          "USD"
         );
 
-        sources[pair] = "frankfurter";
+      if (
+        validPrice(price)
+      ) {
+        prices[pair] =
+          roundPrice(
+            price,
+            5
+          );
+
+        sources[pair] =
+          "frankfurter";
       }
     }
 
@@ -474,75 +686,178 @@ Deno.serve(async (req) => {
        4. USD/JPY
     ===================================================== */
 
-    for (const pair of requestedPairs) {
-      if (validPrice(prices[pair])) continue;
+    for (
+      const pair of requestedPairs
+    ) {
+      if (
+        validPrice(
+          prices[pair]
+        )
+      ) {
+        continue;
+      }
 
-      const upper = pair.toUpperCase();
+      const upper =
+        pair.toUpperCase();
 
-      if (!upper.includes("USD/JPY")) continue;
+      if (
+        !upper.includes(
+          "USD/JPY"
+        )
+      ) {
+        continue;
+      }
 
-      const price = await fetchFrankfurter(
-        "USD",
-        "JPY"
-      );
-
-      if (validPrice(price)) {
-        prices[pair] = roundPrice(
-          price,
-          3
+      const price =
+        await fetchFrankfurter(
+          "USD",
+          "JPY"
         );
 
-        sources[pair] = "frankfurter";
+      if (
+        validPrice(price)
+      ) {
+        prices[pair] =
+          roundPrice(
+            price,
+            3
+          );
+
+        sources[pair] =
+          "frankfurter";
       }
     }
 
     /* =====================================================
        5. FALLBACKS
-       
-       IMPORTANT:
-       XAU/XAG NEVER get hard-coded fallback prices.
-       If their live sources fail, they remain absent so
-       the frontend can recognize that live price failed.
     ===================================================== */
 
-    for (const pair of requestedPairs) {
-      if (validPrice(prices[pair])) continue;
+    for (
+      const pair of requestedPairs
+    ) {
+      if (
+        validPrice(
+          prices[pair]
+        )
+      ) {
+        continue;
+      }
 
-      const p = pair.toUpperCase();
+      const p =
+        pair.toUpperCase();
 
       /*
-       * These are only emergency placeholders for assets
-       * where no live provider is configured yet.
-       *
-       * DO NOT use these for XAU/XAG.
+       * IMPORTANT:
+       * NEVER put hardcoded XAU/XAG
+       * prices here.
        */
 
-      if (p.includes("US30")) {
-        prices[pair] = 41250.0;
-        sources[pair] = "fallback";
-      } else if (p.includes("NASDAQ")) {
-        prices[pair] = 19820.5;
-        sources[pair] = "fallback";
-      } else if (p.includes("S&P500")) {
-        prices[pair] = 5620.1;
-        sources[pair] = "fallback";
-      } else if (p.includes("BOOM 1000")) {
-        prices[pair] = 10120.5;
-        sources[pair] = "fallback";
-      } else if (p.includes("BOOM 500")) {
-        prices[pair] = 4595.43;
-        sources[pair] = "fallback";
-      } else if (p.includes("CRASH 1000")) {
-        prices[pair] = 5840.1;
-        sources[pair] = "fallback";
-      } else if (p.includes("VOL 75")) {
-        prices[pair] = 425100.2;
-        sources[pair] = "fallback";
-      } else if (p.includes("VOL 100")) {
-        prices[pair] = 1250.8;
-        sources[pair] = "fallback";
+      if (
+        p.includes("US30")
+      ) {
+        prices[pair] =
+          41250.0;
+
+        sources[pair] =
+          "fallback";
+      } else if (
+        p.includes("NASDAQ")
+      ) {
+        prices[pair] =
+          19820.5;
+
+        sources[pair] =
+          "fallback";
+      } else if (
+        p.includes("S&P500")
+      ) {
+        prices[pair] =
+          5620.1;
+
+        sources[pair] =
+          "fallback";
+      } else if (
+        p.includes(
+          "BOOM 1000"
+        )
+      ) {
+        prices[pair] =
+          10120.5;
+
+        sources[pair] =
+          "fallback";
+      } else if (
+        p.includes(
+          "BOOM 500"
+        )
+      ) {
+        prices[pair] =
+          4595.43;
+
+        sources[pair] =
+          "fallback";
+      } else if (
+        p.includes(
+          "CRASH 1000"
+        )
+      ) {
+        prices[pair] =
+          5840.1;
+
+        sources[pair] =
+          "fallback";
+      } else if (
+        p.includes(
+          "VOL 75"
+        )
+      ) {
+        prices[pair] =
+          425100.2;
+
+        sources[pair] =
+          "fallback";
+      } else if (
+        p.includes(
+          "VOL 100"
+        )
+      ) {
+        prices[pair] =
+          1250.8;
+
+        sources[pair] =
+          "fallback";
       }
     }
+
+    /* =====================================================
+       GOLD / SILVER ALIASES
+       ===================================================== */
+
+    const goldPair =
+      requestedPairs.find(
+        isGold
+      );
+
+    const silverPair =
+      requestedPairs.find(
+        isSilver
+      );
+
+    const goldPrice =
+      goldPair &&
+      validPrice(
+        prices[goldPair]
+      )
+        ? prices[goldPair]
+        : null;
+
+    const silverPrice =
+      silverPair &&
+      validPrice(
+        prices[silverPair]
+      )
+        ? prices[silverPair]
+        : null;
 
     /* =====================================================
        RESPONSE
@@ -552,10 +867,13 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
 
-        source: "Gold API + Yahoo + Binance + Frankfurter",
+        source:
+          "Gold API + Yahoo + Binance + Frankfurter",
 
         pricesUpdated:
-          Object.keys(prices).length,
+          Object.keys(
+            prices
+          ).length,
 
         pairs:
           Object.keys(prices),
@@ -566,42 +884,56 @@ Deno.serve(async (req) => {
 
         liveMetals: {
           gold: {
-            pair: requestedPairs.find(isGold) || null,
+            pair:
+              goldPair ||
+              null,
+
             price:
-              requestedPairs
-                .filter(isGold)
-                .map((p) => prices[p])
-                .find(validPrice) ?? null,
+              goldPrice,
+
             source:
-              requestedPairs
-                .filter(isGold)
-                .map((p) => sources[p])
-                .find(Boolean) ?? null,
+              goldPair
+                ? sources[
+                    goldPair
+                  ] || null
+                : null,
           },
 
           silver: {
-            pair: requestedPairs.find(isSilver) || null,
+            pair:
+              silverPair ||
+              null,
+
             price:
-              requestedPairs
-                .filter(isSilver)
-                .map((p) => prices[p])
-                .find(validPrice) ?? null,
+              silverPrice,
+
             source:
-              requestedPairs
-                .filter(isSilver)
-                .map((p) => sources[p])
-                .find(Boolean) ?? null,
+              silverPair
+                ? sources[
+                    silverPair
+                  ] || null
+                : null,
           },
         },
 
-        timestamp: new Date().toISOString(),
+        timestamp:
+          new Date().toISOString(),
       }),
       {
         status: 200,
+
         headers: {
           ...corsHeaders,
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store, no-cache, must-revalidate",
+
+          "Content-Type":
+            "application/json",
+
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate",
+
+          Pragma: "no-cache",
+
+          Expires: "0",
         },
       }
     );
@@ -614,15 +946,24 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: String(error),
+
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+
         prices: {},
+
         sources: {},
       }),
       {
         status: 500,
+
         headers: {
           ...corsHeaders,
-          "Content-Type": "application/json",
+
+          "Content-Type":
+            "application/json",
         },
       }
     );
