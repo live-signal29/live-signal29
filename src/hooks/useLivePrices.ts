@@ -1,53 +1,175 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Retry helper for VPN/proxy compatibility
-const fetchWithRetry = async <T>(
-  fn: () => Promise<T>,
-  retries: number = 3,
-  delay: number = 1000
-): Promise<T> => {
-  for (let i = 0; i <= retries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (i === retries) throw error;
-      await new Promise(r => setTimeout(r, delay * (i + 1)));
-    }
+// =========================================================
+// HELPERS
+// =========================================================
+
+const normalizePair = (pair: string): string => {
+  const p = String(pair || '').trim().toUpperCase();
+
+  if (
+    p.includes('XAU') ||
+    p.includes('GOLD')
+  ) {
+    return 'XAU/USD (Gold)';
   }
-  throw new Error('Max retries reached');
+
+  if (
+    p.includes('XAG') ||
+    p.includes('SILVER')
+  ) {
+    return 'XAG/USD (Silver)';
+  }
+
+  return String(pair || '').trim();
 };
 
-// Parse entry price (handles ranges like "4280-4282" or single values)
-export const parseEntryPrice = (entry: string): number => {
+const getPriceFromResponse = (
+  prices: Record<string, unknown>,
+  requestedPair: string
+): number => {
+  if (!prices || typeof prices !== 'object') {
+    return 0;
+  }
+
+  const normalized = normalizePair(requestedPair);
+
+  const candidates = [
+    requestedPair,
+    normalized,
+
+    // Gold aliases
+    ...(normalized === 'XAU/USD (Gold)'
+      ? [
+          'XAU/USD',
+          'XAUUSD',
+          'XAU',
+          'GOLD',
+          'GOLD/USD',
+          'XAU/USD (GOLD)',
+        ]
+      : []),
+
+    // Silver aliases
+    ...(normalized === 'XAG/USD (Silver)'
+      ? [
+          'XAG/USD',
+          'XAGUSD',
+          'XAG',
+          'SILVER',
+          'SILVER/USD',
+          'XAG/USD (SILVER)',
+        ]
+      : []),
+  ];
+
+  for (const key of candidates) {
+    const raw = prices[key];
+
+    const numeric =
+      typeof raw === 'number'
+        ? raw
+        : parseFloat(String(raw ?? ''));
+
+    if (
+      Number.isFinite(numeric) &&
+      numeric > 0
+    ) {
+      return numeric;
+    }
+  }
+
+  // Last fallback: case-insensitive key matching
+  const wanted = candidates.map((x) =>
+    String(x).trim().toUpperCase()
+  );
+
+  for (const [key, value] of Object.entries(prices)) {
+    if (
+      wanted.includes(
+        String(key).trim().toUpperCase()
+      )
+    ) {
+      const numeric =
+        typeof value === 'number'
+          ? value
+          : parseFloat(String(value ?? ''));
+
+      if (
+        Number.isFinite(numeric) &&
+        numeric > 0
+      ) {
+        return numeric;
+      }
+    }
+  }
+
+  return 0;
+};
+
+// =========================================================
+// Parse entry price
+// Handles:
+// 4280
+// 4280-4282
+// 4280 – 4282
+// =========================================================
+
+export const parseEntryPrice = (
+  entry: string
+): number => {
   if (!entry) return 0;
 
-  const cleaned = entry.replace(/[^\d.\-–]/g, '');
+  const cleaned = entry.replace(
+    /[^\d.\-–]/g,
+    ''
+  );
+
   const parts = cleaned.split(/[-–]/);
 
   if (parts.length >= 2) {
-    return (parseFloat(parts[0]) + parseFloat(parts[1])) / 2;
+    const first = parseFloat(parts[0]);
+    const second = parseFloat(parts[1]);
+
+    if (
+      Number.isFinite(first) &&
+      Number.isFinite(second)
+    ) {
+      return (first + second) / 2;
+    }
   }
 
   return parseFloat(cleaned) || 0;
 };
 
+// =========================================================
 // Calculate running P/L
+// =========================================================
+
 export const calculateRunningPL = (
   currentPrice: number,
   entryPrice: number,
   signalType: string,
   lotValue: number = 1
-): { value: number; isProfit: boolean; formatted: string } => {
-  if (!currentPrice || !entryPrice) {
+): {
+  value: number;
+  isProfit: boolean;
+  formatted: string;
+} => {
+  if (
+    !currentPrice ||
+    !entryPrice
+  ) {
     return {
       value: 0,
       isProfit: true,
-      formatted: '$0'
+      formatted: '$0',
     };
   }
 
-  const isBuy = signalType?.toLowerCase() === 'buy';
+  const isBuy =
+    signalType?.toLowerCase() === 'buy';
 
   const pl = isBuy
     ? (currentPrice - entryPrice) * lotValue
@@ -59,13 +181,14 @@ export const calculateRunningPL = (
     formatted:
       pl >= 0
         ? `+$${Math.abs(pl).toFixed(0)}`
-        : `-$${Math.abs(pl).toFixed(0)}`
+        : `-$${Math.abs(pl).toFixed(0)}`,
   };
 };
 
-// Check if TP/SL is hit
-// BUY: TP hit when price >= TP, SL hit when price <= SL
-// SELL: TP hit when price <= TP, SL hit when price >= SL
+// =========================================================
+// Check TP / SL
+// =========================================================
+
 export const checkTPSLHit = (
   currentPrice: number,
   targetPrice: number,
@@ -81,194 +204,327 @@ export const checkTPSLHit = (
     return false;
   }
 
-  const isBuy = signalType?.toLowerCase() === 'buy';
+  const isBuy =
+    signalType?.toLowerCase() === 'buy';
 
   if (isSL) {
-    if (isBuy) {
-      return currentPrice <= targetPrice;
-    } else {
-      return currentPrice >= targetPrice;
-    }
+    return isBuy
+      ? currentPrice <= targetPrice
+      : currentPrice >= targetPrice;
   }
 
-  if (isBuy) {
-    return currentPrice >= targetPrice;
-  } else {
-    return currentPrice <= targetPrice;
-  }
+  return isBuy
+    ? currentPrice >= targetPrice
+    : currentPrice <= targetPrice;
 };
 
-// Hook to fetch live prices via edge function
+// =========================================================
+// LIVE PRICES HOOK
+// =========================================================
+
 export const useLivePricesFetch = (
   pairs: string[],
   enabled: boolean = true
 ) => {
-  const [prices, setPrices] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [prices, setPrices] =
+    useState<Record<string, string>>({});
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const failedAttemptsRef = useRef(0);
-  const retryAfterRef = useRef(0);
+  const [loading, setLoading] =
+    useState(false);
 
-  /*
-   * IMPORTANT:
-   * `pairs` can be recreated on every render.
-   * Using the array directly in useEffect causes the polling
-   * interval to restart repeatedly.
-   *
-   * Convert the pairs into one stable string key instead.
-   */
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const intervalRef =
+    useRef<ReturnType<typeof setInterval> | null>(
+      null
+    );
+
+  const failedAttemptsRef =
+    useRef(0);
+
+  const retryAfterRef =
+    useRef(0);
+
+  // Stable pair list
   const pairsKey = pairs
-    .map((pair) => String(pair).trim())
+    .map((pair) =>
+      String(pair).trim()
+    )
     .filter(Boolean)
     .join('\u0001');
 
-  const fetchPrices = useCallback(async () => {
-    if (!enabled || !pairsKey) return;
+  // =======================================================
+  // FETCH
+  // =======================================================
 
-    if (Date.now() < retryAfterRef.current) return;
-
-    const requestedPairs = pairsKey
-      .split('\u0001')
-      .map((pair) => pair.trim())
-      .filter(Boolean);
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { data, error: invokeError } =
-        await supabase.functions.invoke(
-          'fetch-live-prices',
-          {
-            body: {
-              pairs: requestedPairs
-            }
-          }
-        );
-
-      if (invokeError) {
-        throw new Error(
-          invokeError.message ||
-            'Live price function failed'
-        );
+  const fetchPrices =
+    useCallback(async () => {
+      if (
+        !enabled ||
+        !pairsKey
+      ) {
+        return;
       }
-
-      if (!data?.success) {
-        throw new Error(
-          data?.error ||
-            'MT5 live price service failed'
-        );
-      }
-
-      const nextPrices = data?.prices;
 
       if (
-        !nextPrices ||
-        typeof nextPrices !== 'object'
+        Date.now() <
+        retryAfterRef.current
       ) {
-        throw new Error(
-          'MT5 returned no prices'
-        );
+        return;
       }
 
-      const validPrices: Record<string, string> = {};
+      const requestedPairs =
+        pairsKey
+          .split('\u0001')
+          .map((pair) =>
+            pair.trim()
+          )
+          .filter(Boolean);
 
-      for (const pair of requestedPairs) {
-        const raw = nextPrices[pair];
+      setLoading(true);
+      setError(null);
 
-        const numeric =
-          typeof raw === 'number'
-            ? raw
-            : parseFloat(
-                String(raw ?? '')
-              );
+      try {
+        /*
+         * IMPORTANT:
+         *
+         * Your Edge Function currently reads:
+         *
+         * url.searchParams.get("pairs")
+         *
+         * Supabase invoke body does NOT become
+         * a URL query parameter.
+         *
+         * We therefore send the pairs in the body
+         * AND the function should support body fallback.
+         */
+
+        const {
+          data,
+          error: invokeError,
+        } =
+          await supabase.functions.invoke(
+            'fetch-live-prices',
+            {
+              body: {
+                pairs: requestedPairs,
+              },
+            }
+          );
+
+        if (invokeError) {
+          throw new Error(
+            invokeError.message ||
+              'Live price function failed'
+          );
+        }
+
+        if (!data?.success) {
+          throw new Error(
+            data?.error ||
+              'Live price service failed'
+          );
+        }
+
+        const responsePrices =
+          data?.prices;
 
         if (
-          Number.isFinite(numeric) &&
-          numeric > 0
+          !responsePrices ||
+          typeof responsePrices !==
+            'object'
         ) {
-          validPrices[pair] = String(raw);
+          throw new Error(
+            'Live price service returned no prices'
+          );
         }
-      }
 
-      if (
-        Object.keys(validPrices).length === 0
-      ) {
-        throw new Error(
-          'MT5 returned no live prices for the requested pairs'
-        );
-      }
+        const validPrices: Record<
+          string,
+          string
+        > = {};
 
-      setPrices((prev) => {
-        let changed = false;
+        // =================================================
+        // MATCH EVERY REQUESTED PAIR
+        // INCLUDING XAU/XAG ALIASES
+        // =================================================
 
-        const next = {
-          ...prev
-        };
+        for (
+          const pair of requestedPairs
+        ) {
+          const numeric =
+            getPriceFromResponse(
+              responsePrices,
+              pair
+            );
 
-        for (const [
-          pair,
-          value
-        ] of Object.entries(validPrices)) {
-          if (next[pair] !== value) {
-            next[pair] = value;
-            changed = true;
+          if (
+            Number.isFinite(numeric) &&
+            numeric > 0
+          ) {
+            /*
+             * IMPORTANT:
+             * Store using the ORIGINAL pair name
+             * because UI components normally ask
+             * for the original symbol.
+             */
+            validPrices[pair] =
+              String(numeric);
           }
         }
 
-        return changed ? next : prev;
-      });
+        // =================================================
+        // ALSO CREATE GOLD/SILVER ALIASES
+        // =================================================
 
-      failedAttemptsRef.current = 0;
-      retryAfterRef.current = 0;
+        const goldPrice =
+          getPriceFromResponse(
+            responsePrices,
+            'XAU/USD (Gold)'
+          );
 
-    } catch (err) {
+        const silverPrice =
+          getPriceFromResponse(
+            responsePrices,
+            'XAG/USD (Silver)'
+          );
 
-      failedAttemptsRef.current++;
+        if (
+          Number.isFinite(goldPrice) &&
+          goldPrice > 0
+        ) {
+          validPrices[
+            'XAU/USD (Gold)'
+          ] =
+            String(goldPrice);
 
-      if (
-        failedAttemptsRef.current >= 5
-      ) {
-        retryAfterRef.current =
-          Date.now() + 30000;
-      }
+          validPrices[
+            'XAU/USD'
+          ] =
+            String(goldPrice);
 
-      if (
-        failedAttemptsRef.current <= 2
-      ) {
-        console.error(
-          'Error fetching live prices:',
-          err
+          validPrices[
+            'XAUUSD'
+          ] =
+            String(goldPrice);
+        }
+
+        if (
+          Number.isFinite(silverPrice) &&
+          silverPrice > 0
+        ) {
+          validPrices[
+            'XAG/USD (Silver)'
+          ] =
+            String(silverPrice);
+
+          validPrices[
+            'XAG/USD'
+          ] =
+            String(silverPrice);
+
+          validPrices[
+            'XAGUSD'
+          ] =
+            String(silverPrice);
+        }
+
+        if (
+          Object.keys(validPrices)
+            .length === 0
+        ) {
+          throw new Error(
+            'No live prices returned'
+          );
+        }
+
+        // =================================================
+        // UPDATE STATE ONLY IF CHANGED
+        // =================================================
+
+        setPrices((previous) => {
+          let changed = false;
+
+          const next = {
+            ...previous,
+          };
+
+          for (
+            const [
+              pair,
+              value,
+            ] of Object.entries(
+              validPrices
+            )) {
+            if (
+              next[pair] !== value
+            ) {
+              next[pair] = value;
+              changed = true;
+            }
+          }
+
+          return changed
+            ? next
+            : previous;
+        });
+
+        failedAttemptsRef.current = 0;
+        retryAfterRef.current = 0;
+
+      } catch (err) {
+        failedAttemptsRef.current++;
+
+        if (
+          failedAttemptsRef.current >= 5
+        ) {
+          retryAfterRef.current =
+            Date.now() + 30000;
+        }
+
+        if (
+          failedAttemptsRef.current <= 2
+        ) {
+          console.error(
+            'Error fetching live prices:',
+            err
+          );
+        }
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Network error'
         );
+      } finally {
+        setLoading(false);
       }
+    }, [
+      pairsKey,
+      enabled,
+    ]);
 
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Network error'
-      );
-
-    } finally {
-      setLoading(false);
-    }
-  }, [pairsKey, enabled]);
+  // =======================================================
+  // POLLING
+  // =======================================================
 
   useEffect(() => {
-    if (!enabled || !pairsKey) return;
+    if (
+      !enabled ||
+      !pairsKey
+    ) {
+      return;
+    }
 
-    // Fetch immediately after mount/pair change.
-    const initTimeout = setTimeout(
-      fetchPrices,
-      250
-    );
+    // Immediate fetch
+    const initTimeout =
+      setTimeout(
+        fetchPrices,
+        100
+      );
 
-    /*
-     * Real 3-second polling.
-     * Stable pairsKey prevents the interval
-     * from restarting on every render.
-     */
+    // Every 3 seconds
     intervalRef.current =
       setInterval(
         fetchPrices,
@@ -276,29 +532,38 @@ export const useLivePricesFetch = (
       );
 
     return () => {
-      clearTimeout(initTimeout);
+      clearTimeout(
+        initTimeout
+      );
 
-      if (intervalRef.current) {
+      if (
+        intervalRef.current
+      ) {
         clearInterval(
           intervalRef.current
         );
 
-        intervalRef.current = null;
+        intervalRef.current =
+          null;
       }
     };
   }, [
     fetchPrices,
     enabled,
-    pairsKey
+    pairsKey,
   ]);
 
   return {
     prices,
     loading,
     error,
-    refetch: fetchPrices
+    refetch: fetchPrices,
   };
 };
+
+// =========================================================
+// AUTO TP / SL UPDATE
+// =========================================================
 
 export const useAutoTPSLUpdate = (
   signalId: string,
@@ -320,20 +585,33 @@ export const useAutoTPSLUpdate = (
     useRef<string>('');
 
   useEffect(() => {
-    if (!currentPrice || slHit) return;
+    if (
+      !currentPrice ||
+      slHit
+    ) {
+      return;
+    }
 
     const priceNum =
       parseFloat(currentPrice);
 
-    if (!priceNum) return;
+    if (
+      !Number.isFinite(priceNum) ||
+      priceNum <= 0
+    ) {
+      return;
+    }
 
     const updates: Record<
       string,
       any
     > = {};
 
-    // Check TP1
-    if (!tp1Hit && tp1) {
+    // TP1
+    if (
+      !tp1Hit &&
+      tp1
+    ) {
       const tp1Price =
         parseEntryPrice(tp1);
 
@@ -349,8 +627,11 @@ export const useAutoTPSLUpdate = (
       }
     }
 
-    // Check TP2
-    if (!tp2Hit && tp2) {
+    // TP2
+    if (
+      !tp2Hit &&
+      tp2
+    ) {
       const tp2Price =
         parseEntryPrice(tp2);
 
@@ -366,8 +647,11 @@ export const useAutoTPSLUpdate = (
       }
     }
 
-    // Check TP3
-    if (!tp3Hit && tp3) {
+    // TP3
+    if (
+      !tp3Hit &&
+      tp3
+    ) {
       const tp3Price =
         parseEntryPrice(tp3);
 
@@ -383,8 +667,11 @@ export const useAutoTPSLUpdate = (
       }
     }
 
-    // Check TP4
-    if (!tp4Hit && tp4) {
+    // TP4
+    if (
+      !tp4Hit &&
+      tp4
+    ) {
       const tp4Price =
         parseEntryPrice(tp4);
 
@@ -400,10 +687,10 @@ export const useAutoTPSLUpdate = (
       }
     }
 
-    /*
-     * SL:
-     * Only trigger if no TP has been hit.
-     */
+    // =====================================================
+    // SL
+    // =====================================================
+
     const anyTPHit =
       tp1Hit ||
       tp2Hit ||
@@ -436,9 +723,13 @@ export const useAutoTPSLUpdate = (
       }
     }
 
-    // Update database if there are changes
+    // =====================================================
+    // DATABASE UPDATE
+    // =====================================================
+
     if (
-      Object.keys(updates).length > 0
+      Object.keys(updates)
+        .length > 0
     ) {
       const updateKey =
         JSON.stringify(updates);
@@ -457,19 +748,22 @@ export const useAutoTPSLUpdate = (
             'id',
             signalId
           )
-          .then(({ error }) => {
-            if (error) {
-              console.error(
-                'Error updating signal:',
-                error
-              );
+          .then(
+            ({ error }) => {
+              if (error) {
+                console.error(
+                  'Error updating signal:',
+                  error
+                );
+              }
             }
-          });
+          );
       }
     }
   }, [
     currentPrice,
     signalId,
+    pair,
     signalType,
     tp1,
     tp2,
@@ -480,6 +774,6 @@ export const useAutoTPSLUpdate = (
     tp2Hit,
     tp3Hit,
     tp4Hit,
-    slHit
+    slHit,
   ]);
 };
