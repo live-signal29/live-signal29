@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -19,9 +19,15 @@ import {
   Clock,
   LineChart,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
+import { TrialExpiredModal } from "@/components/TrialExpiredModal";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { hasAccess, loading: accessLoading, trialExpired } = useSubscriptionAccess();
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
+
   // Master Active Category State
   const [activeCategory, setActiveCategory] = useState("All");
 
@@ -39,6 +45,20 @@ const Index = () => {
       return data;
     },
   });
+
+  // Show trial expired modal when trial is expired
+  useEffect(() => {
+    if (!accessLoading && trialExpired && !hasAccess) {
+      setShowTrialExpiredModal(true);
+    }
+  }, [accessLoading, trialExpired, hasAccess]);
+
+  // Redirect to premium if no access at all
+  useEffect(() => {
+    if (!accessLoading && !hasAccess && !trialExpired) {
+      navigate("/premium", { replace: true });
+    }
+  }, [accessLoading, hasAccess, trialExpired, navigate]);
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -58,6 +78,26 @@ const Index = () => {
     
     return sigCat === activeCat;
   });
+
+  // Show loading state while checking access
+  if (accessLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 border-4 border-primary/20 rounded-full"></div>
+            <div className="absolute top-0 left-0 w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-sm text-muted-foreground animate-pulse">Checking Access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no access and not trial expired, show nothing (redirect will handle)
+  if (!hasAccess && !trialExpired) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/20 selection:text-foreground transition-colors duration-300">
@@ -228,6 +268,17 @@ const Index = () => {
 
       <ExnessPopup />
       <Footer />
+
+      {/* Trial Expired Modal */}
+      <TrialExpiredModal 
+        open={showTrialExpiredModal} 
+        onOpenChange={(open) => {
+          setShowTrialExpiredModal(open);
+          if (!open) {
+            navigate("/premium");
+          }
+        }}
+      />
     </div>
   );
 };
