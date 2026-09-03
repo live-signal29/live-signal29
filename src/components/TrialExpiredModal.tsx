@@ -75,10 +75,7 @@ export const TrialExpiredModal = ({ open, onOpenChange }: TrialExpiredModalProps
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                navigate("/premium");
-              }}
+              onClick={() => onOpenChange(false)}
               className="h-12"
             >
               Maybe Later
