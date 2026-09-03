@@ -19,7 +19,7 @@ const fetchWithRetry = async <T>(
 };
 
 export const useSubscriptionAccess = () => {
-  const [hasAccess, setHasAccess] = useState(true); // Optimistically assume access
+  const [hasAccess, setHasAccess] = useState(true);
   const [loading, setLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialExpired, setTrialExpired] = useState(false);
@@ -28,7 +28,6 @@ export const useSubscriptionAccess = () => {
   const maxRetries = 3;
 
   useEffect(() => {
-    // Small delay to let app stabilize (helps with VPN connections)
     const timeout = setTimeout(() => {
       checkAccess();
     }, 100);
@@ -39,7 +38,6 @@ export const useSubscriptionAccess = () => {
     try {
       setLoading(true);
       
-      // Use retry logic for VPN/proxy compatibility
       const user = await fetchWithRetry(async () => {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error) throw error;
@@ -69,7 +67,7 @@ export const useSubscriptionAccess = () => {
       }
 
       setSubscriptionStatus(profile.subscription_status);
-      retryCountRef.current = 0; // Reset on success
+      retryCountRef.current = 0;
 
       const now = new Date();
 
@@ -81,44 +79,32 @@ export const useSubscriptionAccess = () => {
           setTrialExpired(false);
         } else {
           setHasAccess(false);
-          setTrialExpired(false);
+          setTrialExpired(true);
         }
       }
-      // Check if free trial
-      else if (profile.subscription_status === 'free_trial') {
+      // Check free trial or default trial expiration check
+      else {
         const trialEnd = profile.trial_end_date ? new Date(profile.trial_end_date) : null;
         setTrialEndDate(trialEnd);
         
         if (trialEnd && trialEnd > now) {
-          // Trial is still active
+          // Trial active
           setHasAccess(true);
           setTrialExpired(false);
         } else {
-          // Trial has expired - but still allow dashboard access with filtered signals
-          setHasAccess(true); // Allow access to dashboard
-          setTrialExpired(true); // Mark trial as expired for filtering
+          // Trial expired -> Block access
+          setHasAccess(false);
+          setTrialExpired(true);
         }
-      }
-      // Otherwise no access
-      else {
-        setHasAccess(false);
-        setTrialExpired(false);
       }
     } catch (error) {
       retryCountRef.current++;
-      
-      // Only log first few errors to avoid spam
       if (retryCountRef.current <= 2) {
         console.error("Error checking access:", error);
       }
-      
-      // On network errors, keep optimistic access instead of blocking user
-      // This prevents VPN/proxy users from being locked out
       if (retryCountRef.current < maxRetries) {
-        // Retry after delay
         setTimeout(checkAccess, 2000 * retryCountRef.current);
       }
-      // Keep hasAccess as true (optimistic) on persistent failures
     } finally {
       setLoading(false);
     }
