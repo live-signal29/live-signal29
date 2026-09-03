@@ -6,6 +6,8 @@ import SignalCard from "@/components/SignalCard";
 import SEO from "@/components/SEO";
 import { ExnessAffiliateBanner } from "@/components/ExnessAffiliateBanner";
 import { ExnessPopup } from "@/components/ExnessPopup";
+import { FreeTrialModal } from "@/components/FreeTrialModal";
+import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import {
   getWebsiteStructuredData,
   getOrganizationStructuredData,
@@ -22,7 +24,8 @@ import {
 import { Link } from "react-router-dom";
 
 const Index = () => {
-  // Master Active Category State
+  // Subscription / Trial Expire Check
+  const { trialExpired, hasAccess } = useSubscriptionAccess();
   const [activeCategory, setActiveCategory] = useState("All");
 
   const { data: signals, isLoading } = useQuery({
@@ -59,6 +62,9 @@ const Index = () => {
     return sigCat === activeCat;
   });
 
+  // Modal automatically opens if trial is expired or access is disabled
+  const showTrialModal = trialExpired || !hasAccess;
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/20 selection:text-foreground transition-colors duration-300">
       <SEO
@@ -69,7 +75,13 @@ const Index = () => {
         structuredData={structuredData}
       />
 
-      {/* Connected Header with Category Change Handler & Signals Data */}
+      {/* Free Trial Expired Auto Pop-up */}
+      <FreeTrialModal 
+        open={showTrialModal} 
+        onOpenChange={() => {}} 
+      />
+
+      {/* Connected Header */}
       <Header
         signals={signals || []}
         activeCategory={activeCategory}
