@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
-import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 // Lazy load all pages for better performance
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
@@ -116,12 +115,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Global defaults — kept reasonably cached so switching tabs (especially in
+// the Admin Dashboard) doesn't refetch every query from scratch every time.
+// The live signals feed in SignalsDashboard.tsx sets its own staleTime: 0
+// override where instant real-time updates are actually needed, so this
+// change doesn't affect that.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      staleTime: 30_000, // Reuse cached data for 30s before refetching
       gcTime: 1000 * 60 * 5,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: false, // Was causing full refetch storms on every app/tab focus
       refetchOnMount: true,
       retry: 2,
     },
@@ -136,63 +140,61 @@ const App = () => (
         <Sonner position="top-center" richColors closeButton />
         <OfflineIndicator />
         <BrowserRouter>
-          <SubscriptionGuard>
-            <div className="has-bottom-nav">
-              <Suspense fallback={<LoadingSpinner />}>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/signal/:id" element={<SharedSignal />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  
-                  {/* Protected routes */}
-                  <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
-                  <Route path="/signals" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                  <Route path="/commodities-signals" element={<ProtectedRoute><CommoditiesSignals /></ProtectedRoute>} />
-                  <Route path="/xauusd-signals" element={<ProtectedRoute><XAUUSDSignals /></ProtectedRoute>} />
-                  <Route path="/forex-signals" element={<ProtectedRoute><ForexSignals /></ProtectedRoute>} />
-                  <Route path="/crypto-signals" element={<ProtectedRoute><CryptoSignals /></ProtectedRoute>} />
-                  <Route path="/deriv-signals" element={<ProtectedRoute><DerivSignals /></ProtectedRoute>} />
-                  <Route path="/chart-analysis" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
-                  <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/admin/login" element={<AdminLogin />} />
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
-                  <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
-                  <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
-                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                  <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
-                  <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
-                  <Route path="/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
-                  <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
-                  <Route path="/economic-calendar" element={<ProtectedRoute><EconomicCalendar /></ProtectedRoute>} />
-                  <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
-                  <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
-                  <Route path="/price-alerts" element={<ProtectedRoute><PriceAlerts /></ProtectedRoute>} />
-                  <Route path="/trade-journal" element={<ProtectedRoute><TradeJournal /></ProtectedRoute>} />
-                  <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
-                  <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-                  <Route path="/academy" element={<ProtectedRoute><Academy /></ProtectedRoute>} />
-                  <Route path="/market-brief" element={<ProtectedRoute><MarketBrief /></ProtectedRoute>} />
-                  <Route path="/gift-premium" element={<ProtectedRoute><GiftPremium /></ProtectedRoute>} />
-                  <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-                  <Route path="/backtesting" element={<ProtectedRoute><Backtesting /></ProtectedRoute>} />
-                  <Route path="/compound" element={<ProtectedRoute><CompoundCalculator /></ProtectedRoute>} />
-                  
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-              <NavigationWrapper />
-            </div>
-          </SubscriptionGuard>
+          <div className="has-bottom-nav">
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/signal/:id" element={<SharedSignal />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                
+                {/* Protected routes */}
+                <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
+                <Route path="/signals" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/commodities-signals" element={<ProtectedRoute><CommoditiesSignals /></ProtectedRoute>} />
+                <Route path="/xauusd-signals" element={<ProtectedRoute><XAUUSDSignals /></ProtectedRoute>} />
+                <Route path="/forex-signals" element={<ProtectedRoute><ForexSignals /></ProtectedRoute>} />
+                <Route path="/crypto-signals" element={<ProtectedRoute><CryptoSignals /></ProtectedRoute>} />
+                <Route path="/deriv-signals" element={<ProtectedRoute><DerivSignals /></ProtectedRoute>} />
+                <Route path="/chart-analysis" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
+                <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
+                <Route path="/about" element={<About />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+                <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
+                <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+                <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
+                <Route path="/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
+                <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                <Route path="/economic-calendar" element={<ProtectedRoute><EconomicCalendar /></ProtectedRoute>} />
+                <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
+                <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+                <Route path="/price-alerts" element={<ProtectedRoute><PriceAlerts /></ProtectedRoute>} />
+                <Route path="/trade-journal" element={<ProtectedRoute><TradeJournal /></ProtectedRoute>} />
+                <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+                <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+                <Route path="/academy" element={<ProtectedRoute><Academy /></ProtectedRoute>} />
+                <Route path="/market-brief" element={<ProtectedRoute><MarketBrief /></ProtectedRoute>} />
+                <Route path="/gift-premium" element={<ProtectedRoute><GiftPremium /></ProtectedRoute>} />
+                <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+                <Route path="/backtesting" element={<ProtectedRoute><Backtesting /></ProtectedRoute>} />
+                <Route path="/compound" element={<ProtectedRoute><CompoundCalculator /></ProtectedRoute>} />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            <NavigationWrapper />
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </OneSignalProvider>
