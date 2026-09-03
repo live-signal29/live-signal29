@@ -179,25 +179,34 @@ function roundPrice(
   decimals: number
 ): number {
   const factor = 10 ** decimals;
-  return Math.round(value * factor) / factor;
+
+  return (
+    Math.round(value * factor) /
+    factor
+  );
 }
 
 function randomBetween(
   min: number,
   max: number
 ): number {
-  return min + Math.random() * (max - min);
+  return (
+    min +
+    Math.random() * (max - min)
+  );
 }
 
 function weightedRandom<T extends { weight: number }>(
   items: T[]
 ): T {
   const total = items.reduce(
-    (sum, item) => sum + item.weight,
+    (sum, item) =>
+      sum + item.weight,
     0
   );
 
-  let random = Math.random() * total;
+  let random =
+    Math.random() * total;
 
   for (const item of items) {
     random -= item.weight;
@@ -207,22 +216,29 @@ function weightedRandom<T extends { weight: number }>(
     }
   }
 
-  return items[items.length - 1];
+  return items[
+    items.length - 1
+  ];
 }
 
 // ============================================================
-// LIVE PRICE FETCH
+// LIVE PRICES
 // ============================================================
 
 async function fetchLivePrices(
   requestedNames: string[]
-): Promise<Record<string, { price: number }>> {
+): Promise<
+  Record<string, { price: number }>
+> {
   const result: Record<
     string,
     { price: number }
   > = {};
 
-  const aliases: Record<string, string[]> = {
+  const aliases: Record<
+    string,
+    string[]
+  > = {
     "XAU/USD (Gold)": [
       "XAU/USD (Gold)",
       "XAUUSD",
@@ -303,11 +319,25 @@ async function fetchLivePrices(
       "SOL-USD",
     ],
 
-    "BOOM 1000": ["BOOM 1000"],
-    "CRASH 1000": ["CRASH 1000"],
-    "VOL 75": ["VOL 75"],
-    "BOOM 500": ["BOOM 500"],
-    "VOL 100": ["VOL 100"],
+    "BOOM 1000": [
+      "BOOM 1000",
+    ],
+
+    "CRASH 1000": [
+      "CRASH 1000",
+    ],
+
+    "VOL 75": [
+      "VOL 75",
+    ],
+
+    "BOOM 500": [
+      "BOOM 500",
+    ],
+
+    "VOL 100": [
+      "VOL 100",
+    ],
   };
 
   try {
@@ -316,17 +346,24 @@ async function fetchLivePrices(
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          "Content-Type":
+            "application/json",
+
+          Authorization:
+            `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+
+          apikey:
+            SUPABASE_SERVICE_ROLE_KEY,
         },
+
         body: JSON.stringify({
           pairs: requestedNames,
         }),
       }
     );
 
-    const text = await response.text();
+    const text =
+      await response.text();
 
     let data: any;
 
@@ -358,16 +395,21 @@ async function fetchLivePrices(
 
     for (const standardName of requestedNames) {
       const possibleKeys =
-        aliases[standardName] ?? [
-          standardName,
-        ];
+        aliases[standardName] ??
+        [standardName];
 
       for (const key of possibleKeys) {
-        const value = prices[key];
-        const price = getLivePrice(value);
+        const price =
+          getLivePrice(
+            prices[key]
+          );
 
-        if (Number.isFinite(price)) {
-          result[standardName] = {
+        if (
+          Number.isFinite(price)
+        ) {
+          result[
+            standardName
+          ] = {
             price,
           };
 
@@ -391,22 +433,31 @@ async function fetchLivePrices(
 }
 
 // ============================================================
-// CHECK ACTIVE SIGNAL
+// ACTIVE SIGNAL CHECK
 // ============================================================
 
 async function evaluatePair(
   pairName: string
 ): Promise<boolean> {
   try {
-    const { data, error } = await supabase
+    const {
+      data,
+      error,
+    } = await supabase
       .from("signals")
       .select(
         "id,pair,status,signal_status,created_at"
       )
-      .eq("pair", pairName)
-      .order("created_at", {
-        ascending: false,
-      })
+      .eq(
+        "pair",
+        pairName
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      )
       .limit(10);
 
     if (error) {
@@ -418,18 +469,22 @@ async function evaluatePair(
       return false;
     }
 
-    if (!data || data.length === 0) {
+    if (
+      !data ||
+      data.length === 0
+    ) {
       return true;
     }
 
     for (const signal of data) {
-      const status = String(
-        signal.status ??
-          signal.signal_status ??
-          ""
-      )
-        .trim()
-        .toUpperCase();
+      const status =
+        String(
+          signal.status ??
+            signal.signal_status ??
+            ""
+        )
+          .trim()
+          .toUpperCase();
 
       if (
         status === "OPEN" ||
@@ -461,35 +516,46 @@ async function evaluatePair(
 // ============================================================
 
 async function findAvailablePair() {
-  const shuffled = [...PAIRS];
+  const shuffled =
+    [...PAIRS];
 
-  // Weighted candidate
   const weightedCandidate =
     weightedRandom(shuffled);
 
   const ordered = [
     weightedCandidate,
+
     ...shuffled.filter(
       (p) =>
-        p.name !== weightedCandidate.name
+        p.name !==
+        weightedCandidate.name
     ),
   ];
 
-  const requestedNames = ordered.map(
-    (p) => p.name
-  );
+  const requestedNames =
+    ordered.map(
+      (p) => p.name
+    );
 
   const livePrices =
-    await fetchLivePrices(requestedNames);
+    await fetchLivePrices(
+      requestedNames
+    );
 
   for (const candidate of ordered) {
     const live =
-      livePrices[candidate.name];
+      livePrices[
+        candidate.name
+      ];
 
     const currentPrice =
       getLivePrice(live);
 
-    if (!Number.isFinite(currentPrice)) {
+    if (
+      !Number.isFinite(
+        currentPrice
+      )
+    ) {
       console.log(
         `Skipping ${candidate.name}: no live price`
       );
@@ -498,7 +564,9 @@ async function findAvailablePair() {
     }
 
     const available =
-      await evaluatePair(candidate.name);
+      await evaluatePair(
+        candidate.name
+      );
 
     if (!available) {
       console.log(
@@ -510,7 +578,8 @@ async function findAvailablePair() {
 
     return {
       ...candidate,
-      livePrice: currentPrice,
+      livePrice:
+        currentPrice,
     };
   }
 
@@ -518,7 +587,7 @@ async function findAvailablePair() {
 }
 
 // ============================================================
-// GENERATE SIGNAL
+// SIGNAL GENERATOR
 // ============================================================
 
 function generateSignal({
@@ -530,12 +599,18 @@ function generateSignal({
   name: string;
   category: string;
   decimals: number;
-  price: { price: number };
+  price: {
+    price: number;
+  };
 }) {
   const currentPrice =
     getLivePrice(price);
 
-  if (!Number.isFinite(currentPrice)) {
+  if (
+    !Number.isFinite(
+      currentPrice
+    )
+  ) {
     throw new Error(
       `Invalid live price for ${name}`
     );
@@ -543,7 +618,9 @@ function generateSignal({
 
   let movePercent = 0.12;
 
-  if (category === "CRYPTO") {
+  if (
+    category === "CRYPTO"
+  ) {
     movePercent = 0.4;
   } else if (
     category === "DERIV/BINARY"
@@ -551,8 +628,7 @@ function generateSignal({
     movePercent = 0.15;
   }
 
-  // Random BUY / SELL
-  const action =
+  const signal =
     Math.random() >= 0.5
       ? "BUY"
       : "SELL";
@@ -561,53 +637,85 @@ function generateSignal({
     currentPrice *
     (movePercent / 100);
 
-  const entry = currentPrice;
+  const entry =
+    currentPrice;
 
   let tp1: number;
   let tp2: number;
   let sl: number;
 
-  if (action === "BUY") {
-    tp1 = entry + distance * 0.55;
-    tp2 = entry + distance;
-    sl = entry - distance * 0.65;
+  if (signal === "BUY") {
+    tp1 =
+      entry +
+      distance * 0.55;
+
+    tp2 =
+      entry +
+      distance;
+
+    sl =
+      entry -
+      distance * 0.65;
   } else {
-    tp1 = entry - distance * 0.55;
-    tp2 = entry - distance;
-    sl = entry + distance * 0.65;
+    tp1 =
+      entry -
+      distance * 0.55;
+
+    tp2 =
+      entry -
+      distance;
+
+    sl =
+      entry +
+      distance * 0.65;
   }
 
   return {
     pair: name,
+
     category,
-    action,
-    signal: action,
+
+    signal,
+
     entry: roundPrice(
       entry,
       decimals
     ),
+
     tp1: roundPrice(
       tp1,
       decimals
     ),
+
     tp2: roundPrice(
       tp2,
       decimals
     ),
+
     sl: roundPrice(
       sl,
       decimals
     ),
+
     price: roundPrice(
       currentPrice,
       decimals
     ),
-    confidence: Math.floor(
-      randomBetween(78, 94)
-    ),
+
+    confidence:
+      Math.floor(
+        randomBetween(
+          78,
+          94
+        )
+      ),
+
     timeframe: "15M",
+
     status: "OPEN",
+
     signal_status: "OPEN",
+
     created_at:
       new Date().toISOString(),
   };
@@ -621,20 +729,28 @@ async function postToTelegram(
   signal: any
 ) {
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/telegram-signal-post`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-        },
-        body: JSON.stringify({
-          signal,
-        }),
-      }
-    );
+    const response =
+      await fetch(
+        `${SUPABASE_URL}/functions/v1/telegram-signal-post`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+
+            apikey:
+              SUPABASE_SERVICE_ROLE_KEY,
+          },
+
+          body: JSON.stringify({
+            signal,
+          }),
+        }
+      );
 
     const text =
       await response.text();
@@ -642,7 +758,8 @@ async function postToTelegram(
     let data: any;
 
     try {
-      data = JSON.parse(text);
+      data =
+        JSON.parse(text);
     } catch {
       data = {
         raw: text,
@@ -657,6 +774,7 @@ async function postToTelegram(
 
       return {
         success: false,
+
         error:
           data?.error ??
           text,
@@ -675,7 +793,9 @@ async function postToTelegram(
 
     return {
       success: false,
-      error: formatError(error),
+
+      error:
+        formatError(error),
     };
   }
 }
@@ -684,194 +804,262 @@ async function postToTelegram(
 // MAIN
 // ============================================================
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
-  }
+Deno.serve(
+  async (req) => {
+    if (
+      req.method ===
+      "OPTIONS"
+    ) {
+      return new Response(
+        "ok",
+        {
+          headers:
+            corsHeaders,
+        }
+      );
+    }
 
-  try {
-    console.log(
-      "========== AUTO GENERATE START =========="
-    );
-
-    const selected =
-      await findAvailablePair();
-
-    if (!selected) {
+    try {
       console.log(
-        "No available pair with live price."
+        "========== AUTO GENERATE START =========="
+      );
+
+      const selected =
+        await findAvailablePair();
+
+      if (!selected) {
+        console.log(
+          "No available pair with live price."
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            generated: false,
+
+            error:
+              "No available pair with live price. All pairs may have active signals or unavailable prices.",
+          }),
+          {
+            status: 200,
+
+            headers: {
+              ...corsHeaders,
+
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+      }
+
+      console.log(
+        "SELECTED PAIR:",
+        selected.name
+      );
+
+      console.log(
+        "LIVE PRICE:",
+        selected.livePrice
+      );
+
+      const currentPrice =
+        Number(
+          selected.livePrice
+        );
+
+      const signal =
+        generateSignal({
+          name:
+            selected.name,
+
+          category:
+            selected.category,
+
+          decimals:
+            selected.decimals,
+
+          price: {
+            price:
+              currentPrice,
+          },
+        });
+
+      console.log(
+        "GENERATED SIGNAL:",
+        JSON.stringify(signal)
+      );
+
+      // ========================================================
+      // DATABASE INSERT
+      // IMPORTANT: NO "action" COLUMN
+      // ========================================================
+
+      const insertData: any = {
+        pair:
+          signal.pair,
+
+        category:
+          signal.category,
+
+        signal:
+          signal.signal,
+
+        entry:
+          signal.entry,
+
+        tp1:
+          signal.tp1,
+
+        tp2:
+          signal.tp2,
+
+        sl:
+          signal.sl,
+
+        price:
+          signal.price,
+
+        confidence:
+          signal.confidence,
+
+        timeframe:
+          signal.timeframe,
+
+        status:
+          "OPEN",
+
+        signal_status:
+          "OPEN",
+
+        created_at:
+          signal.created_at,
+      };
+
+      console.log(
+        "INSERT DATA:",
+        JSON.stringify(
+          insertData
+        )
+      );
+
+      const {
+        data:
+          insertedSignal,
+        error:
+          insertError,
+      } = await supabase
+        .from("signals")
+        .insert(
+          insertData
+        )
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error(
+          "SIGNAL INSERT ERROR:",
+          JSON.stringify(
+            insertError,
+            null,
+            2
+          )
+        );
+
+        throw new Error(
+          `Signal insert failed: ${formatError(
+            insertError
+          )}`
+        );
+      }
+
+      console.log(
+        "SIGNAL INSERTED:",
+        JSON.stringify(
+          insertedSignal
+        )
+      );
+
+      // ========================================================
+      // TELEGRAM
+      // ========================================================
+
+      const telegram =
+        await postToTelegram({
+          ...signal,
+
+          id:
+            insertedSignal?.id,
+        });
+
+      console.log(
+        "TELEGRAM RESULT:",
+        JSON.stringify(
+          telegram
+        )
+      );
+
+      console.log(
+        "========== AUTO GENERATE END =========="
+      );
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+
+          generated: true,
+
+          signal:
+            insertedSignal,
+
+          telegram_posted:
+            telegram.success,
+
+          telegram:
+            telegram.success
+              ? telegram.data
+              : telegram.error,
+        }),
+        {
+          status: 200,
+
+          headers: {
+            ...corsHeaders,
+
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+    } catch (error) {
+      const errorMessage =
+        formatError(error);
+
+      console.error(
+        "AUTO GENERATE ERROR:",
+        errorMessage
       );
 
       return new Response(
         JSON.stringify({
           success: false,
+
           generated: false,
+
           error:
-            "No available pair with live price. All pairs may have active signals or unavailable prices.",
+            errorMessage,
         }),
         {
-          status: 200,
+          status: 500,
+
           headers: {
             ...corsHeaders,
+
             "Content-Type":
               "application/json",
           },
         }
       );
     }
-
-    console.log(
-      "SELECTED PAIR:",
-      selected.name
-    );
-
-    console.log(
-      "LIVE PRICE:",
-      selected.livePrice
-    );
-
-    const currentPrice =
-      Number(selected.livePrice);
-
-    const signal =
-      generateSignal({
-        name: selected.name,
-        category:
-          selected.category,
-        decimals:
-          selected.decimals,
-        price: {
-          price: currentPrice,
-        },
-      });
-
-    console.log(
-      "GENERATED SIGNAL:",
-      JSON.stringify(signal)
-    );
-
-    // ========================================================
-    // INSERT SIGNAL
-    // ========================================================
-
-    const insertData: any = {
-      pair: signal.pair,
-      category: signal.category,
-      action: signal.action,
-      signal: signal.signal,
-      entry: signal.entry,
-      tp1: signal.tp1,
-      tp2: signal.tp2,
-      sl: signal.sl,
-      price: signal.price,
-      confidence:
-        signal.confidence,
-      timeframe:
-        signal.timeframe,
-      status: "OPEN",
-      signal_status: "OPEN",
-      created_at:
-        signal.created_at,
-    };
-
-    const {
-      data: insertedSignal,
-      error: insertError,
-    } = await supabase
-      .from("signals")
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error(
-        "SIGNAL INSERT ERROR:",
-        JSON.stringify(
-          insertError,
-          null,
-          2
-        )
-      );
-
-      throw new Error(
-        `Signal insert failed: ${formatError(
-          insertError
-        )}`
-      );
-    }
-
-    console.log(
-      "SIGNAL INSERTED:",
-      JSON.stringify(
-        insertedSignal
-      )
-    );
-
-    // ========================================================
-    // TELEGRAM
-    // ========================================================
-
-    const telegram =
-      await postToTelegram({
-        ...signal,
-        id: insertedSignal?.id,
-      });
-
-    console.log(
-      "TELEGRAM RESULT:",
-      JSON.stringify(telegram)
-    );
-
-    console.log(
-      "========== AUTO GENERATE END =========="
-    );
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        generated: true,
-        signal: insertedSignal,
-        telegram_posted:
-          telegram.success,
-        telegram:
-          telegram.success
-            ? telegram.data
-            : telegram.error,
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
-  } catch (error) {
-    const errorMessage =
-      formatError(error);
-
-    console.error(
-      "AUTO GENERATE ERROR:",
-      errorMessage
-    );
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        generated: false,
-        error: errorMessage,
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
   }
-});
+);
