@@ -10,8 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
-import { TrialExpiredModal } from "@/components/TrialExpiredModal";
-import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 
 // Lazy load all pages for better performance
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
@@ -117,56 +115,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Subscription Guard - Checks if user has active subscription or trial
-const SubscriptionGuard = ({ children }: { children: React.ReactNode }) => {
-  const navigate = useNavigate();
-  const { hasAccess, loading, trialExpired } = useSubscriptionAccess();
-  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
-
-  useEffect(() => {
-    if (!loading && trialExpired && !hasAccess) {
-      setShowTrialExpiredModal(true);
-    }
-  }, [loading, trialExpired, hasAccess]);
-
-  useEffect(() => {
-    if (!loading && !hasAccess && !trialExpired) {
-      navigate("/premium", { replace: true });
-    }
-  }, [loading, hasAccess, trialExpired, navigate]);
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  // Show content but overlay with trial expired modal
-  return (
-    <>
-      {children}
-      <TrialExpiredModal 
-        open={showTrialExpiredModal} 
-        onOpenChange={(open) => {
-          setShowTrialExpiredModal(open);
-          if (!open) {
-            navigate("/premium");
-          }
-        }}
-      />
-    </>
-  );
-};
-
-// Global defaults — kept reasonably cached so switching tabs (especially in
-// the Admin Dashboard) doesn't refetch every query from scratch every time.
-// The live signals feed in SignalsDashboard.tsx sets its own staleTime: 0
-// override where instant real-time updates are actually needed, so this
-// change doesn't affect that.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000, // Reuse cached data for 30s before refetching
+      staleTime: 30_000,
       gcTime: 1000 * 60 * 5,
-      refetchOnWindowFocus: false, // Was causing full refetch storms on every app/tab focus
+      refetchOnWindowFocus: false,
       refetchOnMount: true,
       retry: 2,
     },
@@ -195,41 +149,41 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
                 
-                {/* Protected routes with SubscriptionGuard */}
-                <Route path="/" element={<ProtectedRoute><SubscriptionGuard><SignalsDashboard /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/signals" element={<ProtectedRoute><SubscriptionGuard><SignalsDashboard /></SubscriptionGuard></ProtectedRoute>} />
+                {/* Protected routes - direct render, access check inside components */}
+                <Route path="/" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
+                <Route path="/signals" element={<ProtectedRoute><SignalsDashboard /></ProtectedRoute>} />
                 <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><SubscriptionGuard><Profile /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/commodities-signals" element={<ProtectedRoute><SubscriptionGuard><CommoditiesSignals /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/xauusd-signals" element={<ProtectedRoute><SubscriptionGuard><XAUUSDSignals /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/forex-signals" element={<ProtectedRoute><SubscriptionGuard><ForexSignals /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/crypto-signals" element={<ProtectedRoute><SubscriptionGuard><CryptoSignals /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/deriv-signals" element={<ProtectedRoute><SubscriptionGuard><DerivSignals /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/chart-analysis" element={<ProtectedRoute><SubscriptionGuard><ChartAnalysis /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/contact" element={<ProtectedRoute><SubscriptionGuard><Contact /></SubscriptionGuard></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/commodities-signals" element={<ProtectedRoute><CommoditiesSignals /></ProtectedRoute>} />
+                <Route path="/xauusd-signals" element={<ProtectedRoute><XAUUSDSignals /></ProtectedRoute>} />
+                <Route path="/forex-signals" element={<ProtectedRoute><ForexSignals /></ProtectedRoute>} />
+                <Route path="/crypto-signals" element={<ProtectedRoute><CryptoSignals /></ProtectedRoute>} />
+                <Route path="/deriv-signals" element={<ProtectedRoute><DerivSignals /></ProtectedRoute>} />
+                <Route path="/chart-analysis" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
+                <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
                 <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/premium" element={<ProtectedRoute><SubscriptionGuard><Premium /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/free-trial" element={<ProtectedRoute><SubscriptionGuard><FreeTrial /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/benefits" element={<ProtectedRoute><SubscriptionGuard><Benefits /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute><SubscriptionGuard><Notifications /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><SubscriptionGuard><Settings /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/payment-success" element={<ProtectedRoute><SubscriptionGuard><PaymentSuccess /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/crypto-deposit" element={<ProtectedRoute><SubscriptionGuard><CryptoDeposit /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/account-management" element={<ProtectedRoute><SubscriptionGuard><AccountManagement /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/results" element={<ProtectedRoute><SubscriptionGuard><Results /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/economic-calendar" element={<ProtectedRoute><SubscriptionGuard><EconomicCalendar /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/calculator" element={<ProtectedRoute><SubscriptionGuard><Calculator /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/referrals" element={<ProtectedRoute><SubscriptionGuard><Referrals /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/price-alerts" element={<ProtectedRoute><SubscriptionGuard><PriceAlerts /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/trade-journal" element={<ProtectedRoute><SubscriptionGuard><TradeJournal /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/ai-chat" element={<ProtectedRoute><SubscriptionGuard><AIChat /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/leaderboard" element={<ProtectedRoute><SubscriptionGuard><Leaderboard /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/academy" element={<ProtectedRoute><SubscriptionGuard><Academy /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/market-brief" element={<ProtectedRoute><SubscriptionGuard><MarketBrief /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/gift-premium" element={<ProtectedRoute><SubscriptionGuard><GiftPremium /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/portfolio" element={<ProtectedRoute><SubscriptionGuard><Portfolio /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/backtesting" element={<ProtectedRoute><SubscriptionGuard><Backtesting /></SubscriptionGuard></ProtectedRoute>} />
-                <Route path="/compound" element={<ProtectedRoute><SubscriptionGuard><CompoundCalculator /></SubscriptionGuard></ProtectedRoute>} />
+                <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+                <Route path="/free-trial" element={<ProtectedRoute><FreeTrial /></ProtectedRoute>} />
+                <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+                <Route path="/crypto-deposit" element={<ProtectedRoute><CryptoDeposit /></ProtectedRoute>} />
+                <Route path="/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
+                <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                <Route path="/economic-calendar" element={<ProtectedRoute><EconomicCalendar /></ProtectedRoute>} />
+                <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
+                <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+                <Route path="/price-alerts" element={<ProtectedRoute><PriceAlerts /></ProtectedRoute>} />
+                <Route path="/trade-journal" element={<ProtectedRoute><TradeJournal /></ProtectedRoute>} />
+                <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+                <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+                <Route path="/academy" element={<ProtectedRoute><Academy /></ProtectedRoute>} />
+                <Route path="/market-brief" element={<ProtectedRoute><MarketBrief /></ProtectedRoute>} />
+                <Route path="/gift-premium" element={<ProtectedRoute><GiftPremium /></ProtectedRoute>} />
+                <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+                <Route path="/backtesting" element={<ProtectedRoute><Backtesting /></ProtectedRoute>} />
+                <Route path="/compound" element={<ProtectedRoute><CompoundCalculator /></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
