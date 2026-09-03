@@ -7,29 +7,18 @@ import {
   XCircle,
   Lock,
   Crown,
-  Share2,
-  Copy,
-  Send,
 } from "lucide-react";
 import {
   format,
   differenceInHours,
 } from "date-fns";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import {
   parseEntryPrice,
   calculateRunningPL,
 } from "@/hooks/useLivePrices";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface SignalCardProps {
   signal: {
@@ -517,6 +506,9 @@ const SignalCardNew = ({
         if (!signal.tp4) {
           updates.signal_status =
             "close";
+
+          updates.status =
+            "CLOSED";
         }
       }
 
@@ -533,11 +525,35 @@ const SignalCardNew = ({
         updates.signal_status =
           "close";
 
+        updates.status =
+          "CLOSED";
+
         updates.profit_note =
           "TP 4 Final Target Hit 🎊 Maximum Profit Secured ✅";
       }
 
-      const effectiveTP1Hit =
+      // ---------------------------------------------------
+      // SL / BREAKEVEN
+      //
+      // FIX: previously, once TP1 hit and SL moved to
+      // breakeven (entry price), the signal only closed if
+      // a price tick landed EXACTLY within a tiny tolerance
+      // band around entry (atBreakEven snapshot check). With
+      // 1s polling, fast-moving pairs like Gold routinely
+      // skip straight over that narrow band, so the signal
+      // never closed and stayed "OPEN" forever even after
+      // price came back through entry.
+      //
+      // Now we use the same directional crossing check used
+      // for a normal SL hit (price <= SL for Buy / >= SL for
+      // Sell), just against whichever SL is currently active
+      // — the original SL before TP1, or the breakeven price
+      // after TP1. That means "price returned to entry" is
+      // detected as soon as it crosses the level, not only if
+      // a tick happens to land inside a tiny window.
+      // ---------------------------------------------------
+
+      const effectiveTP1 =
         !!signal.tp1_hit ||
         !!updates.tp1_hit;
 
@@ -548,48 +564,12 @@ const SignalCardNew = ({
             )
           : slPrice;
 
-      const breakEvenTolerance =
-        Math.max(
-          entryPrice * 0.0001,
-          0.01
-        );
-
-      const atBreakEven =
-        Math.abs(
-          currentPriceNum -
-            entryPrice
-        ) <= breakEvenTolerance;
-
-      if (
-        effectiveTP1Hit &&
-        effectiveSL > 0 &&
-        Math.abs(
-          effectiveSL -
-            entryPrice
-        ) <= breakEvenTolerance &&
-        atBreakEven &&
-        !signal.sl_hit
-      ) {
-        updates.signal_status =
-          "close";
-
-        updates.sl_hit = false;
-
-        updates.profit_note =
-          "Signal Closed at Breakeven after TP1 ✅";
-      }
-
-      const effectiveTP1 =
-        !!signal.tp1_hit ||
-        !!updates.tp1_hit;
-
       const slBreachThisTick =
         !signal.sl_hit &&
-        !effectiveTP1 &&
-        slPrice > 0 &&
+        effectiveSL > 0 &&
         hasSLReached(
           currentPriceNum,
-          slPrice
+          effectiveSL
         );
 
       slBreachStreakRef.current = slBreachThisTick
@@ -600,13 +580,25 @@ const SignalCardNew = ({
         slBreachThisTick &&
         slBreachStreakRef.current >= 2
       ) {
-        updates.sl_hit = true;
-
         updates.signal_status =
           "close";
 
-        updates.profit_note =
-          "SL Hit ❌ - Staying patient for a better entry.";
+        updates.status =
+          "CLOSED";
+
+        if (effectiveTP1) {
+          // SL had already moved to breakeven (entry) —
+          // price came back and closed at entry, not a loss.
+          updates.sl_hit = false;
+
+          updates.profit_note =
+            "Signal Closed at Breakeven after TP1 ✅";
+        } else {
+          updates.sl_hit = true;
+
+          updates.profit_note =
+            "SL Hit ❌ - Staying patient for a better entry.";
+        }
       }
 
       if (
@@ -642,75 +634,6 @@ const SignalCardNew = ({
     signal.tp4_hit,
     signal.sl_hit,
   ]);
-
-  /*
-   * ============================================================
-   * SHARE
-   * ============================================================
-   */
-
-  const handleShare = (
-    e: React.MouseEvent<HTMLDivElement>,
-    platform:
-      | "whatsapp"
-      | "telegram"
-      | "copy"
-  ) => {
-    e.stopPropagation();
-
-    const shareUrl =
-      `https://live-signal29.vercel.app/signal/${signal.id}`;
-
-    const shareText =
-      isLocked || signal.is_premium
-        ? `🔔 Premium ${signal.type.toUpperCase()} Signal Alert!\n\n` +
-          `📊 Pair: ${signal.pair}\n` +
-          `💰 Entry: ${signal.entry}\n` +
-          `🔒 TP/SL: Buy Premium to unlock\n\n` +
-          `👉 Get premium access: ${shareUrl}`
-        : `🔔 New ${signal.type.toUpperCase()} Signal Alert!\n\n` +
-          `📊 Pair: ${signal.pair}\n` +
-          `💰 Entry: ${signal.entry}\n` +
-          `🎯 TP1: ${signal.tp1}\n` +
-          `⛔ SL: ${signal.sl}\n\n` +
-          `View full signal details: ${shareUrl}`;
-
-    if (
-      platform === "whatsapp"
-    ) {
-      window.open(
-        `https://wa.me/?text=${encodeURIComponent(
-          shareText
-        )}`,
-        "_blank"
-      );
-    }
-
-    if (
-      platform === "telegram"
-    ) {
-      window.open(
-        `https://t.me/share/url?url=${encodeURIComponent(
-          shareUrl
-        )}&text=${encodeURIComponent(
-          shareText
-        )}`,
-        "_blank"
-      );
-    }
-
-    if (
-      platform === "copy"
-    ) {
-      navigator.clipboard.writeText(
-        shareText
-      );
-
-      toast.success(
-        "Signal link copied to clipboard!"
-      );
-    }
-  };
 
   /*
    * ============================================================
@@ -1029,68 +952,6 @@ const SignalCardNew = ({
               )}
             </span>
           </div>
-
-          {/* SHARE */}
-
-          <DropdownMenu>
-
-            <DropdownMenuTrigger
-              asChild
-              onClick={(e) =>
-                e.stopPropagation()
-              }
-            >
-              <button
-                type="button"
-                className="p-1 rounded-full hover:bg-muted/60 text-muted-foreground transition-colors"
-              >
-                <Share2 className="h-3 w-3" />
-              </button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent
-              align="end"
-              className="w-36"
-            >
-
-              <DropdownMenuItem
-                onClick={(e) =>
-                  handleShare(
-                    e,
-                    "whatsapp"
-                  )
-                }
-              >
-                <Send className="mr-2 h-3.5 w-3.5 text-green-500" />
-                WhatsApp
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) =>
-                  handleShare(
-                    e,
-                    "telegram"
-                  )
-                }
-              >
-                <Send className="mr-2 h-3.5 w-3.5 text-blue-500" />
-                Telegram
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) =>
-                  handleShare(
-                    e,
-                    "copy"
-                  )
-                }
-              >
-                <Copy className="mr-2 h-3.5 w-3.5" />
-                Copy Link
-              </DropdownMenuItem>
-
-            </DropdownMenuContent>
-          </DropdownMenu>
 
         </div>
       </div>
