@@ -36,8 +36,8 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
       .single();
 
     if (profile) {
-      const endDate = new Date(profile.trial_end_date);
-      const startDate = new Date(profile.created_at);
+      const endDate = profile.trial_end_date ? new Date(profile.trial_end_date) : new Date();
+      const startDate = profile.created_at ? new Date(profile.created_at) : new Date();
       const today = new Date();
       const remaining = differenceInDays(endDate, today);
       const isExpired = today > endDate && profile.subscription_status !== "premium";
@@ -61,7 +61,7 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
       if (trialInfo?.isExpired) return;
       onOpenChange(val);
     }}>
-      <DialogContent className="sm:max-w-md [&>button]:hidden">
+      <DialogContent className="sm:max-w-md [&>button]:hidden z-[100]">
         <DialogHeader>
           <DialogTitle className="text-2xl text-center font-bold text-primary">
             {trialInfo?.isExpired ? "Free Trial Expired" : "Welcome to TREND IS FRIEND"}
@@ -82,7 +82,7 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
               {!trialInfo.isExpired && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Remaining</span>
-                  <span className="font-bold text-warning">{trialInfo.remainingDays} days</span>
+                  <span className="font-bold text-amber-500">{trialInfo.remainingDays} days</span>
                 </div>
               )}
             </div>
@@ -93,8 +93,8 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
                 <p className="text-xs text-muted-foreground">Upgrade to Premium to continue accessing live signals.</p>
               </div>
             ) : (
-              <div className="bg-success/10 border border-success rounded-lg p-4 text-center">
-                <p className="text-success font-bold text-lg">FREE TRIAL IS ACTIVE</p>
+              <div className="bg-emerald-500/10 border border-emerald-500 rounded-lg p-4 text-center">
+                <p className="text-emerald-500 font-bold text-lg">FREE TRIAL IS ACTIVE</p>
               </div>
             )}
 
@@ -112,3 +112,5 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
     </Dialog>
   );
 };
+
+export default FreeTrialModal;
