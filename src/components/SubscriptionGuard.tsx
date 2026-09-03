@@ -2,7 +2,7 @@ import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { FreeTrialModal } from "@/components/FreeTrialModal";
 import { useLocation } from "react-router-dom";
 
-// In saare pages par popup kabhi nahi dikhega
+// Profile, Settings aur Auth pages par block nahi karna
 const allowedRoutes = [
   "/login",
   "/signup",
@@ -14,9 +14,7 @@ const allowedRoutes = [
   "/onboarding",
   "/contact",
   "/privacy",
-  "/terms",
-  "/about",
-  "/admin"
+  "/terms"
 ];
 
 export const SubscriptionGuard = ({ children }: { children: React.ReactNode }) => {
@@ -24,16 +22,17 @@ export const SubscriptionGuard = ({ children }: { children: React.ReactNode }) =
   const location = useLocation();
 
   const currentPath = location.pathname.toLowerCase();
-  const isAllowedRoute = allowedRoutes.some((route) =>
+  
+  // Check if user is on profile/settings/auth page
+  const isAllowed = allowedRoutes.some((route) =>
     currentPath === route || currentPath.startsWith(route)
   );
 
-  // LOGIC FIX:
-  // 1. Agar request load ho rahi hai -> Pop-up Hide
-  // 2. Agar user Allowed Route par hai -> Pop-up Hide
-  // 3. Agar Trial Expire NAHI hua (trialExpired === false) -> Pop-up Hide
-  // 4. SIRF tabhi Pop-up dikhao jab Data Fetch hone ke baad REAL MEIN trialExpired === true ho!
-  const showModal = !loading && !isAllowedRoute && trialExpired === true;
+  // Pop-up SIRF TABHI dikhao jab:
+  // 1. Data load ho chuka ho (!loading)
+  // 2. User main Signals/App pages par ho (!isAllowed)
+  // 3. User ka trial BESHAK EXPIRED ho chuka ho (trialExpired === true)
+  const showModal = !loading && !isAllowed && trialExpired === true;
 
   return (
     <>
