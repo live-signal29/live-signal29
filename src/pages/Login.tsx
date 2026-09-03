@@ -34,7 +34,7 @@ const Login = () => {
       }
     } catch {
       toast.error("Failed to sign in. Please try again.");
-    } font-sans finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -58,8 +58,8 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-[#070908] text-white flex flex-col justify-between px-6 py-8 font-sans relative overflow-hidden">
-      {/* Background Subtle Green Ambient Glow */}
-      <div className="absolute top-0 left-0 w-[350px] h-[350px] bg-emerald-900/25 rounded-full blur-[100px] pointer-events-none" />
+      {/* Background Subtle Green Radial Glow Effects */}
+      <div className="absolute top-0 left-0 w-[350px] h-[350px] bg-emerald-900/20 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-950/30 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Top Header */}
@@ -81,10 +81,10 @@ const Login = () => {
         </button>
       </div>
 
-      {/* Main Form Content */}
+      {/* Main Login Form Container */}
       <div className="max-w-md w-full mx-auto space-y-6 flex-1 flex flex-col justify-center z-10">
         <form onSubmit={handleLogin} className="space-y-5">
-          {/* Email Field with Floating-style Label */}
+          {/* Email Input */}
           <div className="relative pt-2">
             <label className="absolute -top-1 left-3 text-xs text-emerald-500 bg-[#070908] px-1 z-10 font-medium">
               Email
@@ -99,7 +99,7 @@ const Login = () => {
             />
           </div>
 
-          {/* Password Field with Toggle & Green Label */}
+          {/* Password Input */}
           <div className="relative pt-2">
             <label className="absolute -top-1 left-3 text-xs text-emerald-500 bg-[#070908] px-1 z-10 font-medium">
               Password
@@ -137,7 +137,7 @@ const Login = () => {
           </Button>
         </form>
 
-        {/* Or Divider */}
+        {/* Divider */}
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-gray-800" />
@@ -149,7 +149,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Circular Social Icons */}
+        {/* Social Login Buttons */}
         <div className="flex justify-center items-center gap-4">
           <button
             type="button"
@@ -188,13 +188,13 @@ const Login = () => {
           </button>
         </div>
 
-        {/* Links */}
+        {/* Footer Links */}
         <div className="text-center space-y-2 pt-6 text-sm">
           <p className="text-gray-300">
             Don't have an account?{" "}
             <Link
               to={`/signup${returnUrl !== "/" ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
-              className="text-emerald-500 font-semibold hover:underline"
+              className="text-emerald-500 font-medium underline"
             >
               Register
             </Link>
