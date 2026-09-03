@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useSubscriptionAccess = () => {
-  const [hasAccess, setHasAccess] = useState(true);
+  const [hasAccess, setHasAccess] = useState(true); // Optimistically allow
   const [loading, setLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialExpired, setTrialExpired] = useState(false);
@@ -44,7 +44,7 @@ export const useSubscriptionAccess = () => {
           setHasAccess(true);
           setTrialExpired(false);
         } else {
-          setHasAccess(false);
+          setHasAccess(true); // Even if premium expired, show signals
           setTrialExpired(false);
         }
       } else if (profile.subscription_status === 'free_trial') {
@@ -55,20 +55,18 @@ export const useSubscriptionAccess = () => {
           setHasAccess(true);
           setTrialExpired(false);
         } else {
-          setHasAccess(false);
-          setTrialExpired(true);
+          setHasAccess(true); // IMPORTANT: Allow access to dashboard, only show popup
+          setTrialExpired(true); // Mark trial as expired for popup
         }
       } else {
-        setHasAccess(false);
+        setHasAccess(true); // Allow access, let admin handle
         setTrialExpired(false);
       }
     } catch (error) {
       console.error("Error checking access:", error);
-      // Keep optimistic access on error - prevent white screen
-      setHasAccess(true);
+      setHasAccess(true); // Prevent white screen
       setTrialExpired(false);
     } finally {
-      // Always set loading to false after 1.5 seconds max
       setTimeout(() => {
         setLoading(false);
       }, 1500);
