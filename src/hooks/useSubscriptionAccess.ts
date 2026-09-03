@@ -1,76 +1,47 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useSubscriptionAccess = () => {
-  const [hasAccess, setHasAccess] = useState<boolean>(true);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
-  const [trialExpired, setTrialExpired] = useState<boolean>(false);
-  const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [trialExpired, setTrialExpired] = useState(false);
+  const [hasAccess, setHasAccess] = useState(true);
 
   useEffect(() => {
-    checkAccess();
+    checkStatus();
   }, []);
 
-  const checkAccess = async () => {
+  const checkStatus = async () => {
     try {
       setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        setHasAccess(false);
+      if (!user) {
         setTrialExpired(false);
+        setHasAccess(true);
+        setLoading(false);
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
-        .select("subscription_status, trial_end_date, subscription_end_date")
+        .select("trial_end_date, subscription_status")
         .eq("id", user.id)
         .single();
 
-      if (profileError || !profile) {
-        setHasAccess(false);
-        setTrialExpired(false);
+      if (error || !profile) {
+        setLoading(false);
         return;
       }
 
-      const now = new Date();
-      const status = profile.subscription_status;
-      setSubscriptionStatus(status);
+      const isPremium = profile.subscription_status === "premium";
+      const now = new Date().getTime();
+      const trialEnd = profile.trial_end_date ? new Date(profile.trial_end_date).getTime() : 0;
 
-      // 1. Check IF Premium
-      if (status === "premium") {
-        const subEnd = profile.subscription_end_date ? new Date(profile.subscription_end_date) : null;
-        if (subEnd && subEnd > now) {
-          setHasAccess(true);
-          setTrialExpired(false);
-        } else {
-          setHasAccess(false);
-          setTrialExpired(true);
-        }
-        return;
-      }
+      // Agar user premium nahi hai AUR current time trial_end_date se agay nikal gaya hai
+      const isExpired = !isPremium && (trialEnd === 0 || now > trialEnd);
 
-      // 2. Check Trial Expiry (For ALL Non-Premium users)
-      const trialEnd = profile.trial_end_date ? new Date(profile.trial_end_date) : null;
-      setTrialEndDate(trialEnd);
-
-      if (trialEnd) {
-        if (now > trialEnd) {
-          // TRIAL IS EXPIRED! BLOCK ACCESS IMMEDIATELY
-          setHasAccess(false);
-          setTrialExpired(true);
-        } else {
-          // Trial is still valid
-          setHasAccess(true);
-          setTrialExpired(false);
-        }
-      } else {
-        // If no trial date set and not premium -> Block
-        setHasAccess(false);
-        setTrialExpired(true);
-      }
+      setTrialExpired(isExpired);
+      setHasAccess(isPremium || !isExpired);
     } catch (err) {
       console.error("Subscription check error:", err);
     } finally {
@@ -78,12 +49,5 @@ export const useSubscriptionAccess = () => {
     }
   };
 
-  return {
-    hasAccess,
-    loading,
-    subscriptionStatus,
-    trialExpired,
-    trialEndDate,
-    refetch: checkAccess,
-  };
+  return { loading, trialExpired, hasAccess };
 };
