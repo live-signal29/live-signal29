@@ -73,13 +73,14 @@ export const useSubscriptionAccess = () => {
 
       const now = new Date();
 
-      // Check if premium
+      // Check if premium (active subscription)
       if (profile.subscription_status === 'premium') {
         const endDate = profile.subscription_end_date ? new Date(profile.subscription_end_date) : null;
         if (endDate && endDate > now) {
           setHasAccess(true);
           setTrialExpired(false);
         } else {
+          // Premium expired - deny access
           setHasAccess(false);
           setTrialExpired(false);
         }
@@ -94,12 +95,12 @@ export const useSubscriptionAccess = () => {
           setHasAccess(true);
           setTrialExpired(false);
         } else {
-          // Trial has expired - but still allow dashboard access with filtered signals
-          setHasAccess(true); // Allow access to dashboard
-          setTrialExpired(true); // Mark trial as expired for filtering
+          // Trial has expired - DENY access
+          setHasAccess(false);
+          setTrialExpired(true);
         }
       }
-      // Otherwise no access
+      // No subscription or trial
       else {
         setHasAccess(false);
         setTrialExpired(false);
