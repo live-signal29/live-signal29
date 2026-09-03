@@ -141,6 +141,17 @@ const FreeTrial = () => {
     );
   }
 
+  // If trial is expired, automatically redirect to premium page
+  useEffect(() => {
+    if (isExpired) {
+      const redirectTimer = setTimeout(() => {
+        navigate("/premium");
+      }, 3000);
+      
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isExpired, navigate]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -218,23 +229,29 @@ const FreeTrial = () => {
                       <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-2" />
                       <p className="text-destructive font-bold text-xl">FREE TRIAL EXPIRED</p>
                       <p className="text-muted-foreground mt-2 text-sm">
-                        Upgrade to premium to continue receiving live trading signals.
+                        Redirecting you to Premium page...
                       </p>
+                      <Button
+                        onClick={() => navigate("/premium")}
+                        className="w-full h-14 text-xl font-semibold mt-4"
+                        size="lg"
+                      >
+                        Upgrade to Premium Now
+                      </Button>
                     </div>
                   ) : (
                     <div className="bg-success/10 border border-success rounded-lg p-6 text-center">
                       <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
                       <p className="text-success font-bold text-2xl">FREE TRIAL IS ACTIVE</p>
+                      <Button
+                        onClick={() => navigate("/premium")}
+                        className="w-full h-14 text-xl font-semibold mt-4"
+                        size="lg"
+                      >
+                        Take Premium Now
+                      </Button>
                     </div>
                   )}
-
-                  <Button
-                    onClick={() => navigate("/premium")}
-                    className="w-full h-14 text-xl font-semibold"
-                    size="lg"
-                  >
-                    {isExpired ? "Upgrade to Premium" : "Take Premium Now"}
-                  </Button>
                 </>
               )}
             </CardContent>
