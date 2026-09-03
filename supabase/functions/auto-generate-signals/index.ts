@@ -101,17 +101,7 @@ async function fetchLivePrices() {
   for (const [standardName, possibleKeys] of Object.entries(aliases)) {
     for (const key of possibleKeys) {
       if (prices[key]) {
-        // FIX: downstream code (evaluatePair's live-price check,
-        // generateSignal, generateGoldLevels, etc.) all expect
-        // `live.price` — an object with a `price` field — not a
-        // bare number. This used to store the bare number here,
-        // so `live.price` was always `undefined` and every single
-        // pair failed the "No live price for X" check on every
-        // run, even when the real price was available. That's why
-        // NO new signals were generating at all (not just XAUUSD).
-        result[standardName] = {
-          price: prices[key],
-        };
+        result[standardName] = prices[key];
         break;
       }
     }
@@ -636,44 +626,19 @@ function validateSignal(
 // =========================================================
 
 async function evaluatePair(pair: string) {
-  // FIX: this used to only check the `status` column for "OPEN".
-  // Signal cards close a trade by writing `signal_status` (e.g.
-  // "close"/"CLOSE") — they never touched `status`, so `status`
-  // stayed stuck at "OPEN" forever after a signal closed. That
-  // made this check always think the pair still had an open
-  // signal, so no new signal (e.g. XAUUSD) was ever generated
-  // after the previous one closed. Now both columns are checked,
-  // and a signal only counts as "still open" if neither column
-  // says it's closed.
   const { data, error } = await supabase
     .from("signals")
-    .select("id, pair, status, signal_status")
+    .select("id, pair, status")
     .eq("pair", pair)
-    .limit(5);
+    .eq("status", "OPEN")
+    .limit(1);
 
   if (error) {
     console.error("Active signal check error:", error);
     return false;
   }
 
-  if (!data || data.length === 0) {
-    return true;
-  }
-
-  const stillOpen = data.some((row) => {
-    const status = String(row.status || "").toUpperCase();
-    const signalStatus = String(row.signal_status || "").toUpperCase();
-
-    const closed =
-      status === "CLOSED" ||
-      status === "CLOSE" ||
-      signalStatus === "CLOSED" ||
-      signalStatus === "CLOSE";
-
-    return !closed;
-  });
-
-  return !stillOpen;
+  return !data || data.length === 0;
 }
 
 // =========================================================
@@ -691,19 +656,27 @@ async function postTelegram(signal: any) {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           apikey: SUPABASE_SERVICE_ROLE_KEY,
         },
-        body: JSON.stringify(signal),
+        body: JSON.stringify({
+          action: "new_signal",
+          signal,
+        }),
       }
     );
 
-    const result = await response.text();
+    const resultText = await response.text();
 
     console.log(
       "Telegram response:",
       response.status,
-      result
+      resultText
     );
 
-    return response.ok;
+    try {
+      const result = JSON.parse(resultText);
+      return response.ok && result?.success === true;
+    } catch {
+      return false;
+    }
   } catch (error) {
     console.error("Telegram post error:", error);
     return false;
