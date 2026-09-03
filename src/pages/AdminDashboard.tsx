@@ -10,20 +10,17 @@ import {
   Activity,
   BarChart3,
   Bell,
-  BookOpen,
   BriefcaseBusiness,
   ChevronRight,
   CircleDollarSign,
   Clock3,
   Coins,
   Eye,
-  FileText,
   LayoutDashboard,
   LogOut,
   Menu,
   Plus,
   Search,
-  Settings,
   ShieldCheck,
   Signal,
   Ticket,
@@ -41,35 +38,51 @@ import { toast } from "sonner";
 ========================================================= */
 
 const SignalForm = lazy(() => import("@/components/admin/SignalForm"));
-const SignalsList = lazy(() => import("@/components/admin/SignalsList"));
+
+const SignalsList = lazy(
+  () => import("@/components/admin/SignalsList")
+);
+
 const ChartAnalysisForm = lazy(
   () => import("@/components/admin/ChartAnalysisForm")
 );
+
 const ChartAnalysisList = lazy(
   () => import("@/components/admin/ChartAnalysisList")
 );
+
 const UserManagement = lazy(
   () => import("@/components/admin/UserManagement")
 );
-const ActivityLog = lazy(() => import("@/components/admin/ActivityLog"));
+
+const ActivityLog = lazy(
+  () => import("@/components/admin/ActivityLog")
+);
+
 const CouponManagement = lazy(
   () => import("@/components/admin/CouponManagement")
 );
+
 const SpecialOfferManagement = lazy(
   () => import("@/components/admin/SpecialOfferManagement")
 );
+
 const UserActivityDashboard = lazy(
   () => import("@/components/admin/UserActivityDashboard")
 );
+
 const AccountApplications = lazy(
   () => import("@/components/admin/AccountApplications")
 );
+
 const PerformanceManagement = lazy(
   () => import("@/components/admin/PerformanceManagement")
 );
+
 const HeadlinesManagement = lazy(
   () => import("@/components/admin/HeadlinesManagement")
 );
+
 const MT5CopierManagement = lazy(
   () => import("@/components/admin/MT5CopierManagement")
 );
@@ -277,7 +290,9 @@ const AdminDashboard = () => {
     if (!normalizedSearch) return [];
 
     return pairs
-      .filter((pair) => pair.toLowerCase().includes(normalizedSearch))
+      .filter((pair) =>
+        pair.toLowerCase().includes(normalizedSearch)
+      )
       .slice(0, 6);
   }, [normalizedSearch]);
 
@@ -285,12 +300,6 @@ const AdminDashboard = () => {
     setPairSearch(pair);
     setSearchOpen(true);
     setActiveTab("signals");
-
-    /*
-      The search value is kept ready for SignalsList.
-      SignalsList can use the same value when its search support
-      is connected.
-    */
 
     toast.success(`${pair} selected`);
   };
@@ -323,7 +332,7 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -332,7 +341,8 @@ const AdminDashboard = () => {
   if (!user) return null;
 
   const activeMenu =
-    menuItems.find((item) => item.id === activeTab) || menuItems[0];
+    menuItems.find((item) => item.id === activeTab) ||
+    menuItems[0];
 
   /* =======================================================
      UI
@@ -349,12 +359,15 @@ const AdminDashboard = () => {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-3 sm:px-5">
 
           {/* BRAND */}
+
           <div className="flex min-w-0 items-center gap-3">
+
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
               <ShieldCheck className="h-5 w-5" />
             </div>
 
             <div className="min-w-0">
+
               <h1 className="truncate text-base font-bold sm:text-lg">
                 Admin Panel
               </h1>
@@ -362,10 +375,12 @@ const AdminDashboard = () => {
               <p className="hidden text-xs text-slate-500 sm:block">
                 Forex 7 StarZ Management
               </p>
+
             </div>
           </div>
 
           {/* DESKTOP ACTIONS */}
+
           <div className="hidden items-center gap-2 sm:flex">
 
             <Button
@@ -387,9 +402,11 @@ const AdminDashboard = () => {
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
+
           </div>
 
           {/* MOBILE ACTIONS */}
+
           <div className="flex items-center gap-1 sm:hidden">
 
             <Button
@@ -404,7 +421,9 @@ const AdminDashboard = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() =>
+                setMobileMenuOpen(!mobileMenuOpen)
+              }
               className="rounded-xl"
             >
               {mobileMenuOpen ? (
@@ -413,7 +432,9 @@ const AdminDashboard = () => {
                 <Menu className="h-5 w-5" />
               )}
             </Button>
+
           </div>
+
         </div>
 
         {/* ===================================================
@@ -422,6 +443,7 @@ const AdminDashboard = () => {
 
         {mobileMenuOpen && (
           <div className="border-t bg-white p-2 shadow-lg sm:hidden">
+
             <div className="grid grid-cols-3 gap-1">
 
               {menuItems.map((item) => {
@@ -468,6 +490,7 @@ const AdminDashboard = () => {
         =================================================== */}
 
         <div className="-mx-3 mb-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+
           <div className="flex w-max gap-2">
 
             {menuItems.map((item) => {
@@ -478,7 +501,7 @@ const AdminDashboard = () => {
                 <button
                   key={item.id}
                   onClick={() => openTab(item.id)}
-                  className={`flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition ${
+                  className={`flex h-10 items-center gap-2 whitespace-nowrap rounded-full border px-4 text-sm font-medium transition ${
                     active
                       ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                       : "border-slate-200 bg-white text-slate-600"
@@ -500,17 +523,21 @@ const AdminDashboard = () => {
         <div className="mb-4 flex items-center justify-between">
 
           <div className="min-w-0">
+
             <div className="flex items-center gap-2">
+
               <activeMenu.icon className="h-5 w-5 text-slate-500" />
 
               <h2 className="truncate text-xl font-bold sm:text-2xl">
                 {activeMenu.label}
               </h2>
+
             </div>
 
             <p className="mt-1 text-xs text-slate-500 sm:text-sm">
               Manage your {activeMenu.label.toLowerCase()} quickly
             </p>
+
           </div>
 
         </div>
@@ -524,76 +551,9 @@ const AdminDashboard = () => {
           {activeTab === "signals" && (
             <div className="space-y-3">
 
-              {/* QUICK ACTION BAR */}
-
-              <Card className="overflow-hidden border-slate-200 shadow-sm">
-                <CardContent className="p-3">
-
-                  <div className="flex gap-2">
-
-                    {/* SEARCH */}
-
-                    <button
-                      onClick={() => setSearchOpen(true)}
-                      className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border bg-slate-50 px-3 py-3 text-left"
-                    >
-                      <Search className="h-5 w-5 shrink-0 text-slate-400" />
-
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-slate-700">
-                          Search pair
-                        </div>
-
-                        <div className="truncate text-xs text-slate-400">
-                          XAU/USD, EUR/USD, BTC/USD...
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* ADD */}
-
-                    <Button
-                      onClick={() => setShowSignalForm(true)}
-                      className="h-auto min-h-[54px] shrink-0 rounded-xl px-4"
-                    >
-                      <Plus className="mr-1.5 h-5 w-5" />
-                      Add
-                    </Button>
-
-                  </div>
-
-                  {/* QUICK SEARCH RESULT */}
-
-                  {pairSearch && (
-                    <div className="mt-2 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-
-                      <div className="flex min-w-0 items-center gap-2">
-                        <CircleDollarSign className="h-4 w-4 shrink-0 text-emerald-600" />
-
-                        <span className="truncate text-sm font-semibold">
-                          {pairSearch}
-                        </span>
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8"
-                        onClick={() => {
-                          setPairSearch("");
-                          setSearchOpen(false);
-                        }}
-                      >
-                        Clear
-                      </Button>
-
-                    </div>
-                  )}
-
-                </CardContent>
-              </Card>
-
-              {/* ADD SIGNAL */}
+              {/* =================================================
+                  ADD SIGNAL FORM
+              ================================================= */}
 
               {showSignalForm && (
                 <Card className="border-emerald-200 shadow-md">
@@ -615,7 +575,9 @@ const AdminDashboard = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowSignalForm(false)}
+                        onClick={() =>
+                          setShowSignalForm(false)
+                        }
                         className="rounded-xl"
                       >
                         <X className="h-5 w-5" />
@@ -635,11 +597,15 @@ const AdminDashboard = () => {
                 </Card>
               )}
 
-              {/* SIGNAL LIST */}
+              {/* =================================================
+                  SIGNAL LIST
+              ================================================= */}
 
               <Card className="border-slate-200 shadow-sm">
 
                 <CardContent className="p-2 sm:p-4">
+
+                  {/* LIVE SIGNALS HEADER */}
 
                   <div className="mb-2 flex items-center justify-between px-1">
 
@@ -653,12 +619,18 @@ const AdminDashboard = () => {
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => setSearchOpen(true)}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border bg-white"
+                    {/* MEDIUM ADD SIGNAL BUTTON */}
+
+                    <Button
+                      onClick={() =>
+                        setShowSignalForm(true)
+                      }
+                      size="sm"
+                      className="h-9 rounded-lg px-4"
                     >
-                      <Search className="h-4 w-4" />
-                    </button>
+                      <Plus className="mr-1.5 h-4 w-4" />
+                      Add Signal
+                    </Button>
 
                   </div>
 
@@ -679,6 +651,7 @@ const AdminDashboard = () => {
             <div className="space-y-3">
 
               <Card className="border-slate-200 shadow-sm">
+
                 <CardContent className="p-3">
 
                   <div className="flex items-center justify-between gap-3">
@@ -694,7 +667,9 @@ const AdminDashboard = () => {
                     </div>
 
                     <Button
-                      onClick={() => setShowChartForm(!showChartForm)}
+                      onClick={() =>
+                        setShowChartForm(!showChartForm)
+                      }
                       size="sm"
                       className="rounded-xl"
                     >
@@ -705,13 +680,16 @@ const AdminDashboard = () => {
                   </div>
 
                 </CardContent>
+
               </Card>
 
               {showChartForm && (
                 <Card className="border-blue-200 shadow-md">
+
                   <CardContent className="p-3 sm:p-5">
 
                     <div className="mb-3 flex items-center justify-between">
+
                       <h3 className="font-bold">
                         Add Chart Analysis
                       </h3>
@@ -719,10 +697,13 @@ const AdminDashboard = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowChartForm(false)}
+                        onClick={() =>
+                          setShowChartForm(false)
+                        }
                       >
                         <X className="h-5 w-5" />
                       </Button>
+
                     </div>
 
                     <ChartAnalysisForm
@@ -733,6 +714,7 @@ const AdminDashboard = () => {
                     />
 
                   </CardContent>
+
                 </Card>
               )}
 
@@ -832,7 +814,6 @@ const AdminDashboard = () => {
           </button>
 
         </div>
-
       </div>
 
       {/* =====================================================
@@ -853,7 +834,9 @@ const AdminDashboard = () => {
               <Input
                 autoFocus
                 value={pairSearch}
-                onChange={(e) => setPairSearch(e.target.value)}
+                onChange={(e) =>
+                  setPairSearch(e.target.value)
+                }
                 placeholder="Search XAU/USD, EUR/USD..."
                 className="border-0 shadow-none focus-visible:ring-0"
               />
@@ -891,11 +874,12 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {pairSearch && searchSuggestions.length === 0 && (
-                <div className="p-8 text-center text-sm text-slate-500">
-                  No pair found
-                </div>
-              )}
+              {pairSearch &&
+                searchSuggestions.length === 0 && (
+                  <div className="p-8 text-center text-sm text-slate-500">
+                    No pair found
+                  </div>
+                )}
 
               {searchSuggestions.map((pair) => (
                 <button
@@ -911,6 +895,7 @@ const AdminDashboard = () => {
                     </div>
 
                     <div>
+
                       <p className="text-sm font-semibold">
                         {pair}
                       </p>
@@ -918,6 +903,7 @@ const AdminDashboard = () => {
                       <p className="text-xs text-slate-400">
                         Open signal
                       </p>
+
                     </div>
 
                   </div>
