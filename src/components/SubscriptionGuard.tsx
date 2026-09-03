@@ -2,19 +2,34 @@ import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
 import { FreeTrialModal } from "@/components/FreeTrialModal";
 import { useLocation } from "react-router-dom";
 
-// In routes par Pop-up open nahi hoga
-const allowedRoutes = ["/login", "/signup", "/premium", "/onboarding"];
+// In sabhi routes/pages par POP-UP KABHI NAHI AAYEGA
+const allowedRoutes = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/profile",
+  "/settings",
+  "/premium",
+  "/onboarding",
+  "/contact",
+  "/privacy",
+  "/terms",
+  "/about",
+  "/admin"
+];
 
 export const SubscriptionGuard = ({ children }: { children: React.ReactNode }) => {
   const { trialExpired, hasAccess } = useSubscriptionAccess();
   const location = useLocation();
 
-  // Check karein ke user Allowed Route par hai ya nahi
+  // Check if current path matches any allowed route
+  const currentPath = location.pathname.toLowerCase();
   const isAllowedRoute = allowedRoutes.some((route) =>
-    location.pathname.startsWith(route)
+    currentPath === route || currentPath.startsWith(route)
   );
 
-  // Agar trial expire hai AUR user allowed route par NAHI hai, tabhi pop-up dikhao
+  // Pop-up tabhi aayega jab user Protected Content (Live Signals, Charts, etc.) par ho
   const showModal = !isAllowedRoute && (trialExpired || !hasAccess);
 
   return (
