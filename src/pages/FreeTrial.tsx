@@ -29,7 +29,6 @@ const FreeTrial = () => {
     fetchTrialInfo();
   }, []);
 
-  // Live countdown update every second
   useEffect(() => {
     if (!trialEndDate || isPremium) return;
 
@@ -72,7 +71,6 @@ const FreeTrial = () => {
         .single();
 
       if (profile) {
-        // Check if user is premium
         if (profile.subscription_status === 'premium') {
           setIsPremium(true);
         } else {
@@ -84,6 +82,8 @@ const FreeTrial = () => {
           setTrialEndDateFormatted(format(endDate, "dd MMM yyyy"));
         }
       }
+    } catch (error) {
+      console.error("Error fetching trial info:", error);
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,6 @@ const FreeTrial = () => {
     );
   }
 
-  // Premium user view
   if (isPremium) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -141,7 +140,6 @@ const FreeTrial = () => {
     );
   }
 
-  // If trial is expired, automatically redirect to premium page
   useEffect(() => {
     if (isExpired) {
       const redirectTimer = setTimeout(() => {
@@ -160,7 +158,7 @@ const FreeTrial = () => {
         <div className="max-w-2xl mx-auto">
           <Card className="border-2 border-primary">
             <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold text-primary mb-2">
+              <CardTitle className="text-3xl font-bold text-primary mb-2">
                 {isExpired ? "Trial Expired 🔒" : "Welcome to TREND IS FRIEND"}
               </CardTitle>
               <p className="text-muted-foreground">Your free trial details</p>
@@ -169,7 +167,6 @@ const FreeTrial = () => {
             <CardContent className="space-y-6">
               {trialEndDate && (
                 <>
-                  {/* Live Countdown */}
                   {!isExpired && timeLeft && (
                     <div className="bg-primary/10 border border-primary rounded-lg p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-4">
@@ -197,7 +194,6 @@ const FreeTrial = () => {
                     </div>
                   )}
 
-                  {/* Trial Details */}
                   <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                     <div className="flex justify-between items-center py-3 border-b">
                       <span className="text-lg text-muted-foreground">Started On</span>
@@ -223,7 +219,6 @@ const FreeTrial = () => {
                     </div>
                   </div>
 
-                  {/* Status Banner */}
                   {isExpired ? (
                     <div className="bg-destructive/10 border border-destructive rounded-lg p-6 text-center">
                       <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-2" />
