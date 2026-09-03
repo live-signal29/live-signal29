@@ -29,6 +29,7 @@ const FreeTrial = () => {
     fetchTrialInfo();
   }, []);
 
+  // Live countdown update every second
   useEffect(() => {
     if (!trialEndDate || isPremium) return;
 
@@ -71,6 +72,7 @@ const FreeTrial = () => {
         .single();
 
       if (profile) {
+        // Check if user is premium
         if (profile.subscription_status === 'premium') {
           setIsPremium(true);
         } else {
@@ -82,8 +84,6 @@ const FreeTrial = () => {
           setTrialEndDateFormatted(format(endDate, "dd MMM yyyy"));
         }
       }
-    } catch (error) {
-      console.error("Error fetching trial info:", error);
     } finally {
       setLoading(false);
     }
@@ -99,6 +99,7 @@ const FreeTrial = () => {
     );
   }
 
+  // Premium user view
   if (isPremium) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -140,16 +141,6 @@ const FreeTrial = () => {
     );
   }
 
-  useEffect(() => {
-    if (isExpired) {
-      const redirectTimer = setTimeout(() => {
-        navigate("/premium");
-      }, 3000);
-      
-      return () => clearTimeout(redirectTimer);
-    }
-  }, [isExpired, navigate]);
-
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -158,7 +149,7 @@ const FreeTrial = () => {
         <div className="max-w-2xl mx-auto">
           <Card className="border-2 border-primary">
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-primary mb-2">
+            <CardTitle className="text-3xl font-bold text-primary mb-2">
                 {isExpired ? "Trial Expired 🔒" : "Welcome to TREND IS FRIEND"}
               </CardTitle>
               <p className="text-muted-foreground">Your free trial details</p>
@@ -167,6 +158,7 @@ const FreeTrial = () => {
             <CardContent className="space-y-6">
               {trialEndDate && (
                 <>
+                  {/* Live Countdown */}
                   {!isExpired && timeLeft && (
                     <div className="bg-primary/10 border border-primary rounded-lg p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-4">
@@ -194,6 +186,7 @@ const FreeTrial = () => {
                     </div>
                   )}
 
+                  {/* Trial Details */}
                   <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                     <div className="flex justify-between items-center py-3 border-b">
                       <span className="text-lg text-muted-foreground">Started On</span>
@@ -219,34 +212,29 @@ const FreeTrial = () => {
                     </div>
                   </div>
 
+                  {/* Status Banner */}
                   {isExpired ? (
                     <div className="bg-destructive/10 border border-destructive rounded-lg p-6 text-center">
                       <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-2" />
                       <p className="text-destructive font-bold text-xl">FREE TRIAL EXPIRED</p>
                       <p className="text-muted-foreground mt-2 text-sm">
-                        Redirecting you to Premium page...
+                        Upgrade to premium to continue receiving live trading signals.
                       </p>
-                      <Button
-                        onClick={() => navigate("/premium")}
-                        className="w-full h-14 text-xl font-semibold mt-4"
-                        size="lg"
-                      >
-                        Upgrade to Premium Now
-                      </Button>
                     </div>
                   ) : (
                     <div className="bg-success/10 border border-success rounded-lg p-6 text-center">
                       <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
                       <p className="text-success font-bold text-2xl">FREE TRIAL IS ACTIVE</p>
-                      <Button
-                        onClick={() => navigate("/premium")}
-                        className="w-full h-14 text-xl font-semibold mt-4"
-                        size="lg"
-                      >
-                        Take Premium Now
-                      </Button>
                     </div>
                   )}
+
+                  <Button
+                    onClick={() => navigate("/premium")}
+                    className="w-full h-14 text-xl font-semibold"
+                    size="lg"
+                  >
+                    {isExpired ? "Upgrade to Premium" : "Take Premium Now"}
+                  </Button>
                 </>
               )}
             </CardContent>

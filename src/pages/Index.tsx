@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -20,13 +20,8 @@ import {
   LineChart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useSubscriptionAccess } from "@/hooks/useSubscriptionAccess";
-import { TrialExpiredModal } from "@/components/TrialExpiredModal";
 
 const Index = () => {
-  const { trialExpired } = useSubscriptionAccess();
-  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
-
   // Master Active Category State
   const [activeCategory, setActiveCategory] = useState("All");
 
@@ -44,17 +39,6 @@ const Index = () => {
       return data;
     },
   });
-
-  // Show popup when trial expired
-  useEffect(() => {
-    if (trialExpired) {
-      const timer = setTimeout(() => {
-        setShowTrialExpiredModal(true);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [trialExpired]);
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -244,12 +228,6 @@ const Index = () => {
 
       <ExnessPopup />
       <Footer />
-
-      {/* Trial Expired Modal - Only popup, no redirect */}
-      <TrialExpiredModal 
-        open={showTrialExpiredModal} 
-        onOpenChange={setShowTrialExpiredModal}
-      />
     </div>
   );
 };
