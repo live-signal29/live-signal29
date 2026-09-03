@@ -5,13 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 // CONFIG
 // =========================================================
 
-// FIX: was 1000ms — price felt slow/laggy compared to MT5.
-// Polling faster (500ms) makes the ticker update roughly 2x as
-// often. Note: gold-api.com / Yahoo are free quote endpoints,
-// not a live broker tick feed, so this cannot match MT5's raw
-// tick-by-tick speed exactly — but it visibly halves the delay
-// between price updates on screen.
-const PRICE_POLL_MS = 500;
+const PRICE_POLL_MS = 1000;
 const INITIAL_FETCH_MS = 100;
 
 // =========================================================
@@ -851,9 +845,6 @@ export const useAutoTPSLUpdate = (
 
         updates.signal_status =
           'CLOSE';
-
-        updates.status =
-          'CLOSED';
       }
     }
 
