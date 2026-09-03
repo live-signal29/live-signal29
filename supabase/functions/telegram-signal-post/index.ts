@@ -103,6 +103,9 @@ async function sendTelegramMessage(
     };
   }
 
+  // Telegram sendMessage has a 4096-character limit.
+  const safeMessage = String(message || "").slice(0, 4090);
+
   try {
     const response = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -113,7 +116,7 @@ async function sendTelegramMessage(
         },
         body: JSON.stringify({
           chat_id: TELEGRAM_CHANNEL_ID,
-          text: message,
+          text: safeMessage,
           parse_mode: "HTML",
           disable_web_page_preview: true,
         }),
@@ -122,17 +125,54 @@ async function sendTelegramMessage(
 
     const result = await response.json();
 
-    console.log("Telegram sendMessage:", JSON.stringify(result));
+    console.log(
+      "Telegram sendMessage:",
+      response.status,
+      JSON.stringify(result)
+    );
 
-    if (response.ok && result.ok === true) {
-      return {
-        success: true,
-      };
+    if (response.ok && result?.ok === true) {
+      return { success: true };
+    }
+
+    // HTML formatting can fail because of unexpected characters.
+    // Retry as plain text so the post is never lost just because of formatting.
+    const plainText = safeMessage
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<[^>]*>/g, "");
+
+    const retry = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHANNEL_ID,
+          text: plainText.slice(0, 4090),
+          disable_web_page_preview: true,
+        }),
+      }
+    );
+
+    const retryResult = await retry.json();
+
+    console.log(
+      "Telegram plain-text retry:",
+      retry.status,
+      JSON.stringify(retryResult)
+    );
+
+    if (retry.ok && retryResult?.ok === true) {
+      return { success: true };
     }
 
     return {
       success: false,
       error:
+        retryResult?.description ||
         result?.description ||
         `Telegram HTTP ${response.status}`,
     };
@@ -632,6 +672,18 @@ serve(async (req) => {
       update_type,
     } = body;
 
+    // Older auto-signal callers sent the signal object without
+    // a top-level action. Keep that format working.
+    const resolvedAction =
+      action ||
+      (signal?.action
+        ? "new_signal"
+        : signal?.direction
+        ? "new_signal"
+        : idea
+        ? "new_idea"
+        : null);
+
     let result: {
       success: boolean;
       error?: string;
@@ -641,7 +693,7 @@ serve(async (req) => {
        NEW SIGNAL
     ===================================================== */
 
-    if (action === "new_signal") {
+    if (resolvedAction === "new_signal") {
       if (!signal) {
         return new Response(
           JSON.stringify({
@@ -701,7 +753,7 @@ serve(async (req) => {
     ===================================================== */
 
     else if (
-      isIdeaAction(action) ||
+      isIdeaAction(resolvedAction) ||
       idea
     ) {
       if (!idea) {
@@ -734,7 +786,7 @@ serve(async (req) => {
       console.log(
         "Auto idea detected:",
         JSON.stringify({
-          action,
+          action: resolvedAction,
           category:
             idea.category ||
             idea.main_category ||
@@ -768,7 +820,7 @@ serve(async (req) => {
         JSON.stringify({
           success: false,
           error: "Invalid action",
-          received_action: action || null,
+          received_action: resolvedAction || action || null,
           hint:
             "Use new_signal, update, or new_idea",
         }),
