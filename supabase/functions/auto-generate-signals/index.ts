@@ -30,6 +30,22 @@ function rand(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
 
+// IMPORTANT:
+// fetch-live-prices returns numbers directly.
+// This helper supports both:
+// 3465.25
+// and
+// { price: 3465.25 }
+function getLivePrice(value: any): number {
+  const price = Number(
+    value?.price ?? value
+  );
+
+  return Number.isFinite(price) && price > 0
+    ? price
+    : NaN;
+}
+
 // =========================================================
 // LIVE PRICES
 // =========================================================
@@ -58,11 +74,16 @@ async function fetchLivePrices() {
   ];
 
   const response = await fetch(
-    `${SUPABASE_URL}/functions/v1/fetch-live-prices?pairs=${pairs.join(",")}`,
+    `${SUPABASE_URL}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(
+      pairs.join(",")
+    )}`,
     {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization:
+          `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey:
+          SUPABASE_SERVICE_ROLE_KEY,
       },
     }
   );
@@ -75,7 +96,15 @@ async function fetchLivePrices() {
 
   const data = await response.json();
 
-  const prices = data?.prices || data || {};
+  if (data?.success === false) {
+    throw new Error(
+      data?.error ||
+        "Live price function returned success=false"
+    );
+  }
+
+  const prices =
+    data?.prices || {};
 
   const aliases: Record<string, string[]> = {
     "XAU/USD (Gold)": [
@@ -153,6 +182,7 @@ async function fetchLivePrices() {
     "S&P500": [
       "SP500",
       "US500",
+      "S&P500",
     ],
 
     "BOOM 1000": [
@@ -181,20 +211,28 @@ async function fetchLivePrices() {
     ],
   };
 
-  const result: Record<string, any> = {};
+  // Always normalize to:
+  // {
+  //   "XAU/USD (Gold)": { price: 3465.25 }
+  // }
+  const result: Record<
+    string,
+    { price: number }
+  > = {};
 
-  for (const [standardName, possibleKeys] of Object.entries(
-    aliases
-  )) {
+  for (
+    const [standardName, possibleKeys]
+    of Object.entries(aliases)
+  ) {
     for (const key of possibleKeys) {
       const value = prices[key];
+      const price = getLivePrice(value);
 
-      if (
-        value !== undefined &&
-        value !== null &&
-        Number.isFinite(Number(value?.price ?? value))
-      ) {
-        result[standardName] = value;
+      if (Number.isFinite(price)) {
+        result[standardName] = {
+          price,
+        };
+
         break;
       }
     }
@@ -202,7 +240,7 @@ async function fetchLivePrices() {
 
   console.log(
     "Live prices received:",
-    Object.keys(result)
+    JSON.stringify(result)
   );
 
   return result;
@@ -351,9 +389,8 @@ function generateSignal(config: any) {
     decimals,
   } = config;
 
-  const currentPrice = Number(
-    price?.price ?? price
-  );
+  const currentPrice =
+    getLivePrice(price);
 
   if (!Number.isFinite(currentPrice)) {
     throw new Error(
@@ -387,7 +424,8 @@ function generateSignal(config: any) {
     "VOL 100",
   ].includes(pair);
 
-  const isBuy = Math.random() > 0.5;
+  const isBuy =
+    Math.random() > 0.5;
 
   let entryOffset = 0;
 
@@ -552,16 +590,20 @@ function generateSignal(config: any) {
     };
   } else {
     const slDistance =
-      rand(12, 20) * pipMultiplier;
+      rand(12, 20) *
+      pipMultiplier;
 
     const tp1Distance =
-      rand(15, 25) * pipMultiplier;
+      rand(15, 25) *
+      pipMultiplier;
 
     const tp2Distance =
-      rand(30, 45) * pipMultiplier;
+      rand(30, 45) *
+      pipMultiplier;
 
     const tp3Distance =
-      rand(50, 75) * pipMultiplier;
+      rand(50, 75) *
+      pipMultiplier;
 
     levels = {
       sl: Number(
@@ -603,8 +645,7 @@ function generateSignal(config: any) {
     symbol: pair,
 
     category:
-      isGold ||
-      isSilver
+      isGold || isSilver
         ? "COMMODITIES"
         : isBTC
         ? "CRYPTO"
@@ -634,10 +675,17 @@ function generateSignal(config: any) {
     tp2: levels.tp2,
     tp3: levels.tp3,
 
-    stop_loss: levels.sl,
-    target1: levels.tp1,
-    target2: levels.tp2,
-    target3: levels.tp3,
+    stop_loss:
+      levels.sl,
+
+    target1:
+      levels.tp1,
+
+    target2:
+      levels.tp2,
+
+    target3:
+      levels.tp3,
 
     reason: pick(
       isBuy
@@ -871,18 +919,22 @@ function validateSignal(
 async function evaluatePair(
   pair: string
 ) {
-  const { data, error } =
-    await supabase
-      .from("signals")
-      .select(
-        "id, pair, status, signal_status, created_at"
-      )
-      .eq("pair", pair)
-      .order(
-        "created_at",
-        { ascending: false }
-      )
-      .limit(20);
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("signals")
+    .select(
+      "id, pair, status, signal_status, created_at"
+    )
+    .eq("pair", pair)
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    )
+    .limit(20);
 
   if (error) {
     console.error(
@@ -890,8 +942,6 @@ async function evaluatePair(
       error
     );
 
-    // Fail closed.
-    // If database check fails, don't create duplicate signals.
     return false;
   }
 
@@ -902,13 +952,38 @@ async function evaluatePair(
     return true;
   }
 
+  const closedStatuses = [
+    "CLOSED",
+    "CLOSE",
+    "TP1",
+    "TP 1",
+    "TP1 HIT",
+    "TP 1 HIT",
+    "TP2",
+    "TP 2",
+    "TP2 HIT",
+    "TP 2 HIT",
+    "TP3",
+    "TP 3",
+    "TP3 HIT",
+    "TP 3 HIT",
+    "SL",
+    "SL HIT",
+    "STOP LOSS",
+    "STOP LOSS HIT",
+    "EXPIRED",
+    "CANCELLED",
+    "CANCELED",
+  ];
+
   const activeSignal =
     data.some((row) => {
-      const status = String(
-        row.status || ""
-      )
-        .trim()
-        .toUpperCase();
+      const status =
+        String(
+          row.status || ""
+        )
+          .trim()
+          .toUpperCase();
 
       const signalStatus =
         String(
@@ -917,33 +992,10 @@ async function evaluatePair(
           .trim()
           .toUpperCase();
 
-      // Explicitly closed statuses
-      const closedStatuses = [
-        "CLOSED",
-        "CLOSE",
-        "TP1",
-        "TP 1",
-        "TP1 HIT",
-        "TP 1 HIT",
-        "TP2",
-        "TP 2",
-        "TP2 HIT",
-        "TP 2 HIT",
-        "TP3",
-        "TP 3",
-        "TP3 HIT",
-        "TP 3 HIT",
-        "SL",
-        "SL HIT",
-        "STOP LOSS",
-        "STOP LOSS HIT",
-        "EXPIRED",
-        "CANCELLED",
-        "CANCELED",
-      ];
-
       if (
-        closedStatuses.includes(status) ||
+        closedStatuses.includes(
+          status
+        ) ||
         closedStatuses.includes(
           signalStatus
         )
@@ -951,17 +1003,23 @@ async function evaluatePair(
         return false;
       }
 
-      // Any close / TP / SL style signal status
       if (
-        signalStatus.includes("CLOSE") ||
-        signalStatus.includes("TP") ||
-        signalStatus.includes("SL HIT") ||
-        signalStatus.includes("STOP")
+        signalStatus.includes(
+          "CLOSE"
+        ) ||
+        signalStatus.includes(
+          "TP"
+        ) ||
+        signalStatus.includes(
+          "SL HIT"
+        ) ||
+        signalStatus.includes(
+          "STOP"
+        )
       ) {
         return false;
       }
 
-      // Only OPEN is considered active.
       return status === "OPEN";
     });
 
@@ -969,27 +1027,33 @@ async function evaluatePair(
 }
 
 // =========================================================
-// GET AVAILABLE PAIR
+// FIND AVAILABLE PAIR
 // =========================================================
 
 async function findAvailablePair(
   candidates: any[],
-  livePrices: Record<string, any>
+  livePrices: Record<
+    string,
+    { price: number }
+  >
 ) {
-  // Shuffle candidates while keeping duplicate weighted
-  // entries. Gold has more entries, so it still receives
-  // higher probability.
-  const shuffled = [...candidates].sort(
-    () => Math.random() - 0.5
-  );
+  const shuffled =
+    [...candidates].sort(
+      () => Math.random() - 0.5
+    );
 
-  const checked = new Set<string>();
+  const checked =
+    new Set<string>();
 
-  for (const candidate of shuffled) {
-    const pair = candidate.pair;
+  for (
+    const candidate of shuffled
+  ) {
+    const pair =
+      candidate.pair;
 
-    // Don't query same pair repeatedly.
-    if (checked.has(pair)) {
+    if (
+      checked.has(pair)
+    ) {
       continue;
     }
 
@@ -998,10 +1062,15 @@ async function findAvailablePair(
     const live =
       livePrices[pair];
 
+    const currentPrice =
+      getLivePrice(live);
+
+    // FIX:
+    // Accept normalized {price:number}
+    // and direct numeric values.
     if (
-      !live ||
       !Number.isFinite(
-        Number(live.price)
+        currentPrice
       )
     ) {
       console.log(
@@ -1023,10 +1092,15 @@ async function findAvailablePair(
     }
 
     console.log(
-      `Available pair found: ${pair}`
+      `Available pair found: ${pair} @ ${currentPrice}`
     );
 
-    return candidate;
+    return {
+      ...candidate,
+
+      livePrice:
+        currentPrice,
+    };
   }
 
   return null;
@@ -1090,7 +1164,8 @@ async function postTelegram(
 Deno.serve(
   async (req) => {
     if (
-      req.method === "OPTIONS"
+      req.method ===
+      "OPTIONS"
     ) {
       return new Response(
         "ok",
@@ -1121,10 +1196,18 @@ Deno.serve(
       const livePrices =
         await fetchLivePrices();
 
+      console.log(
+        "Available normalized pairs:",
+        Object.keys(
+          livePrices
+        )
+      );
+
       if (
         !livePrices ||
-        Object.keys(livePrices)
-          .length === 0
+        Object.keys(
+          livePrices
+        ).length === 0
       ) {
         return new Response(
           JSON.stringify({
@@ -1150,12 +1233,14 @@ Deno.serve(
 
       const commodities = [
         {
-          pair: "XAU/USD (Gold)",
+          pair:
+            "XAU/USD (Gold)",
           pipMultiplier: 1,
           decimals: 2,
         },
         {
-          pair: "XAG/USD (Silver)",
+          pair:
+            "XAG/USD (Silver)",
           pipMultiplier: 0.05,
           decimals: 3,
         },
@@ -1285,15 +1370,18 @@ Deno.serve(
         ) {
           weight = 12;
         } else if (
-          item.pair === "US30"
+          item.pair ===
+          "US30"
         ) {
           weight = 9;
         } else if (
-          item.pair === "NASDAQ"
+          item.pair ===
+          "NASDAQ"
         ) {
           weight = 8;
         } else if (
-          item.pair === "S&P500"
+          item.pair ===
+          "S&P500"
         ) {
           weight = 6;
         }
@@ -1312,19 +1400,25 @@ Deno.serve(
       for (
         const item of forex
       ) {
-        weighted.push(item);
+        weighted.push(
+          item
+        );
       }
 
       for (
         const item of crypto
       ) {
-        weighted.push(item);
+        weighted.push(
+          item
+        );
       }
 
       for (
         const item of deriv
       ) {
-        weighted.push(item);
+        weighted.push(
+          item
+        );
       }
 
       // ===================================================
@@ -1337,8 +1431,7 @@ Deno.serve(
           livePrices
         );
 
-      // If weighted selection somehow fails,
-      // check every pair.
+      // Fallback: check every pair.
       if (!selected) {
         console.log(
           "Weighted search failed. Trying all pairs..."
@@ -1356,8 +1449,14 @@ Deno.serve(
           JSON.stringify({
             success: true,
             generated: false,
+
             reason:
-              "No available pair with live price. All pairs may have active signals.",
+              "No available pair with live price or all pairs have active signals.",
+
+            live_pairs:
+              Object.keys(
+                livePrices
+              ),
           }),
           {
             headers: {
@@ -1373,23 +1472,22 @@ Deno.serve(
       // LIVE PRICE
       // ===================================================
 
-      const live =
-        livePrices[
-          selected.pair
-        ];
-
       const currentPrice =
-        Number(live.price);
+        Number(
+          selected.livePrice
+        );
 
       if (
         !Number.isFinite(
           currentPrice
-        )
+        ) ||
+        currentPrice <= 0
       ) {
         return new Response(
           JSON.stringify({
             success: true,
             generated: false,
+
             reason:
               `Invalid live price for ${selected.pair}`,
           }),
@@ -1414,7 +1512,11 @@ Deno.serve(
       const signal =
         generateSignal({
           ...selected,
-          price: live,
+
+          price: {
+            price:
+              currentPrice,
+          },
         });
 
       // ===================================================
@@ -1436,8 +1538,10 @@ Deno.serve(
           JSON.stringify({
             success: true,
             generated: false,
+
             reason:
               "Signal validation failed",
+
             pair:
               selected.pair,
           }),
@@ -1474,6 +1578,7 @@ Deno.serve(
             JSON.stringify({
               success: true,
               generated: false,
+
               reason:
                 "Silver signal validation failed",
             }),
@@ -1511,6 +1616,7 @@ Deno.serve(
             JSON.stringify({
               success: true,
               generated: false,
+
               reason:
                 "BTC signal validation failed",
             }),
@@ -1530,24 +1636,38 @@ Deno.serve(
       // ===================================================
 
       const insertData = {
-        pair: signal.pair,
-        symbol: signal.symbol,
+        pair:
+          signal.pair,
+
+        symbol:
+          signal.symbol,
+
         category:
           signal.category,
 
-        action: signal.action,
+        action:
+          signal.action,
+
         direction:
           signal.direction,
 
-        entry: signal.entry,
+        entry:
+          signal.entry,
 
         current_price:
           signal.currentPrice,
 
-        sl: signal.sl,
-        tp1: signal.tp1,
-        tp2: signal.tp2,
-        tp3: signal.tp3,
+        sl:
+          signal.sl,
+
+        tp1:
+          signal.tp1,
+
+        tp2:
+          signal.tp2,
+
+        tp3:
+          signal.tp3,
 
         stop_loss:
           signal.stop_loss,
@@ -1567,7 +1687,8 @@ Deno.serve(
         signal_type:
           signal.signal_type,
 
-        status: "OPEN",
+        status:
+          "OPEN",
 
         created_at:
           signal.created_at,
@@ -1611,7 +1732,9 @@ Deno.serve(
       const telegramPosted =
         await postTelegram({
           ...signal,
-          id: inserted?.id,
+
+          id:
+            inserted?.id,
         });
 
       // ===================================================
@@ -1621,15 +1744,23 @@ Deno.serve(
       return new Response(
         JSON.stringify({
           success: true,
+
           generated: true,
 
           pair:
             selected.pair,
 
+          price:
+            currentPrice,
+
+          action:
+            signal.action,
+
           telegram_posted:
             telegramPosted,
 
-          signal: inserted,
+          signal:
+            inserted,
         }),
         {
           headers: {
@@ -1648,6 +1779,7 @@ Deno.serve(
       return new Response(
         JSON.stringify({
           success: false,
+
           generated: false,
 
           error:
@@ -1660,6 +1792,7 @@ Deno.serve(
 
           headers: {
             ...corsHeaders,
+
             "Content-Type":
               "application/json",
           },
