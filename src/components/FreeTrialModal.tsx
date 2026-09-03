@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInDays } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Lock, Zap, CheckCircle2, Crown, Loader2 } from "lucide-react";
 
 interface FreeTrialModalProps {
   open: boolean;
@@ -14,20 +13,15 @@ interface FreeTrialModalProps {
 export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [trialInfo, setTrialInfo] = useState<{
-    startDate: string;
-    endDate: string;
-    remainingDays: number;
-    isExpired: boolean;
-  } | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     if (open) {
-      fetchTrialInfo();
+      checkTrialStatus();
     }
   }, [open]);
 
-  const fetchTrialInfo = async () => {
+  const checkTrialStatus = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -38,34 +32,24 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("trial_end_date, created_at, subscription_status")
+        .select("trial_end_date, subscription_status")
         .eq("id", user.id)
         .single();
 
       if (profile) {
-        const endDate = profile.trial_end_date ? new Date(profile.trial_end_date) : new Date();
-        const startDate = profile.created_at ? new Date(profile.created_at) : new Date();
+        const endDate = profile.trial_end_date ? new Date(profile.trial_end_date) : new Date(0);
         const today = new Date();
-        const remaining = differenceInDays(endDate, today);
-        
-        // Agar status premium nahi hai aur trial date guzar gayi hai toh Expired hai
-        const isExpired = profile.subscription_status !== "premium" && (today > endDate || remaining <= 0);
-
-        setTrialInfo({
-          startDate: format(startDate, "dd MMM yyyy"),
-          endDate: format(endDate, "dd MMM yyyy"),
-          remainingDays: Math.max(0, remaining),
-          isExpired,
-        });
+        const expired = profile.subscription_status !== "premium" && today > endDate;
+        setIsExpired(expired);
       }
     } catch (err) {
-      console.error("Error fetching trial info:", err);
+      console.error("Trial status check error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAction = () => {
+  const handleUpgrade = () => {
     onOpenChange(false);
     navigate("/premium");
   };
@@ -74,65 +58,72 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
     <Dialog 
       open={open} 
       onOpenChange={(val) => {
-        // Expiry par modal ko close mat hone do
-        if (trialInfo?.isExpired) return;
+        // Stop closing modal when trial is expired
+        if (isExpired) return;
         onOpenChange(val);
       }}
     >
-      <DialogContent className="sm:max-w-md [&>button]:hidden z-[100] bg-background border-border">
+      <DialogContent className="sm:max-w-md [&>button]:hidden z-[100] p-0 overflow-hidden border-0 bg-slate-950 text-white shadow-2xl rounded-2xl">
         {loading ? (
-          <div className="flex flex-col items-center justify-center p-8 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Checking Subscription Status...</p>
+          <div className="flex flex-col items-center justify-center p-12 gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+            <p className="text-xs text-slate-400 font-medium">Verifying Account Status...</p>
           </div>
         ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-2xl text-center font-black text-primary">
-                {trialInfo?.isExpired ? "Free Trial Expired" : "Welcome to TREND IS FRIEND"}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              {trialInfo && (
-                <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Started On</span>
-                    <span className="font-semibold">{trialInfo.startDate}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Valid Till</span>
-                    <span className="font-semibold">{trialInfo.endDate}</span>
-                  </div>
-                  {!trialInfo.isExpired && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Remaining</span>
-                      <span className="font-bold text-amber-500">{trialInfo.remainingDays} days</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {trialInfo?.isExpired ? (
-                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-center space-y-1">
-                  <p className="text-destructive font-black text-base">YOUR TRIAL HAS EXPIRED</p>
-                  <p className="text-xs text-muted-foreground">Upgrade to Premium to continue accessing live signals.</p>
-                </div>
-              ) : (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 text-center">
-                  <p className="text-emerald-500 font-bold text-base">FREE TRIAL IS ACTIVE</p>
-                </div>
-              )}
-
-              <Button
-                onClick={handleAction}
-                className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
-                size="lg"
-              >
-                {trialInfo?.isExpired ? "Upgrade to Premium Now" : "Take Premium Now"}
-              </Button>
+          <div className="relative p-6 sm:p-8 bg-gradient-to-b from-slate-900 via-slate-950 to-black text-center space-y-6">
+            
+            {/* Top Glowing Lock Badge */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/30 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+              <div className="p-3 bg-gradient-to-tr from-amber-500 to-yellow-300 rounded-full text-slate-950 shadow-md">
+                <Crown className="w-8 h-8 fill-slate-950" />
+              </div>
             </div>
-          </>
+
+            {/* Main Heading & Punchy Description */}
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black uppercase tracking-wider">
+                <Lock className="w-3.5 h-3.5" /> Access Restricted
+              </div>
+              <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                Your Free Trial Has Expired!
+              </h2>
+              <p className="text-sm text-slate-300 leading-relaxed max-w-xs mx-auto">
+                Live trading signals, TP/SL targets, and market updates are now locked.
+              </p>
+            </div>
+
+            {/* Impressive Feature Benefits */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 text-left space-y-2.5">
+              <div className="flex items-center gap-2.5 text-xs text-slate-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Instant High-Accuracy VIP Signals (XAUUSD & Forex)</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-xs text-slate-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Real-Time Entry, Take Profit & Stop Loss Alerts</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-xs text-slate-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Full Access to MT5 Auto Copier & Analysis</span>
+              </div>
+            </div>
+
+            {/* High-Converting CTA Button */}
+            <div className="pt-2">
+              <Button
+                onClick={handleUpgrade}
+                size="lg"
+                className="w-full h-13 text-base font-black bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2"
+              >
+                <Zap className="w-5 h-5 fill-slate-950" />
+                Unlock Premium Access Now
+              </Button>
+              <p className="text-[11px] text-slate-500 mt-2.5">
+                Join our VIP members trading with high accuracy today.
+              </p>
+            </div>
+
+          </div>
         )}
       </DialogContent>
     </Dialog>
