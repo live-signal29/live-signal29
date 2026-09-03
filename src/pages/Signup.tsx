@@ -23,7 +23,6 @@ const Signup = () => {
   const refCode = searchParams.get('ref') || '';
   const [referralCode, setReferralCode] = useState(refCode);
 
-  // Live Password Validation Logic
   const isCommonPattern = /(123|password|admin|qwerty|azazi|aziz)/i.test(password);
   const passwordRules = [
     { label: "At least 8 characters", valid: password.length >= 8 },
@@ -32,8 +31,6 @@ const Signup = () => {
     { label: "Uppercase & Lowercase letter", valid: /[a-z]/.test(password) && /[A-Z]/.test(password) },
     { label: "Avoid common phrases", valid: !isCommonPattern && password.length > 0 }
   ];
-
-  const strengthScore = passwordRules.filter((r) => r.valid).length;
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,9 +109,13 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0f0e] text-white flex flex-col justify-between px-6 py-8 font-sans">
+    <div className="min-h-screen bg-[#070908] text-white flex flex-col justify-between px-6 py-8 font-sans relative overflow-hidden">
+      {/* Background Soft Green Radial Gradient Effects */}
+      <div className="absolute top-0 left-0 w-[350px] h-[350px] bg-emerald-900/25 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-950/30 rounded-full blur-[120px] pointer-events-none" />
+
       {/* Top Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 z-10">
         <button onClick={() => navigate(-1)} className="text-white hover:opacity-80 transition-opacity">
           <ArrowLeft className="h-6 w-6" />
         </button>
@@ -126,7 +127,7 @@ const Signup = () => {
       </div>
 
       {/* Signup Form */}
-      <div className="max-w-md w-full mx-auto space-y-5 flex-1 flex flex-col justify-center">
+      <div className="max-w-md w-full mx-auto space-y-5 flex-1 flex flex-col justify-center z-10">
         <form onSubmit={handleSignup} className="space-y-4">
           
           {/* First Name & Last Name Grid */}
@@ -138,7 +139,7 @@ const Signup = () => {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 required
-                className="h-14 bg-[#1f2220] border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
+                className="h-14 bg-[#1f2220]/90 border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
               />
             </div>
             <div className="relative">
@@ -148,27 +149,27 @@ const Signup = () => {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 required
-                className="h-14 bg-[#1f2220] border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
+                className="h-14 bg-[#1f2220]/90 border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
               />
             </div>
           </div>
 
           {/* Email */}
           <div className="relative pt-2">
-            <label className="absolute -top-1 left-3 text-xs text-emerald-500 bg-[#0d0f0e] px-1 z-10">Email</label>
+            <label className="absolute -top-1 left-3 text-xs text-emerald-500 bg-[#0a0c0b] px-1 z-10">Email</label>
             <Input
               type="email"
               placeholder="example@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-14 bg-[#1f2220] border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
+              className="h-14 bg-[#1f2220]/90 border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
             />
           </div>
 
           {/* Password */}
           <div className="relative pt-2">
-            <label className="absolute -top-1 left-3 text-xs text-emerald-500 bg-[#0d0f0e] px-1 z-10">Password</label>
+            <label className="absolute -top-1 left-3 text-xs text-emerald-500 bg-[#0a0c0b] px-1 z-10">Password</label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
@@ -176,7 +177,7 @@ const Signup = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-14 bg-[#1f2220] border-0 rounded-xl text-white placeholder:text-gray-500 pr-12 focus-visible:ring-1 focus-visible:ring-emerald-500"
+                className="h-14 bg-[#1f2220]/90 border-0 rounded-xl text-white placeholder:text-gray-500 pr-12 focus-visible:ring-1 focus-visible:ring-emerald-500"
               />
               <button
                 type="button"
@@ -189,7 +190,7 @@ const Signup = () => {
 
             {/* Password Validation Indicator */}
             {password.length > 0 && (
-              <div className="mt-3 p-3 bg-[#181a19] rounded-xl border border-gray-800 space-y-1.5 text-xs">
+              <div className="mt-3 p-3 bg-[#181a19]/90 rounded-xl border border-gray-800 space-y-1.5 text-xs">
                 {passwordRules.map((rule, idx) => (
                   <div key={idx} className={`flex items-center gap-2 ${rule.valid ? "text-emerald-400" : "text-gray-500"}`}>
                     {rule.valid ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
@@ -207,7 +208,7 @@ const Signup = () => {
               placeholder="Referral code (Optional)"
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value)}
-              className="h-14 bg-[#1f2220] border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
+              className="h-14 bg-[#1f2220]/90 border-0 rounded-xl text-white placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
             />
           </div>
 
@@ -243,7 +244,7 @@ const Signup = () => {
             <span className="w-full border-t border-gray-800" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-[#0d0f0e] px-4 text-gray-400">Or Register with</span>
+            <span className="bg-[#070908] px-4 text-gray-400">Or Register with</span>
           </div>
         </div>
 
