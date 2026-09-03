@@ -626,19 +626,44 @@ function validateSignal(
 // =========================================================
 
 async function evaluatePair(pair: string) {
+  // FIX: this used to only check the `status` column for "OPEN".
+  // Signal cards close a trade by writing `signal_status` (e.g.
+  // "close"/"CLOSE") — they never touched `status`, so `status`
+  // stayed stuck at "OPEN" forever after a signal closed. That
+  // made this check always think the pair still had an open
+  // signal, so no new signal (e.g. XAUUSD) was ever generated
+  // after the previous one closed. Now both columns are checked,
+  // and a signal only counts as "still open" if neither column
+  // says it's closed.
   const { data, error } = await supabase
     .from("signals")
-    .select("id, pair, status")
+    .select("id, pair, status, signal_status")
     .eq("pair", pair)
-    .eq("status", "OPEN")
-    .limit(1);
+    .limit(5);
 
   if (error) {
     console.error("Active signal check error:", error);
     return false;
   }
 
-  return !data || data.length === 0;
+  if (!data || data.length === 0) {
+    return true;
+  }
+
+  const stillOpen = data.some((row) => {
+    const status = String(row.status || "").toUpperCase();
+    const signalStatus = String(row.signal_status || "").toUpperCase();
+
+    const closed =
+      status === "CLOSED" ||
+      status === "CLOSE" ||
+      signalStatus === "CLOSED" ||
+      signalStatus === "CLOSE";
+
+    return !closed;
+  });
+
+  return !stillOpen;
 }
 
 // =========================================================
