@@ -782,7 +782,7 @@ const SignalCardNew = ({
       className={cn(
         "relative mb-3 w-full rounded-[16px] p-3 transition-all duration-300 overflow-hidden border backdrop-blur-md shadow-lg",
         /* LIGHT MODE: Halka Soft Green Gradient */
-        "bg-gradient-to-br from-[#f2fbf7] via-[#e8f6f0] to-[#ffffff] border-emerald-500/20 shadow-emerald-900/5",
+      "bg-gradient-to-br from-[#f8fcfa] via-[#f3f9f6] to-[#ffffff] border-emerald-500/20 shadow-emerald-900/5",
         /* DARK MODE: 3D Glowing Deep Navy Blue Gradient */
         "dark:bg-gradient-to-br dark:from-[#0c182b] dark:via-[#09111e] dark:to-[#04080f] dark:border-cyan-500/20 dark:shadow-[0_8px_25px_rgba(0,0,0,0.6)]",
         /* HOVER EFFECTS */
