@@ -667,7 +667,7 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * TP / SL COLORS
+   * TP / SL COLORS & STEPPER PROGRESS
    * ============================================================
    */
 
@@ -899,7 +899,7 @@ const SignalCardNew = ({
       ) : (
         <>
           {/* ==================================================
-              PRICES BLOCK
+              PRICES BLOCK WITH MINI CANDLESTICK / SPARKLINE CHART
               ================================================== */}
 
           <div className="flex items-center justify-between rounded-[12px] bg-white/70 dark:bg-[#07101d]/80 border border-emerald-500/15 dark:border-cyan-500/15 px-2.5 py-2 mb-2 shadow-inner">
@@ -929,6 +929,19 @@ const SignalCardNew = ({
                   ? currentPriceNum.toFixed(2)
                   : signal.entry}
               </span>
+            </div>
+
+            {/* MINI CHART VISUAL (AS IN IMAGE) */}
+            <div className="hidden sm:flex items-center h-6 w-12 px-1">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 50 20">
+                <path
+                  d={isBuy ? "M 0 15 Q 12 18, 25 8 T 50 3" : "M 0 3 Q 12 2, 25 12 T 50 17"}
+                  fill="none"
+                  stroke={isBuy ? "#10b981" : "#f43f5e"}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
             </div>
 
             {/* TYPE / P&L */}
@@ -983,104 +996,51 @@ const SignalCardNew = ({
           </div>
 
           {/* ==================================================
-              TARGETS BLOCK
+              TARGETS BLOCK + GLOWING STEPPER PROGRESS BAR
               ================================================== */}
 
-          <div className="flex items-center justify-between px-1 mb-2 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-3 min-w-full justify-between">
+          <div className="flex flex-col gap-1 px-1 mb-2">
+            <div className="flex items-center justify-between text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
+              <span>Stop Loss</span>
+              <span>Target 1</span>
+              {signal.tp2 && <span>Target 2</span>}
+              {signal.tp3 && <span>Target 3</span>}
+              {signal.tp4 && <span>Target 4</span>}
+            </div>
 
-              {/* SL */}
-              <div className="flex flex-col items-start shrink-0">
-                <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
-                  Stop Loss
-                </span>
-                <span
-                  className={cn(
-                    "font-mono text-[10.5px] mt-0.5",
-                    getTargetColor("sl")
-                  )}
-                >
-                  {signal.sl}
-                </span>
-              </div>
+            <div className="flex items-center justify-between font-mono text-[10.5px]">
+              <span className={getTargetColor("sl")}>{signal.sl}</span>
+              <span className={getTargetColor("tp1")}>{signal.tp1}</span>
+              {signal.tp2 && <span className={getTargetColor("tp2")}>{signal.tp2}</span>}
+              {signal.tp3 && <span className={getTargetColor("tp3")}>{signal.tp3}</span>}
+              {signal.tp4 && <span className={getTargetColor("tp4")}>{signal.tp4}</span>}
+            </div>
 
-              <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
-
-              {/* TP1 */}
-              <div className="flex flex-col items-start shrink-0">
-                <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
-                  Target 1
-                </span>
-                <span
-                  className={cn(
-                    "font-mono text-[10.5px] mt-0.5",
-                    getTargetColor("tp1")
-                  )}
-                >
-                  {signal.tp1}
-                </span>
-              </div>
-
-              {/* TP2 */}
-              {signal.tp2 && (
-                <>
-                  <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
-                  <div className="flex flex-col items-start shrink-0">
-                    <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
-                      Target 2
-                    </span>
-                    <span
-                      className={cn(
-                        "font-mono text-[10.5px] mt-0.5",
-                        getTargetColor("tp2")
-                      )}
-                    >
-                      {signal.tp2}
-                    </span>
-                  </div>
-                </>
-              )}
-
-              {/* TP3 */}
-              {signal.tp3 && (
-                <>
-                  <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
-                  <div className="flex flex-col items-start shrink-0">
-                    <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
-                      Target 3
-                    </span>
-                    <span
-                      className={cn(
-                        "font-mono text-[10.5px] mt-0.5",
-                        getTargetColor("tp3")
-                      )}
-                    >
-                      {signal.tp3}
-                    </span>
-                  </div>
-                </>
-              )}
-
-              {/* TP4 */}
-              {signal.tp4 && (
-                <>
-                  <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
-                  <div className="flex flex-col items-start shrink-0">
-                    <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
-                      Target 4
-                    </span>
-                    <span
-                      className={cn(
-                        "font-mono text-[10.5px] mt-0.5",
-                        getTargetColor("tp4")
-                      )}
-                    >
-                      {signal.tp4}
-                    </span>
-                  </div>
-                </>
-              )}
-
+            {/* Glowing Stepper Progress Line (Exact Frame Replica) */}
+            <div className="relative mt-1 flex items-center justify-between">
+              <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-slate-300 dark:bg-cyan-950" />
+              <div 
+                className={cn(
+                  "absolute left-0 top-1/2 h-[2px] -translate-y-1/2 transition-all duration-500",
+                  signal.tp3_hit ? "w-full" : signal.tp2_hit ? "w-3/4" : signal.tp1_hit ? "w-1/2" : "w-1/4",
+                  isBuy ? "bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400" : "bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500"
+                )} 
+              />
+              
+              {/* SL Node Dot */}
+              <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.sl_hit ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "bg-rose-500/50")} />
+              
+              {/* TP1 Node Dot */}
+              <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp1_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />
+              
+              {/* TP2 Node Dot */}
+              {signal.tp2 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp2_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />}
+              
+              {/* TP3 Node Dot */}
+              {signal.tp3 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp3_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />}
+              
+              {/* TP4 Node Dot */}
+              {signal.tp4 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp4_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />}
             </div>
           </div>
 
