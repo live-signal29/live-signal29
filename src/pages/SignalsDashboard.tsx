@@ -7,7 +7,7 @@ import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Maximize2 } from "lucide-react";
+import { Loader2, Maximize2, Layers } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TrialExpiredPopup from "@/components/TrialExpiredPopup";
@@ -26,9 +26,6 @@ import { ChartReactions } from "@/components/ChartReactions";
 
 const SIGNALS_PER_PAGE = 20;
 
-/*
- * Dashboard refresh settings
- */
 const SIGNALS_REFRESH_MS = 5000;
 const MARKET_IDEAS_REFRESH_MS = 30000;
 
@@ -40,9 +37,6 @@ const CATEGORIES = [
   "COPIER",
 ];
 
-/*
- * Normalize pair names.
- */
 const normalizeSymbolKey = (symbolStr: string): string => {
   if (!symbolStr) return "";
 
@@ -53,16 +47,9 @@ const normalizeSymbolKey = (symbolStr: string): string => {
 
   const compact = upper.replace(/[^A-Z0-9]/g, "");
 
-  // Commodities
-  if (compact.includes("XAUUSD") || compact.includes("GOLD")) {
-    return "XAUUSD";
-  }
+  if (compact.includes("XAUUSD") || compact.includes("GOLD")) return "XAUUSD";
+  if (compact.includes("XAGUSD") || compact.includes("SILVER")) return "XAGUSD";
 
-  if (compact.includes("XAGUSD") || compact.includes("SILVER")) {
-    return "XAGUSD";
-  }
-
-  // Forex
   if (compact.includes("EURUSD")) return "EURUSD";
   if (compact.includes("GBPUSD")) return "GBPUSD";
   if (compact.includes("USDJPY")) return "USDJPY";
@@ -73,83 +60,27 @@ const normalizeSymbolKey = (symbolStr: string): string => {
   if (compact.includes("USDCAD")) return "USDCAD";
   if (compact.includes("USDCHF")) return "USDCHF";
 
-  // Crypto
-  if (compact.includes("BTCUSD") || compact.includes("BITCOIN")) {
-    return "BTCUSD";
-  }
-
-  if (compact.includes("ETHUSD") || compact.includes("ETHEREUM")) {
-    return "ETHUSD";
-  }
-
+  if (compact.includes("BTCUSD") || compact.includes("BITCOIN")) return "BTCUSD";
+  if (compact.includes("ETHUSD") || compact.includes("ETHEREUM")) return "ETHUSD";
   if (compact.includes("XRPUSD")) return "XRPUSD";
   if (compact.includes("LTCUSD")) return "LTCUSD";
   if (compact.includes("ADAUSD")) return "ADAUSD";
+  if (compact.includes("SOLUSD") || compact.includes("SOLANA")) return "SOLUSD";
 
-  if (compact.includes("SOLUSD") || compact.includes("SOLANA")) {
-    return "SOLUSD";
-  }
-
-  // Deriv
-  if (/BOOM\s*1000/.test(upper) || compact.includes("BOOM1000")) {
-    return "BOOM1000";
-  }
-
-  if (/BOOM\s*500/.test(upper) || compact.includes("BOOM500")) {
-    return "BOOM500";
-  }
-
-  if (/CRASH\s*1000/.test(upper) || compact.includes("CRASH1000")) {
-    return "CRASH1000";
-  }
-
-  if (/CRASH\s*500/.test(upper) || compact.includes("CRASH500")) {
-    return "CRASH500";
-  }
-
-  if (
-    /VOL(?:ATILITY)?\s*100/.test(upper) ||
-    compact.includes("VOLATILITY100") ||
-    compact === "V100"
-  ) {
-    return "VOL100";
-  }
-
-  if (
-    /VOL(?:ATILITY)?\s*75/.test(upper) ||
-    compact.includes("VOLATILITY75") ||
-    compact === "V75"
-  ) {
-    return "VOL75";
-  }
-
-  if (
-    /VOL(?:ATILITY)?\s*50/.test(upper) ||
-    compact.includes("VOLATILITY50") ||
-    compact === "V50"
-  ) {
-    return "VOL50";
-  }
-
-  if (
-    /VOL(?:ATILITY)?\s*25/.test(upper) ||
-    compact.includes("VOLATILITY25") ||
-    compact === "V25"
-  ) {
-    return "VOL25";
-  }
+  if (/BOOM\s*1000/.test(upper) || compact.includes("BOOM1000")) return "BOOM1000";
+  if (/BOOM\s*500/.test(upper) || compact.includes("BOOM500")) return "BOOM500";
+  if (/CRASH\s*1000/.test(upper) || compact.includes("CRASH1000")) return "CRASH1000";
+  if (/CRASH\s*500/.test(upper) || compact.includes("CRASH500")) return "CRASH500";
+  if (/VOL(?:ATILITY)?\s*100/.test(upper) || compact.includes("VOLATILITY100") || compact === "V100") return "VOL100";
+  if (/VOL(?:ATILITY)?\s*75/.test(upper) || compact.includes("VOLATILITY75") || compact === "V75") return "VOL75";
+  if (/VOL(?:ATILITY)?\s*50/.test(upper) || compact.includes("VOLATILITY50") || compact === "V50") return "VOL50";
+  if (/VOL(?:ATILITY)?\s*25/.test(upper) || compact.includes("VOLATILITY25") || compact === "V25") return "VOL25";
 
   return compact;
 };
 
-/*
- * Exact real time
- */
-const formatExactRealTime = (
-  dateString: string | Date | null | undefined
-) => {
+const formatExactRealTime = (dateString: string | Date | null | undefined) => {
   if (!dateString) return "";
-
   try {
     return format(new Date(dateString), "hh:mm a");
   } catch {
@@ -175,30 +106,19 @@ const SignalsDashboard = () => {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  /*
-   * Category change
-   */
   const handleCategoryChange = (category: string) => {
     setMainCategory(category);
     setSubCategory("all");
   };
 
-  /*
-   * Swipe start
-   */
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   }, []);
 
-  /*
-   * Swipe end
-   */
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
-      if (touchStartX.current === null || touchStartY.current === null) {
-        return;
-      }
+      if (touchStartX.current === null || touchStartY.current === null) return;
 
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
       const deltaY = e.changedTouches[0].clientY - touchStartY.current;
@@ -221,78 +141,24 @@ const SignalsDashboard = () => {
     [mainCategory]
   );
 
-  /*
-   * Trial popup
-   */
   useEffect(() => {
     if (trialExpired && subscriptionStatus === "free_trial") {
       setShowTrialExpiredPopup(true);
     }
   }, [trialExpired, subscriptionStatus]);
 
-  /*
-   * Breadcrumb
-   */
   const breadcrumbData = getBreadcrumbStructuredData([
-    {
-      name: "Home",
-      url: "https://yourdomain.com",
-    },
-    {
-      name: "Live Signals Dashboard",
-      url: "https://yourdomain.com/signals-dashboard",
-    },
+    { name: "Home", url: "https://yourdomain.com" },
+    { name: "Live Signals Dashboard", url: "https://yourdomain.com/signals-dashboard" },
   ]);
 
-  /*
-   * Subcategories
-   */
   const subCategoryOptions: Record<string, string[]> = {
-    FOREX: [
-      "EUR/USD",
-      "GBP/USD",
-      "USD/JPY",
-      "CHF/JPY",
-      "CAD/JPY",
-      "AUD/USD",
-      "NZD/USD",
-      "USD/CAD",
-      "USD/CHF",
-    ],
-    COMMODITIES: [
-      "XAU/USD (Gold)",
-      "XAG/USD (Silver)",
-      "Oil - Crude",
-      "Oil - Brent",
-      "Natural Gas",
-      "US30",
-      "NASDAQ",
-      "S&P500",
-      "DAX",
-      "FTSE100",
-      "Nikkei",
-    ],
-    CRYPTO: [
-      "BTC/USD",
-      "ETH/USD",
-      "XRP/USD",
-      "LTC/USD",
-      "ADA/USD",
-      "SOL/USD",
-    ],
-    "DERIV/BINARY": [
-      "BOOM 1000",
-      "BOOM 500",
-      "CRASH 1000",
-      "CRASH 500",
-      "VOL 75",
-      "VOL 100",
-    ],
+    FOREX: ["EUR/USD", "GBP/USD", "USD/JPY", "CHF/JPY", "CAD/JPY", "AUD/USD", "NZD/USD", "USD/CAD", "USD/CHF"],
+    COMMODITIES: ["XAU/USD (Gold)", "XAG/USD (Silver)", "Oil - Crude", "Oil - Brent", "Natural Gas", "US30", "NASDAQ", "S&P500", "DAX", "FTSE100", "Nikkei"],
+    CRYPTO: ["BTC/USD", "ETH/USD", "XRP/USD", "LTC/USD", "ADA/USD", "SOL/USD"],
+    "DERIV/BINARY": ["BOOM 1000", "BOOM 500", "CRASH 1000", "CRASH 500", "VOL 75", "VOL 100"],
   };
 
-  /*
-   * SIGNALS QUERY
-   */
   const {
     data: signalsData,
     isLoading,
@@ -314,8 +180,7 @@ const SignalsDashboard = () => {
 
       return {
         data: data || [],
-        nextPage:
-          (data?.length || 0) === SIGNALS_PER_PAGE ? pageParam + 1 : undefined,
+        nextPage: (data?.length || 0) === SIGNALS_PER_PAGE ? pageParam + 1 : undefined,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
@@ -328,24 +193,18 @@ const SignalsDashboard = () => {
     staleTime: 0,
   });
 
-  const allSignals =
-    signalsData?.pages.flatMap((page) => page.data) || [];
+  const allSignals = signalsData?.pages.flatMap((page) => page.data) || [];
 
   const signals =
     trialExpired && trialEndDate
-      ? allSignals.filter(
-          (signal) => new Date(signal.created_at) <= trialEndDate
-        )
+      ? allSignals.filter((signal) => new Date(signal.created_at) <= trialEndDate)
       : allSignals;
 
   const getActiveSignalsCount = (category: string) => {
-    if (category === "MARKET IDEAS" || category === "COPIER") {
-      return 0;
-    }
+    if (category === "MARKET IDEAS" || category === "COPIER") return 0;
     return (
       signals?.filter(
-        (signal) =>
-          signal.main_category === category && signal.signal_status !== "CLOSE"
+        (signal) => signal.main_category === category && signal.signal_status !== "CLOSE"
       ).length || 0
     );
   };
@@ -361,23 +220,10 @@ const SignalsDashboard = () => {
     openSignalPairs.length > 0
   );
 
-  /*
-   * SUPABASE REALTIME
-   */
   useEffect(() => {
     const channel = supabase
       .channel(`signals-dashboard-${mainCategory}-${subCategory}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "signals",
-        },
-        () => {
-          refetch();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "signals" }, () => refetch())
       .subscribe();
 
     return () => {
@@ -385,25 +231,14 @@ const SignalsDashboard = () => {
     };
   }, [refetch, mainCategory, subCategory]);
 
-  /*
-   * AUTO REFRESH ON VISIBILITY
-   */
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        refetch();
-      }
+      if (document.visibilityState === "visible") refetch();
     };
-
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [refetch]);
 
-  /*
-   * INFINITE SCROLL
-   */
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -414,43 +249,24 @@ const SignalsDashboard = () => {
       { threshold: 0.1 }
     );
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  /*
-   * MARKET IDEAS / CHART ANALYSIS
-   */
   const { data: chartAnalysis, isLoading: isLoadingCharts } = useQuery({
     queryKey: ["chart-analysis-and-ideas"],
     queryFn: async () => {
       const [charts, ideas] = await Promise.all([
-        supabase
-          .from("chart_analysis")
-          .select("*")
-          .eq("published", true)
-          .order("created_at", { ascending: false })
-          .limit(30),
-        supabase
-          .from("market_ideas")
-          .select("*")
-          .eq("published", true)
-          .order("created_at", { ascending: false })
-          .limit(30),
+        supabase.from("chart_analysis").select("*").eq("published", true).order("created_at", { ascending: false }).limit(30),
+        supabase.from("market_ideas").select("*").eq("published", true).order("created_at", { ascending: false }).limit(30),
       ]);
 
       if (charts.error) throw charts.error;
       if (ideas.error) throw ideas.error;
 
-      const merged = [...(charts.data || []), ...(ideas.data || [])].sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      return [...(charts.data || []), ...(ideas.data || [])].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-
-      return merged;
     },
     enabled: mainCategory === "MARKET IDEAS",
     refetchInterval: MARKET_IDEAS_REFRESH_MS,
@@ -475,7 +291,7 @@ const SignalsDashboard = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-background dark:bg-[#0B0E14] text-foreground transition-colors duration-200"
+      className="min-h-screen flex flex-col bg-[#080B11] text-slate-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-400"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -488,19 +304,18 @@ const SignalsDashboard = () => {
       />
 
       <Header />
-
       <HeadlineTicker />
 
-      <main className="flex-1">
-        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
+      <main className="flex-1 pb-12">
+        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-5 max-w-7xl space-y-4">
           <TrialExpiredPopup
             open={showTrialExpiredPopup}
             onClose={() => setShowTrialExpiredPopup(false)}
           />
 
-          {/* CATEGORY TABS */}
-          <div className="mb-4">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {/* NEON CATEGORY PILLS */}
+          <div className="w-full overflow-x-auto scrollbar-hide py-1">
+            <div className="flex gap-2 min-w-max">
               {categoryTabs.map((tab) => {
                 const isActive = mainCategory === tab.key;
                 const activeCount = getActiveSignalsCount(tab.key);
@@ -511,18 +326,18 @@ const SignalsDashboard = () => {
                     key={tab.key}
                     onClick={() => handleCategoryChange(tab.key)}
                     className={cn(
-                      "relative flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 border",
+                      "relative flex items-center gap-2 px-5 py-2 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-300 border backdrop-blur-md",
                       isActive
-                        ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
-                        : "bg-card dark:bg-[#151921] text-muted-foreground border-border/60 dark:border-slate-800 hover:bg-accent/50 dark:hover:bg-slate-800/60 hover:text-foreground"
+                        ? "bg-[#062c21] text-[#00ffb3] border-[#00e599] shadow-[0_0_20px_rgba(0,229,153,0.35)]"
+                        : "bg-[#101722]/80 text-slate-400 border-slate-800/80 hover:border-slate-700 hover:text-slate-200 hover:bg-[#151f2e]"
                     )}
                   >
                     <span>{tab.label}</span>
 
                     {hasActiveSignals && (
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffb3] opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00e599]" />
                       </span>
                     )}
                   </button>
@@ -531,33 +346,39 @@ const SignalsDashboard = () => {
             </div>
           </div>
 
+          {/* MT5 COPIER BANNER */}
           <MT5CopierBanner />
 
-          <div key={mainCategory} className="animate-fade-slide-in">
+          <div key={mainCategory} className="animate-fade-slide-in space-y-4">
             {/* TOP AD */}
             {subscriptionStatus !== "premium" && (
-              <div className="mb-4">
+              <div>
                 <AdBanner />
               </div>
             )}
 
-            {/* SUBCATEGORY SELECTOR */}
+            {/* SUBCATEGORY DROPDOWN */}
             {mainCategory !== "MARKET IDEAS" &&
               mainCategory !== "COPIER" &&
               subCategoryOptions[mainCategory] && (
-                <div className="mb-4">
+                <div className="relative w-full sm:w-[220px]">
                   <select
                     value={subCategory}
                     onChange={(e) => setSubCategory(e.target.value)}
-                    className="w-full sm:w-[220px] rounded-xl border border-border/70 dark:border-slate-800 bg-card dark:bg-[#151921] px-3.5 py-2 text-xs sm:text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                    className="w-full appearance-none rounded-2xl border border-slate-800 bg-[#101722]/90 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-200 shadow-lg focus:outline-none focus:border-[#00e599]/60 focus:ring-1 focus:ring-[#00e599]/40 transition-all cursor-pointer"
                   >
                     <option value="all">All Pairs</option>
                     {subCategoryOptions[mainCategory].map((pair) => (
-                      <option key={pair} value={pair}>
+                      <option key={pair} value={pair} className="bg-[#101722] text-slate-200">
                         {pair}
                       </option>
                     ))}
                   </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                    </svg>
+                  </div>
                 </div>
               )}
 
@@ -566,68 +387,61 @@ const SignalsDashboard = () => {
               <>
                 {isLoadingCharts ? (
                   <div className="flex justify-center items-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <Loader2 className="h-8 w-8 animate-spin text-[#00e599]" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {chartAnalysis?.map((analysis, index) => {
                       const hasImage =
-                        !!analysis.image_url &&
-                        String(analysis.image_url).trim() !== "";
-
-                      const displayTime = formatExactRealTime(
-                        analysis.created_at
-                      );
+                        !!analysis.image_url && String(analysis.image_url).trim() !== "";
+                      const displayTime = formatExactRealTime(analysis.created_at);
 
                       return (
                         <Card
                           key={analysis.id}
-                          className="group overflow-hidden rounded-2xl bg-card dark:bg-[#151921] border border-border/60 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-lg transition-all duration-300"
+                          className="group overflow-hidden rounded-2xl bg-[#101722]/90 border border-slate-800 hover:border-[#00e599]/40 shadow-xl transition-all duration-300"
                         >
                           {hasImage && (
                             <div
-                              className="relative aspect-video w-full overflow-hidden bg-muted dark:bg-slate-900 cursor-pointer"
+                              className="relative aspect-video w-full overflow-hidden bg-slate-950 cursor-pointer"
                               onClick={() => openLightbox(index)}
                             >
                               <img
                                 src={analysis.image_url}
                                 alt={analysis.title || "Trading idea chart"}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 loading="lazy"
                               />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                                 <Button
                                   size="icon"
                                   variant="secondary"
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/90 dark:bg-slate-900/90 text-foreground"
+                                  className="bg-[#101722]/90 border border-slate-700 text-slate-100 hover:bg-[#152030]"
                                 >
-                                  <Maximize2 className="h-5 w-5" />
+                                  <Maximize2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
                           )}
 
-                          <CardHeader className="p-4 sm:p-5 pb-2">
+                          <CardHeader className="p-4 pb-2">
                             {analysis.title && (
-                              <CardTitle className="text-base sm:text-lg font-bold group-hover:text-primary transition-colors text-foreground">
+                              <CardTitle className="text-base font-bold text-slate-100 group-hover:text-[#00e599] transition-colors">
                                 {analysis.title}
                               </CardTitle>
                             )}
-
-                            <p className="text-xs text-muted-foreground">
-                              {displayTime}
-                            </p>
+                            <p className="text-xs text-slate-400">{displayTime}</p>
                           </CardHeader>
 
                           {analysis.description && (
-                            <CardContent className="px-4 sm:px-5 pt-0 pb-3">
-                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                            <CardContent className="px-4 pt-0 pb-3">
+                              <p className="text-xs sm:text-sm text-slate-300 line-clamp-2">
                                 {analysis.description}
                               </p>
                             </CardContent>
                           )}
 
-                          <CardContent className="px-4 sm:px-5 py-3 border-t border-border/40 dark:border-slate-800/80 bg-muted/20 dark:bg-slate-900/30">
+                          <CardContent className="px-4 py-2.5 border-t border-slate-800/80 bg-[#0b1018]">
                             <ChartReactions chartId={analysis.id} />
                           </CardContent>
                         </Card>
@@ -646,8 +460,8 @@ const SignalsDashboard = () => {
                 )}
 
                 {!isLoadingCharts && chartAnalysis?.length === 0 && (
-                  <div className="text-center py-20 bg-card dark:bg-[#151921] rounded-2xl border border-border/60 dark:border-slate-800">
-                    <p className="text-muted-foreground text-base sm:text-lg font-medium">
+                  <div className="text-center py-20 bg-[#101722]/60 rounded-2xl border border-slate-800">
+                    <p className="text-slate-400 text-sm font-medium">
                       No chart analysis available
                     </p>
                   </div>
@@ -664,80 +478,67 @@ const SignalsDashboard = () => {
                 {isLoading ? (
                   <SignalsSkeleton />
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {signals && signals.length > 0 ? (
                       (() => {
-                        const groupedSignals: {
-                          [key: string]: typeof signals;
-                        } = {};
+                        const groupedSignals: { [key: string]: typeof signals } = {};
 
                         signals.forEach((signal) => {
-                          const date = startOfDay(
-                            new Date(signal.created_at)
-                          ).toISOString();
-
-                          if (!groupedSignals[date]) {
-                            groupedSignals[date] = [];
-                          }
+                          const date = startOfDay(new Date(signal.created_at)).toISOString();
+                          if (!groupedSignals[date]) groupedSignals[date] = [];
                           groupedSignals[date].push(signal);
                         });
 
                         let globalSignalIndex = 0;
 
-                        return Object.entries(groupedSignals).map(
-                          ([date, daySignals]) => (
-                            <div key={date}>
-                              <div className="space-y-3">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                                  {daySignals.map((signal) => {
-                                    const key = normalizeSymbolKey(signal.pair);
+                        return Object.entries(groupedSignals).map(([date, daySignals]) => (
+                          <div key={date}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                              {daySignals.map((signal) => {
+                                const key = normalizeSymbolKey(signal.pair);
+                                const currentLivePrice = livePrices[key]
+                                  ? parseFloat(livePrices[key])
+                                  : undefined;
 
-                                    const currentLivePrice = livePrices[key]
-                                      ? parseFloat(livePrices[key])
-                                      : undefined;
+                                globalSignalIndex += 1;
+                                const showBanner = globalSignalIndex % 3 === 0;
 
-                                    globalSignalIndex += 1;
-                                    const showBanner =
-                                      globalSignalIndex % 3 === 0;
+                                return (
+                                  <React.Fragment key={signal.id}>
+                                    <SignalCardNew
+                                      signal={signal as any}
+                                      hasAccess={hasAccess}
+                                      subscriptionStatus={subscriptionStatus}
+                                      livePrice={currentLivePrice}
+                                    />
 
-                                    return (
-                                      <React.Fragment key={signal.id}>
-                                        <SignalCardNew
-                                          signal={signal as any}
-                                          hasAccess={hasAccess}
-                                          subscriptionStatus={subscriptionStatus}
-                                          livePrice={currentLivePrice}
-                                        />
-
-                                        {showBanner && (
-                                          <div className="md:col-span-2 my-1">
-                                            <AffiliateBannerCarousel />
-                                          </div>
-                                        )}
-                                      </React.Fragment>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                                    {showBanner && (
+                                      <div className="md:col-span-2 my-1">
+                                        <AffiliateBannerCarousel />
+                                      </div>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
                             </div>
-                          )
-                        );
+                          </div>
+                        ));
                       })()
                     ) : (
-                      <div className="text-center py-20 bg-card dark:bg-[#151921] rounded-2xl border border-border/60 dark:border-slate-800">
-                        <p className="text-muted-foreground text-base sm:text-lg font-medium">
+                      <div className="text-center py-20 bg-[#101722]/60 rounded-2xl border border-slate-800">
+                        <p className="text-slate-400 text-sm font-medium">
                           No signals found
                         </p>
                       </div>
                     )}
 
-                    <div ref={loadMoreRef} className="py-8 flex justify-center">
+                    <div ref={loadMoreRef} className="py-6 flex justify-center">
                       {isFetchingNextPage && (
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <Loader2 className="h-6 w-6 animate-spin text-[#00e599]" />
                       )}
 
                       {!hasNextPage && signals.length > 0 && (
-                        <p className="text-muted-foreground text-xs sm:text-sm font-medium">
+                        <p className="text-slate-500 text-xs font-medium">
                           All signals loaded
                         </p>
                       )}
@@ -750,7 +551,7 @@ const SignalsDashboard = () => {
 
           {/* BOTTOM AD */}
           {subscriptionStatus !== "premium" && (
-            <div className="mt-6">
+            <div className="mt-4">
               <AdBanner />
             </div>
           )}
@@ -758,7 +559,6 @@ const SignalsDashboard = () => {
       </main>
 
       <ExnessPopup />
-
       <Footer />
     </div>
   );
