@@ -296,8 +296,16 @@ async function sendTelegramPhoto(
 ========================================================= */
 
 function formatSignalMessage(signal: Signal): string {
+  // FIX: auto-generate-signals sends `action`/`direction`, not `type`.
+  // Falling back only to `signal.type` meant every auto-posted signal
+  // showed a blank direction and the wrong (red) emoji.
   const type = escapeHtml(
-    String(signal.type || "").toUpperCase()
+    String(
+      signal.type ||
+        (signal as any).action ||
+        (signal as any).direction ||
+        ""
+    ).toUpperCase()
   );
 
   const emoji = type === "BUY" ? "🟢" : "🔴";
@@ -380,6 +388,10 @@ const UPDATE_META: Record<
     headline: "🛑 STOP LOSS HIT",
     banner: "🔴",
   },
+  expired: {
+    headline: "⌛ SIGNAL EXPIRED",
+    banner: "⚪",
+  },
 };
 
 function formatUpdateMessage(
@@ -387,7 +399,12 @@ function formatUpdateMessage(
   updateType?: string
 ): string {
   const type = escapeHtml(
-    String(signal.type || "").toUpperCase()
+    String(
+      signal.type ||
+        (signal as any).action ||
+        (signal as any).direction ||
+        ""
+    ).toUpperCase()
   );
 
   const isSl = updateType === "sl_hit";
@@ -395,6 +412,7 @@ function formatUpdateMessage(
   const isClosingEvent =
     updateType === "tp3_hit" ||
     updateType === "tp4_hit" ||
+    updateType === "expired" ||
     isSl;
 
   let meta =
