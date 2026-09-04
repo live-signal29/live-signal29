@@ -144,12 +144,6 @@ const SignalCardNew = ({
    * ============================================================
    * DERIV / SYNTHETIC INDEX CHECK
    * ============================================================
-   * Temporary debug step: for Deriv category pairs (Volatility,
-   * Boom, Crash, Step, Jump indices) we keep computing/updating
-   * current_price on the backend as usual, but we HIDE the
-   * "Current" price on the frontend for now, so we can verify
-   * from the backend/DB whether the value being fetched is
-   * actually correct, independent of anything on the UI side.
    */
 
   const isDerivPair = (() => {
@@ -191,15 +185,6 @@ const SignalCardNew = ({
    * ============================================================
    * LIVE PRICE MOVEMENT
    * ============================================================
-   * Current price color must follow the actual MT5 movement,
-   * NOT the signal type.
-   *
-   * UP   -> blue
-   * DOWN -> red
-   * SAME -> keep the last movement color
-   *
-   * This is intentionally based on the livePrice prop because
-   * SignalsDashboard refreshes it from MetaApi every few seconds.
    */
   const previousLivePriceRef = useRef<number | null>(null);
   const [priceDirection, setPriceDirection] = useState<"up" | "down" | "neutral">("neutral");
@@ -222,8 +207,8 @@ const SignalCardNew = ({
 
   const currentPriceColor =
     priceDirection === "down"
-      ? "text-red-600 dark:text-red-400"
-      : "text-blue-600 dark:text-blue-400";
+      ? "text-rose-500 dark:text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.4)]"
+      : "text-emerald-500 dark:text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]";
 
   /*
    * ============================================================
@@ -396,14 +381,6 @@ const SignalCardNew = ({
    * ============================================================
    */
 
-  // FIX: useLivePricesFetch can emit one stale/incorrect price right when a
-  // card mounts or when the feed reconnects (the "price reverts after ~1s"
-  // bug). Previously this effect trusted the very first tick, which could
-  // instantly (and permanently) mark a signal as SL Hit / Closed on bad
-  // data — this is what was undoing admin's manual edits on Deriv/VOL
-  // signals. Now: (1) the first tick after mount/reconnect is skipped, and
-  // (2) an SL breach must be seen on 2 consecutive ticks before it's
-  // written to the database.
   const primedForChecksRef = useRef(false);
   const slBreachStreakRef = useRef(0);
 
@@ -532,27 +509,6 @@ const SignalCardNew = ({
           "TP 4 Final Target Hit 🎊 Maximum Profit Secured ✅";
       }
 
-      // ---------------------------------------------------
-      // SL / BREAKEVEN
-      //
-      // FIX: previously, once TP1 hit and SL moved to
-      // breakeven (entry price), the signal only closed if
-      // a price tick landed EXACTLY within a tiny tolerance
-      // band around entry (atBreakEven snapshot check). With
-      // 1s polling, fast-moving pairs like Gold routinely
-      // skip straight over that narrow band, so the signal
-      // never closed and stayed "OPEN" forever even after
-      // price came back through entry.
-      //
-      // Now we use the same directional crossing check used
-      // for a normal SL hit (price <= SL for Buy / >= SL for
-      // Sell), just against whichever SL is currently active
-      // — the original SL before TP1, or the breakeven price
-      // after TP1. That means "price returned to entry" is
-      // detected as soon as it crosses the level, not only if
-      // a tick happens to land inside a tiny window.
-      // ---------------------------------------------------
-
       const effectiveTP1 =
         !!signal.tp1_hit ||
         !!updates.tp1_hit;
@@ -587,8 +543,6 @@ const SignalCardNew = ({
           "CLOSED";
 
         if (effectiveTP1) {
-          // SL had already moved to breakeven (entry) —
-          // price came back and closed at entry, not a loss.
           updates.sl_hit = false;
 
           updates.profit_note =
@@ -637,7 +591,7 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * TIME (FIXED FOR UTC CONVERSION & LOCAL TIME DISPLAY)
+   * TIME FORMATTING
    * ============================================================
    */
 
@@ -647,7 +601,6 @@ const SignalCardNew = ({
     try {
       if (!dateString) return "Just now";
 
-      // ISO String parse with UTC check
       const rawDate = new Date(dateString);
       const utcDate =
         dateString.endsWith("Z") || dateString.includes("+")
@@ -656,7 +609,6 @@ const SignalCardNew = ({
 
       const formattedTime = format(utcDate, "hh:mm a");
 
-      // Closed Signals
       if (
         isClosed ||
         signal.sl_hit ||
@@ -666,7 +618,6 @@ const SignalCardNew = ({
         return `Closed at ${formattedTime}`;
       }
 
-      // Open / Live Signals
       return formattedTime;
     } catch {
       return "Just now";
@@ -675,7 +626,7 @@ const SignalCardNew = ({
 
   /*
    * ============================================================
-   * STATUS
+   * STATUS STYLING
    * ============================================================
    */
 
@@ -686,26 +637,12 @@ const SignalCardNew = ({
     note.toUpperCase();
 
   const getSignalStatus = () => {
-    if (isClosed) {
+    if (isClosed || signal.sl_hit || signal.tp4_hit || (!signal.tp4 && signal.tp3_hit)) {
       return "CLOSED";
     }
-
-    if (signal.sl_hit) {
-      return "CLOSED";
-    }
-
-    if (
-      signal.tp4_hit ||
-      (!signal.tp4 &&
-        signal.tp3_hit)
-    ) {
-      return "CLOSED";
-    }
-
     if (isPending) {
       return "PENDING";
     }
-
     return "OPEN";
   };
 
@@ -715,16 +652,16 @@ const SignalCardNew = ({
   const getStatusStyle = () => {
     switch (statusText) {
       case "CLOSED":
-        return "bg-rose-500/10 border-rose-500/20 text-rose-500 dark:text-rose-400";
+        return "bg-rose-500/15 border-rose-500/40 text-rose-500 dark:text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
 
       case "OPEN":
-        return "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 dark:text-emerald-400";
+        return "bg-emerald-500/15 border-emerald-500/40 text-emerald-500 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]";
 
       case "PENDING":
-        return "bg-amber-500/10 border-amber-500/20 text-amber-500 dark:text-amber-400";
+        return "bg-amber-500/15 border-amber-500/40 text-amber-500 dark:text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]";
 
       default:
-        return "bg-blue-500/10 border-blue-500/20 text-blue-500 dark:text-blue-400";
+        return "bg-cyan-500/15 border-cyan-500/40 text-cyan-500 dark:text-cyan-400";
     }
   };
 
@@ -745,15 +682,11 @@ const SignalCardNew = ({
     if (targetType === "sl") {
       const slMovedToBE =
         !!signal.tp1_hit ||
-        noteUpper.includes(
-          "BREAKEVEN"
-        ) ||
-        noteUpper.includes(
-          "B.E"
-        );
+        noteUpper.includes("BREAKEVEN") ||
+        noteUpper.includes("B.E");
 
       if (slMovedToBE) {
-        return "text-amber-500 dark:text-amber-400";
+        return "text-amber-500 dark:text-amber-400 font-bold";
       }
 
       return "text-rose-500 dark:text-rose-400";
@@ -767,71 +700,60 @@ const SignalCardNew = ({
     };
 
     return hitMap[targetType]
-      ? "text-emerald-500 dark:text-emerald-400"
-      : "text-blue-600 dark:text-blue-400";
+      ? "text-emerald-500 dark:text-emerald-400 font-bold drop-shadow-[0_0_6px_rgba(16,185,129,0.3)]"
+      : "text-slate-700 dark:text-cyan-300/80";
   };
 
   /*
    * ============================================================
-   * PROFIT NOTE COLOR
+   * PROFIT NOTE STYLES
    * ============================================================
    */
 
   const isSLHit =
     !!signal.sl_hit ||
-    /\bSL\s+HIT\b/i.test(
-      note
-    );
+    /\bSL\s+HIT\b/i.test(note);
 
   const isBreakEven =
     !isSLHit &&
-    (
-      /BREAKEVEN/i.test(
-        note
-      ) ||
-      /B\.E/i.test(
-        note
-      )
-    );
+    (/BREAKEVEN/i.test(note) || /B\.E/i.test(note));
 
   const isTPHit =
     !isSLHit &&
     !isBreakEven &&
-    /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(
-      note
-    );
+    /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(note);
 
   const getNoteStyle = () => {
     if (isSLHit) {
       return {
         container:
-          "border-rose-500/30 bg-rose-500/10",
+          "border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20 shadow-[0_0_10px_rgba(244,63,94,0.15)]",
         icon:
           "text-rose-500 dark:text-rose-400",
         text:
-          "text-rose-600 dark:text-rose-400",
+          "text-rose-600 dark:text-rose-300",
       };
     }
 
     if (isBreakEven) {
       return {
         container:
-          "border-amber-500/30 bg-amber-500/10",
+          "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
         icon:
           "text-amber-500 dark:text-amber-400",
         text:
-          "text-amber-600 dark:text-amber-400",
+          "text-amber-600 dark:text-amber-300",
       };
     }
 
     if (isTPHit) {
       return {
         container:
-          "border-emerald-500/30 bg-emerald-500/10",
+          "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]",
         icon:
           "text-emerald-500 dark:text-emerald-400",
         text:
-          "text-emerald-600 dark:text-emerald-300",
+          "text-emerald-700 dark:text-emerald-300",
       };
     }
 
@@ -845,11 +767,8 @@ const SignalCardNew = ({
     };
   };
 
-  const noteStyle =
-    getNoteStyle();
-
-  const pairUpper =
-    signal.pair?.toUpperCase() || "";
+  const noteStyle = getNoteStyle();
+  const pairUpper = signal.pair?.toUpperCase() || "";
 
   /*
    * ============================================================
@@ -860,19 +779,36 @@ const SignalCardNew = ({
   return (
     <div
       ref={cardRef}
-      className="relative mb-2 w-full rounded-[12px] bg-card border border-border/50 p-2.5 text-foreground shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-300 overflow-hidden card-3d-hover"
+      className={cn(
+        "relative mb-3 w-full rounded-[16px] p-3 transition-all duration-300 overflow-hidden border backdrop-blur-md shadow-lg",
+        /* LIGHT MODE: Halka Soft Green Gradient */
+        "bg-gradient-to-br from-[#f2fbf7] via-[#e8f6f0] to-[#ffffff] border-emerald-500/20 shadow-emerald-900/5",
+        /* DARK MODE: 3D Glowing Deep Navy Blue Gradient */
+        "dark:bg-gradient-to-br dark:from-[#0c182b] dark:via-[#09111e] dark:to-[#04080f] dark:border-cyan-500/20 dark:shadow-[0_8px_25px_rgba(0,0,0,0.6)]",
+        /* HOVER EFFECTS */
+        "hover:scale-[1.01] hover:border-emerald-500/40 dark:hover:border-cyan-400/50 dark:hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]"
+      )}
     >
+      {/* 3D Top Glow Accent Line */}
+      <div 
+        className={cn(
+          "absolute top-0 left-0 right-0 h-[2px]",
+          isBuy 
+            ? "bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80" 
+            : "bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-80"
+        )} 
+      />
+
       {/* ======================================================
           HEADER
           ====================================================== */}
 
-      <div className="flex items-center justify-between mb-1.5">
+      <div className="flex items-center justify-between mb-2">
 
         {/* LEFT */}
+        <div className="flex items-center gap-2 min-w-0">
 
-        <div className="flex items-center gap-1.5 min-w-0">
-
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-yellow-500/40 bg-background/60 text-[10px] shadow-sm">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-yellow-600/10 text-xs shadow-[0_0_10px_rgba(245,158,11,0.2)]">
             {pairUpper.includes("XAU")
               ? "🪙"
               : pairUpper.includes("BTC")
@@ -882,29 +818,25 @@ const SignalCardNew = ({
 
           <div className="flex flex-col min-w-0">
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
 
-              <h3 className="text-[10.5px] font-bold text-foreground leading-tight">
-                {signal.pair.replace(
-                  "/",
-                  ""
-                )}
+              <h3 className="text-xs font-black tracking-wide text-slate-800 dark:text-cyan-50 leading-tight">
+                {signal.pair.replace("/", "")}
               </h3>
 
-              {isNewSignal &&
-                !isLocked && (
-                  <span className="animate-pulse bg-primary px-1 py-[0.5px] rounded text-[6px] font-extrabold text-primary-foreground">
-                    NEW
-                  </span>
-                )}
+              {isNewSignal && !isLocked && (
+                <span className="animate-pulse bg-gradient-to-r from-emerald-500 to-teal-400 px-1.5 py-[1px] rounded-full text-[6.5px] font-black text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]">
+                  NEW
+                </span>
+              )}
 
               {signal.is_premium && (
-                <Crown className="h-3 w-3 text-amber-500 shrink-0" />
+                <Crown className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(245,158,11,0.6)] shrink-0" />
               )}
 
             </div>
 
-            <p className="text-[7.5px] text-muted-foreground leading-tight">
+            <p className="text-[8px] font-semibold text-slate-500 dark:text-cyan-300/60 leading-tight">
               {pairUpper.includes("XAU")
                 ? "Gold"
                 : pairUpper.includes("BTC")
@@ -916,94 +848,80 @@ const SignalCardNew = ({
         </div>
 
         {/* RIGHT */}
-
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
 
           {/* STATUS */}
-
           <span
             className={cn(
-              "inline-flex items-center rounded-full border px-1.5 py-[2px] text-[6px] font-bold uppercase tracking-wide leading-none",
+              "inline-flex items-center rounded-full border px-2 py-[2.5px] text-[7px] font-black uppercase tracking-wider leading-none backdrop-blur-md",
               getStatusStyle()
             )}
           >
             <span
               className={cn(
-                "mr-1 h-1 w-1 rounded-full",
+                "mr-1 h-1.5 w-1.5 rounded-full animate-pulse",
                 statusText === "CLOSED"
-                  ? "bg-rose-500"
+                  ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]"
                   : statusText === "OPEN"
-                    ? "bg-emerald-500"
-                    : "bg-amber-500"
+                    ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                    : "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]"
               )}
             />
-
             {statusText}
           </span>
 
           {/* TIME */}
-
-          <div className="flex items-center gap-0.5 text-[7.5px] text-muted-foreground">
-            <Clock className="h-2.5 w-2.5" />
-
-            <span>
-              {formatRealTime(
-                signalTime
-              )}
-            </span>
+          <div className="flex items-center gap-1 text-[8px] font-medium text-slate-500 dark:text-cyan-200/50 bg-black/5 dark:bg-cyan-950/40 px-2 py-1 rounded-lg border border-black/5 dark:border-cyan-500/10">
+            <Clock className="h-2.5 w-2.5 text-emerald-600 dark:text-cyan-400" />
+            <span>{formatRealTime(signalTime)}</span>
           </div>
 
         </div>
       </div>
 
       {/* ======================================================
-          PREMIUM LOCKED VIEW (FIXED WITH CLICK HANDLER)
+          PREMIUM LOCKED VIEW
           ====================================================== */}
 
       {isLocked ? (
         <div 
           onClick={() => navigate("/premium")}
-          className="flex flex-col items-center justify-center gap-1.5 py-4 bg-muted/20 hover:bg-muted/30 active:scale-[0.98] rounded-[9px] border border-dashed border-border/60 cursor-pointer transition-all select-none"
+          className="flex flex-col items-center justify-center gap-2 py-5 bg-emerald-500/5 dark:bg-cyan-950/30 hover:bg-emerald-500/10 dark:hover:bg-cyan-900/40 active:scale-[0.98] rounded-[12px] border border-dashed border-emerald-500/30 dark:border-cyan-500/30 cursor-pointer transition-all duration-200 select-none shadow-inner"
         >
-          <Lock className="h-4 w-4 text-amber-500 pointer-events-none" />
+          <div className="p-2 rounded-full bg-amber-500/10 border border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+            <Lock className="h-4 w-4 text-amber-400 pointer-events-none" />
+          </div>
 
-          <span className="text-[10px] font-bold text-muted-foreground pointer-events-none">
+          <span className="text-[10px] font-bold tracking-wide text-slate-700 dark:text-cyan-200 pointer-events-none">
             🔒 Premium Signal - Tap to Unlock
           </span>
         </div>
       ) : (
         <>
           {/* ==================================================
-              PRICES
+              PRICES BLOCK
               ================================================== */}
 
-          <div className="flex items-center justify-between rounded-[9px] bg-muted/30 border border-border/50 px-2 py-1.5 mb-1.5">
+          <div className="flex items-center justify-between rounded-[12px] bg-white/70 dark:bg-[#07101d]/80 border border-emerald-500/15 dark:border-cyan-500/15 px-2.5 py-2 mb-2 shadow-inner">
 
             {/* ENTRY */}
-
             <div className="flex flex-col">
-
-              <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400 dark:text-cyan-300/50">
                 Entry
               </span>
-
-              <span className="font-mono text-[10.5px] font-bold text-foreground">
+              <span className="font-mono text-[11px] font-black text-slate-800 dark:text-cyan-100">
                 {signal.entry}
               </span>
-
             </div>
 
             {/* CURRENT */}
-
             <div className="flex flex-col items-center">
-
-              <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400 dark:text-cyan-300/50">
                 Current
               </span>
-
               <span
                 className={cn(
-                  "font-mono text-[11px] font-bold transition-colors duration-200",
+                  "font-mono text-[11.5px] font-black transition-colors duration-200",
                   currentPriceColor
                 )}
               >
@@ -1011,19 +929,16 @@ const SignalCardNew = ({
                   ? currentPriceNum.toFixed(2)
                   : signal.entry}
               </span>
-
             </div>
 
             {/* TYPE / P&L */}
-
             <div className="flex flex-col items-end gap-0.5">
-
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-[0.5px] text-[6.5px] font-bold uppercase",
+                  "rounded-md px-2 py-[1.5px] text-[7px] font-black uppercase tracking-wider shadow-sm",
                   isBuy
-                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300"
-                    : "bg-rose-500/20 text-rose-600 dark:text-rose-300"
+                    ? "bg-emerald-500 text-white dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                    : "bg-rose-500 text-white dark:bg-rose-500/20 dark:text-rose-300 dark:border dark:border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.3)]"
                 )}
               >
                 {signal.type.toUpperCase()}
@@ -1032,12 +947,12 @@ const SignalCardNew = ({
               {runningPL !== null ? (
                 <span
                   className={cn(
-                    "font-mono text-[8px] font-bold",
+                    "font-mono text-[8.5px] font-extrabold drop-shadow-sm",
                     runningPL > 0
-                      ? "text-emerald-500"
+                      ? "text-emerald-600 dark:text-emerald-400"
                       : runningPL < 0
-                        ? "text-rose-500"
-                        : "text-muted-foreground"
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-slate-400 dark:text-cyan-300/60"
                   )}
                 >
                   {runningPL > 0
@@ -1050,7 +965,7 @@ const SignalCardNew = ({
                 signal.risk_level && (
                   <span
                     className={cn(
-                      "flex items-center gap-0.5 text-[6.5px] font-medium",
+                      "flex items-center gap-0.5 text-[7px] font-bold",
                       signal.risk_level === "High"
                         ? "text-rose-500 dark:text-rose-400"
                         : signal.risk_level === "Medium"
@@ -1058,7 +973,7 @@ const SignalCardNew = ({
                           : "text-emerald-500 dark:text-emerald-400"
                     )}
                   >
-                    <AlertCircle className="h-2 w-2" />
+                    <AlertCircle className="h-2.5 w-2.5" />
                     {signal.risk_level}
                   </span>
                 )
@@ -1068,134 +983,100 @@ const SignalCardNew = ({
           </div>
 
           {/* ==================================================
-              TARGETS
+              TARGETS BLOCK
               ================================================== */}
 
-          <div className="flex items-center justify-between px-0.5 mb-1.5 overflow-x-auto">
-
-            <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-between px-1 mb-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-3 min-w-full justify-between">
 
               {/* SL */}
-
               <div className="flex flex-col items-start shrink-0">
-
-                <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
                   Stop Loss
                 </span>
-
                 <span
                   className={cn(
-                    "font-mono text-[10px] font-bold mt-0.5",
-                    getTargetColor(
-                      "sl"
-                    )
+                    "font-mono text-[10.5px] mt-0.5",
+                    getTargetColor("sl")
                   )}
                 >
                   {signal.sl}
                 </span>
-
               </div>
 
-              <div className="h-3 w-[1px] bg-border/50" />
+              <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
 
               {/* TP1 */}
-
               <div className="flex flex-col items-start shrink-0">
-
-                <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
                   Target 1
                 </span>
-
                 <span
                   className={cn(
-                    "font-mono text-[10px] font-bold mt-0.5",
-                    getTargetColor(
-                      "tp1"
-                    )
+                    "font-mono text-[10.5px] mt-0.5",
+                    getTargetColor("tp1")
                   )}
                 >
                   {signal.tp1}
                 </span>
-
               </div>
 
               {/* TP2 */}
-
               {signal.tp2 && (
                 <>
-                  <div className="h-3 w-[1px] bg-border/50" />
-
+                  <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
                   <div className="flex flex-col items-start shrink-0">
-
-                    <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                    <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
                       Target 2
                     </span>
-
                     <span
                       className={cn(
-                        "font-mono text-[10px] font-bold mt-0.5",
-                        getTargetColor(
-                          "tp2"
-                        )
+                        "font-mono text-[10.5px] mt-0.5",
+                        getTargetColor("tp2")
                       )}
                     >
                       {signal.tp2}
                     </span>
-
                   </div>
                 </>
               )}
 
               {/* TP3 */}
-
               {signal.tp3 && (
                 <>
-                  <div className="h-3 w-[1px] bg-border/50" />
-
+                  <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
                   <div className="flex flex-col items-start shrink-0">
-
-                    <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                    <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
                       Target 3
                     </span>
-
                     <span
                       className={cn(
-                        "font-mono text-[10px] font-bold mt-0.5",
-                        getTargetColor(
-                          "tp3"
-                        )
+                        "font-mono text-[10.5px] mt-0.5",
+                        getTargetColor("tp3")
                       )}
                     >
                       {signal.tp3}
                     </span>
-
                   </div>
                 </>
               )}
 
               {/* TP4 */}
-
               {signal.tp4 && (
                 <>
-                  <div className="h-3 w-[1px] bg-border/50" />
-
+                  <div className="h-3.5 w-[1px] bg-slate-300 dark:bg-cyan-500/20" />
                   <div className="flex flex-col items-start shrink-0">
-
-                    <span className="text-[6.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                    <span className="text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
                       Target 4
                     </span>
-
                     <span
                       className={cn(
-                        "font-mono text-[10px] font-bold mt-0.5",
-                        getTargetColor(
-                          "tp4"
-                        )
+                        "font-mono text-[10.5px] mt-0.5",
+                        getTargetColor("tp4")
                       )}
                     >
                       {signal.tp4}
                     </span>
-
                   </div>
                 </>
               )}
@@ -1210,22 +1091,21 @@ const SignalCardNew = ({
           {signal.profit_note && (
             <div
               className={cn(
-                "flex items-center gap-1.5 rounded-[8px] border px-2.5 py-1",
+                "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-all duration-300 backdrop-blur-md",
                 noteStyle.container
               )}
             >
-
               {isSLHit ? (
                 <XCircle
                   className={cn(
-                    "h-3 w-3 shrink-0",
+                    "h-3.5 w-3.5 shrink-0 drop-shadow-[0_0_6px_rgba(244,63,94,0.5)]",
                     noteStyle.icon
                   )}
                 />
               ) : (
                 <CheckCircle2
                   className={cn(
-                    "h-3 w-3 shrink-0",
+                    "h-3.5 w-3.5 shrink-0 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]",
                     noteStyle.icon
                   )}
                 />
@@ -1233,13 +1113,12 @@ const SignalCardNew = ({
 
               <span
                 className={cn(
-                  "text-[9px] font-medium leading-tight",
+                  "text-[9.5px] font-bold leading-tight tracking-wide",
                   noteStyle.text
                 )}
               >
                 {signal.profit_note}
               </span>
-
             </div>
           )}
 
