@@ -7,7 +7,7 @@ import AdBanner from "@/components/AdBanner";
 import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Maximize2, Layers } from "lucide-react";
+import { Loader2, Maximize2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TrialExpiredPopup from "@/components/TrialExpiredPopup";
@@ -25,7 +25,6 @@ import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 
 const SIGNALS_PER_PAGE = 20;
-
 const SIGNALS_REFRESH_MS = 5000;
 const MARKET_IDEAS_REFRESH_MS = 30000;
 
@@ -39,12 +38,7 @@ const CATEGORIES = [
 
 const normalizeSymbolKey = (symbolStr: string): string => {
   if (!symbolStr) return "";
-
-  const upper = String(symbolStr)
-    .trim()
-    .toUpperCase()
-    .replace(/_/g, " ");
-
+  const upper = String(symbolStr).trim().toUpperCase().replace(/_/g, " ");
   const compact = upper.replace(/[^A-Z0-9]/g, "");
 
   if (compact.includes("XAUUSD") || compact.includes("GOLD")) return "XAUUSD";
@@ -291,7 +285,7 @@ const SignalsDashboard = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-[#080B11] text-slate-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-400"
+      className="min-h-screen flex flex-col bg-[#070a0f] text-slate-100 font-sans selection:bg-[#00ffb3]/30 selection:text-[#00ffb3]"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -307,7 +301,7 @@ const SignalsDashboard = () => {
       <HeadlineTicker />
 
       <main className="flex-1 pb-12">
-        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-5 max-w-7xl space-y-4">
+        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl space-y-4">
           <TrialExpiredPopup
             open={showTrialExpiredPopup}
             onClose={() => setShowTrialExpiredPopup(false)}
@@ -326,14 +320,13 @@ const SignalsDashboard = () => {
                     key={tab.key}
                     onClick={() => handleCategoryChange(tab.key)}
                     className={cn(
-                      "relative flex items-center gap-2 px-5 py-2 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-300 border backdrop-blur-md",
+                      "relative flex items-center gap-2 px-5 py-2 text-xs sm:text-sm font-bold rounded-2xl transition-all duration-300 border backdrop-blur-md",
                       isActive
                         ? "bg-[#062c21] text-[#00ffb3] border-[#00e599] shadow-[0_0_20px_rgba(0,229,153,0.35)]"
-                        : "bg-[#101722]/80 text-slate-400 border-slate-800/80 hover:border-slate-700 hover:text-slate-200 hover:bg-[#151f2e]"
+                        : "bg-[#0e1622]/90 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200"
                     )}
                   >
                     <span>{tab.label}</span>
-
                     {hasActiveSignals && (
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ffb3] opacity-75" />
@@ -346,7 +339,6 @@ const SignalsDashboard = () => {
             </div>
           </div>
 
-          {/* MT5 COPIER BANNER */}
           <MT5CopierBanner />
 
           <div key={mainCategory} className="animate-fade-slide-in space-y-4">
@@ -357,7 +349,7 @@ const SignalsDashboard = () => {
               </div>
             )}
 
-            {/* SUBCATEGORY DROPDOWN */}
+            {/* SUBCATEGORY SELECTOR */}
             {mainCategory !== "MARKET IDEAS" &&
               mainCategory !== "COPIER" &&
               subCategoryOptions[mainCategory] && (
@@ -365,11 +357,11 @@ const SignalsDashboard = () => {
                   <select
                     value={subCategory}
                     onChange={(e) => setSubCategory(e.target.value)}
-                    className="w-full appearance-none rounded-2xl border border-slate-800 bg-[#101722]/90 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-200 shadow-lg focus:outline-none focus:border-[#00e599]/60 focus:ring-1 focus:ring-[#00e599]/40 transition-all cursor-pointer"
+                    className="w-full appearance-none rounded-2xl border border-slate-800 bg-[#0e1622] px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-200 shadow-lg focus:outline-none focus:border-[#00e599]/60 transition-all cursor-pointer"
                   >
                     <option value="all">All Pairs</option>
                     {subCategoryOptions[mainCategory].map((pair) => (
-                      <option key={pair} value={pair} className="bg-[#101722] text-slate-200">
+                      <option key={pair} value={pair} className="bg-[#0e1622] text-slate-200">
                         {pair}
                       </option>
                     ))}
@@ -392,14 +384,13 @@ const SignalsDashboard = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {chartAnalysis?.map((analysis, index) => {
-                      const hasImage =
-                        !!analysis.image_url && String(analysis.image_url).trim() !== "";
+                      const hasImage = !!analysis.image_url && String(analysis.image_url).trim() !== "";
                       const displayTime = formatExactRealTime(analysis.created_at);
 
                       return (
                         <Card
                           key={analysis.id}
-                          className="group overflow-hidden rounded-2xl bg-[#101722]/90 border border-slate-800 hover:border-[#00e599]/40 shadow-xl transition-all duration-300"
+                          className="group overflow-hidden rounded-2xl bg-[#0e1622] border border-slate-800 hover:border-[#00e599]/40 shadow-xl transition-all duration-300"
                         >
                           {hasImage && (
                             <div
@@ -416,7 +407,7 @@ const SignalsDashboard = () => {
                                 <Button
                                   size="icon"
                                   variant="secondary"
-                                  className="bg-[#101722]/90 border border-slate-700 text-slate-100 hover:bg-[#152030]"
+                                  className="bg-[#0e1622] border border-slate-700 text-slate-100"
                                 >
                                   <Maximize2 className="h-4 w-4" />
                                 </Button>
@@ -441,7 +432,7 @@ const SignalsDashboard = () => {
                             </CardContent>
                           )}
 
-                          <CardContent className="px-4 py-2.5 border-t border-slate-800/80 bg-[#0b1018]">
+                          <CardContent className="px-4 py-2.5 border-t border-slate-800/80 bg-[#070a0f]">
                             <ChartReactions chartId={analysis.id} />
                           </CardContent>
                         </Card>
@@ -460,10 +451,8 @@ const SignalsDashboard = () => {
                 )}
 
                 {!isLoadingCharts && chartAnalysis?.length === 0 && (
-                  <div className="text-center py-20 bg-[#101722]/60 rounded-2xl border border-slate-800">
-                    <p className="text-slate-400 text-sm font-medium">
-                      No chart analysis available
-                    </p>
+                  <div className="text-center py-20 bg-[#0e1622]/60 rounded-2xl border border-slate-800">
+                    <p className="text-slate-400 text-sm font-medium">No chart analysis available</p>
                   </div>
                 )}
               </>
@@ -525,10 +514,8 @@ const SignalsDashboard = () => {
                         ));
                       })()
                     ) : (
-                      <div className="text-center py-20 bg-[#101722]/60 rounded-2xl border border-slate-800">
-                        <p className="text-slate-400 text-sm font-medium">
-                          No signals found
-                        </p>
+                      <div className="text-center py-20 bg-[#0e1622]/60 rounded-2xl border border-slate-800">
+                        <p className="text-slate-400 text-sm font-medium">No signals found</p>
                       </div>
                     )}
 
@@ -538,9 +525,7 @@ const SignalsDashboard = () => {
                       )}
 
                       {!hasNextPage && signals.length > 0 && (
-                        <p className="text-slate-500 text-xs font-medium">
-                          All signals loaded
-                        </p>
+                        <p className="text-slate-500 text-xs font-medium">All signals loaded</p>
                       )}
                     </div>
                   </div>
