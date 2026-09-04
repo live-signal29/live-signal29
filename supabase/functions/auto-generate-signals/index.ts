@@ -484,8 +484,31 @@ function generateSignal(config: any) {
           "Swing",
         ]),
 
+    // FIX: the `signals` table's real direction column is `type`
+    // (NOT `action`/`direction`) — the frontend card reads
+    // `signal.type` to show the BUY/SELL badge. We keep
+    // action/direction too for backward compatibility with any
+    // code still reading those.
+    type: isBuy ? "BUY" : "SELL",
+
     created_at: new Date().toISOString(),
   };
+}
+
+// =========================================================
+// EXPIRY TIME
+// -----------------------------------------------------------
+// Auto-generated signals never got an expiry_time before, so the
+// client-side auto-close timer (useSignalTimer) had nothing to
+// expire and signals stayed OPEN forever. This also feeds the
+// server-side safety-close timeout in auto-close-signals.
+// =========================================================
+
+function getExpiryHours(signalType: string): number {
+  if (signalType === "Scalping") return 3;
+  if (signalType === "Intraday") return 12;
+  if (signalType === "Swing") return 72;
+  return 6;
 }
 
 // =========================================================
@@ -658,7 +681,13 @@ async function postTelegram(signal: any) {
         },
         body: JSON.stringify({
           action: "new_signal",
-          signal,
+          // send `type` explicitly too so telegram-signal-post
+          // always has a direction to render even if its own
+          // fallback logic ever changes.
+          signal: {
+            ...signal,
+            type: signal.type || signal.action || signal.direction,
+          },
         }),
       }
     );
@@ -671,15 +700,34 @@ async function postTelegram(signal: any) {
       resultText
     );
 
+    let parsed: any = null;
     try {
-      const result = JSON.parse(resultText);
-      return response.ok && result?.success === true;
+      parsed = JSON.parse(resultText);
     } catch {
-      return false;
+      // non-JSON response — fall through, treated as failure below
     }
+
+    const ok = response.ok && parsed?.success === true;
+
+    if (!ok) {
+      // IMPORTANT: this used to fail silently. Log loudly so the
+      // reason (missing TELEGRAM_BOT_TOKEN/TELEGRAM_CHANNEL_ID,
+      // wrong chat id, bot not admin in channel, etc.) is visible
+      // in the auto-generate-signals function logs.
+      console.error(
+        "TELEGRAM POST FAILED:",
+        response.status,
+        parsed?.error || resultText
+      );
+    }
+
+    return { success: ok, error: parsed?.error || null };
   } catch (error) {
     console.error("Telegram post error:", error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -1015,11 +1063,17 @@ Deno.serve(async (req) => {
     // INSERT DATABASE
     // =====================================================
 
+    const expiryTime = new Date(
+      Date.now() +
+        getExpiryHours(signal.signal_type) * 60 * 60 * 1000
+    ).toISOString();
+
     const insertData = {
       pair: signal.pair,
       symbol: signal.symbol,
       category: signal.category,
 
+      type: signal.type,
       action: signal.action,
       direction: signal.direction,
 
@@ -1036,10 +1090,14 @@ Deno.serve(async (req) => {
       target2: signal.target2,
       target3: signal.target3,
 
+      analysis_reason: signal.reason,
       reason: signal.reason,
       signal_type: signal.signal_type,
 
       status: "OPEN",
+      signal_status: "OPEN",
+
+      expiry_time: expiryTime,
 
       created_at: signal.created_at,
     };
@@ -1064,7 +1122,7 @@ Deno.serve(async (req) => {
     // TELEGRAM
     // =====================================================
 
-    await postTelegram({
+    const telegramResult = await postTelegram({
       ...signal,
       id: inserted?.id,
     });
@@ -1078,6 +1136,8 @@ Deno.serve(async (req) => {
         success: true,
         generated: true,
         signal: inserted,
+        telegram_posted: telegramResult.success,
+        telegram_error: telegramResult.error,
       }),
       {
         headers: {
