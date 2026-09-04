@@ -83,6 +83,7 @@ const SignalCardNew = ({
   const confettiFiredRef = useRef(false);
   const initialTP3StateRef = useRef(!!signal.tp3_hit);
 
+  // Refresh component state if needed
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -93,7 +94,12 @@ const SignalCardNew = ({
     return () => window.clearInterval(interval);
   }, []);
 
-  /* SIGNAL STATUS */
+  /*
+   * ============================================================
+   * SIGNAL STATUS
+   * ============================================================
+   */
+
   const lifecycle = (
     signal.signal_status ||
     signal.status ||
@@ -101,17 +107,26 @@ const SignalCardNew = ({
   ).toLowerCase();
 
   const isPending = lifecycle === "pending";
+
   const isClosed =
     lifecycle === "close" ||
     lifecycle === "closed" ||
     lifecycle === "completed";
+
   const isOpen =
     !isClosed &&
     !isPending &&
     ["open", "running", "active"].includes(lifecycle);
 
-  /* ENTRY LOGIC */
-  const isLimitOrder = signal.entry_mode?.toLowerCase() === "limit";
+  /*
+   * ============================================================
+   * ENTRY LOGIC
+   * ============================================================
+   */
+
+  const isLimitOrder =
+    signal.entry_mode?.toLowerCase() === "limit";
+
   const limitPrice =
     Number(signal.limit_entry_price) > 0
       ? Number(signal.limit_entry_price)
@@ -122,9 +137,43 @@ const SignalCardNew = ({
       ? limitPrice
       : parseEntryPrice(signal.entry);
 
-  const isBuy = signal.type?.toLowerCase() === "buy";
+  const isBuy =
+    signal.type?.toLowerCase() === "buy";
 
-  /* CURRENT PRICE */
+  /*
+   * ============================================================
+   * DERIV / SYNTHETIC INDEX CHECK
+   * ============================================================
+   */
+
+  const isDerivPair = (() => {
+    const cat = String(
+      signal.main_category ||
+        signal.category ||
+        ""
+    ).toUpperCase();
+
+    if (cat.includes("DERIV")) return true;
+
+    const p = String(
+      signal.pair || ""
+    ).toUpperCase();
+
+    return (
+      p.includes("VOL") ||
+      p.includes("BOOM") ||
+      p.includes("CRASH") ||
+      p.includes("STEP") ||
+      p.includes("JUMP")
+    );
+  })();
+
+  /*
+   * ============================================================
+   * CURRENT PRICE
+   * ============================================================
+   */
+
   const currentPriceNum =
     typeof livePrice === "number" && livePrice > 0
       ? livePrice
@@ -132,12 +181,17 @@ const SignalCardNew = ({
         ? parseFloat(signal.current_price)
         : 0;
 
-  /* LIVE PRICE MOVEMENT */
+  /*
+   * ============================================================
+   * LIVE PRICE MOVEMENT
+   * ============================================================
+   */
   const previousLivePriceRef = useRef<number | null>(null);
   const [priceDirection, setPriceDirection] = useState<"up" | "down" | "neutral">("neutral");
 
   useEffect(() => {
     if (typeof livePrice !== "number" || livePrice <= 0) return;
+
     const previous = previousLivePriceRef.current;
 
     if (previous !== null) {
@@ -147,6 +201,7 @@ const SignalCardNew = ({
         setPriceDirection("down");
       }
     }
+
     previousLivePriceRef.current = livePrice;
   }, [livePrice]);
 
@@ -155,47 +210,115 @@ const SignalCardNew = ({
       ? "text-rose-500 dark:text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.4)]"
       : "text-emerald-500 dark:text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]";
 
-  /* PREMIUM */
-  const isPremiumUser = subscriptionStatus === "premium";
-  const isLocked = !!signal.is_premium && !isPremiumUser && !isClosed;
+  /*
+   * ============================================================
+   * PREMIUM
+   * ============================================================
+   */
 
-  /* TIME & AGE */
+  const isPremiumUser =
+    subscriptionStatus === "premium";
+
+  const isLocked =
+    !!signal.is_premium &&
+    !isPremiumUser &&
+    !isClosed;
+
+  /*
+   * ============================================================
+   * TIME LOGIC
+   * ============================================================
+   */
+
   const signalTime =
     isOpen && signal.activated_at
       ? signal.activated_at
       : signal.created_at;
+
+  /*
+   * ============================================================
+   * NEW SIGNAL
+   * ============================================================
+   */
 
   const signalAgeHours = differenceInHours(
     new Date(),
     new Date(signal.created_at)
   );
 
-  const isNewSignal = signalAgeHours < 24 && !isClosed;
+  const isNewSignal =
+    signalAgeHours < 24 &&
+    !isClosed;
 
-  /* RUNNING P/L */
-  const signalAgeMs = Date.now() - new Date(signal.created_at).getTime();
-  const isVeryNewSignal = signalAgeMs < 60000;
-  const entryTouched = isOpen && !isVeryNewSignal;
+  /*
+   * ============================================================
+   * RUNNING P/L
+   * ============================================================
+   */
+
+  const signalAgeMs =
+    Date.now() -
+    new Date(signal.created_at).getTime();
+
+  const isVeryNewSignal =
+    signalAgeMs < 60000;
+
+  const entryTouched =
+    isOpen &&
+    !isVeryNewSignal;
 
   const runningPL =
-    entryTouched && currentPriceNum > 0 && parsedEntryPrice > 0
-      ? calculateRunningPL(currentPriceNum, parsedEntryPrice, signal.type)
+    entryTouched &&
+    currentPriceNum > 0 &&
+    parsedEntryPrice > 0
+      ? calculateRunningPL(
+          currentPriceNum,
+          parsedEntryPrice,
+          signal.type
+        )
       : null;
 
-  /* CONFETTI */
+  /*
+   * ============================================================
+   * CONFETTI
+   * ============================================================
+   */
+
   const triggerConfetti = useCallback(() => {
-    if (!cardRef.current || confettiFiredRef.current) return;
+    if (
+      !cardRef.current ||
+      confettiFiredRef.current
+    ) {
+      return;
+    }
+
     confettiFiredRef.current = true;
 
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (rect.left + rect.width / 2) / window.innerWidth;
-    const y = (rect.top + rect.height / 2) / window.innerHeight;
+    const rect =
+      cardRef.current.getBoundingClientRect();
+
+    const x =
+      (rect.left + rect.width / 2) /
+      window.innerWidth;
+
+    const y =
+      (rect.top + rect.height / 2) /
+      window.innerHeight;
 
     confetti({
       particleCount: 100,
       spread: 70,
-      origin: { x, y },
-      colors: ["#10b981", "#22c55e", "#4ade80", "#fbbf24", "#f59e0b"],
+      origin: {
+        x,
+        y,
+      },
+      colors: [
+        "#10b981",
+        "#22c55e",
+        "#4ade80",
+        "#fbbf24",
+        "#f59e0b",
+      ],
       zIndex: 9999,
     });
   }, []);
@@ -209,25 +332,64 @@ const SignalCardNew = ({
     ) {
       triggerConfetti();
     }
-  }, [signal.tp3_hit, triggerConfetti]);
+  }, [
+    signal.tp3_hit,
+    triggerConfetti,
+  ]);
 
-  /* TP / SL LOGIC */
-  const hasTPReached = (current: number, target: number) => {
-    if (current <= 0 || target <= 0) return false;
-    return isBuy ? current >= target : current <= target;
+  /*
+   * ============================================================
+   * TP / SL PRICE LOGIC
+   * ============================================================
+   */
+
+  const hasTPReached = (
+    current: number,
+    target: number
+  ) => {
+    if (
+      current <= 0 ||
+      target <= 0
+    ) {
+      return false;
+    }
+
+    return isBuy
+      ? current >= target
+      : current <= target;
   };
 
-  const hasSLReached = (current: number, sl: number) => {
-    if (current <= 0 || sl <= 0) return false;
-    return isBuy ? current <= sl : current >= sl;
+  const hasSLReached = (
+    current: number,
+    sl: number
+  ) => {
+    if (
+      current <= 0 ||
+      sl <= 0
+    ) {
+      return false;
+    }
+
+    return isBuy
+      ? current <= sl
+      : current >= sl;
   };
 
-  /* AUTO TP / SL UPDATE */
+  /*
+   * ============================================================
+   * AUTO TP / SL UPDATE
+   * ============================================================
+   */
+
   const primedForChecksRef = useRef(false);
   const slBreachStreakRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen || !currentPriceNum || parsedEntryPrice <= 0) {
+    if (
+      !isOpen ||
+      !currentPriceNum ||
+      parsedEntryPrice <= 0
+    ) {
       primedForChecksRef.current = false;
       slBreachStreakRef.current = 0;
       return;
@@ -241,79 +403,204 @@ const SignalCardNew = ({
     let cancelled = false;
 
     const checkAndUpdate = async () => {
-      const updates: Record<string, boolean | string | null> = {};
-      const entryPrice = parsedEntryPrice;
+      const updates: Record<
+        string,
+        boolean | string | null
+      > = {};
 
-      const tp1Price = signal.tp1 ? parseEntryPrice(signal.tp1) : 0;
-      const tp2Price = signal.tp2 ? parseEntryPrice(signal.tp2) : 0;
-      const tp3Price = signal.tp3 ? parseEntryPrice(signal.tp3) : 0;
-      const tp4Price = signal.tp4 ? parseEntryPrice(signal.tp4) : 0;
-      const slPrice = signal.sl ? parseEntryPrice(signal.sl) : 0;
+      const entryPrice =
+        parsedEntryPrice;
 
-      if (!signal.tp1_hit && tp1Price > 0 && hasTPReached(currentPriceNum, tp1Price)) {
+      const tp1Price =
+        signal.tp1
+          ? parseEntryPrice(signal.tp1)
+          : 0;
+
+      const tp2Price =
+        signal.tp2
+          ? parseEntryPrice(signal.tp2)
+          : 0;
+
+      const tp3Price =
+        signal.tp3
+          ? parseEntryPrice(signal.tp3)
+          : 0;
+
+      const tp4Price =
+        signal.tp4
+          ? parseEntryPrice(signal.tp4)
+          : 0;
+
+      const slPrice =
+        signal.sl
+          ? parseEntryPrice(signal.sl)
+          : 0;
+
+      if (
+        !signal.tp1_hit &&
+        tp1Price > 0 &&
+        hasTPReached(
+          currentPriceNum,
+          tp1Price
+        )
+      ) {
         updates.tp1_hit = true;
-        updates.sl = String(entryPrice);
-        updates.profit_note = "TP 1 Hit ✅ SL moved to B.E";
+
+        updates.sl =
+          String(entryPrice);
+
+        updates.profit_note =
+          "TP 1 Hit ✅ SL moved to B.E";
       }
 
-      if (!signal.tp2_hit && tp2Price > 0 && hasTPReached(currentPriceNum, tp2Price)) {
+      if (
+        !signal.tp2_hit &&
+        tp2Price > 0 &&
+        hasTPReached(
+          currentPriceNum,
+          tp2Price
+        )
+      ) {
         updates.tp2_hit = true;
-        updates.profit_note = "TP 2 Hit ✅ More Profit Secured 💰";
+
+        updates.profit_note =
+          "TP 2 Hit ✅ More Profit Secured 💰";
       }
 
-      if (!signal.tp3_hit && tp3Price > 0 && hasTPReached(currentPriceNum, tp3Price)) {
+      if (
+        !signal.tp3_hit &&
+        tp3Price > 0 &&
+        hasTPReached(
+          currentPriceNum,
+          tp3Price
+        )
+      ) {
         updates.tp3_hit = true;
-        updates.profit_note = "TP 3 Hit 🎊 Maximum Profit Secured ✅";
+
+        updates.profit_note =
+          "TP 3 Hit 🎊 Maximum Profit Secured ✅";
+
         if (!signal.tp4) {
-          updates.signal_status = "close";
-          updates.status = "CLOSED";
+          updates.signal_status =
+            "close";
+
+          updates.status =
+            "CLOSED";
         }
       }
 
-      if (!signal.tp4_hit && tp4Price > 0 && hasTPReached(currentPriceNum, tp4Price)) {
+      if (
+        !signal.tp4_hit &&
+        tp4Price > 0 &&
+        hasTPReached(
+          currentPriceNum,
+          tp4Price
+        )
+      ) {
         updates.tp4_hit = true;
-        updates.signal_status = "close";
-        updates.status = "CLOSED";
-        updates.profit_note = "TP 4 Final Target Hit 🎊 Maximum Profit Secured ✅";
+
+        updates.signal_status =
+          "close";
+
+        updates.status =
+          "CLOSED";
+
+        updates.profit_note =
+          "TP 4 Final Target Hit 🎊 Maximum Profit Secured ✅";
       }
 
-      const effectiveTP1 = !!signal.tp1_hit || !!updates.tp1_hit;
-      const effectiveSL = updates.sl ? parseEntryPrice(String(updates.sl)) : slPrice;
+      const effectiveTP1 =
+        !!signal.tp1_hit ||
+        !!updates.tp1_hit;
+
+      const effectiveSL =
+        updates.sl
+          ? parseEntryPrice(
+              String(updates.sl)
+            )
+          : slPrice;
 
       const slBreachThisTick =
-        !signal.sl_hit && effectiveSL > 0 && hasSLReached(currentPriceNum, effectiveSL);
+        !signal.sl_hit &&
+        effectiveSL > 0 &&
+        hasSLReached(
+          currentPriceNum,
+          effectiveSL
+        );
 
-      slBreachStreakRef.current = slBreachThisTick ? slBreachStreakRef.current + 1 : 0;
+      slBreachStreakRef.current = slBreachThisTick
+        ? slBreachStreakRef.current + 1
+        : 0;
 
-      if (slBreachThisTick && slBreachStreakRef.current >= 2) {
-        updates.signal_status = "close";
-        updates.status = "CLOSED";
+      if (
+        slBreachThisTick &&
+        slBreachStreakRef.current >= 2
+      ) {
+        updates.signal_status =
+          "close";
+
+        updates.status =
+          "CLOSED";
+
         if (effectiveTP1) {
           updates.sl_hit = false;
-          updates.profit_note = "Signal Closed at Breakeven after TP1 ✅";
+
+          updates.profit_note =
+            "Signal Closed at Breakeven after TP1 ✅";
         } else {
           updates.sl_hit = true;
-          updates.profit_note = "SL Hit ❌ - Staying patient for a better entry.";
+
+          updates.profit_note =
+            "SL Hit ❌ - Staying patient for a better entry.";
         }
       }
 
-      if (!cancelled && Object.keys(updates).length > 0) {
-        await supabase.from("signals").update(updates).eq("id", signal.id);
+      if (
+        !cancelled &&
+        Object.keys(updates).length > 0
+      ) {
+        await supabase
+          .from("signals")
+          .update(updates)
+          .eq("id", signal.id);
       }
     };
 
     checkAndUpdate();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [
-    isOpen, currentPriceNum, parsedEntryPrice, signal.id, signal.type,
-    signal.tp1, signal.tp2, signal.tp3, signal.tp4, signal.sl,
-    signal.tp1_hit, signal.tp2_hit, signal.tp3_hit, signal.tp4_hit, signal.sl_hit,
+    isOpen,
+    currentPriceNum,
+    parsedEntryPrice,
+    signal.id,
+    signal.type,
+    signal.tp1,
+    signal.tp2,
+    signal.tp3,
+    signal.tp4,
+    signal.sl,
+    signal.tp1_hit,
+    signal.tp2_hit,
+    signal.tp3_hit,
+    signal.tp4_hit,
+    signal.sl_hit,
   ]);
 
-  /* TIME FORMATTING */
-  const formatRealTime = (dateString: string) => {
+  /*
+   * ============================================================
+   * TIME FORMATTING
+   * ============================================================
+   */
+
+  const formatRealTime = (
+    dateString: string
+  ) => {
     try {
       if (!dateString) return "Just now";
+
       const rawDate = new Date(dateString);
       const utcDate =
         dateString.endsWith("Z") || dateString.includes("+")
@@ -322,50 +609,86 @@ const SignalCardNew = ({
 
       const formattedTime = format(utcDate, "hh:mm a");
 
-      if (isClosed || signal.sl_hit || signal.tp4_hit || (!signal.tp4 && signal.tp3_hit)) {
+      if (
+        isClosed ||
+        signal.sl_hit ||
+        signal.tp4_hit ||
+        (!signal.tp4 && signal.tp3_hit)
+      ) {
         return `Closed at ${formattedTime}`;
       }
+
       return formattedTime;
     } catch {
       return "Just now";
     }
   };
 
-  /* STATUS STYLING */
-  const note = signal.profit_note || "";
-  const noteUpper = note.toUpperCase();
+  /*
+   * ============================================================
+   * STATUS STYLING
+   * ============================================================
+   */
+
+  const note =
+    signal.profit_note || "";
+
+  const noteUpper =
+    note.toUpperCase();
 
   const getSignalStatus = () => {
     if (isClosed || signal.sl_hit || signal.tp4_hit || (!signal.tp4 && signal.tp3_hit)) {
       return "CLOSED";
     }
-    if (isPending) return "PENDING";
+    if (isPending) {
+      return "PENDING";
+    }
     return "OPEN";
   };
 
-  const statusText = getSignalStatus();
+  const statusText =
+    getSignalStatus();
 
   const getStatusStyle = () => {
     switch (statusText) {
       case "CLOSED":
         return "bg-rose-500/15 border-rose-500/40 text-rose-500 dark:text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
+
       case "OPEN":
         return "bg-emerald-500/15 border-emerald-500/40 text-emerald-500 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]";
+
       case "PENDING":
         return "bg-amber-500/15 border-amber-500/40 text-amber-500 dark:text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]";
+
       default:
         return "bg-cyan-500/15 border-cyan-500/40 text-cyan-500 dark:text-cyan-400";
     }
   };
 
-  const getTargetColor = (targetType: "sl" | "tp1" | "tp2" | "tp3" | "tp4") => {
+  /*
+   * ============================================================
+   * TP / SL COLORS & STEPPER PROGRESS
+   * ============================================================
+   */
+
+  const getTargetColor = (
+    targetType:
+      | "sl"
+      | "tp1"
+      | "tp2"
+      | "tp3"
+      | "tp4"
+  ) => {
     if (targetType === "sl") {
       const slMovedToBE =
         !!signal.tp1_hit ||
         noteUpper.includes("BREAKEVEN") ||
         noteUpper.includes("B.E");
 
-      if (slMovedToBE) return "text-amber-500 dark:text-amber-400 font-bold";
+      if (slMovedToBE) {
+        return "text-amber-500 dark:text-amber-400 font-bold";
+      }
+
       return "text-rose-500 dark:text-rose-400";
     }
 
@@ -381,56 +704,92 @@ const SignalCardNew = ({
       : "text-slate-700 dark:text-cyan-300/80";
   };
 
-  const isSLHit = !!signal.sl_hit || /\bSL\s+HIT\b/i.test(note);
-  const isBreakEven = !isSLHit && (/BREAKEVEN/i.test(note) || /B\.E/i.test(note));
-  const isTPHit = !isSLHit && !isBreakEven && /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(note);
+  /*
+   * ============================================================
+   * PROFIT NOTE STYLES
+   * ============================================================
+   */
+
+  const isSLHit =
+    !!signal.sl_hit ||
+    /\bSL\s+HIT\b/i.test(note);
+
+  const isBreakEven =
+    !isSLHit &&
+    (/BREAKEVEN/i.test(note) || /B\.E/i.test(note));
+
+  const isTPHit =
+    !isSLHit &&
+    !isBreakEven &&
+    /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(note);
 
   const getNoteStyle = () => {
     if (isSLHit) {
       return {
-        container: "border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20 shadow-[0_0_10px_rgba(244,63,94,0.15)]",
-        icon: "text-rose-500 dark:text-rose-400",
-        text: "text-rose-600 dark:text-rose-300",
+        container:
+          "border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20 shadow-[0_0_10px_rgba(244,63,94,0.15)]",
+        icon:
+          "text-rose-500 dark:text-rose-400",
+        text:
+          "text-rose-600 dark:text-rose-300",
       };
     }
+
     if (isBreakEven) {
       return {
-        container: "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
-        icon: "text-amber-500 dark:text-amber-400",
-        text: "text-amber-600 dark:text-amber-300",
+        container:
+          "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+        icon:
+          "text-amber-500 dark:text-amber-400",
+        text:
+          "text-amber-600 dark:text-amber-300",
       };
     }
+
     if (isTPHit) {
       return {
-        container: "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]",
-        icon: "text-emerald-500 dark:text-emerald-400",
-        text: "text-emerald-700 dark:text-emerald-300",
+        container:
+          "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]",
+        icon:
+          "text-emerald-500 dark:text-emerald-400",
+        text:
+          "text-emerald-700 dark:text-emerald-300",
       };
     }
+
     return {
-      container: "border-border/50 bg-muted/20",
-      icon: "text-muted-foreground",
-      text: "text-muted-foreground",
+      container:
+        "border-border/50 bg-muted/20",
+      icon:
+        "text-muted-foreground",
+      text:
+        "text-muted-foreground",
     };
   };
 
   const noteStyle = getNoteStyle();
   const pairUpper = signal.pair?.toUpperCase() || "";
 
+  /*
+   * ============================================================
+   * RENDER
+   * ============================================================
+   */
+
   return (
     <div
       ref={cardRef}
       className={cn(
         "relative mb-3 w-full rounded-[16px] p-3 transition-all duration-300 overflow-hidden border backdrop-blur-md shadow-lg",
-        /* LIGHT MODE: Ultra-subtle green hint (Very slight green mix with crisp white) */
-        "bg-gradient-to-br from-[#fcfdfe] via-[#f7faf8] to-[#ffffff] border-emerald-500/15 shadow-slate-200/50",
-        /* DARK MODE: Glowing Dark Navy Gradient */
+        /* LIGHT MODE: Halka Soft Green Gradient */
+        "bg-gradient-to-br from-[#f2fbf7] via-[#e8f6f0] to-[#ffffff] border-emerald-500/20 shadow-emerald-900/5",
+        /* DARK MODE: 3D Glowing Deep Navy Blue Gradient */
         "dark:bg-gradient-to-br dark:from-[#0c182b] dark:via-[#09111e] dark:to-[#04080f] dark:border-cyan-500/20 dark:shadow-[0_8px_25px_rgba(0,0,0,0.6)]",
         /* HOVER EFFECTS */
-        "hover:scale-[1.01] hover:border-emerald-500/30 dark:hover:border-cyan-400/50 dark:hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]"
+        "hover:scale-[1.01] hover:border-emerald-500/40 dark:hover:border-cyan-400/50 dark:hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]"
       )}
     >
-      {/* Top Glow Accent Line */}
+      {/* 3D Top Glow Accent Line */}
       <div 
         className={cn(
           "absolute top-0 left-0 right-0 h-[2px]",
@@ -440,26 +799,29 @@ const SignalCardNew = ({
         )} 
       />
 
-      {/* HEADER */}
+      {/* ======================================================
+          HEADER
+          ====================================================== */}
+
       <div className="flex items-center justify-between mb-2">
+
+        {/* LEFT */}
         <div className="flex items-center gap-2 min-w-0">
-          {/* GOLD ICON MATCHING REFERENCE IMAGE */}
-          {pairUpper.includes("XAU") || pairUpper.includes("GOLD") ? (
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-600 p-[1px] shadow-[0_0_10px_rgba(245,158,11,0.3)]">
-              <div className="flex h-full w-full items-center justify-center rounded-[11px] bg-gradient-to-br from-amber-100 to-amber-200 dark:from-[#1a150a] dark:to-[#0f0b04]">
-                <span className="text-base leading-none drop-shadow-sm">🟡</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-yellow-600/10 text-xs shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-              {pairUpper.includes("BTC") ? "₿" : "💶"}
-            </div>
-          )}
+
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-yellow-600/10 text-xs shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            {pairUpper.includes("XAU")
+              ? "🪙"
+              : pairUpper.includes("BTC")
+                ? "₿"
+                : "💶"}
+          </div>
 
           <div className="flex flex-col min-w-0">
+
             <div className="flex items-center gap-1.5">
+
               <h3 className="text-xs font-black tracking-wide text-slate-800 dark:text-cyan-50 leading-tight">
-                {signal.pair.includes("(") ? signal.pair : `${signal.pair} (Gold)`}
+                {signal.pair.replace("/", "")}
               </h3>
 
               {isNewSignal && !isLocked && (
@@ -471,29 +833,56 @@ const SignalCardNew = ({
               {signal.is_premium && (
                 <Crown className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(245,158,11,0.6)] shrink-0" />
               )}
+
             </div>
 
             <p className="text-[8px] font-semibold text-slate-500 dark:text-cyan-300/60 leading-tight">
-              {pairUpper.includes("XAU") ? "Gold" : pairUpper.includes("BTC") ? "Bitcoin" : "Forex"}
+              {pairUpper.includes("XAU")
+                ? "Gold"
+                : pairUpper.includes("BTC")
+                  ? "Bitcoin"
+                  : "Forex"}
             </p>
+
           </div>
         </div>
 
-        {/* STATUS & TIME */}
+        {/* RIGHT */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className={cn("inline-flex items-center rounded-full border px-2 py-[2.5px] text-[7px] font-black uppercase tracking-wider leading-none backdrop-blur-md", getStatusStyle())}>
-            <span className={cn("mr-1 h-1.5 w-1.5 rounded-full animate-pulse", statusText === "CLOSED" ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" : statusText === "OPEN" ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" : "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]")} />
+
+          {/* STATUS */}
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full border px-2 py-[2.5px] text-[7px] font-black uppercase tracking-wider leading-none backdrop-blur-md",
+              getStatusStyle()
+            )}
+          >
+            <span
+              className={cn(
+                "mr-1 h-1.5 w-1.5 rounded-full animate-pulse",
+                statusText === "CLOSED"
+                  ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]"
+                  : statusText === "OPEN"
+                    ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                    : "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]"
+              )}
+            />
             {statusText}
           </span>
 
-          <div className="flex items-center gap-1 text-[8px] font-medium text-slate-500 dark:text-cyan-200/50 bg-slate-100 dark:bg-cyan-950/40 px-2 py-1 rounded-lg border border-slate-200 dark:border-cyan-500/10">
+          {/* TIME */}
+          <div className="flex items-center gap-1 text-[8px] font-medium text-slate-500 dark:text-cyan-200/50 bg-black/5 dark:bg-cyan-950/40 px-2 py-1 rounded-lg border border-black/5 dark:border-cyan-500/10">
             <Clock className="h-2.5 w-2.5 text-emerald-600 dark:text-cyan-400" />
             <span>{formatRealTime(signalTime)}</span>
           </div>
+
         </div>
       </div>
 
-      {/* PREMIUM LOCKED OR CONTENT */}
+      {/* ======================================================
+          PREMIUM LOCKED VIEW
+          ====================================================== */}
+
       {isLocked ? (
         <div 
           onClick={() => navigate("/premium")}
@@ -502,14 +891,20 @@ const SignalCardNew = ({
           <div className="p-2 rounded-full bg-amber-500/10 border border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
             <Lock className="h-4 w-4 text-amber-400 pointer-events-none" />
           </div>
+
           <span className="text-[10px] font-bold tracking-wide text-slate-700 dark:text-cyan-200 pointer-events-none">
             🔒 Premium Signal - Tap to Unlock
           </span>
         </div>
       ) : (
         <>
-          {/* PRICES BLOCK WITH CANDLESTICK CHART */}
-          <div className="flex items-center justify-between rounded-[12px] bg-slate-50/80 dark:bg-[#07101d]/80 border border-slate-200/80 dark:border-cyan-500/15 px-2.5 py-2 mb-2 shadow-inner">
+          {/* ==================================================
+              PRICES BLOCK WITH MINI CANDLESTICK / SPARKLINE CHART
+              ================================================== */}
+
+          <div className="flex items-center justify-between rounded-[12px] bg-white/70 dark:bg-[#07101d]/80 border border-emerald-500/15 dark:border-cyan-500/15 px-2.5 py-2 mb-2 shadow-inner">
+
+            {/* ENTRY */}
             <div className="flex flex-col">
               <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400 dark:text-cyan-300/50">
                 Entry
@@ -519,66 +914,91 @@ const SignalCardNew = ({
               </span>
             </div>
 
+            {/* CURRENT */}
             <div className="flex flex-col items-center">
               <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400 dark:text-cyan-300/50">
                 Current
               </span>
-              <span className={cn("font-mono text-[11.5px] font-black transition-colors duration-200", currentPriceColor)}>
-                {currentPriceNum > 0 ? currentPriceNum.toFixed(2) : signal.entry}
+              <span
+                className={cn(
+                  "font-mono text-[11.5px] font-black transition-colors duration-200",
+                  currentPriceColor
+                )}
+              >
+                {currentPriceNum > 0
+                  ? currentPriceNum.toFixed(2)
+                  : signal.entry}
               </span>
             </div>
 
-            {/* MINI CANDLESTICK CHART (Matching image style) */}
-            <div className="flex items-center h-5 w-14 px-1 gap-[2px]">
-              <div className="flex flex-col items-center h-full justify-center">
-                <div className="w-[1px] h-full bg-emerald-500/40 relative flex items-center justify-center">
-                  <div className="w-[3px] h-2 bg-emerald-500 rounded-[0.5px]" />
-                </div>
-              </div>
-              <div className="flex flex-col items-center h-full justify-center">
-                <div className="w-[1px] h-full bg-rose-500/40 relative flex items-center justify-center">
-                  <div className="w-[3px] h-1.5 bg-rose-500 rounded-[0.5px]" />
-                </div>
-              </div>
-              <div className="flex flex-col items-center h-full justify-center">
-                <div className="w-[1px] h-full bg-emerald-500/40 relative flex items-center justify-center">
-                  <div className="w-[3px] h-2.5 bg-emerald-500 rounded-[0.5px]" />
-                </div>
-              </div>
-              <div className="flex flex-col items-center h-full justify-center">
-                <div className="w-[1px] h-full bg-emerald-500/40 relative flex items-center justify-center">
-                  <div className="w-[3px] h-1.5 bg-emerald-500 rounded-[0.5px]" />
-                </div>
-              </div>
-              <div className="flex flex-col items-center h-full justify-center">
-                <div className="w-[1px] h-full bg-rose-500/40 relative flex items-center justify-center">
-                  <div className="w-[3px] h-2 bg-rose-500 rounded-[0.5px]" />
-                </div>
-              </div>
+            {/* MINI CHART VISUAL (AS IN IMAGE) */}
+            <div className="hidden sm:flex items-center h-6 w-12 px-1">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 50 20">
+                <path
+                  d={isBuy ? "M 0 15 Q 12 18, 25 8 T 50 3" : "M 0 3 Q 12 2, 25 12 T 50 17"}
+                  fill="none"
+                  stroke={isBuy ? "#10b981" : "#f43f5e"}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
             </div>
 
             {/* TYPE / P&L */}
             <div className="flex flex-col items-end gap-0.5">
-              <span className={cn("rounded-md px-2 py-[1.5px] text-[7px] font-black uppercase tracking-wider shadow-sm", isBuy ? "bg-emerald-500 text-white dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-rose-500 text-white dark:bg-rose-500/20 dark:text-rose-300 dark:border dark:border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.3)]")}>
+              <span
+                className={cn(
+                  "rounded-md px-2 py-[1.5px] text-[7px] font-black uppercase tracking-wider shadow-sm",
+                  isBuy
+                    ? "bg-emerald-500 text-white dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                    : "bg-rose-500 text-white dark:bg-rose-500/20 dark:text-rose-300 dark:border dark:border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.3)]"
+                )}
+              >
                 {signal.type.toUpperCase()}
               </span>
 
               {runningPL !== null ? (
-                <span className={cn("font-mono text-[8.5px] font-extrabold drop-shadow-sm", runningPL > 0 ? "text-emerald-600 dark:text-emerald-400" : runningPL < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400 dark:text-cyan-300/60")}>
-                  {runningPL > 0 ? `+${runningPL.toFixed(1)} pips` : runningPL < 0 ? `${runningPL.toFixed(1)} pips` : "0.0 pips"}
+                <span
+                  className={cn(
+                    "font-mono text-[8.5px] font-extrabold drop-shadow-sm",
+                    runningPL > 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : runningPL < 0
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-slate-400 dark:text-cyan-300/60"
+                  )}
+                >
+                  {runningPL > 0
+                    ? `+${runningPL.toFixed(1)} pips`
+                    : runningPL < 0
+                      ? `${runningPL.toFixed(1)} pips`
+                      : "0.0 pips"}
                 </span>
               ) : (
                 signal.risk_level && (
-                  <span className={cn("flex items-center gap-0.5 text-[7px] font-bold", signal.risk_level === "High" ? "text-rose-500 dark:text-rose-400" : signal.risk_level === "Medium" ? "text-amber-500 dark:text-amber-400" : "text-emerald-500 dark:text-emerald-400")}>
+                  <span
+                    className={cn(
+                      "flex items-center gap-0.5 text-[7px] font-bold",
+                      signal.risk_level === "High"
+                        ? "text-rose-500 dark:text-rose-400"
+                        : signal.risk_level === "Medium"
+                          ? "text-amber-500 dark:text-amber-400"
+                          : "text-emerald-500 dark:text-emerald-400"
+                    )}
+                  >
                     <AlertCircle className="h-2.5 w-2.5" />
                     {signal.risk_level}
                   </span>
                 )
               )}
+
             </div>
           </div>
 
-          {/* TARGETS & PROGRESS BAR */}
+          {/* ==================================================
+              TARGETS BLOCK + GLOWING STEPPER PROGRESS BAR
+              ================================================== */}
+
           <div className="flex flex-col gap-1 px-1 mb-2">
             <div className="flex items-center justify-between text-[7px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-cyan-300/40">
               <span>Stop Loss</span>
@@ -596,8 +1016,9 @@ const SignalCardNew = ({
               {signal.tp4 && <span className={getTargetColor("tp4")}>{signal.tp4}</span>}
             </div>
 
+            {/* Glowing Stepper Progress Line (Exact Frame Replica) */}
             <div className="relative mt-1 flex items-center justify-between">
-              <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-slate-200 dark:bg-cyan-950" />
+              <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-slate-300 dark:bg-cyan-950" />
               <div 
                 className={cn(
                   "absolute left-0 top-1/2 h-[2px] -translate-y-1/2 transition-all duration-500",
@@ -606,27 +1027,61 @@ const SignalCardNew = ({
                 )} 
               />
               
-              <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900", signal.sl_hit ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "bg-rose-500/50")} />
-              <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900", signal.tp1_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />
-              {signal.tp2 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900", signal.tp2_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />}
-              {signal.tp3 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900", signal.tp3_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />}
-              {signal.tp4 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900", signal.tp4_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />}
+              {/* SL Node Dot */}
+              <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.sl_hit ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "bg-rose-500/50")} />
+              
+              {/* TP1 Node Dot */}
+              <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp1_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />
+              
+              {/* TP2 Node Dot */}
+              {signal.tp2 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp2_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />}
+              
+              {/* TP3 Node Dot */}
+              {signal.tp3 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp3_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />}
+              
+              {/* TP4 Node Dot */}
+              {signal.tp4 && <div className={cn("relative z-10 h-2.5 w-2.5 rounded-full border-2 border-slate-900", signal.tp4_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />}
             </div>
           </div>
 
-          {/* PROFIT NOTE */}
+          {/* ==================================================
+              PROFIT / STATUS NOTE
+              ================================================== */}
+
           {signal.profit_note && (
-            <div className={cn("flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-all duration-300 backdrop-blur-md", noteStyle.container)}>
-              {isSLHit ? (
-                <XCircle className={cn("h-3.5 w-3.5 shrink-0 drop-shadow-[0_0_6px_rgba(244,63,94,0.5)]", noteStyle.icon)} />
-              ) : (
-                <CheckCircle2 className={cn("h-3.5 w-3.5 shrink-0 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]", noteStyle.icon)} />
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-all duration-300 backdrop-blur-md",
+                noteStyle.container
               )}
-              <span className={cn("text-[9.5px] font-bold leading-tight tracking-wide", noteStyle.text)}>
+            >
+              {isSLHit ? (
+                <XCircle
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 drop-shadow-[0_0_6px_rgba(244,63,94,0.5)]",
+                    noteStyle.icon
+                  )}
+                />
+              ) : (
+                <CheckCircle2
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]",
+                    noteStyle.icon
+                  )}
+                />
+              )}
+
+              <span
+                className={cn(
+                  "text-[9.5px] font-bold leading-tight tracking-wide",
+                  noteStyle.text
+                )}
+              >
                 {signal.profit_note}
               </span>
             </div>
           )}
+
         </>
       )}
     </div>
