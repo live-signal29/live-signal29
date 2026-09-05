@@ -1,12 +1,34 @@
+import { useState } from "react";
 import { useXAUUSDAccuracyStats, XAUUSDDayData } from "@/hooks/useXAUUSDAccuracyStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, TrendingUp, TrendingDown, BarChart3, Activity, Zap, Calendar, Clock, CalendarDays } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
+import DailyTradeBreakdown from "@/components/DailyTradeBreakdown";
 
 const XAUUSDAccuracyStats = () => {
   const { data: stats, isLoading } = useXAUUSDAccuracyStats();
+  const [breakdownDate, setBreakdownDate] = useState<Date | null>(null);
+  const [breakdownLabel, setBreakdownLabel] = useState("");
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+
+  // Only "Today" and "Yesterday" map to a single exact calendar day --
+  // "This Week" / "Monthly" are ranges, so they aren't wired to the
+  // day-by-day breakdown dialog here.
+  const clickableDateFor = (label: string): Date | null => {
+    if (label === "Today") return new Date();
+    if (label === "Yesterday") return subDays(new Date(), 1);
+    return null;
+  };
+
+  const openBreakdown = (label: string) => {
+    const date = clickableDateFor(label);
+    if (!date) return;
+    setBreakdownDate(date);
+    setBreakdownLabel(label);
+    setBreakdownOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -101,11 +123,15 @@ const XAUUSDAccuracyStats = () => {
         {dateCards.map((card) => {
           const hasCardData = card.total > 0;
           const Icon = card.icon;
-          
+          const isClickable = card.label === "Today" || card.label === "Yesterday";
+
           return (
-            <Card 
-              key={card.label} 
-              className={`bg-gradient-to-br ${card.color} ${card.borderColor} overflow-hidden`}
+            <Card
+              key={card.label}
+              onClick={() => isClickable && openBreakdown(card.label)}
+              className={`bg-gradient-to-br ${card.color} ${card.borderColor} overflow-hidden ${
+                isClickable ? "cursor-pointer active:scale-[0.98] transition-transform" : ""
+              }`}
             >
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -315,6 +341,19 @@ const XAUUSDAccuracyStats = () => {
           </CardContent>
         </Card>
       )}
+
+      <DailyTradeBreakdown
+        open={breakdownOpen}
+        onOpenChange={setBreakdownOpen}
+        date={breakdownDate}
+        dateLabel={breakdownLabel}
+        defaultCategory={null}
+        defaultPair="XAU/USD (Gold)"
+        filterOptions={[
+          { label: "Gold Only", pair: "XAU/USD (Gold)", category: null },
+          { label: "All Pairs", pair: null, category: null },
+        ]}
+      />
     </div>
   );
 };
