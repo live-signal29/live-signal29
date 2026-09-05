@@ -18,7 +18,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const PLAY_STORE_URL =
-    "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
+    "https://play.google.com/store/apps/details?id=co.median.android.mbawodo";
 
   useEffect(() => {
     const handleScroll = () => {
