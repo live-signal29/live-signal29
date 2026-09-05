@@ -6,7 +6,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowUpCircle,
@@ -130,7 +129,10 @@ const DailyTradeBreakdown = ({
           )}
         </DialogHeader>
 
-        <ScrollArea className="flex-1">
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        >
           <div className="p-4 space-y-4">
             {isLoading ? (
               <div className="grid grid-cols-3 gap-2">
@@ -285,7 +287,7 @@ const DailyTradeBreakdown = ({
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
