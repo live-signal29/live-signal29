@@ -4,6 +4,8 @@ import { Calendar } from "lucide-react";
 import SEO from "@/components/SEO";
 import XAUUSDAccuracyStats from "@/components/XAUUSDAccuracyStats";
 import PerPairPerformance from "@/components/PerPairPerformance";
+import AdSlot from "@/components/AdSlot";
+import { AD_SLOTS } from "@/config/ads";
 
 const Results = () => {
   return (
@@ -27,6 +29,10 @@ const Results = () => {
 
           {/* XAUUSD Accuracy Stats - Only working section */}
           <XAUUSDAccuracyStats />
+
+          <div className="my-6">
+            <AdSlot slot={AD_SLOTS.resultsPage} />
+          </div>
 
           {/* Per-pair performance breakdown */}
           <PerPairPerformance />
