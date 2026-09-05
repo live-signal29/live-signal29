@@ -18,6 +18,8 @@ import { useLivePricesFetch } from "@/hooks/useLivePrices";
 import ChartLightbox from "@/components/ChartLightbox";
 import { startOfDay, format } from "date-fns";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
+import AdSlot from "@/components/AdSlot";
+import { AD_SLOTS } from "@/config/ads";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
 import { CopierLeaderboard } from "@/components/CopierLeaderboard";
 import { ExnessPopup } from "@/components/ExnessPopup";
@@ -699,6 +701,8 @@ const SignalsDashboard = () => {
                                     globalSignalIndex += 1;
                                     const showBanner =
                                       globalSignalIndex % 3 === 0;
+                                    const showAd =
+                                      globalSignalIndex % 6 === 0;
 
                                     return (
                                       <React.Fragment key={signal.id}>
@@ -712,6 +716,12 @@ const SignalsDashboard = () => {
                                         {showBanner && (
                                           <div className="md:col-span-2 my-1">
                                             <AffiliateBannerCarousel />
+                                          </div>
+                                        )}
+
+                                        {showAd && subscriptionStatus !== "premium" && (
+                                          <div className="md:col-span-2 my-1">
+                                            <AdSlot slot={AD_SLOTS.signalsFeed} />
                                           </div>
                                         )}
                                       </React.Fragment>
