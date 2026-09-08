@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
+import MarketSessionBanner from "@/components/MarketSessionBanner";
 import Footer from "@/components/Footer";
 import SignalCard from "@/components/SignalCard";
 import SEO from "@/components/SEO";
@@ -75,6 +76,8 @@ const Index = () => {
         activeCategory={activeCategory}
         onCategoryChange={(cat) => setActiveCategory(cat)}
       />
+
+      <MarketSessionBanner />
 
       <main className="flex-1">
         {/* HERO SECTION */}
