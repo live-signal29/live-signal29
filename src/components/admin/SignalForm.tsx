@@ -359,7 +359,7 @@ const SignalForm = memo(
               action: "new_signal",
             },
           })
-          .then(({ error: tgError }) => {
+          .then(({ data: tgData, error: tgError }) => {
             if (tgError) {
               console.error(
                 "Telegram post error:",
@@ -369,10 +369,33 @@ const SignalForm = memo(
               toast.error(
                 "Signal saved, but Telegram post failed"
               );
-            } else {
-              toast.success(
-                "Posted to Telegram"
+              return;
+            }
+
+            if (tgData?.skipped) {
+              // Outside the allowed Gold(weekday)/BTC(weekend)
+              // channel session — signal is saved, just not
+              // posted publicly right now.
+              toast.info(
+                "Saved. Not posted to Telegram (outside current market session)."
               );
+              return;
+            }
+
+            toast.success("Posted to Telegram");
+
+            // Store the channel message id so a later TP/SL hit
+            // can EDIT this exact post instead of sending a new one.
+            if (inserted?.id && tgData?.message_id) {
+              void supabase
+                .from("signals")
+                .update({
+                  telegram_message_id: tgData.message_id,
+                  telegram_chat_id: tgData.chat_id
+                    ? String(tgData.chat_id)
+                    : null,
+                })
+                .eq("id", inserted.id);
             }
           })
           .catch((error) => {
