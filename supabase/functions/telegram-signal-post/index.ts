@@ -10,6 +10,55 @@ const corsHeaders = {
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const TELEGRAM_CHANNEL_ID = Deno.env.get("TELEGRAM_CHANNEL_ID");
 
+/* =========================================================
+   MARKET SESSION (weekday / weekend)
+   ---------------------------------------------------------
+   Mon 00:00 UTC -> Fri 20:00 UTC  = "weekday"  (Gold/Forex open)
+   Fri 20:00 UTC -> Mon 00:00 UTC  = "weekend"  (Gold/Forex closed,
+   crypto + synthetic indices still trade 24/7)
+
+   This is intentionally simple (no holiday calendar) — it exists
+   to decide what the TELEGRAM CHANNEL is allowed to post, not to
+   change the dashboard's own signal engine.
+========================================================= */
+
+type MarketPhase = "weekday" | "weekend";
+
+function getMarketPhase(now: Date = new Date()): MarketPhase {
+  const day = now.getUTCDay(); // 0 = Sun ... 6 = Sat
+  const hour = now.getUTCHours();
+
+  if (day === 0 || day === 6) return "weekend";
+  if (day === 5 && hour >= 20) return "weekend";
+  return "weekday";
+}
+
+const GOLD_KEYWORDS = ["XAU", "GOLD"];
+const WEEKEND_KEYWORDS = [
+  "BTC",
+  "ETH",
+  "SOL",
+  "CRYPTO",
+  "BOOM",
+  "CRASH",
+  "VOL 75",
+  "VOL 100",
+  "VOL75",
+  "VOL100",
+];
+
+function isAllowedForChannel(pair: unknown, phase: MarketPhase): boolean {
+  const p = String(pair || "").toUpperCase();
+  if (!p) return true; // don't block on missing pair data, just post it
+
+  if (phase === "weekday") {
+    return GOLD_KEYWORDS.some((k) => p.includes(k));
+  }
+
+  // weekend — only markets that are genuinely still open
+  return WEEKEND_KEYWORDS.some((k) => p.includes(k));
+}
+
 interface Signal {
   id?: string;
   pair: string;
@@ -95,7 +144,7 @@ function telegramConfigured(): boolean {
 
 async function sendTelegramMessage(
   message: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; message_id?: number; chat_id?: string }> {
   if (!telegramConfigured()) {
     return {
       success: false,
@@ -132,7 +181,11 @@ async function sendTelegramMessage(
     );
 
     if (response.ok && result?.ok === true) {
-      return { success: true };
+      return {
+        success: true,
+        message_id: result?.result?.message_id,
+        chat_id: String(TELEGRAM_CHANNEL_ID),
+      };
     }
 
     // HTML formatting can fail because of unexpected characters.
@@ -166,7 +219,11 @@ async function sendTelegramMessage(
     );
 
     if (retry.ok && retryResult?.ok === true) {
-      return { success: true };
+      return {
+        success: true,
+        message_id: retryResult?.result?.message_id,
+        chat_id: String(TELEGRAM_CHANNEL_ID),
+      };
     }
 
     return {
@@ -190,13 +247,84 @@ async function sendTelegramMessage(
 }
 
 /* =========================================================
+   EDIT TELEGRAM TEXT MESSAGE
+   ---------------------------------------------------------
+   Used for signal updates (TP1/TP2/TP3/SL hit) so the SAME
+   channel post gets highlighted in place instead of a new
+   message being posted every time a target is hit.
+========================================================= */
+
+async function editTelegramMessage(
+  messageId: number,
+  chatId: string,
+  message: string
+): Promise<{ success: boolean; error?: string; message_id?: number; chat_id?: string }> {
+  if (!telegramConfigured()) {
+    return { success: false, error: "Telegram secrets are missing" };
+  }
+
+  const safeMessage = String(message || "").slice(0, 4090);
+
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId || TELEGRAM_CHANNEL_ID,
+          message_id: messageId,
+          text: safeMessage,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    console.log(
+      "Telegram editMessageText:",
+      response.status,
+      JSON.stringify(result)
+    );
+
+    if (response.ok && result?.ok === true) {
+      return { success: true, message_id: messageId, chat_id: chatId };
+    }
+
+    // "message is not modified" happens if the text is identical —
+    // that's not really a failure, treat it as success.
+    if (
+      String(result?.description || "")
+        .toLowerCase()
+        .includes("message is not modified")
+    ) {
+      return { success: true, message_id: messageId, chat_id: chatId };
+    }
+
+    return {
+      success: false,
+      error: result?.description || `Telegram HTTP ${response.status}`,
+    };
+  } catch (error) {
+    console.error("Telegram edit error:", error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Telegram edit failed",
+    };
+  }
+}
+
+/* =========================================================
    SEND TELEGRAM PHOTO
 ========================================================= */
 
 async function sendTelegramPhoto(
   imageUrl: string,
   caption: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; message_id?: number; chat_id?: string }> {
   if (!telegramConfigured()) {
     return {
       success: false,
@@ -240,6 +368,8 @@ async function sendTelegramPhoto(
     if (response.ok && result.ok === true) {
       return {
         success: true,
+        message_id: result?.result?.message_id,
+        chat_id: String(TELEGRAM_CHANNEL_ID),
       };
     }
 
@@ -624,6 +754,71 @@ function formatIdeaMessage(idea: Idea): string {
 }
 
 /* =========================================================
+   SESSION ANNOUNCEMENT (Friday close / Monday reopen)
+========================================================= */
+
+interface WeekStats {
+  tpHits?: number;
+  slHits?: number;
+  winRate?: number;
+  bestPair?: string;
+}
+
+function formatSessionMessage(
+  sessionType: string,
+  stats?: WeekStats
+): string {
+  if (sessionType === "friday_close") {
+    let message = `🌙 <b>MARKET CLOSED FOR THE WEEKEND</b> 🌙\n`;
+    message += `━━━━━━━━━━━━━━━\n\n`;
+    message += `Gold, Silver &amp; Forex markets are now closed until Monday.\n\n`;
+
+    if (stats && (stats.tpHits || stats.slHits)) {
+      message += `📊 <b>This Week's Performance</b>\n`;
+      message += `✅ Targets hit: <b>${stats.tpHits ?? 0}</b>\n`;
+
+      if (stats.slHits !== undefined) {
+        message += `🛑 SL hit: <b>${stats.slHits}</b>\n`;
+      }
+
+      if (stats.winRate !== undefined) {
+        message += `🏆 Win rate: <b>${stats.winRate}%</b>\n`;
+      }
+
+      if (stats.bestPair) {
+        message += `⭐ Top performer: <b>${escapeHtml(stats.bestPair)}</b>\n`;
+      }
+
+      message += `\n`;
+    }
+
+    message += `🟠 <b>BTC signals continue all weekend</b> for our crypto traders.\n\n`;
+    message += `Have a great weekend, everyone! 🎉\n`;
+    message += `See you Monday for fresh Gold signals.\n`;
+
+    message += `\n━━━━━━━━━━━━━━━\n`;
+    message += `🌐 <b>TREND IS FRIEND</b>`;
+
+    return message;
+  }
+
+  if (sessionType === "monday_reopen") {
+    let message = `☀️ <b>WELCOME BACK, TRADERS</b> ☀️\n`;
+    message += `━━━━━━━━━━━━━━━\n\n`;
+    message += `Gold &amp; Forex markets are open again!\n\n`;
+    message += `🥇 <b>XAUUSD signals starting soon</b> — stay tuned 👀\n\n`;
+    message += `Wishing everyone a profitable week ahead 💪\n`;
+
+    message += `\n━━━━━━━━━━━━━━━\n`;
+    message += `🌐 <b>TREND IS FRIEND</b>`;
+
+    return message;
+  }
+
+  return `🔔 <b>Market Update</b>`;
+}
+
+/* =========================================================
    DETECT IDEA ACTION
    ---------------------------------------------------------
    Supports:
@@ -688,7 +883,12 @@ serve(async (req) => {
       idea,
       action,
       update_type,
+      session_type,
+      stats,
+      force,
     } = body;
+
+    const phase = getMarketPhase();
 
     // Older auto-signal callers sent the signal object without
     // a top-level action. Keep that format working.
@@ -705,6 +905,9 @@ serve(async (req) => {
     let result: {
       success: boolean;
       error?: string;
+      message_id?: number;
+      chat_id?: string;
+      skipped?: boolean;
     };
 
     /* =====================================================
@@ -728,15 +931,37 @@ serve(async (req) => {
         );
       }
 
-      const message =
-        formatSignalMessage(signal);
+      // Weekday -> Gold only. Weekend -> BTC / crypto / synthetic
+      // indices only (whichever market is genuinely still open).
+      // `force: true` lets an admin manually override this from
+      // the dashboard if they really want to.
+      if (!force && !isAllowedForChannel(signal.pair, phase)) {
+        console.log(
+          `Skipping Telegram post: ${signal.pair} not allowed in "${phase}" session`
+        );
 
-      result =
-        await sendTelegramMessage(message);
+        result = {
+          success: true,
+          skipped: true,
+          error: `Pair "${signal.pair}" not posted — outside allowed "${phase}" session`,
+        };
+      } else {
+        const message =
+          formatSignalMessage(signal);
+
+        result =
+          await sendTelegramMessage(message);
+      }
     }
 
     /* =====================================================
        SIGNAL UPDATE
+       ---------------------------------------------------
+       Edits the ORIGINAL channel post in place (TP1 -> TP2 ->
+       TP3 -> SL moved to entry, etc.) when we know which
+       message to edit. Falls back to a fresh message only if
+       we have no stored message_id (e.g. older signals created
+       before this feature existed) or the edit itself fails.
     ===================================================== */
 
     else if (action === "update") {
@@ -756,14 +981,72 @@ serve(async (req) => {
         );
       }
 
-      const message =
-        formatUpdateMessage(
-          signal,
-          update_type
+      if (!force && !isAllowedForChannel(signal.pair, phase)) {
+        console.log(
+          `Skipping Telegram update: ${signal.pair} not allowed in "${phase}" session`
         );
 
-      result =
-        await sendTelegramMessage(message);
+        result = {
+          success: true,
+          skipped: true,
+          error: `Pair "${signal.pair}" update not posted — outside allowed "${phase}" session`,
+        };
+      } else {
+        const message =
+          formatUpdateMessage(
+            signal,
+            update_type
+          );
+
+        const existingMessageId = signal.telegram_message_id;
+        const existingChatId =
+          signal.telegram_chat_id || TELEGRAM_CHANNEL_ID;
+
+        if (existingMessageId) {
+          result = await editTelegramMessage(
+            Number(existingMessageId),
+            String(existingChatId),
+            message
+          );
+
+          // Original message may be too old to edit, deleted, etc.
+          // Don't silently lose the update — post it fresh instead.
+          if (!result.success) {
+            console.log(
+              "Edit failed, falling back to new message:",
+              result.error
+            );
+            result = await sendTelegramMessage(message);
+          }
+        } else {
+          result = await sendTelegramMessage(message);
+        }
+      }
+    }
+
+    /* =====================================================
+       SESSION ANNOUNCEMENT (Friday close / Monday reopen)
+    ===================================================== */
+
+    else if (action === "session_announcement") {
+      if (!session_type) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "session_type is required",
+          }),
+          {
+            status: 400,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
+      const message = formatSessionMessage(session_type, stats);
+      result = await sendTelegramMessage(message);
     }
 
     /* =====================================================
@@ -861,8 +1144,13 @@ serve(async (req) => {
       JSON.stringify({
         success: result.success,
         message: result.success
-          ? "Telegram post sent successfully"
+          ? result.skipped
+            ? "Skipped (outside allowed market session)"
+            : "Telegram post sent successfully"
           : "Telegram post failed",
+        skipped: result.skipped || false,
+        message_id: result.message_id ?? null,
+        chat_id: result.chat_id ?? null,
         error: result.error || null,
       }),
       {
