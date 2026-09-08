@@ -721,7 +721,14 @@ async function postTelegram(signal: any) {
       );
     }
 
-    return { success: ok, error: parsed?.error || null };
+    return {
+      success: ok,
+      error: parsed?.error || null,
+      // Stored on the signal row so a later TP/SL update can EDIT
+      // this exact channel message instead of posting a new one.
+      message_id: parsed?.message_id ?? null,
+      chat_id: parsed?.chat_id ?? null,
+    };
   } catch (error) {
     console.error("Telegram post error:", error);
     return {
@@ -1126,6 +1133,21 @@ Deno.serve(async (req) => {
       ...signal,
       id: inserted?.id,
     });
+
+    // Save the Telegram message id/chat id on the signal row so a
+    // later TP1/TP2/TP3/SL update can edit THIS exact channel post
+    // instead of spamming a new message for every target hit.
+    if (inserted?.id && telegramResult.message_id) {
+      await supabase
+        .from("signals")
+        .update({
+          telegram_message_id: telegramResult.message_id,
+          telegram_chat_id: telegramResult.chat_id
+            ? String(telegramResult.chat_id)
+            : null,
+        })
+        .eq("id", inserted.id);
+    }
 
     // =====================================================
     // RESPONSE
