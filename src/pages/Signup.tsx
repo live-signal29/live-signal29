@@ -22,6 +22,7 @@ const Signup = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get("returnUrl") || "/onboarding";
   const refCode = searchParams.get("ref") || "";
+
   const [referralCode, setReferralCode] = useState(refCode);
 
   const isCommonPattern =
@@ -73,13 +74,16 @@ const Signup = () => {
       const { data, error } = await supabase.auth.signUp({
         email: validation.data.email,
         password: validation.data.password,
+
         options: {
           emailRedirectTo: `${window.location.origin}${returnUrl}`,
+
           data: {
             full_name: validation.data.fullName,
             first_name: firstName,
             last_name: lastName,
             terms_accepted: validation.data.termsAccepted,
+
             referred_by_code: referralCode
               ? referralCode.trim().toUpperCase()
               : undefined,
@@ -103,7 +107,9 @@ const Signup = () => {
             "This password is too easy to guess. Please choose a unique password."
           );
         } else {
-          toast.error(error.message || "Signup failed. Please try again.");
+          toast.error(
+            error.message || "Signup failed. Please try again."
+          );
         }
 
         return;
@@ -128,16 +134,21 @@ const Signup = () => {
         }
       }
     } catch {
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.error(
+        "An unexpected error occurred. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOAuthSignup = async (provider: "google" | "apple") => {
+  const handleOAuthSignup = async (
+    provider: "google" | "apple"
+  ) => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
+
         options: {
           redirectTo: `${window.location.origin}${returnUrl}`,
         },
@@ -145,126 +156,184 @@ const Signup = () => {
 
       if (error) throw error;
     } catch (error: any) {
-      toast.error(error.message || `${provider} signup failed`);
+      toast.error(
+        error.message || `${provider} signup failed`
+      );
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#070908] text-white flex flex-col px-5 py-5 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex items-center justify-center p-4 font-sans">
 
-      {/* Background Glow */}
-      <div className="absolute top-0 left-0 w-[260px] h-[260px] bg-emerald-900/15 rounded-full blur-[90px] pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[280px] h-[280px] bg-emerald-950/20 rounded-full blur-[100px] pointer-events-none" />
+      {/* Premium Auth Card */}
+      <div className="w-full max-w-md bg-[#131926] border border-slate-800/80 rounded-2xl p-6 shadow-2xl relative">
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 z-10 shrink-0">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="text-white hover:opacity-80 transition-opacity p-1"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+        {/* Header */}
+        <div className="flex justify-between items-center mb-5">
 
-        <h1 className="text-lg font-bold tracking-wide">
-          Register
-        </h1>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="text-slate-400 hover:text-white transition p-2 rounded-lg bg-slate-800/40"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
 
-        <button
-          type="button"
-          className="flex items-center gap-1 text-emerald-500 font-semibold text-[10px] tracking-wider uppercase"
-        >
-          <Globe className="h-3.5 w-3.5" />
-          AUTO
-        </button>
-      </div>
+          <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+            <Globe className="h-3 w-3" />
+            AUTO
+          </span>
 
-      {/* Signup Section */}
-      <div className="max-w-sm w-full mx-auto z-10">
+        </div>
 
-        <form onSubmit={handleSignup} className="space-y-3">
+        {/* Title */}
+        <div className="text-center mb-5">
 
-          {/* First & Last Name */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <Input
-              type="text"
-              placeholder="First name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              autoComplete="given-name"
-              className="h-11 bg-[#1f2220]/90 border-0 rounded-xl text-white text-sm placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
-            />
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            Create an Account
+          </h1>
 
-            <Input
-              type="text"
-              placeholder="Last name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              autoComplete="family-name"
-              className="h-11 bg-[#1f2220]/90 border-0 rounded-xl text-white text-sm placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
-            />
+          <p className="text-slate-400 text-xs mt-1">
+            Fill in your details to get started with us
+          </p>
+
+        </div>
+
+        {/* Login / Signup Tabs */}
+        <div className="grid grid-cols-2 bg-[#0b0f19] p-1 rounded-xl mb-5 border border-slate-800">
+
+          <Link
+            to={`/login${
+              returnUrl !== "/onboarding"
+                ? `?returnUrl=${encodeURIComponent(returnUrl)}`
+                : ""
+            }`}
+            className="py-2.5 text-xs font-bold text-slate-400 hover:text-slate-200 rounded-lg transition-all duration-200 text-center"
+          >
+            Log In
+          </Link>
+
+          <button
+            type="button"
+            className="py-2.5 text-xs font-bold rounded-lg bg-amber-400 text-slate-950 shadow-md"
+          >
+            Sign Up
+          </button>
+
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSignup} className="space-y-3.5">
+
+          {/* First + Last Name */}
+          <div className="grid grid-cols-2 gap-3">
+
+            <div>
+              <label className="block text-xs text-slate-300 mb-1 font-medium">
+                First Name
+              </label>
+
+              <Input
+                type="text"
+                placeholder="John"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                autoComplete="given-name"
+                className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-300 mb-1 font-medium">
+                Last Name
+              </label>
+
+              <Input
+                type="text"
+                placeholder="Doe"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                autoComplete="family-name"
+                className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
+              />
+            </div>
+
           </div>
 
           {/* Email */}
-          <div className="relative pt-1">
-            <label className="absolute -top-1 left-3 text-[11px] text-emerald-500 bg-[#070908] px-1 z-10 font-medium">
+          <div>
+
+            <label className="block text-xs text-slate-300 mb-1 font-medium">
               Email
             </label>
 
             <Input
               type="email"
-              placeholder="Email"
+              placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="h-11 bg-[#1f2220]/90 border-0 rounded-xl text-white text-sm placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
+              className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
             />
+
           </div>
 
           {/* Password */}
-          <div className="relative pt-1">
-            <label className="absolute -top-1 left-3 text-[11px] text-emerald-500 bg-[#070908] px-1 z-10 font-medium">
+          <div>
+
+            <label className="block text-xs text-slate-300 mb-1 font-medium">
               Password
             </label>
 
             <div className="relative">
+
               <Input
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="h-11 bg-[#1f2220]/90 border-0 rounded-xl text-white text-sm placeholder:text-gray-500 pr-11 focus-visible:ring-1 focus-visible:ring-emerald-500"
+                className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 pr-11 placeholder:text-slate-600"
               />
 
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                aria-label={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
               >
                 {showPassword ? (
-                  <EyeOff className="h-4.5 w-4.5" />
+                  <EyeOff className="h-4 w-4" />
                 ) : (
-                  <Eye className="h-4.5 w-4.5" />
+                  <Eye className="h-4 w-4" />
                 )}
               </button>
+
             </div>
 
             {/* Password Rules */}
             {password.length > 0 && (
-              <div className="mt-2 p-2.5 bg-[#181a19]/90 rounded-xl border border-gray-800 space-y-1 text-[10px]">
+              <div className="mt-2.5 p-3 bg-[#0b0f19] rounded-xl border border-slate-800 space-y-1.5 text-[10px]">
+
                 {passwordRules.map((rule, idx) => (
                   <div
                     key={idx}
                     className={`flex items-center gap-1.5 ${
-                      rule.valid ? "text-emerald-400" : "text-gray-500"
+                      rule.valid
+                        ? "text-emerald-400"
+                        : "text-slate-500"
                     }`}
                   >
+
                     {rule.valid ? (
                       <Check className="h-3 w-3 shrink-0" />
                     ) : (
@@ -272,132 +341,172 @@ const Signup = () => {
                     )}
 
                     <span>{rule.label}</span>
+
                   </div>
                 ))}
+
               </div>
             )}
+
           </div>
 
           {/* Referral */}
-          <Input
-            type="text"
-            placeholder="Referral code (Optional)"
-            value={referralCode}
-            onChange={(e) => setReferralCode(e.target.value)}
-            className="h-11 bg-[#1f2220]/90 border-0 rounded-xl text-white text-sm placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-emerald-500"
-          />
+          <div>
+
+            <label className="block text-xs text-slate-300 mb-1 font-medium">
+              Referral Code
+              <span className="text-slate-500 ml-1">
+                (Optional)
+              </span>
+            </label>
+
+            <Input
+              type="text"
+              placeholder="Enter referral code"
+              value={referralCode}
+              onChange={(e) =>
+                setReferralCode(e.target.value)
+              }
+              className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
+            />
+
+          </div>
 
           {/* Terms */}
           <div className="flex items-start gap-2.5 pt-1">
+
             <Checkbox
               id="terms"
               checked={termsAccepted}
               onCheckedChange={(checked) =>
-                setTermsAccepted(checked as boolean)
+                setTermsAccepted(checked === true)
               }
-              className="mt-0.5 h-4 w-4 border-gray-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 rounded"
+              className="mt-0.5 h-4 w-4 border-slate-700 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400 data-[state=checked]:text-slate-950 rounded"
             />
 
             <label
               htmlFor="terms"
-              className="text-[10px] text-gray-300 leading-relaxed cursor-pointer"
+              className="text-[10px] text-slate-400 leading-relaxed cursor-pointer"
             >
-              I accept the{" "}
-              <span className="text-emerald-500">
-                Terms & Conditions
-              </span>
-              ,{" "}
-              <span className="text-emerald-500">
+              I agree to the{" "}
+
+              <span className="text-amber-400 hover:underline">
+                Terms of Service
+              </span>{" "}
+              and{" "}
+
+              <span className="text-amber-400 hover:underline">
                 Privacy Policy
-              </span>
-              , &{" "}
-              <span className="text-emerald-500">
-                Cookie Policy
               </span>
               .
             </label>
+
           </div>
 
-          {/* Register Button */}
+          {/* Register */}
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-11 bg-[#42434a] hover:bg-[#4f5058] text-gray-200 font-semibold rounded-xl text-sm transition-colors mt-1"
+            className="w-full h-12 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-sm transition duration-200 shadow-lg shadow-amber-400/20 mt-2"
           >
-            {loading ? "Creating Account..." : "Register"}
+            {loading
+              ? "Creating Account..."
+              : "Register"}
           </Button>
+
         </form>
 
         {/* Divider */}
-        <div className="relative my-4">
+        <div className="relative my-5 text-center">
+
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-800" />
+            <div className="w-full border-t border-slate-800" />
           </div>
 
-          <div className="relative flex justify-center text-[10px]">
-            <span className="bg-[#070908] px-3 text-gray-500">
-              Or Register with
-            </span>
-          </div>
+          <span className="relative bg-[#131926] px-3 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+            Or register with
+          </span>
+
         </div>
 
-        {/* Social Buttons */}
-        <div className="flex justify-center items-center gap-3">
+        {/* Social Login */}
+        <div className="grid grid-cols-2 gap-3">
 
           {/* Google */}
           <button
             type="button"
             onClick={() => handleOAuthSignup("google")}
-            className="w-11 h-11 rounded-full bg-[#1f2220] flex items-center justify-center hover:bg-gray-800 transition-colors"
+            className="flex items-center justify-center gap-2 bg-[#0b0f19] hover:bg-slate-800/80 border border-slate-800 py-3 rounded-xl text-xs font-semibold text-slate-200 transition"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24">
+
+            <svg className="h-4 w-4" viewBox="0 0 24 24">
+
               <path
                 fill="#EA4335"
                 d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.4 1.7 14.9 1 12 1 7.7 1 4 3.5 2.2 7.1l3.7 2.8C6.8 7.3 9.2 5 12 5z"
               />
+
               <path
                 fill="#4285F4"
                 d="M22.6 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h6c-.3 1.4-1 2.5-2.2 3.3l3.6 2.8c2.1-1.9 3.2-4.7 3.2-8.1z"
               />
+
               <path
                 fill="#FBBC05"
                 d="M5.9 14.1c-.2-.7-.4-1.4-.4-2.1s.2-1.4.4-2.1L2.2 7.1C1.4 8.6 1 10.2 1 12s.4 3.4 1.2 4.9l3.7-2.8z"
               />
+
               <path
                 fill="#34A853"
                 d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.8 0-5.2-1.9-6.1-4.5L2.2 17C4 20.5 7.7 23 12 23z"
               />
+
             </svg>
+
+            Google
+
           </button>
 
           {/* Apple */}
           <button
             type="button"
             onClick={() => handleOAuthSignup("apple")}
-            className="w-11 h-11 rounded-full bg-[#1f2220] flex items-center justify-center hover:bg-gray-800 transition-colors text-white"
+            className="flex items-center justify-center gap-2 bg-[#0b0f19] hover:bg-slate-800/80 border border-slate-800 py-3 rounded-xl text-xs font-semibold text-slate-200 transition"
           >
-            <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
+
+            <svg
+              className="h-4 w-4 fill-current"
+              viewBox="0 0 24 24"
+            >
               <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.66-.8 1.11-1.92.99-3.04-.96.04-2.12.64-2.8 1.44-.61.71-1.14 1.86-1 2.97 1.08.08 2.16-.57 2.81-1.37z" />
             </svg>
+
+            Apple
+
           </button>
 
         </div>
 
-        {/* Already Have Account */}
-        <div className="text-center mt-5 pb-4">
-          <p className="text-xs text-gray-300">
-            Have an account?{" "}
+        {/* Login */}
+        <div className="text-center pt-5 pb-1 text-xs">
+
+          <p className="text-slate-300">
+
+            Already have an account?{" "}
+
             <Link
               to={`/login${
                 returnUrl !== "/onboarding"
                   ? `?returnUrl=${encodeURIComponent(returnUrl)}`
                   : ""
               }`}
-              className="text-emerald-500 font-semibold underline underline-offset-2"
+              className="text-amber-400 font-semibold hover:underline"
             >
-              Login
+              Log In
             </Link>
+
           </p>
+
         </div>
 
       </div>
