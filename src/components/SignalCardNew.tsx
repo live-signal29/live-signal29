@@ -1023,7 +1023,12 @@ const SignalCardNew = ({
                 className={cn(
                   "absolute left-0 top-1/2 h-[2px] -translate-y-1/2 transition-all duration-500",
                   signal.tp3_hit ? "w-full" : signal.tp2_hit ? "w-3/4" : signal.tp1_hit ? "w-1/2" : "w-1/4",
-                  isBuy ? "bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400" : "bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500"
+                  // FIX: dots are always laid out SL (red) -> TP1 -> TP2 -> TP3
+                  // (green) for BOTH buy and sell signals. The line color must
+                  // match that fixed layout and never flip by direction — a sell
+                  // signal was showing green on the SL side and red on the TP
+                  // side, which is backwards (red = SL, green = TP, always).
+                  "bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400"
                 )} 
               />
               
