@@ -225,11 +225,30 @@ Deno.serve(async (req) => {
         const slHit =
           !anyTpHit && checkHit(currentPrice, sl, isBuy, true);
 
-        if (tp1Hit && !row.tp1_hit) updates.tp1_hit = true;
-        if (tp2Hit && !row.tp2_hit) updates.tp2_hit = true;
-        if (tp3Hit && !row.tp3_hit) updates.tp3_hit = true;
-        if (tp4Hit && !row.tp4_hit) updates.tp4_hit = true;
-        if (slHit) updates.sl_hit = true;
+        // NOTE: assigned in ascending TP order so that if multiple
+        // targets get crossed in a single tick, the note reflects
+        // the highest one reached (mirrors the old client logic).
+        if (tp1Hit && !row.tp1_hit) {
+          updates.tp1_hit = true;
+          updates.sl = String(entry);
+          updates.profit_note = "TP 1 Hit ✅ SL moved to B.E";
+        }
+        if (tp2Hit && !row.tp2_hit) {
+          updates.tp2_hit = true;
+          updates.profit_note = "TP 2 Hit ✅ More Profit Secured 💰";
+        }
+        if (tp3Hit && !row.tp3_hit) {
+          updates.tp3_hit = true;
+          updates.profit_note = "TP 3 Hit 🎊 Maximum Profit Secured ✅";
+        }
+        if (tp4Hit && !row.tp4_hit) {
+          updates.tp4_hit = true;
+          updates.profit_note = "TP 4 Final Target Hit 🎊 Maximum Profit Secured ✅";
+        }
+        if (slHit) {
+          updates.sl_hit = true;
+          updates.profit_note = "SL Hit ❌ - Staying patient for a better entry.";
+        }
 
         // Final target = highest defined TP (tp4 if present, else tp3).
         const finalTargetHit = Number.isFinite(tp4) ? tp4Hit : tp3Hit;
