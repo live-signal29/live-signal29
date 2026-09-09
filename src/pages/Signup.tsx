@@ -9,8 +9,7 @@ import { ArrowLeft, Globe, Eye, EyeOff, Check, X } from "lucide-react";
 import { signupSchema } from "@/lib/validations";
 
 const Signup = () => {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,9 +24,7 @@ const Signup = () => {
 
   const [referralCode, setReferralCode] = useState(refCode);
 
-  const isCommonPattern =
-    /(123|password|admin|qwerty|azazi|aziz)/i.test(password);
-
+  // Password rules
   const passwordRules = [
     {
       label: "At least 8 characters",
@@ -45,19 +42,15 @@ const Signup = () => {
       label: "Uppercase & Lowercase letter",
       valid: /[a-z]/.test(password) && /[A-Z]/.test(password),
     },
-    {
-      label: "Avoid common phrases",
-      valid: !isCommonPattern && password.length > 0,
-    },
   ];
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const fullName = `${firstName} ${lastName}`.trim();
+    const cleanName = fullName.trim();
 
     const validation = signupSchema.safeParse({
-      fullName,
+      fullName: cleanName,
       email,
       password,
       termsAccepted,
@@ -80,8 +73,11 @@ const Signup = () => {
 
           data: {
             full_name: validation.data.fullName,
-            first_name: firstName,
-            last_name: lastName,
+
+            // Keep metadata compatible with existing profiles
+            first_name: cleanName,
+            last_name: "",
+
             terms_accepted: validation.data.termsAccepted,
 
             referred_by_code: referralCode
@@ -169,7 +165,7 @@ const Signup = () => {
       <div className="w-full max-w-md bg-[#131926] border border-slate-800/80 rounded-2xl p-6 shadow-2xl relative">
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-5">
+        <div className="flex justify-between items-center mb-6">
 
           <button
             type="button"
@@ -188,7 +184,7 @@ const Signup = () => {
         </div>
 
         {/* Title */}
-        <div className="text-center mb-5">
+        <div className="text-center mb-6">
 
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Create an Account
@@ -201,7 +197,7 @@ const Signup = () => {
         </div>
 
         {/* Login / Signup Tabs */}
-        <div className="grid grid-cols-2 bg-[#0b0f19] p-1 rounded-xl mb-5 border border-slate-800">
+        <div className="grid grid-cols-2 bg-[#0b0f19] p-1 rounded-xl mb-6 border border-slate-800">
 
           <Link
             to={`/login${
@@ -224,42 +220,40 @@ const Signup = () => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSignup} className="space-y-3.5">
+        <form
+          onSubmit={handleSignup}
+          className="space-y-4"
+        >
 
-          {/* First + Last Name */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Full Name */}
+          <div>
 
-            <div>
-              <label className="block text-xs text-slate-300 mb-1 font-medium">
-                First Name
-              </label>
+            <label className="block text-xs text-slate-300 mb-1 font-medium">
+              Full Name
+            </label>
 
-              <Input
-                type="text"
-                placeholder="John"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                autoComplete="given-name"
-                className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-300 mb-1 font-medium">
-                Last Name
-              </label>
-
-              <Input
-                type="text"
-                placeholder="Doe"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                autoComplete="family-name"
-                className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
-              />
-            </div>
+            <Input
+              type="text"
+              placeholder="John Doe"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              autoComplete="name"
+              className="
+                w-full
+                h-11
+                bg-[#0b0f19]
+                border border-slate-800
+                focus:border-amber-400
+                focus-visible:ring-0
+                text-white
+                text-sm
+                rounded-xl
+                px-4
+                placeholder:text-slate-600
+                transition
+              "
+            />
 
           </div>
 
@@ -277,7 +271,20 @@ const Signup = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
+              className="
+                w-full
+                h-11
+                bg-[#0b0f19]
+                border border-slate-800
+                focus:border-amber-400
+                focus-visible:ring-0
+                text-white
+                text-sm
+                rounded-xl
+                px-4
+                placeholder:text-slate-600
+                transition
+              "
             />
 
           </div>
@@ -298,13 +305,37 @@ const Signup = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 pr-11 placeholder:text-slate-600"
+                className="
+                  w-full
+                  h-11
+                  bg-[#0b0f19]
+                  border border-slate-800
+                  focus:border-amber-400
+                  focus-visible:ring-0
+                  text-white
+                  text-sm
+                  rounded-xl
+                  px-4
+                  pr-11
+                  placeholder:text-slate-600
+                  transition
+                "
               />
 
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                onClick={() =>
+                  setShowPassword(!showPassword)
+                }
+                className="
+                  absolute
+                  right-3.5
+                  top-1/2
+                  -translate-y-1/2
+                  text-slate-500
+                  hover:text-slate-300
+                  transition
+                "
                 aria-label={
                   showPassword
                     ? "Hide password"
@@ -320,33 +351,64 @@ const Signup = () => {
 
             </div>
 
-            {/* Password Rules */}
-            {password.length > 0 && (
-              <div className="mt-2.5 p-3 bg-[#0b0f19] rounded-xl border border-slate-800 space-y-1.5 text-[10px]">
+            {/* Password Instructions */}
+            <div
+              className="
+                mt-2.5
+                p-3
+                bg-[#0b0f19]
+                rounded-xl
+                border border-slate-800
+                space-y-2
+                text-[10px]
+              "
+            >
 
-                {passwordRules.map((rule, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-center gap-1.5 ${
+              {passwordRules.map((rule, index) => (
+                <div
+                  key={index}
+                  className={`
+                    flex
+                    items-center
+                    gap-2
+                    transition-colors
+                    duration-200
+                    ${
                       rule.valid
                         ? "text-emerald-400"
                         : "text-slate-500"
-                    }`}
-                  >
+                    }
+                  `}
+                >
 
-                    {rule.valid ? (
-                      <Check className="h-3 w-3 shrink-0" />
-                    ) : (
-                      <X className="h-3 w-3 shrink-0" />
-                    )}
+                  {rule.valid ? (
+                    <Check
+                      className="
+                        h-3.5
+                        w-3.5
+                        shrink-0
+                        text-emerald-400
+                      "
+                    />
+                  ) : (
+                    <X
+                      className="
+                        h-3.5
+                        w-3.5
+                        shrink-0
+                        text-slate-600
+                      "
+                    />
+                  )}
 
-                    <span>{rule.label}</span>
+                  <span>
+                    {rule.label}
+                  </span>
 
-                  </div>
-                ))}
+                </div>
+              ))}
 
-              </div>
-            )}
+            </div>
 
           </div>
 
@@ -367,7 +429,20 @@ const Signup = () => {
               onChange={(e) =>
                 setReferralCode(e.target.value)
               }
-              className="h-11 bg-[#0b0f19] border border-slate-800 focus:border-amber-400 focus-visible:ring-0 text-white text-sm rounded-xl px-4 placeholder:text-slate-600"
+              className="
+                w-full
+                h-11
+                bg-[#0b0f19]
+                border border-slate-800
+                focus:border-amber-400
+                focus-visible:ring-0
+                text-white
+                text-sm
+                rounded-xl
+                px-4
+                placeholder:text-slate-600
+                transition
+              "
             />
 
           </div>
@@ -381,12 +456,26 @@ const Signup = () => {
               onCheckedChange={(checked) =>
                 setTermsAccepted(checked === true)
               }
-              className="mt-0.5 h-4 w-4 border-slate-700 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400 data-[state=checked]:text-slate-950 rounded"
+              className="
+                mt-0.5
+                h-4
+                w-4
+                border-slate-700
+                data-[state=checked]:bg-amber-400
+                data-[state=checked]:border-amber-400
+                data-[state=checked]:text-slate-950
+                rounded
+              "
             />
 
             <label
               htmlFor="terms"
-              className="text-[10px] text-slate-400 leading-relaxed cursor-pointer"
+              className="
+                text-[10px]
+                text-slate-400
+                leading-relaxed
+                cursor-pointer
+              "
             >
               I agree to the{" "}
 
@@ -403,11 +492,25 @@ const Signup = () => {
 
           </div>
 
-          {/* Register */}
+          {/* Register Button */}
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-sm transition duration-200 shadow-lg shadow-amber-400/20 mt-2"
+            className="
+              w-full
+              h-12
+              bg-amber-400
+              hover:bg-amber-300
+              text-slate-950
+              font-bold
+              rounded-xl
+              text-sm
+              transition
+              duration-200
+              shadow-lg
+              shadow-amber-400/20
+              mt-2
+            "
           >
             {loading
               ? "Creating Account..."
@@ -417,13 +520,24 @@ const Signup = () => {
         </form>
 
         {/* Divider */}
-        <div className="relative my-5 text-center">
+        <div className="relative my-6 text-center">
 
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-800" />
           </div>
 
-          <span className="relative bg-[#131926] px-3 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+          <span
+            className="
+              relative
+              bg-[#131926]
+              px-3
+              text-[11px]
+              text-slate-500
+              uppercase
+              tracking-wider
+              font-semibold
+            "
+          >
             Or register with
           </span>
 
@@ -435,12 +549,31 @@ const Signup = () => {
           {/* Google */}
           <button
             type="button"
-            onClick={() => handleOAuthSignup("google")}
-            className="flex items-center justify-center gap-2 bg-[#0b0f19] hover:bg-slate-800/80 border border-slate-800 py-3 rounded-xl text-xs font-semibold text-slate-200 transition"
+            onClick={() =>
+              handleOAuthSignup("google")
+            }
+            className="
+              flex
+              items-center
+              justify-center
+              gap-2
+              bg-[#0b0f19]
+              hover:bg-slate-800/80
+              border
+              border-slate-800
+              py-3
+              rounded-xl
+              text-xs
+              font-semibold
+              text-slate-200
+              transition
+            "
           >
 
-            <svg className="h-4 w-4" viewBox="0 0 24 24">
-
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+            >
               <path
                 fill="#EA4335"
                 d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.4 1.7 14.9 1 12 1 7.7 1 4 3.5 2.2 7.1l3.7 2.8C6.8 7.3 9.2 5 12 5z"
@@ -458,9 +591,8 @@ const Signup = () => {
 
               <path
                 fill="#34A853"
-                d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.8 0-5.2-1.9-6.1-4.5L2.2 17C4 20.5 7.7 23 12 23z"
+                d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6.1-4.5L2.2 17C4 20.5 7.7 23 12 23z"
               />
-
             </svg>
 
             Google
@@ -470,8 +602,25 @@ const Signup = () => {
           {/* Apple */}
           <button
             type="button"
-            onClick={() => handleOAuthSignup("apple")}
-            className="flex items-center justify-center gap-2 bg-[#0b0f19] hover:bg-slate-800/80 border border-slate-800 py-3 rounded-xl text-xs font-semibold text-slate-200 transition"
+            onClick={() =>
+              handleOAuthSignup("apple")
+            }
+            className="
+              flex
+              items-center
+              justify-center
+              gap-2
+              bg-[#0b0f19]
+              hover:bg-slate-800/80
+              border
+              border-slate-800
+              py-3
+              rounded-xl
+              text-xs
+              font-semibold
+              text-slate-200
+              transition
+            "
           >
 
             <svg
@@ -491,7 +640,6 @@ const Signup = () => {
         <div className="text-center pt-5 pb-1 text-xs">
 
           <p className="text-slate-300">
-
             Already have an account?{" "}
 
             <Link
@@ -500,7 +648,11 @@ const Signup = () => {
                   ? `?returnUrl=${encodeURIComponent(returnUrl)}`
                   : ""
               }`}
-              className="text-amber-400 font-semibold hover:underline"
+              className="
+                text-amber-400
+                font-semibold
+                hover:underline
+              "
             >
               Log In
             </Link>
