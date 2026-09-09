@@ -710,20 +710,37 @@ const SignalCardNew = ({
    * ============================================================
    */
 
-  const isSLHit =
-    !!signal.sl_hit ||
-    /\bSL\s+HIT\b/i.test(note);
-
+  // FIX: check breakeven text FIRST. `signal.sl_hit` is TRUE even on a
+  // breakeven exit (the SL was technically hit — just at entry price),
+  // so checking sl_hit before the breakeven text was making every
+  // breakeven close show up as a red "SL Hit" loss.
   const isBreakEven =
+    /BREAKEVEN/i.test(note) || /B\.E/i.test(note);
+
+  const isSLHit =
+    !isBreakEven &&
+    (!!signal.sl_hit || /\bSL\s+HIT\b/i.test(note));
+
+  const isFullTPWin =
+    !isBreakEven &&
+    (/MAXIMUM PROFIT/i.test(note) ||
+      /TP\s*[34]\s*(HIT|FINAL)/i.test(note));
+
+  const isPartialSecured =
+    !isBreakEven &&
     !isSLHit &&
-    (/BREAKEVEN/i.test(note) || /B\.E/i.test(note));
+    !isFullTPWin &&
+    /SECURED/i.test(note);
 
   const isTPHit =
     !isSLHit &&
     !isBreakEven &&
-    /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(note);
+    (isFullTPWin ||
+      isPartialSecured ||
+      /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(note));
 
   const getNoteStyle = () => {
+    // Real loss — SL hit with no prior TP (red)
     if (isSLHit) {
       return {
         container:
@@ -735,18 +752,20 @@ const SignalCardNew = ({
       };
     }
 
+    // Closed at breakeven after a TP — navy blue (not sky blue)
     if (isBreakEven) {
       return {
         container:
-          "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+          "border-blue-700/40 bg-blue-900/15 dark:bg-blue-950/40 shadow-[0_0_10px_rgba(30,64,175,0.3)]",
         icon:
-          "text-amber-500 dark:text-amber-400",
+          "text-blue-500 dark:text-blue-300",
         text:
-          "text-amber-600 dark:text-amber-300",
+          "text-blue-700 dark:text-blue-200",
       };
     }
 
-    if (isTPHit) {
+    // Full target (TP3/TP4) win — green
+    if (isFullTPWin) {
       return {
         container:
           "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]",
@@ -757,13 +776,27 @@ const SignalCardNew = ({
       };
     }
 
+    // Partial TP secured then closed early (e.g. expiry) — yellow
+    if (isPartialSecured || isTPHit) {
+      return {
+        container:
+          "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+        icon:
+          "text-amber-500 dark:text-amber-400",
+        text:
+          "text-amber-600 dark:text-amber-300",
+      };
+    }
+
+    // Anything else (e.g. "Signal Expired - No Targets Hit") — neutral
+    // blue-gray, never plain white/black.
     return {
       container:
-        "border-border/50 bg-muted/20",
+        "border-slate-500/30 bg-slate-500/10 dark:bg-slate-800/30",
       icon:
-        "text-muted-foreground",
+        "text-slate-400 dark:text-slate-400",
       text:
-        "text-muted-foreground",
+        "text-slate-500 dark:text-slate-300",
     };
   };
 
