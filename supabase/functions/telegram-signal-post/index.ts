@@ -438,7 +438,7 @@ function formatSignalMessage(signal: Signal): string {
     ).toUpperCase()
   );
 
-  const emoji = type === "BUY" ? "🟢" : "🔴";
+  const emoji = type === "BUY" ? " " : " ";
 
   const riskEmoji =
     signal.risk_level === "High"
@@ -610,7 +610,7 @@ function formatUpdateMessage(
     : `\n🟢 <b>Status: Trade Running</b>\n`;
 
   message += `\n━━━━━━━━━━━━━━━\n`;
-  message += `🌐 <b>TREND IS FRIEND</b>`;
+  message += `🌐 <b>trend is friend</b>`;
 
   return message;
 }
@@ -659,9 +659,9 @@ function formatIdeaMessage(idea: Idea): string {
 
     const directionEmoji =
       upperDirection === "BUY"
-        ? "🟢"
+        ? " "
         : upperDirection === "SELL"
-        ? "🔴"
+        ? " "
         : "📈";
 
     message +=
@@ -748,7 +748,7 @@ function formatIdeaMessage(idea: Idea): string {
   }
 
   message += `\n━━━━━━━━━━━━━━━\n`;
-  message += `🌐 <b>TREND IS FRIEND</b>`;
+  message += `🌐 <b>trend is friend</b>`;
 
   return message;
 }
@@ -797,7 +797,7 @@ function formatSessionMessage(
     message += `See you Monday for fresh Gold signals.\n`;
 
     message += `\n━━━━━━━━━━━━━━━\n`;
-    message += `🌐 <b>TREND IS FRIEND</b>`;
+    message += `🌐 <b>trend is friend</b>`;
 
     return message;
   }
@@ -810,7 +810,7 @@ function formatSessionMessage(
     message += `Wishing everyone a profitable week ahead 💪\n`;
 
     message += `\n━━━━━━━━━━━━━━━\n`;
-    message += `🌐 <b>TREND IS FRIEND</b>`;
+    message += `🌐 <b>trend is friend</b>`;
 
     return message;
   }
