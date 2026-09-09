@@ -57,52 +57,45 @@ function isAllowedForChannel(
 }
 
 /* =========================================================
-   TYPES
+   SIGNAL
 ========================================================= */
 
 interface Signal {
   id?: string;
   pair: string;
   type: string;
-
   entry: string;
   tp1: string;
   tp2?: string;
   tp3?: string;
   tp4?: string;
   sl: string;
-
   risk_level?: string;
   signal_type?: string;
   analysis_reason?: string;
-
   category?: string;
   main_category?: string;
-
   profit_note?: string;
-
   tp1_hit?: boolean;
   tp2_hit?: boolean;
   tp3_hit?: boolean;
   tp4_hit?: boolean;
   sl_hit?: boolean;
 
+  // Telegram original signal message
   telegram_message_id?: number | string;
   telegram_chat_id?: string;
 }
 
 interface Idea {
   id?: string;
-
   title?: string;
   description?: string;
-
   image_url?: string | null;
   chart_url?: string | null;
 
   category?: string;
   main_category?: string;
-
   pair?: string;
   symbol?: string;
 
@@ -117,7 +110,6 @@ interface Idea {
 
   analysis?: string;
   analysis_reason?: string;
-
   timeframe?: string;
   risk_level?: string;
 }
@@ -153,10 +145,18 @@ function telegramConfigured(): boolean {
 
 /* =========================================================
    SEND TELEGRAM TEXT
+
+   IMPORTANT:
+   replyToMessageId + quote=true
+
+   This creates a Telegram reply with the original
+   signal highlighted/quoted above the update.
 ========================================================= */
 
 async function sendTelegramMessage(
-  message: string
+  message: string,
+  replyToMessageId?: number | string,
+  replyChatId?: string
 ): Promise<{
   success: boolean;
   error?: string;
@@ -172,6 +172,45 @@ async function sendTelegramMessage(
 
   const safeMessage = String(message || "").slice(0, 4090);
 
+  const chatId =
+    String(replyChatId || TELEGRAM_CHANNEL_ID);
+
+  const replyId =
+    replyToMessageId !== undefined &&
+    replyToMessageId !== null &&
+    String(replyToMessageId).trim() !== ""
+      ? Number(replyToMessageId)
+      : undefined;
+
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text: safeMessage,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  };
+
+  /*
+   * =======================================================
+   * CRITICAL FIX
+   *
+   * Telegram highlighted quote/reply requires
+   * reply_parameters with quote: true.
+   *
+   * reply_to_message_id alone only gives a normal reply.
+   * =======================================================
+   */
+  if (
+    replyId !== undefined &&
+    Number.isFinite(replyId) &&
+    replyId > 0
+  ) {
+    body.reply_parameters = {
+      message_id: replyId,
+      allow_sending_without_reply: true,
+      quote: true,
+    };
+  }
+
   try {
     const response = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -180,12 +219,7 @@ async function sendTelegramMessage(
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHANNEL_ID,
-          text: safeMessage,
-          parse_mode: "HTML",
-          disable_web_page_preview: true,
-        }),
+        body: JSON.stringify(body),
       }
     );
 
@@ -201,15 +235,40 @@ async function sendTelegramMessage(
       return {
         success: true,
         message_id: result?.result?.message_id,
-        chat_id: String(TELEGRAM_CHANNEL_ID),
+        chat_id: chatId,
       };
     }
 
-    /* Plain text fallback */
+    /*
+     * HTML formatting failed.
+     * Retry as plain text.
+     */
+
     const plainText = safeMessage
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/p>/gi, "\n")
       .replace(/<[^>]*>/g, "");
+
+    const plainBody: Record<string, unknown> = {
+      chat_id: chatId,
+      text: plainText.slice(0, 4090),
+      disable_web_page_preview: true,
+    };
+
+    /*
+     * Keep the highlighted quote on retry.
+     */
+    if (
+      replyId !== undefined &&
+      Number.isFinite(replyId) &&
+      replyId > 0
+    ) {
+      plainBody.reply_parameters = {
+        message_id: replyId,
+        allow_sending_without_reply: true,
+        quote: true,
+      };
+    }
 
     const retry = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -218,11 +277,7 @@ async function sendTelegramMessage(
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHANNEL_ID,
-          text: plainText.slice(0, 4090),
-          disable_web_page_preview: true,
-        }),
+        body: JSON.stringify(plainBody),
       }
     );
 
@@ -234,11 +289,15 @@ async function sendTelegramMessage(
       JSON.stringify(retryResult)
     );
 
-    if (retry.ok && retryResult?.ok === true) {
+    if (
+      retry.ok &&
+      retryResult?.ok === true
+    ) {
       return {
         success: true,
-        message_id: retryResult?.result?.message_id,
-        chat_id: String(TELEGRAM_CHANNEL_ID),
+        message_id:
+          retryResult?.result?.message_id,
+        chat_id: chatId,
       };
     }
 
@@ -250,7 +309,10 @@ async function sendTelegramMessage(
         `Telegram HTTP ${response.status}`,
     };
   } catch (error) {
-    console.error("Telegram request error:", error);
+    console.error(
+      "Telegram request error:",
+      error
+    );
 
     return {
       success: false,
@@ -258,94 +320,6 @@ async function sendTelegramMessage(
         error instanceof Error
           ? error.message
           : "Telegram request failed",
-    };
-  }
-}
-
-/* =========================================================
-   EDIT TELEGRAM MESSAGE
-========================================================= */
-
-async function editTelegramMessage(
-  messageId: number,
-  chatId: string,
-  message: string
-): Promise<{
-  success: boolean;
-  error?: string;
-  message_id?: number;
-  chat_id?: string;
-}> {
-  if (!telegramConfigured()) {
-    return {
-      success: false,
-      error: "Telegram secrets are missing",
-    };
-  }
-
-  const safeMessage = String(message || "").slice(0, 4090);
-
-  try {
-    const response = await fetch(
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          chat_id: chatId || TELEGRAM_CHANNEL_ID,
-          message_id: messageId,
-          text: safeMessage,
-          parse_mode: "HTML",
-          disable_web_page_preview: true,
-        }),
-      }
-    );
-
-    const result = await response.json();
-
-    console.log(
-      "Telegram editMessageText:",
-      response.status,
-      JSON.stringify(result)
-    );
-
-    if (response.ok && result?.ok === true) {
-      return {
-        success: true,
-        message_id: messageId,
-        chat_id: chatId,
-      };
-    }
-
-    if (
-      String(result?.description || "")
-        .toLowerCase()
-        .includes("message is not modified")
-    ) {
-      return {
-        success: true,
-        message_id: messageId,
-        chat_id: chatId,
-      };
-    }
-
-    return {
-      success: false,
-      error:
-        result?.description ||
-        `Telegram HTTP ${response.status}`,
-    };
-  } catch (error) {
-    console.error("Telegram edit error:", error);
-
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Telegram edit failed",
     };
   }
 }
@@ -402,11 +376,16 @@ async function sendTelegramPhoto(
       JSON.stringify(result)
     );
 
-    if (response.ok && result.ok === true) {
+    if (
+      response.ok &&
+      result.ok === true
+    ) {
       return {
         success: true,
-        message_id: result?.result?.message_id,
-        chat_id: String(TELEGRAM_CHANNEL_ID),
+        message_id:
+          result?.result?.message_id,
+        chat_id:
+          String(TELEGRAM_CHANNEL_ID),
       };
     }
 
@@ -421,8 +400,10 @@ async function sendTelegramPhoto(
     if (fallback.success) {
       return {
         success: true,
-        message_id: fallback.message_id,
-        chat_id: fallback.chat_id,
+        message_id:
+          fallback.message_id,
+        chat_id:
+          fallback.chat_id,
       };
     }
 
@@ -434,7 +415,10 @@ async function sendTelegramPhoto(
         "Telegram photo failed",
     };
   } catch (error) {
-    console.error("Telegram photo error:", error);
+    console.error(
+      "Telegram photo error:",
+      error
+    );
 
     const fallback =
       await sendTelegramMessage(caption);
@@ -442,8 +426,10 @@ async function sendTelegramPhoto(
     if (fallback.success) {
       return {
         success: true,
-        message_id: fallback.message_id,
-        chat_id: fallback.chat_id,
+        message_id:
+          fallback.message_id,
+        chat_id:
+          fallback.chat_id,
       };
     }
 
@@ -459,13 +445,13 @@ async function sendTelegramPhoto(
 }
 
 /* =========================================================
-   NEW SIGNAL MESSAGE
+   NEW SIGNAL
 ========================================================= */
 
 function formatSignalMessage(
   signal: Signal
 ): string {
-  const type = String(
+  const rawType = String(
     signal.type ||
       (signal as any).action ||
       (signal as any).direction ||
@@ -473,290 +459,156 @@ function formatSignalMessage(
   ).toUpperCase();
 
   const directionEmoji =
-    type === "BUY"
+    rawType === "BUY"
       ? "💹"
-      : type === "SELL"
+      : rawType === "SELL"
       ? "🔻"
-      : "📊";
+      : "";
 
   let message =
-    `New Signal 🚦               °trend is friend°\n`;
+    `New Signal 🚦\n`;
 
   message +=
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    `━━━━━━━━━━━━━━━━━\n`;
 
   message +=
-    `📊 <b>${escapeHtml(signal.pair)}</b>  ` +
-    `${type} ${directionEmoji}         ` +
-    `<b>(Open)</b>\n\n`;
+    `📊 ${escapeHtml(signal.pair)}  ${escapeHtml(rawType)} ${directionEmoji}\n`;
 
   message +=
-    `💰 Entry: <code>${escapeHtml(
-      signal.entry
-    )}</code>\n`;
+    `                                      (Open)\n\n`;
 
   message +=
-    `🎯 TP1: <code>${escapeHtml(
-      signal.tp1
-    )}</code>\n`;
+    `💰 Entry: ${escapeHtml(signal.entry)}\n`;
+
+  message +=
+    `🎯 TP1: ${escapeHtml(signal.tp1)}\n`;
 
   if (signal.tp2) {
     message +=
-      `🎯 TP2: <code>${escapeHtml(
-        signal.tp2
-      )}</code>\n`;
+      `🎯 TP2: ${escapeHtml(signal.tp2)}\n`;
   }
 
   if (signal.tp3) {
     message +=
-      `🎯 TP3: <code>${escapeHtml(
-        signal.tp3
-      )}</code>\n`;
+      `🎯 TP3: ${escapeHtml(signal.tp3)}\n`;
   }
 
   if (signal.tp4) {
     message +=
-      `🎯 TP4: <code>${escapeHtml(
-        signal.tp4
-      )}</code>\n`;
+      `🎯 TP4: ${escapeHtml(signal.tp4)}\n`;
   }
 
   message +=
-    `❌ SL: <code>${escapeHtml(
-      signal.sl
-    )}</code>\n`;
+    `❌ SL: ${escapeHtml(signal.sl)}\n`;
 
   message +=
     `━━━━━━━━━━━━━━━\n`;
 
-  message +=
-    `⏱ Type: ${
-      signal.signal_type
-        ? escapeHtml(signal.signal_type)
-        : "Scalping"
-    }\n`;
+  if (signal.signal_type) {
+    message +=
+      `⏱ Type: ${escapeHtml(signal.signal_type)}\n`;
+  } else {
+    message +=
+      `⏱ Type: Scalping\n`;
+  }
 
   return message;
 }
 
 /* =========================================================
-   SIGNAL UPDATE HEADLINES
+   SIGNAL UPDATE TEXT
 ========================================================= */
 
 const UPDATE_META: Record<
   string,
-  {
-    headline: string;
-    banner: string;
-  }
+  { headline: string; banner: string }
 > = {
   tp1_hit: {
-    headline: "TP 1 Achieved ✅",
-    banner: "",
+    headline:
+      "TP 1 Hit ✅ SL moved to B.E",
+    banner: "🎯",
   },
 
   tp2_hit: {
-    headline: "TP 2 Achieved ✅",
-    banner: "",
+    headline:
+      "TP 2 Secured! 💰 Enjoy Profit 💵",
+    banner: "🎯",
   },
 
   tp3_hit: {
     headline:
-      "🏆 FINAL TARGET HIT 🟢✅✅✅",
-    banner: "",
+      "TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅",
+    banner: "🏆",
   },
 
   tp4_hit: {
     headline:
-      "🏆 FINAL TARGET HIT 🟢✅✅✅",
-    banner: "",
+      "TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅",
+    banner: "🏆",
   },
 
   sl_hit: {
     headline:
-      "🛑 STOP LOSS HIT 🔴",
-    banner: "",
+      "SL Hit ❌",
+    banner: "🛑",
   },
 
   expired: {
     headline:
-      "⚪ BREAK-EVEN EXIT ⚪",
-    banner: "",
+      "⌛ SIGNAL EXPIRED",
+    banner: "⚪",
   },
 };
 
 /* =========================================================
-   SIGNAL UPDATE MESSAGE
+   SIGNAL UPDATE
+
+   ONLY the update text is sent.
+
+   Original signal is NOT edited.
+   Original signal is NOT copied again.
+
+   Telegram itself creates the highlighted quote.
 ========================================================= */
 
 function formatUpdateMessage(
   signal: Signal,
   updateType?: string
 ): string {
-  const type = String(
-    signal.type ||
-      (signal as any).action ||
-      (signal as any).direction ||
-      ""
-  ).toUpperCase();
-
   const isSl =
     updateType === "sl_hit";
-
-  const isClosingEvent =
-    updateType === "tp3_hit" ||
-    updateType === "tp4_hit" ||
-    updateType === "expired" ||
-    isSl;
 
   let meta =
     UPDATE_META[updateType || ""] || {
       headline: "🔔 SIGNAL UPDATE",
-      banner: "",
+      banner: "🔔",
     };
 
   /*
-   * TP1 hit ke baad agar SL hit hota hai,
-   * usay Break-Even Exit show karein.
+   * TP1 already hit + SL hit
+   * = Break-even exit.
    */
-  if (isSl && signal.tp1_hit) {
+  if (
+    isSl &&
+    signal.tp1_hit
+  ) {
     meta = {
       headline:
-        "⚪ BREAK-EVEN EXIT ⚪",
-      banner: "",
+        "Signal Closed at Breakeven💵",
+      banner: "⚪",
     };
   }
 
-  let message =
-    `${meta.headline}\n`;
-
-  message +=
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-  message +=
-    `📊 <b>${escapeHtml(
-      signal.pair
-    )}</b>  ${type}\n\n`;
-
-  message +=
-    `💰 Entry: <code>${escapeHtml(
-      signal.entry
-    )}</code>\n`;
-
-  message +=
-    `${signal.tp1_hit ? "✅" : "⏳"} TP1: ` +
-    `<code>${escapeHtml(
-      signal.tp1
-    )}</code>\n`;
-
-  if (signal.tp2) {
-    message +=
-      `${signal.tp2_hit ? "✅" : "⏳"} TP2: ` +
-      `<code>${escapeHtml(
-        signal.tp2
-      )}</code>\n`;
-  }
-
-  if (signal.tp3) {
-    message +=
-      `${signal.tp3_hit ? "✅" : "⏳"} TP3: ` +
-      `<code>${escapeHtml(
-        signal.tp3
-      )}</code>\n`;
-  }
-
-  if (signal.tp4) {
-    message +=
-      `${signal.tp4_hit ? "✅" : "⏳"} TP4: ` +
-      `<code>${escapeHtml(
-        signal.tp4
-      )}</code>\n`;
-  }
-
-  message +=
-    `❌ SL: <code>${escapeHtml(
-      signal.sl
-    )}</code>\n`;
-
-  message +=
-    `━━━━━━━━━━━━━━━\n`;
-
   /*
-   * EXACT RESULT TEXT
+   * ONLY update text.
    */
-
-  if (updateType === "tp1_hit") {
-    message +=
-      `TP 1 Hit ✅ SL moved to B.E\n`;
-  }
-
-  if (updateType === "tp2_hit") {
-    message +=
-      `TP 2 Secured! 💰 Enjoy Profit 💵\n`;
-  }
-
-  if (
-    updateType === "tp3_hit" ||
-    updateType === "tp4_hit"
-  ) {
-    message +=
-      `TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅\n`;
-  }
-
-  if (isSl && signal.tp1_hit) {
-    message +=
-      `Signal Closed at Breakeven💵\n`;
-  }
-
-  if (isSl && !signal.tp1_hit) {
-    message +=
-      `SL Hit ❌\n`;
-  }
-
-  if (updateType === "expired") {
-    message +=
-      `Signal Closed at Breakeven💵\n`;
-  }
-
-  /*
-   * Existing database profit_note preserve.
-   * Duplicate text ko dobara show nahi karega.
-   */
-  if (
-    signal.profit_note &&
-    ![
-      "TP 1 Hit ✅ SL moved to B.E",
-      "TP 2 Secured! 💰 Enjoy Profit 💵",
-      "TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅",
-      "SL Hit ❌",
-      "Signal Closed at Breakeven💵",
-    ].includes(signal.profit_note)
-  ) {
-    message +=
-      `\n📝 <i>${escapeHtml(
-        signal.profit_note
-      )}</i>\n`;
-  }
-
-  if (isClosingEvent) {
-    message +=
-      `\n🏁 <b>Status: Trade Closed</b>\n`;
-  } else {
-    message +=
-      `\n🟢 <b>Status: Trade Running</b>\n`;
-  }
-
-  message +=
-    `\n━━━━━━━━━━━━━━━\n`;
-
-  message +=
-    `°trend is friend°`;
-
-  return message;
+  return `${meta.banner} <b>${escapeHtml(
+    meta.headline
+  )}</b> ${meta.banner}`;
 }
 
 /* =========================================================
-   NEW IDEA MESSAGE
+   NEW IDEA
 ========================================================= */
 
 function formatIdeaMessage(
@@ -784,13 +636,15 @@ function formatIdeaMessage(
     `━━━━━━━━━━━━━━━\n\n`;
 
   message +=
-    `📂 <b>Category:</b> ` +
-    `${escapeHtml(category)}\n`;
+    `📂 <b>Category:</b> ${escapeHtml(
+      category
+    )}\n`;
 
   if (pair) {
     message +=
-      `📊 <b>Pair:</b> ` +
-      `${escapeHtml(pair)}\n`;
+      `📊 <b>Pair:</b> ${escapeHtml(
+        pair
+      )}\n`;
   }
 
   if (direction) {
@@ -827,7 +681,10 @@ function formatIdeaMessage(
       )}</code>\n`;
   }
 
-  if (idea.tp1 || idea.tp) {
+  if (
+    idea.tp1 ||
+    idea.tp
+  ) {
     message +=
       `🎯 <b>TP:</b> ` +
       `<code>${escapeHtml(
@@ -912,7 +769,10 @@ function formatSessionMessage(
   sessionType: string,
   stats?: WeekStats
 ): string {
-  if (sessionType === "friday_close") {
+  if (
+    sessionType ===
+    "friday_close"
+  ) {
     let message =
       `🌙 <b>MARKET CLOSED FOR THE WEEKEND</b> 🌙\n`;
 
@@ -924,7 +784,8 @@ function formatSessionMessage(
 
     if (
       stats &&
-      (stats.tpHits || stats.slHits)
+      (stats.tpHits ||
+        stats.slHits)
     ) {
       message +=
         `📊 <b>This Week's Performance</b>\n`;
@@ -932,12 +793,18 @@ function formatSessionMessage(
       message +=
         `✅ Targets hit: <b>${stats.tpHits ?? 0}</b>\n`;
 
-      if (stats.slHits !== undefined) {
+      if (
+        stats.slHits !==
+        undefined
+      ) {
         message +=
           `🛑 SL hit: <b>${stats.slHits}</b>\n`;
       }
 
-      if (stats.winRate !== undefined) {
+      if (
+        stats.winRate !==
+        undefined
+      ) {
         message +=
           `🏆 Win rate: <b>${stats.winRate}%</b>\n`;
       }
@@ -970,7 +837,10 @@ function formatSessionMessage(
     return message;
   }
 
-  if (sessionType === "monday_reopen") {
+  if (
+    sessionType ===
+    "monday_reopen"
+  ) {
     let message =
       `☀️ <b>WELCOME BACK, TRADERS</b> ☀️\n`;
 
@@ -999,7 +869,7 @@ function formatSessionMessage(
 }
 
 /* =========================================================
-   IDEA ACTION DETECTOR
+   DETECT IDEA ACTION
 ========================================================= */
 
 function isIdeaAction(
@@ -1033,20 +903,23 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: "POST method required",
+        error:
+          "POST method required",
       }),
       {
         status: 405,
         headers: {
           ...corsHeaders,
-          "Content-Type": "application/json",
+          "Content-Type":
+            "application/json",
         },
       }
     );
   }
 
   try {
-    const body = await req.json();
+    const body =
+      await req.json();
 
     console.log(
       "Telegram function received:",
@@ -1063,10 +936,12 @@ serve(async (req) => {
       force,
     } = body;
 
-    const phase = getMarketPhase();
+    const phase =
+      getMarketPhase();
 
     /*
-     * Old auto-signal callers compatibility
+     * Older auto-signal callers sent signal
+     * without top-level action.
      */
     const resolvedAction =
       action ||
@@ -1090,27 +965,28 @@ serve(async (req) => {
        NEW SIGNAL
     ===================================================== */
 
-    if (resolvedAction === "new_signal") {
+    if (
+      resolvedAction ===
+      "new_signal"
+    ) {
       if (!signal) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Signal data required",
+            error:
+              "Signal data required",
           }),
           {
             status: 400,
             headers: {
               ...corsHeaders,
-              "Content-Type": "application/json",
+              "Content-Type":
+                "application/json",
             },
           }
         );
       }
 
-      /*
-       * Weekday = Gold only
-       * Weekend = Crypto / Synthetic
-       */
       if (
         !force &&
         !isAllowedForChannel(
@@ -1130,8 +1006,16 @@ serve(async (req) => {
         };
       } else {
         const message =
-          formatSignalMessage(signal);
+          formatSignalMessage(
+            signal
+          );
 
+        /*
+         * New signal = normal Telegram message.
+         *
+         * The returned message_id must be stored
+         * with the signal for future TP/SL replies.
+         */
         result =
           await sendTelegramMessage(
             message
@@ -1141,20 +1025,29 @@ serve(async (req) => {
 
     /* =====================================================
        SIGNAL UPDATE
+
+       IMPORTANT:
+       DO NOT EDIT ORIGINAL SIGNAL.
+
+       SEND ONLY UPDATE TEXT AS HIGHLIGHTED QUOTE REPLY.
     ===================================================== */
 
-    else if (action === "update") {
+    else if (
+      action === "update"
+    ) {
       if (!signal) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Signal data required",
+            error:
+              "Signal data required",
           }),
           {
             status: 400,
             headers: {
               ...corsHeaders,
-              "Content-Type": "application/json",
+              "Content-Type":
+                "application/json",
             },
           }
         );
@@ -1178,6 +1071,16 @@ serve(async (req) => {
             `Pair "${signal.pair}" update not posted — outside allowed "${phase}" session`,
         };
       } else {
+        /*
+         * This contains ONLY:
+         *
+         * TP 1 Hit...
+         * TP 2 Secured...
+         * TP 3...
+         * SL Hit...
+         *
+         * No full signal is repeated.
+         */
         const message =
           formatUpdateMessage(
             signal,
@@ -1191,21 +1094,47 @@ serve(async (req) => {
           signal.telegram_chat_id ||
           TELEGRAM_CHANNEL_ID;
 
-        if (existingMessageId) {
+        /*
+         * =================================================
+         * CRITICAL:
+         *
+         * Send as a QUOTED REPLY to the original signal.
+         *
+         * reply_parameters.quote = true
+         * =================================================
+         */
+        if (
+          existingMessageId !==
+            undefined &&
+          existingMessageId !==
+            null &&
+          String(
+            existingMessageId
+          ).trim() !== "" &&
+          Number(
+            existingMessageId
+          ) > 0
+        ) {
           result =
-            await editTelegramMessage(
-              Number(existingMessageId),
-              String(existingChatId),
-              message
+            await sendTelegramMessage(
+              message,
+              Number(
+                existingMessageId
+              ),
+              String(
+                existingChatId
+              )
             );
 
           /*
-           * If original message cannot be edited,
-           * send a fresh update.
+           * If quoted reply fails,
+           * send normal update.
+           *
+           * Original signal is NEVER edited.
            */
           if (!result.success) {
             console.log(
-              "Edit failed, falling back to new message:",
+              "Quoted Telegram reply failed, sending normal update:",
               result.error
             );
 
@@ -1215,6 +1144,13 @@ serve(async (req) => {
               );
           }
         } else {
+          /*
+           * No original message ID available.
+           */
+          console.log(
+            "No telegram_message_id found; sending normal update."
+          );
+
           result =
             await sendTelegramMessage(
               message
@@ -1228,7 +1164,8 @@ serve(async (req) => {
     ===================================================== */
 
     else if (
-      action === "session_announcement"
+      action ===
+      "session_announcement"
     ) {
       if (!session_type) {
         return new Response(
@@ -1265,7 +1202,9 @@ serve(async (req) => {
     ===================================================== */
 
     else if (
-      isIdeaAction(resolvedAction) ||
+      isIdeaAction(
+        resolvedAction
+      ) ||
       idea
     ) {
       if (!idea) {
@@ -1287,7 +1226,9 @@ serve(async (req) => {
       }
 
       const message =
-        formatIdeaMessage(idea);
+        formatIdeaMessage(
+          idea
+        );
 
       const imageUrl =
         idea.image_url ||
@@ -1297,18 +1238,16 @@ serve(async (req) => {
       console.log(
         "Auto idea detected:",
         JSON.stringify({
-          action: resolvedAction,
-
+          action:
+            resolvedAction,
           category:
             idea.category ||
             idea.main_category ||
             null,
-
           pair:
             idea.pair ||
             idea.symbol ||
             null,
-
           imageUrl,
         })
       );
@@ -1335,13 +1274,12 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Invalid action",
-
+          error:
+            "Invalid action",
           received_action:
             resolvedAction ||
             action ||
             null,
-
           hint:
             "Use new_signal, update, or new_idea",
         }),
@@ -1363,30 +1301,36 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: result.success,
+        success:
+          result.success,
 
-        message: result.success
-          ? result.skipped
-            ? "Skipped (outside allowed market session)"
-            : "Telegram post sent successfully"
-          : "Telegram post failed",
+        message:
+          result.success
+            ? result.skipped
+              ? "Skipped (outside allowed market session)"
+              : "Telegram post sent successfully"
+            : "Telegram post failed",
 
         skipped:
           result.skipped || false,
 
         message_id:
-          result.message_id ?? null,
+          result.message_id ??
+          null,
 
         chat_id:
-          result.chat_id ?? null,
+          result.chat_id ??
+          null,
 
         error:
-          result.error || null,
+          result.error ||
+          null,
       }),
       {
-        status: result.success
-          ? 200
-          : 500,
+        status:
+          result.success
+            ? 200
+            : 500,
 
         headers: {
           ...corsHeaders,
