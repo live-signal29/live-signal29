@@ -485,7 +485,7 @@ function formatSignalMessage(signal: Signal): string {
   message += `\n📍 <b>Status: Position Opened</b>\n`;
 
   message += `\n━━━━━━━━━━━━━━━\n`;
-  message += `🌐 <b>TREND IS FRIEND</b>`;
+  message += `🌐 <b>trend is friend</b>`;
 
   return message;
 }
@@ -499,23 +499,23 @@ const UPDATE_META: Record<
   { headline: string; banner: string }
 > = {
   tp1_hit: {
-    headline: "✅ TP1 ACHIEVED",
+    headline: "TP 1 Hit ✅ SL moved to B.E",
     banner: "🟢",
   },
   tp2_hit: {
-    headline: "✅ TP2 ACHIEVED",
+    headline: "✅ TP 2 Hit secured profit",
     banner: "🟢",
   },
   tp3_hit: {
-    headline: "🏆 FINAL TARGET HIT",
+    headline: "🏆 FINAL TARGET HIT Enjoy Profit ✅",
     banner: "🟢",
   },
   tp4_hit: {
-    headline: "✅ TP4 ACHIEVED",
+    headline: "✅ Last target hit enjoy full profit ✅",
     banner: "🟢",
   },
   sl_hit: {
-    headline: "🛑 STOP LOSS HIT",
+    headline: "SL Hit ❌ recover Soon ",
     banner: "🔴",
   },
   expired: {
@@ -553,7 +553,7 @@ function formatUpdateMessage(
 
   if (isSl && signal.tp1_hit) {
     meta = {
-      headline: "⚪ BREAK-EVEN EXIT",
+      headline: "Signal Closed at Breakeven",
       banner: "⚪",
     };
   }
