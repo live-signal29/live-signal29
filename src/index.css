@@ -43,7 +43,10 @@
 
     /* Trading Colors */
     --success: 161 94% 30%;
+    --success-foreground: 0 0% 100%;
+    --success-deep: 161 94% 22%;
     --warning: 45 93% 47%;
+    --warning-foreground: 222 47% 11%;
     --buy: 161 94% 30%;
     --sell: 346 84% 61%;
   }
@@ -79,7 +82,10 @@
     --ring: 161 94% 40%;
 
     --success: 161 94% 40%;
+    --success-foreground: 225 40% 5%;
+    --success-deep: 161 94% 28%;
     --warning: 45 93% 53%;
+    --warning-foreground: 225 40% 5%;
     --buy: 161 94% 40%;
     --sell: 346 84% 65%;
   }
