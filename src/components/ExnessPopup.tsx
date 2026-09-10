@@ -2,8 +2,15 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import exnessLogo from "@/assets/exness-logo-real.png";
 import xmLogo from "@/assets/xm-logo-real.png";
+import trendoLogo from "@/assets/trendo-logo.jpg";
+import { openExternal } from "@/lib/openExternal";
 
-const brokers = [
+const brokers: {
+  name: string;
+  url: string;
+  logo: string | null;
+  description: string;
+}[] = [
   {
     name: "Exness",
     url: "https://one.exnessonelink.com/a/vtkbbmje",
@@ -15,7 +22,13 @@ const brokers = [
     url: "https://www.xmwebsite.net/referral?token=8dCpm56oL4T6QLUFfmxdSg",
     logo: xmLogo,
     description: "Start Trading Now",
-  }
+  },
+  {
+    name: "Trendo Market",
+    url: "https://trendo.com/invite?market=googleplay&code=3317391",
+    logo: trendoLogo,
+    description: "Join Trendo Market",
+  },
 ];
 
 export const ExnessPopup = () => {
@@ -78,21 +91,29 @@ export const ExnessPopup = () => {
           <X className="w-2.5 h-2.5" />
         </button>
         
-        {/* LINK */}
-        <a 
-          href={broker.url} 
-          target="_blank" 
+        {/* LINK — opens via openExternal() so it escapes an in-app
+            WebView/Custom Tab on Android instead of staying "inside the
+            app" when this site is installed as a Play Store wrapper. */}
+        <a
+          href={broker.url}
+          target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => {
+            e.preventDefault();
+            openExternal(broker.url);
+          }}
           className="block group"
         >
           <div className="flex items-center gap-1.5">
             {/* SMALLER LOGO */}
             <div className="w-6 h-6 bg-background rounded-md p-1 flex items-center justify-center shadow-sm flex-shrink-0">
-              <img 
-                src={broker.logo} 
-                alt={broker.name} 
-                className="w-full h-full object-contain"
-              />
+              {broker.logo && (
+                <img
+                  src={broker.logo}
+                  alt={broker.name}
+                  className="w-full h-full object-contain"
+                />
+              )}
             </div>
             
             {/* SMALLER TEXT */}
