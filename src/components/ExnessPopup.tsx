@@ -15,6 +15,12 @@ const brokers = [
     url: "https://www.xmwebsite.net/referral?token=8dCpm56oL4T6QLUFfmxdSg",
     logo: xmLogo,
     description: "Start Trading Now",
+  },
+  {
+    name: "Trendo",
+    url: "https://trendo.com/invite?market=googleplay&code=3317391",
+    logo: trendoLogo,
+    description: "Trade Now",
   }
 ];
 
