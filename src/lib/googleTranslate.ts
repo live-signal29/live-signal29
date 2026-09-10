@@ -44,14 +44,33 @@ export function loadGoogleTranslate() {
   document.body.appendChild(script);
 }
 
+/**
+ * Deletes a cookie across every path/domain variant Google Translate
+ * might have written it under. A partial clear (e.g. only `path=/` with
+ * no domain) can leave the old cookie in place, which is why switching
+ * back to English sometimes silently did nothing before.
+ */
+function clearTranslateCookie() {
+  const host = window.location.hostname;
+  const domains = [host, `.${host}`, host.replace(/^www\./, ""), `.${host.replace(/^www\./, "")}`];
+  const expire = "expires=Thu, 01 Jan 1970 00:00:00 UTC";
+  document.cookie = `googtrans=; ${expire}; path=/;`;
+  for (const domain of domains) {
+    document.cookie = `googtrans=; ${expire}; path=/; domain=${domain}`;
+  }
+}
+
 /** Switches the visible site language. Pass "en" to restore the original text. */
 export function setSiteLanguage(code: string) {
   localStorage.setItem(SITE_LANG_KEY, code);
 
   if (code === "en") {
-    // Clearing the cookie + reload is the most reliable way to fully
-    // restore the original English text everywhere.
-    document.cookie = "googtrans=/en/en; path=/";
+    // Fully delete the cookie (not just overwrite it) and reload — this
+    // is the reliable way to restore the original English text
+    // everywhere. Overwriting with "/en/en" alone left old, more
+    // specific cookies (set by Google itself) in place, so English
+    // wouldn't actually come back.
+    clearTranslateCookie();
     window.location.reload();
     return;
   }
