@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,53 +39,53 @@ import { toast } from "sonner";
    LAZY COMPONENTS
 ========================================================= */
 
-const SignalForm = lazy(() => import("@/components/admin/SignalForm"));
+const SignalForm = lazyWithRetry(() => import("@/components/admin/SignalForm"));
 
-const SignalsList = lazy(
+const SignalsList = lazyWithRetry(
   () => import("@/components/admin/SignalsList")
 );
 
-const ChartAnalysisForm = lazy(
+const ChartAnalysisForm = lazyWithRetry(
   () => import("@/components/admin/ChartAnalysisForm")
 );
 
-const ChartAnalysisList = lazy(
+const ChartAnalysisList = lazyWithRetry(
   () => import("@/components/admin/ChartAnalysisList")
 );
 
-const UserManagement = lazy(
+const UserManagement = lazyWithRetry(
   () => import("@/components/admin/UserManagement")
 );
 
-const ActivityLog = lazy(
+const ActivityLog = lazyWithRetry(
   () => import("@/components/admin/ActivityLog")
 );
 
-const CouponManagement = lazy(
+const CouponManagement = lazyWithRetry(
   () => import("@/components/admin/CouponManagement")
 );
 
-const SpecialOfferManagement = lazy(
+const SpecialOfferManagement = lazyWithRetry(
   () => import("@/components/admin/SpecialOfferManagement")
 );
 
-const UserActivityDashboard = lazy(
+const UserActivityDashboard = lazyWithRetry(
   () => import("@/components/admin/UserActivityDashboard")
 );
 
-const AccountApplications = lazy(
+const AccountApplications = lazyWithRetry(
   () => import("@/components/admin/AccountApplications")
 );
 
-const PerformanceManagement = lazy(
+const PerformanceManagement = lazyWithRetry(
   () => import("@/components/admin/PerformanceManagement")
 );
 
-const HeadlinesManagement = lazy(
+const HeadlinesManagement = lazyWithRetry(
   () => import("@/components/admin/HeadlinesManagement")
 );
 
-const MT5CopierManagement = lazy(
+const MT5CopierManagement = lazyWithRetry(
   () => import("@/components/admin/MT5CopierManagement")
 );
 
@@ -542,6 +544,7 @@ const AdminDashboard = () => {
 
         </div>
 
+        <ErrorBoundary label="This admin section failed to load.">
         <Suspense fallback={<TabLoader />}>
 
           {/* =================================================
@@ -764,6 +767,7 @@ const AdminDashboard = () => {
           )}
 
         </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* =====================================================
