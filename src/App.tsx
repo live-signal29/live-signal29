@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState, Suspense } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
@@ -141,8 +142,9 @@ const App = () => (
         <OfflineIndicator />
         <BrowserRouter>
           <div className="has-bottom-nav">
-            <Suspense fallback={<LoadingSpinner />}>
-              <Routes>
+            <ErrorBoundary label="Something went wrong loading this page.">
+              <Suspense fallback={<LoadingSpinner />}>
+                <Routes>
                 {/* Public routes */}
                 <Route path="/signal/:id" element={<SharedSignal />} />
                 <Route path="/login" element={<Login />} />
@@ -191,8 +193,9 @@ const App = () => (
                 <Route path="/compound" element={<ProtectedRoute><CompoundCalculator /></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
             <NavigationWrapper />
           </div>
         </BrowserRouter>
