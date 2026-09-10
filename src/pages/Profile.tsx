@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Mail, Phone, Calendar, Crown, CreditCard, Gift, Edit2, Check, X } from "lucide-react";
+import { Loader2, User, Mail, Phone, Calendar, Crown, CreditCard, Gift, Edit2, Check, X, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -125,6 +125,16 @@ const Profile = () => {
     setIsEditingName(false);
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -143,9 +153,19 @@ const Profile = () => {
       <main className="flex-1">
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl font-bold mb-8">
-              <span className="gradient-text">My Profile</span>
-            </h1>
+            <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+              <h1 className="text-4xl font-bold">
+                <span className="gradient-text">My Profile</span>
+              </h1>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
 
             {/* Plan Status Card */}
             <Card className={`mb-6 ${isPremium ? 'border-success bg-gradient-to-r from-success/10 to-success/5' : isTrial ? 'border-warning bg-warning/5' : 'border-destructive bg-destructive/5'}`}>
