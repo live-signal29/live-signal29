@@ -87,10 +87,8 @@ const SpecialOfferManagement = () => {
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      // Deactivate all other offers first
-      await supabase.from("special_offers").update({ is_active: false }).neq("id", id);
-
-      // Toggle this offer
+      // Multiple offers can be active and slide together in the
+      // carousel — no longer force-deactivating the others.
       const { error } = await supabase
         .from("special_offers")
         .update({ is_active: !currentStatus })
@@ -176,7 +174,8 @@ const SpecialOfferManagement = () => {
                   onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                 />
                 <label htmlFor="is_active" className="text-sm cursor-pointer">
-                  Activate this offer (Note: Only one offer can be active at a time)
+                  Activate this offer (shows in the Premium page banner —
+                  multiple active offers slide together)
                 </label>
               </div>
               <Button type="submit" className="w-full">
