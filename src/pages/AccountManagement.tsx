@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { type CarouselApi } from "@/components/ui/carousel";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { MT5CopierBanner } from "@/components/MT5CopierBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -243,6 +244,8 @@ const AccountManagement = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-8 space-y-16">
+        <MT5CopierBanner />
+
         {/* Hero Section */}
         <section className="text-center py-12 space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
