@@ -3,89 +3,85 @@
 @tailwind utilities;
 
 /* =========================================================
-   FOREX 7STARZ ULTRA-PREMIUM DESIGN SYSTEM
+   FOREX 7STARZ EXACT DESIGN SYSTEM
+   Dark Theme : Deep Pitch Obsidian + Neon Glows
+   Light Theme: Crisp Porcelain White + Modern Emerald/Cyan
    ========================================================= */
 
 @layer base {
-  /* ================= LIGHT THEME (Clean Fintech Glass) ================= */
+  /* ================= LIGHT THEME ================= */
   :root {
-    --background: 220 20% 97%;          /* Cool Slate-White Background */
-    --foreground: 224 71% 4%;           /* Deep Rich Black Text */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
 
-    --card: 0 0% 100%;                  /* Crisp Pure White */
-    --card-foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 160 84% 39%;             /* Modern Emerald Green */
+    --primary: 161 94% 30%;             /* Emerald Green */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 187 92% 38%;           /* Neon Cyan Accent */
+    --secondary: 187 92% 38%;           /* Cyan */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14% 96%;               /* Subtle Light Grey (NO YELLOW/ORANGE TINT) */
-    --muted-foreground: 220 9% 46%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 215 16% 45%;
 
-    --accent: 38 92% 50%;               /* Premium Luxury Gold */
+    --accent: 45 93% 47%;               /* Gold Accent */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 348 83% 47%;
+    --destructive: 346 84% 61%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;               /* Soft Light Grey Border */
-    --input: 220 14% 96%;                /* Clean Slate Input Background */
-    --ring: 160 84% 39%;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 161 94% 30%;
 
     --radius: 1rem;
 
-    /* Trading & Status Colors */
-    --success: 160 84% 39%;
-    --success-foreground: 0 0% 100%;
-    --success-deep: 160 84% 20%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 224 71% 4%;
-    --buy: 160 84% 39%;
-    --sell: 348 83% 47%;
+    /* Trading Colors */
+    --success: 161 94% 30%;
+    --warning: 45 93% 47%;
+    --buy: 161 94% 30%;
+    --sell: 346 84% 61%;
   }
 
-  /* ================= DARK THEME (Deep Obsidian + Cyber Neon) ================= */
+  /* ================= DARK THEME (FOREX7STARZ EXACT) ================= */
   .dark {
-    --background: 225 35% 5%;           /* Deep Obsidian Black #060913 */
-    --foreground: 210 40% 98%;
+    --background: 225 40% 5%;             /* Pitch Obsidian Black #060913 */
+    --foreground: 0 0% 100%;
 
-    --card: 225 30% 8%;                 /* Elevated Dark Glass #0B0E1B */
-    --card-foreground: 210 40% 98%;
+    --card: 224 35% 8%;                  /* Elevated Dark Card #0C101D */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 225 30% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 224 35% 8%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 160 100% 45%;            /* Neon Emerald */
-    --primary-foreground: 225 35% 5%;
+    --primary: 161 94% 40%;              /* Neon Emerald Green */
+    --primary-foreground: 225 40% 5%;
 
-    --secondary: 187 100% 48%;          /* Cyber Cyan */
-    --secondary-foreground: 225 35% 5%;
+    --secondary: 187 92% 45%;            /* Neon Cyan */
+    --secondary-foreground: 225 40% 5%;
 
-    --muted: 225 20% 12%;               /* Dark Glass Slate */
-    --muted-foreground: 217 19% 70%;
+    --muted: 224 25% 14%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 43 100% 52%;              /* Forex Gold Glow */
-    --accent-foreground: 225 35% 5%;
+    --accent: 45 93% 53%;                /* Forex Gold Accent */
+    --accent-foreground: 225 40% 5%;
 
-    --destructive: 348 100% 63%;
+    --destructive: 346 84% 65%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 225 20% 16%;
-    --input: 225 20% 12%;
-    --ring: 160 100% 45%;
+    --border: 224 25% 16%;
+    --input: 224 25% 16%;
+    --ring: 161 94% 40%;
 
-    --success: 160 100% 45%;
-    --success-foreground: 225 35% 5%;
-    --success-deep: 160 100% 28%;
-    --warning: 43 100% 52%;
-    --warning-foreground: 225 35% 5%;
-    --buy: 160 100% 45%;
-    --sell: 348 100% 63%;
+    --success: 161 94% 40%;
+    --warning: 45 93% 53%;
+    --buy: 161 94% 40%;
+    --sell: 346 84% 65%;
   }
 }
 
@@ -95,91 +91,179 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-300 antialiased;
+    @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
   }
 }
 
 /* =========================================================
-   COMPONENTS & STYLING FIXES
+   ANIMATED FOREX7STARZ COMPONENTS & NEON GLOWS
    ========================================================= */
 
 @layer components {
 
-  /* Modern Card Styling */
+  /* Modern Card */
   .modern-card, .starz-card {
     background: hsl(var(--card));
     color: hsl(var(--card-foreground));
     border: 1px solid hsl(var(--border));
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
-    @apply rounded-2xl p-5 transition-all duration-300;
+    @apply rounded-2xl p-4 transition-all duration-300;
   }
 
   .modern-card:hover, .starz-card:hover {
-    border-color: hsl(var(--primary) / 0.4);
-    box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.15);
+    @apply border-primary/40;
+    box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.15);
   }
 
-  /* Fixed Input Box Look */
+  /* Modern Input */
   .modern-input {
-    background-color: hsl(var(--input));
+    background-color: hsl(var(--muted));
     color: hsl(var(--foreground));
     border: 1px solid hsl(var(--border));
-    @apply rounded-2xl px-4 py-3.5 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200;
+    @apply rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all;
   }
 
-  /* Premium Action Buttons */
+  /* Modern Button */
   .btn-modern {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
     color: #ffffff;
-    box-shadow: 0 4px 15px -3px hsl(var(--primary) / 0.4);
-    @apply rounded-2xl font-semibold px-6 py-3.5 hover:opacity-95 active:scale-[0.98] transition-all duration-200;
+    @apply rounded-2xl font-semibold px-6 py-3 shadow-md hover:opacity-95 active:scale-[0.98] transition-all;
   }
 
-  /* Fixed Bottom Navigation Glass Effect */
-  .glass-navbar {
-    background: hsl(var(--card) / 0.85);
-    backdrop-filter: blur(16px);
-    border-top: 1px solid hsl(var(--border));
-  }
-
-  /* Profile Avatar Ring */
+  /* Neon Glowing Profile Ring (Exact Aziz Avatar Ring) */
   .avatar-neon-ring {
     @apply relative flex items-center justify-center rounded-full p-[2px];
-    background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #f59e0b 100%);
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-    animation: spin-glow 8s linear infinite;
+    background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #eab308 100%);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 35px rgba(6, 182, 212, 0.2);
+    animation: spin-glow 6s linear infinite;
   }
 
-  /* Category Badges */
+  /* Category Badges (Gold, Forex Green, Crypto Cyan, Deriv Purple) */
   .badge-gold {
-    @apply bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold rounded-xl px-3 py-1;
+    @apply bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 font-semibold rounded-xl px-3 py-1.5;
+    box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.1);
   }
 
   .badge-emerald {
-    @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold rounded-xl px-3 py-1;
+    @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold rounded-xl px-3 py-1.5;
+    box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.1);
   }
 
   .badge-cyan {
-    @apply bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-semibold rounded-xl px-3 py-1;
+    @apply bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-semibold rounded-xl px-3 py-1.5;
+    box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.1);
+  }
+
+  .badge-purple {
+    @apply bg-purple-500/10 text-purple-400 border border-purple-500/30 font-semibold rounded-xl px-3 py-1.5;
+    box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.1);
+  }
+
+  /* Glowing Text Gradients */
+  .text-neon-emerald {
+    @apply text-emerald-400;
+    text-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+  }
+
+  .text-neon-cyan {
+    @apply text-cyan-400;
+    text-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+  }
+
+  .text-neon-gold {
+    @apply text-yellow-400;
+    text-shadow: 0 0 12px rgba(234, 179, 8, 0.5);
   }
 }
 
 /* =========================================================
-   ANIMATIONS & UTILITIES
+   ANIMATIONS
    ========================================================= */
 
 @layer utilities {
   @keyframes spin-glow {
-    0% { filter: hue-rotate(0deg); }
-    100% { filter: hue-rotate(360deg); }
+    0% {
+      filter: hue-rotate(0deg);
+    }
+    100% {
+      filter: hue-rotate(360deg);
+    }
   }
 
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.02);
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
+
+  /* ===== Dashboard glow/animation refresh ===== */
+
+  @keyframes fade-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-fade-slide-in {
+    animation: fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 12px hsl(var(--primary) / 0.35), 0 0 0 hsl(var(--primary) / 0);
+    }
+    50% {
+      box-shadow: 0 0 26px hsl(var(--primary) / 0.6), 0 0 10px hsl(var(--primary) / 0.35);
+    }
+  }
+
+  .glow-pulse {
+    animation: glow-pulse 2.6s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse-secondary {
+    0%, 100% {
+      box-shadow: 0 0 12px hsl(var(--secondary) / 0.35), 0 0 0 hsl(var(--secondary) / 0);
+    }
+    50% {
+      box-shadow: 0 0 26px hsl(var(--secondary) / 0.6), 0 0 10px hsl(var(--secondary) / 0.35);
+    }
+  }
+
+  .glow-pulse-secondary {
+    animation: glow-pulse-secondary 2.6s ease-in-out infinite;
+  }
+
+  /* Active category tab pill — subtle 3D glow */
+  .tab-pill-active {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45), inset 0 0 10px hsl(var(--primary) / 0.15);
+    transform: translateY(-1px);
+  }
+
+  /* 3D glowing hover for cards (signal cards, copier cards, banners) */
   .card-3d-hover {
     transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
   }
 
   .card-3d-hover:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 24px -10px hsl(var(--primary) / 0.2);
+    transform: translateY(-4px) scale(1.015);
+    box-shadow: 0 16px 32px -12px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.25);
+  }
+
+  .card-3d-hover:active {
+    transform: translateY(-1px) scale(0.995);
   }
 }
