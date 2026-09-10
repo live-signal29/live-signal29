@@ -267,6 +267,14 @@ const SignalCardNew = ({
     isOpen &&
     !isVeryNewSignal;
 
+  // BUG FIX: calculateRunningPL() returns an object
+  // ({ value, isProfit, formatted }), but runningPL was being used
+  // everywhere below as if it were a plain number (`runningPL > 0`,
+  // `runningPL.toFixed(1)`). Comparing an object to a number is
+  // never true, so the live pip counter under Buy/Sell always fell
+  // through to a hardcoded "0.0 pips" instead of the real live
+  // pip count. Pulling out `.value` here fixes it everywhere below
+  // with no other changes needed.
   const runningPL =
     entryTouched &&
     currentPriceNum > 0 &&
@@ -275,7 +283,7 @@ const SignalCardNew = ({
           currentPriceNum,
           parsedEntryPrice,
           signal.type
-        )
+        ).value
       : null;
 
   /*
