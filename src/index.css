@@ -43,7 +43,10 @@
 
     /* Trading Colors */
     --success: 161 94% 30%;
+    --success-foreground: 0 0% 100%;
+    --success-deep: 161 94% 22%;
     --warning: 45 93% 47%;
+    --warning-foreground: 222 47% 11%;
     --buy: 161 94% 30%;
     --sell: 346 84% 61%;
   }
@@ -79,7 +82,10 @@
     --ring: 161 94% 40%;
 
     --success: 161 94% 40%;
+    --success-foreground: 225 40% 5%;
+    --success-deep: 161 94% 28%;
     --warning: 45 93% 53%;
+    --warning-foreground: 225 40% 5%;
     --buy: 161 94% 40%;
     --sell: 346 84% 65%;
   }
@@ -266,4 +272,35 @@
   .card-3d-hover:active {
     transform: translateY(-1px) scale(0.995);
   }
+}
+
+/* =========================================================
+   GOOGLE TRANSLATE WIDGET — hide Google's default UI chrome.
+   We drive language switching from our own menu (see
+   src/lib/googleTranslate.ts + the Language section in
+   SideDrawer), so none of Google's own banner/toolbar/tooltip
+   should ever be visible to the user.
+   ========================================================= */
+.goog-te-banner-frame,
+.goog-te-balloon-frame,
+#goog-gt-tt,
+.goog-tooltip,
+.goog-tooltip:hover,
+.goog-text-highlight {
+  display: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body {
+  top: 0 !important;
+  position: static !important;
+}
+
+#google_translate_element {
+  display: none !important;
+}
+
+.skiptranslate iframe {
+  display: none !important;
 }
