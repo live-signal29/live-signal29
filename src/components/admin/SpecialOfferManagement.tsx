@@ -13,6 +13,14 @@ import { Trash2, Plus, Edit, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
 
+/** Avoids crashing the whole page if an offer ever has a missing/invalid end_date. */
+const safeFormatDate = (value: string | null | undefined, pattern: string) => {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "—";
+  return format(d, pattern);
+};
+
 const SpecialOfferManagement = () => {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -24,7 +32,7 @@ const SpecialOfferManagement = () => {
     is_active: false,
   });
 
-  const { data: offers, isLoading } = useQuery({
+  const { data: offers, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["special-offers"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -34,6 +42,7 @@ const SpecialOfferManagement = () => {
       if (error) throw error;
       return data;
     },
+    retry: 1,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +116,7 @@ const SpecialOfferManagement = () => {
     setFormData({
       title: offer.title,
       description: offer.description || "",
-      end_date: format(new Date(offer.end_date), "yyyy-MM-dd'T'HH:mm"),
+      end_date: safeFormatDate(offer.end_date, "yyyy-MM-dd'T'HH:mm"),
       is_active: offer.is_active,
     });
     setShowForm(true);
@@ -192,7 +201,16 @@ const SpecialOfferManagement = () => {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p>Loading...</p>
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : isError ? (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <p className="text-sm text-destructive">
+                Couldn't load offers: {(error as any)?.message || "Unknown error"}
+              </p>
+              <Button size="sm" variant="outline" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -214,7 +232,7 @@ const SpecialOfferManagement = () => {
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {format(new Date(offer.end_date), "MMM dd, yyyy HH:mm")}
+                        {safeFormatDate(offer.end_date, "MMM dd, yyyy HH:mm")}
                       </div>
                     </TableCell>
                     <TableCell>
