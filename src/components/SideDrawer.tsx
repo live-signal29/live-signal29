@@ -134,6 +134,26 @@ const CategoryGroup = memo(
 );
 CategoryGroup.displayName = "CategoryGroup";
 
+/** Clearly-labeled reset control — pinned at both the top and bottom of the
+ * language list so it's always reachable, since switching back to the
+ * site's own default language is the thing people need most reliably. */
+const ResetToEnglishButton = ({ current, onReset }: { current: string; onReset: () => void }) => (
+  <button
+    type="button"
+    onClick={onReset}
+    className={cn(
+      "flex w-full items-center justify-between h-8 px-2 rounded-lg text-[11px] font-bold tracking-tight",
+      "border border-primary/30 transition-all duration-200 active:scale-[0.98]",
+      current === "en"
+        ? "bg-primary/10 text-primary"
+        : "text-foreground/80 hover:bg-accent/40"
+    )}
+  >
+    <span>English (Default)</span>
+    {current === "en" && <Check className="h-3.5 w-3.5 shrink-0" />}
+  </button>
+);
+
 /**
  * Fixed "Selected Language" category — always present in the menu (not
  * part of menuGroups since its rows aren't page links). Switches the
@@ -171,28 +191,39 @@ const LanguageCategory = memo(
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-          <div className="ml-2 pl-3 border-l border-border/40 space-y-0.5 py-1 max-h-56 overflow-y-auto">
-            {SITE_LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                type="button"
-                onClick={() => {
-                  setCurrent(lang.code);
-                  setSiteLanguage(lang.code);
-                  closeDrawer();
-                }}
-                className={cn(
-                  "flex w-full items-center justify-between h-8 px-2 rounded-lg text-[11px] font-medium tracking-tight",
-                  "transition-all duration-200 active:scale-[0.98]",
-                  current === lang.code
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-                )}
-              >
-                <span className="truncate">{lang.label}</span>
-                {current === lang.code && <Check className="h-3.5 w-3.5 shrink-0" />}
-              </button>
-            ))}
+          <div className="ml-2 pl-3 border-l border-border/40 py-1 space-y-1">
+            {/* Pinned reset — always visible at the top, before scrolling
+                through the full list, since this is the one people need
+                most reliably (switching back to the site's own default). */}
+            <ResetToEnglishButton current={current} onReset={() => { setCurrent("en"); setSiteLanguage("en"); }} />
+
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {SITE_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => {
+                    setCurrent(lang.code);
+                    setSiteLanguage(lang.code);
+                    closeDrawer();
+                  }}
+                  className={cn(
+                    "flex w-full items-center justify-between h-8 px-2 rounded-lg text-[11px] font-medium tracking-tight",
+                    "transition-all duration-200 active:scale-[0.98]",
+                    current === lang.code
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                  )}
+                >
+                  <span className="truncate">{lang.label}</span>
+                  {current === lang.code && <Check className="h-3.5 w-3.5 shrink-0" />}
+                </button>
+              ))}
+            </div>
+
+            {/* Pinned again at the bottom — easy to reach even after
+                scrolling all the way down through the language list. */}
+            <ResetToEnglishButton current={current} onReset={() => { setCurrent("en"); setSiteLanguage("en"); }} />
           </div>
         </CollapsibleContent>
       </Collapsible>
