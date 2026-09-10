@@ -11,7 +11,6 @@ import {
   Settings as AccountIcon
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +19,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
+import { Languages as LanguagesIcon, Check } from "lucide-react";
+import { SITE_LANGUAGES, getSavedLanguage, setSiteLanguage } from "@/lib/googleTranslate";
 
 const APP_VERSION = "1.7.9";
 
@@ -133,6 +134,73 @@ const CategoryGroup = memo(
 );
 CategoryGroup.displayName = "CategoryGroup";
 
+/**
+ * Fixed "Selected Language" category — always present in the menu (not
+ * part of menuGroups since its rows aren't page links). Switches the
+ * whole site's language via Google Translate (src/lib/googleTranslate.ts),
+ * so every page translates, not just the handful of manually-translated
+ * strings.
+ */
+const LanguageCategory = memo(
+  ({ isOpen, onToggle, closeDrawer }: { isOpen: boolean; onToggle: () => void; closeDrawer: () => void }) => {
+    const [current, setCurrent] = useState(getSavedLanguage());
+
+    return (
+      <Collapsible open={isOpen} onOpenChange={onToggle}>
+        <CollapsibleTrigger className="w-full">
+          <div className={cn(
+            "flex items-center gap-2 px-2 py-1 rounded-lg",
+            "transition-all duration-200 hover:bg-accent/40",
+            isOpen && "bg-accent/20"
+          )}>
+            <span className="flex items-center justify-center shrink-0">
+              <LanguagesIcon className="h-4 w-4 text-primary/70" />
+            </span>
+            <span className="flex-1 text-left text-[10px] font-extrabold uppercase tracking-wider text-foreground/80 font-mono">
+              Selected Language
+            </span>
+            <span className="text-[9px] font-mono text-muted-foreground truncate max-w-[70px]">
+              {SITE_LANGUAGES.find((l) => l.code === current)?.label ?? "English"}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 transition-transform duration-200 text-muted-foreground shrink-0",
+                isOpen && "rotate-180"
+              )}
+            />
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+          <div className="ml-2 pl-3 border-l border-border/40 space-y-0.5 py-1 max-h-56 overflow-y-auto">
+            {SITE_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => {
+                  setCurrent(lang.code);
+                  setSiteLanguage(lang.code);
+                  closeDrawer();
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between h-8 px-2 rounded-lg text-[11px] font-medium tracking-tight",
+                  "transition-all duration-200 active:scale-[0.98]",
+                  current === lang.code
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                )}
+              >
+                <span className="truncate">{lang.label}</span>
+                {current === lang.code && <Check className="h-3.5 w-3.5 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+);
+LanguageCategory.displayName = "LanguageCategory";
+
 export const SideDrawer = () => {
   const [open, setOpen] = useState(false);
   const [otherAppsOpen, setOtherAppsOpen] = useState(false);
@@ -142,6 +210,7 @@ export const SideDrawer = () => {
     "Tools": false,
     "Premium": false,
     "Account": false,
+    "Selected Language": false,
   });
   
   const menuScrollRef = useRef<HTMLElement | null>(null);
@@ -317,6 +386,13 @@ export const SideDrawer = () => {
               />
             ))}
 
+            {/* Selected Language — fixed category, always visible */}
+            <LanguageCategory
+              isOpen={openCategories["Selected Language"] ?? false}
+              onToggle={() => toggleCategory("Selected Language")}
+              closeDrawer={closeDrawer}
+            />
+
             {/* Other Apps */}
             <div className="pt-0.5">
               <Collapsible open={otherAppsOpen} onOpenChange={setOtherAppsOpen}>
@@ -381,10 +457,9 @@ export const SideDrawer = () => {
             <div className="h-1" />
           </nav>
 
-          {/* Footer - Only Language & Version (NO LOGOUT) */}
+          {/* Footer - Version only (Language moved to its own fixed category above, NO LOGOUT here) */}
           <div className="shrink-0 px-3 py-2 border-t border-border/40 bg-background/80">
-            <div className="flex items-center justify-between gap-2">
-              <LanguageSwitcher />
+            <div className="flex items-center justify-end gap-2">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 text-[10px] font-mono text-muted-foreground">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />v{APP_VERSION}
               </span>
