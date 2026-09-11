@@ -860,6 +860,48 @@ function validateBTCSignal(
 }
 
 // =========================================================
+// GOLD VALIDATION
+// ---------------------------------------------------------
+// Gold MUST use a whole-dollar entry and an exact $5 risk:
+// BUY  Entry 4332 -> SL 4327 -> TP1 4337 -> TP2 4347 -> TP3 4357
+// SELL Entry 4332 -> SL 4337 -> TP1 4327 -> TP2 4317 -> TP3 4307
+// =========================================================
+
+function validateGoldSignal(signal: any, currentPrice: number) {
+  const entry = Number(signal.entry);
+  const sl = Number(signal.sl);
+  const tp1 = Number(signal.tp1);
+  const tp2 = Number(signal.tp2);
+  const tp3 = Number(signal.tp3);
+
+  if (!Number.isInteger(entry)) return false;
+  if (!Number.isInteger(sl)) return false;
+  if (!Number.isInteger(tp1)) return false;
+  if (!Number.isInteger(tp2)) return false;
+  if (!Number.isInteger(tp3)) return false;
+
+  // Entry must be a whole dollar and remain close to live price.
+  if (Math.abs(entry - currentPrice) > 1.01) return false;
+
+  // Exact 1R / 3R / 5R with fixed $5 risk.
+  if (signal.action === "BUY") {
+    if (sl !== entry - 5) return false;
+    if (tp1 !== entry + 5) return false;
+    if (tp2 !== entry + 15) return false;
+    if (tp3 !== entry + 25) return false;
+  } else if (signal.action === "SELL") {
+    if (sl !== entry + 5) return false;
+    if (tp1 !== entry - 5) return false;
+    if (tp2 !== entry - 15) return false;
+    if (tp3 !== entry - 25) return false;
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
+// =========================================================
 // GENERAL VALIDATION
 // =========================================================
 
@@ -1308,6 +1350,31 @@ Deno.serve(async (req) => {
           },
         }
       );
+    }
+
+    // GOLD SPECIAL VALIDATION
+    if (selected.pair === "XAU/USD (Gold)") {
+      if (!validateGoldSignal(signal, currentPrice)) {
+        console.log(
+          "Gold validation failed:",
+          signal
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            generated: false,
+            reason:
+              "Gold level validation failed: Entry/SL/TP must be whole-dollar with exact 1R/3R/5R ($5 risk)",
+          }),
+          {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
     }
 
     // SILVER SPECIAL VALIDATION
