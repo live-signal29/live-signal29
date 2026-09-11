@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -330,15 +330,35 @@ const SignalsDashboard = () => {
     staleTime: 0,
   });
 
-  const allSignals =
-    signalsData?.pages.flatMap((page) => page.data) || [];
+  // SORTING LOGIC: Open Signals Top Par, Closed Signals Niche
+  const allSignals = useMemo(() => {
+    const rawList = signalsData?.pages.flatMap((page) => page.data) || [];
 
-  const signals =
-    trialExpired && trialEndDate
-      ? allSignals.filter(
-          (signal) => new Date(signal.created_at) <= trialEndDate
-        )
-      : allSignals;
+    return [...rawList].sort((a, b) => {
+      const statusA = String(a.signal_status || a.status || "").toLowerCase();
+      const statusB = String(b.signal_status || b.status || "").toLowerCase();
+
+      const isAClosed = statusA === "close" || statusA === "closed";
+      const isBClosed = statusB === "close" || statusB === "closed";
+
+      if (!isAClosed && isBClosed) return -1;
+      if (isAClosed && !isBClosed) return 1;
+
+      return (
+        new Date(b.created_at || 0).getTime() -
+        new Date(a.created_at || 0).getTime()
+      );
+    });
+  }, [signalsData]);
+
+  const signals = useMemo(() => {
+    if (trialExpired && trialEndDate) {
+      return allSignals.filter(
+        (signal) => new Date(signal.created_at) <= trialEndDate
+      );
+    }
+    return allSignals;
+  }, [allSignals, trialExpired, trialEndDate]);
 
   const getActiveSignalsCount = (category: string) => {
     if (category === "MARKET IDEAS" || category === "COPIER") {
