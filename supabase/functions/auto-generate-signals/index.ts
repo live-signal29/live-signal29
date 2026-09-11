@@ -131,26 +131,278 @@ const sellReasons = [
 ];
 
 // =========================================================
-// GOLD - KEEP EXISTING WORKING LOGIC
+// GOLD - DETERMINISTIC MULTI-TIMEFRAME LOGIC
+// 1H = trend | 5M = setup | 1M = confirmation | $10+ trigger
+// Entry = whole dollar | SL = 1R | TP1 = 1R | TP2 = 3R | TP3 = 5R
 // =========================================================
 
 function generateGoldLevels(entry: number, isBuy: boolean) {
-  const slDistance = rand(15, 25);
-  const tp1Distance = rand(3, 5);
-  const tp2Distance = rand(8, 15);
-  const tp3Distance = rand(15, 25);
-
-  const sl = isBuy ? entry - slDistance : entry + slDistance;
-  const tp1 = isBuy ? entry + tp1Distance : entry - tp1Distance;
-  const tp2 = isBuy ? entry + tp2Distance : entry - tp2Distance;
-  const tp3 = isBuy ? entry + tp3Distance : entry - tp3Distance;
+  const risk = 5;
 
   return {
-    sl: Number(sl.toFixed(2)),
-    tp1: Number(tp1.toFixed(2)),
-    tp2: Number(tp2.toFixed(2)),
-    tp3: Number(tp3.toFixed(2)),
+    sl: Math.round(isBuy ? entry - risk : entry + risk),
+    tp1: Math.round(isBuy ? entry + risk : entry - risk),
+    tp2: Math.round(isBuy ? entry + risk * 3 : entry - risk * 3),
+    tp3: Math.round(isBuy ? entry + risk * 5 : entry - risk * 5),
   };
+}
+
+type GoldCandle = {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
+
+function goldEMA(values: number[], period: number): number[] {
+  if (!values.length) return [];
+
+  const multiplier = 2 / (period + 1);
+  const result = [values[0]];
+
+  for (let i = 1; i < values.length; i++) {
+    result.push(
+      values[i] * multiplier +
+      result[i - 1] * (1 - multiplier)
+    );
+  }
+
+  return result;
+}
+
+async function fetchGoldCandles(
+  interval: "1m" | "5m" | "1h",
+  range: "1d" | "5d"
+): Promise<GoldCandle[]> {
+  const url =
+    "https://query1.finance.yahoo.com/v8/finance/chart/GC=F" +
+    `?range=${range}&interval=${interval}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+      "User-Agent": "LiveSignals-Gold-Engine/1.0",
+    },
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Gold ${interval} candle request failed: ${response.status}`
+    );
+  }
+
+  const data = await response.json();
+  const quote = data?.chart?.result?.[0]?.indicators?.quote?.[0];
+
+  if (!quote) return [];
+
+  const candles: GoldCandle[] = [];
+
+  for (let i = 0; i < (quote.close?.length || 0); i++) {
+    const open = Number(quote.open?.[i]);
+    const high = Number(quote.high?.[i]);
+    const low = Number(quote.low?.[i]);
+    const close = Number(quote.close?.[i]);
+
+    if (
+      Number.isFinite(open) &&
+      Number.isFinite(high) &&
+      Number.isFinite(low) &&
+      Number.isFinite(close)
+    ) {
+      candles.push({ open, high, low, close });
+    }
+  }
+
+  return candles;
+}
+
+function getGoldDirection(
+  candles1h: GoldCandle[],
+  candles5m: GoldCandle[],
+  candles1m: GoldCandle[]
+): { direction: "BUY" | "SELL"; reason: string } | null {
+
+  if (
+    candles1h.length < 60 ||
+    candles5m.length < 25 ||
+    candles1m.length < 10
+  ) {
+    return null;
+  }
+
+  // -------------------------
+  // 1H TREND
+  // -------------------------
+  const closes1h = candles1h.map(c => c.close);
+  const ema20_1h = goldEMA(closes1h, 20);
+  const ema50_1h = goldEMA(closes1h, 50);
+
+  const last1h = candles1h[candles1h.length - 1];
+
+  const e20 = ema20_1h[ema20_1h.length - 1];
+  const e50 = ema50_1h[ema50_1h.length - 1];
+  const previousE20 = ema20_1h[ema20_1h.length - 2];
+
+  const bullishTrend =
+    e20 > e50 &&
+    e20 > previousE20 &&
+    last1h.close > e20;
+
+  const bearishTrend =
+    e20 < e50 &&
+    e20 < previousE20 &&
+    last1h.close < e20;
+
+  if (!bullishTrend && !bearishTrend) {
+    return null;
+  }
+
+  // -------------------------
+  // 5M SETUP
+  // -------------------------
+  const closes5m = candles5m.map(c => c.close);
+  const ema20_5m = goldEMA(closes5m, 20);
+
+  const last5m = candles5m[candles5m.length - 1];
+  const previous5m = candles5m[candles5m.length - 2];
+
+  const e20_5m = ema20_5m[ema20_5m.length - 1];
+
+  const recent5m = candles5m.slice(-13, -1);
+
+  const recentHigh = Math.max(
+    ...recent5m.map(c => c.high)
+  );
+
+  const recentLow = Math.min(
+    ...recent5m.map(c => c.low)
+  );
+
+  const bullish5m =
+    last5m.close > e20_5m &&
+    (
+      previous5m.low <= e20_5m ||
+      last5m.close > recentHigh
+    ) &&
+    last5m.close > last5m.open;
+
+  const bearish5m =
+    last5m.close < e20_5m &&
+    (
+      previous5m.high >= e20_5m ||
+      last5m.close < recentLow
+    ) &&
+    last5m.close < last5m.open;
+
+  // -------------------------
+  // 1M CONFIRMATION
+  // -------------------------
+  const last1m = candles1m[candles1m.length - 1];
+  const previous1m = candles1m[candles1m.length - 2];
+
+  const bullish1m =
+    last1m.close > last1m.open &&
+    last1m.close > previous1m.high;
+
+  const bearish1m =
+    last1m.close < last1m.open &&
+    last1m.close < previous1m.low;
+
+  if (bullishTrend && bullish5m && bullish1m) {
+    return {
+      direction: "BUY",
+      reason:
+        "1H bullish trend + 5M bullish setup + 1M confirmation + $10+ movement",
+    };
+  }
+
+  if (bearishTrend && bearish5m && bearish1m) {
+    return {
+      direction: "SELL",
+      reason:
+        "1H bearish trend + 5M bearish setup + 1M confirmation + $10+ movement",
+    };
+  }
+
+  return null;
+}
+
+async function analyzeGold(currentPrice: number) {
+  try {
+    const [candles1h, candles5m, candles1m] =
+      await Promise.all([
+        fetchGoldCandles("1h", "5d"),
+        fetchGoldCandles("5m", "1d"),
+        fetchGoldCandles("1m", "1d"),
+      ]);
+
+    if (
+      candles1h.length < 60 ||
+      candles5m.length < 25 ||
+      candles1m.length < 30
+    ) {
+      return null;
+    }
+
+    const analysis = getGoldDirection(
+      candles1h,
+      candles5m,
+      candles1m
+    );
+
+    if (!analysis) {
+      return null;
+    }
+
+    // $10+ movement trigger from the recent 60 x 1M candles.
+    const triggerWindow = candles1m.slice(-60);
+
+    const recentLow = Math.min(
+      ...triggerWindow.map(c => c.low)
+    );
+
+    const recentHigh = Math.max(
+      ...triggerWindow.map(c => c.high)
+    );
+
+    const triggerDistance =
+      analysis.direction === "BUY"
+        ? currentPrice - recentLow
+        : recentHigh - currentPrice;
+
+    if (triggerDistance < 10) {
+      return null;
+    }
+
+    // Whole-dollar entry. Never use decimals for Gold entry.
+    const entry =
+      analysis.direction === "BUY"
+        ? Math.ceil(currentPrice)
+        : Math.floor(currentPrice);
+
+    const levels = generateGoldLevels(
+      entry,
+      analysis.direction === "BUY"
+    );
+
+    return {
+      direction: analysis.direction,
+      entry,
+      levels,
+      reason: analysis.reason,
+    };
+  } catch (error) {
+    console.error(
+      "Gold multi-timeframe analysis failed:",
+      error
+    );
+
+    return null;
+  }
 }
 
 // =========================================================
@@ -651,9 +903,9 @@ function validateSignal(
 async function evaluatePair(pair: string) {
   const { data, error } = await supabase
     .from("signals")
-    .select("id, pair, status")
+    .select("id, pair, status, signal_status")
     .eq("pair", pair)
-    .eq("status", "OPEN")
+    .or("status.ilike.OPEN,signal_status.ilike.OPEN")
     .limit(1);
 
   if (error) {
@@ -964,12 +1216,69 @@ Deno.serve(async (req) => {
     // GENERATE
     // =====================================================
 
-    const signal = generateSignal({
-      ...selected,
-      price: live,
-    });
-
     const currentPrice = Number(live.price);
+
+    let signal: any;
+
+    if (selected.pair === "XAU/USD (Gold)") {
+      const goldAnalysis = await analyzeGold(currentPrice);
+
+      // IMPORTANT: no random/fake Gold signal.
+      // If all Gold conditions are not confirmed, generate nothing.
+      if (!goldAnalysis) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            generated: false,
+            reason:
+              "Gold setup rejected: 1H trend, 5M setup, 1M confirmation and $10+ trigger were not all confirmed",
+          }),
+          {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
+      const isBuy =
+        goldAnalysis.direction === "BUY";
+
+      signal = {
+        pair: selected.pair,
+        symbol: selected.pair,
+        category: "COMMODITIES",
+
+        type: isBuy ? "BUY" : "SELL",
+        action: goldAnalysis.direction,
+        direction: goldAnalysis.direction,
+
+        entry: goldAnalysis.entry,
+
+        current_price: currentPrice,
+        currentPrice,
+
+        sl: goldAnalysis.levels.sl,
+        tp1: goldAnalysis.levels.tp1,
+        tp2: goldAnalysis.levels.tp2,
+        tp3: goldAnalysis.levels.tp3,
+
+        stop_loss: goldAnalysis.levels.sl,
+        target1: goldAnalysis.levels.tp1,
+        target2: goldAnalysis.levels.tp2,
+        target3: goldAnalysis.levels.tp3,
+
+        reason: goldAnalysis.reason,
+        signal_type: "Scalping",
+        created_at: new Date().toISOString(),
+      };
+    } else {
+      signal = generateSignal({
+        ...selected,
+        price: live,
+      });
+    }
 
     // =====================================================
     // VALIDATE
