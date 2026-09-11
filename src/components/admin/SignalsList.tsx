@@ -81,7 +81,7 @@ const SignalsList = () => {
   });
 
   /* =========================================================
-     FILTER + SEARCH
+     FILTER + SEARCH + SORTING (OPEN TOP, CLOSE BOTTOM)
   ========================================================= */
 
   const filteredSignals = useMemo(() => {
@@ -89,7 +89,8 @@ const SignalsList = () => {
 
     const q = search.trim().toLowerCase();
 
-    return signals.filter((signal: any) => {
+    // 1. Filter logic
+    const filtered = signals.filter((signal: any) => {
       const matchesSearch =
         !q ||
         String(signal.pair || "")
@@ -108,7 +109,7 @@ const SignalsList = () => {
 
       const matchesStatus =
         statusFilter === "all" ||
-        signal.signal_status === statusFilter;
+        (signal.signal_status || signal.status || "open") === statusFilter;
 
       const matchesType =
         typeFilter === "all" ||
@@ -119,6 +120,26 @@ const SignalsList = () => {
         matchesRisk &&
         matchesStatus &&
         matchesType
+      );
+    });
+
+    // 2. Sorting logic: Open & Pending Upar, Close Niche
+    return filtered.sort((a: any, b: any) => {
+      const statusA = (a.signal_status || a.status || "open").toLowerCase();
+      const statusB = (b.signal_status || b.status || "open").toLowerCase();
+
+      const isAClosed = statusA === "close" || statusA === "closed";
+      const isBClosed = statusB === "close" || statusB === "closed";
+
+      // Agar A open hai aur B close hai, toh A upar aayega (-1)
+      if (!isAClosed && isBClosed) return -1;
+      // Agar A close hai aur B open hai, toh A niche jaayega (1)
+      if (isAClosed && !isBClosed) return 1;
+
+      // Agar dono ka status same hai, toh Latest created_at ke hisab se sort karein
+      return (
+        new Date(b.created_at || 0).getTime() -
+        new Date(a.created_at || 0).getTime()
       );
     });
   }, [
@@ -445,9 +466,7 @@ const SignalsList = () => {
   return (
     <div className="space-y-2">
 
-      {/* =====================================================
-          SEARCH BAR
-      ===================================================== */}
+      {/* SEARCH BAR */}
 
       <div className="sticky top-[64px] z-30 rounded-xl border bg-white p-2 shadow-sm">
 
@@ -527,9 +546,7 @@ const SignalsList = () => {
 
       </div>
 
-      {/* =====================================================
-          FILTERS
-      ===================================================== */}
+      {/* FILTERS */}
 
       {showFilters && (
         <Card className="border-slate-200 shadow-sm">
@@ -629,9 +646,7 @@ const SignalsList = () => {
         </Card>
       )}
 
-      {/* =====================================================
-          BULK ACTIONS
-      ===================================================== */}
+      {/* BULK ACTIONS */}
 
       {selectedSignals.size > 0 && (
         <Card className="border-primary/20 bg-primary/5">
@@ -769,9 +784,7 @@ const SignalsList = () => {
         </Card>
       )}
 
-      {/* =====================================================
-          SIGNAL LIST
-      ===================================================== */}
+      {/* SIGNAL LIST */}
 
       {filteredSignals.length === 0 && (
         <Card className="border-dashed">
@@ -809,7 +822,7 @@ const SignalsList = () => {
           String(signal.type || "").toLowerCase() === "buy";
 
         const status =
-          signal.signal_status || "open";
+          signal.signal_status || signal.status || "open";
 
         return (
           <Card
@@ -820,10 +833,6 @@ const SignalsList = () => {
                 : ""
             }`}
           >
-
-            {/* =================================================
-                COMPACT SIGNAL HEADER
-            ================================================= */}
 
             <CardContent className="p-3">
 
@@ -955,9 +964,7 @@ const SignalsList = () => {
 
                   </div>
 
-                  {/* =================================================
-                      STATUS + PREMIUM
-                  ================================================= */}
+                  {/* STATUS + PREMIUM */}
 
                   <div className="mt-2 flex items-center justify-between gap-2">
 
@@ -1012,9 +1019,7 @@ const SignalsList = () => {
 
                   </div>
 
-                  {/* =================================================
-                      PRICE ROW
-                  ================================================= */}
+                  {/* PRICE ROW */}
 
                   <div className="mt-2 grid grid-cols-4 gap-1.5">
 
@@ -1060,9 +1065,7 @@ const SignalsList = () => {
 
                   </div>
 
-                  {/* =================================================
-                      QUICK HIT BUTTONS
-                  ================================================= */}
+                  {/* QUICK HIT BUTTONS */}
 
                   <div className="mt-2">
 
@@ -1202,9 +1205,7 @@ const SignalsList = () => {
 
                   </div>
 
-                  {/* =================================================
-                      DATE
-                  ================================================= */}
+                  {/* DATE */}
 
                   <div className="mt-2 flex items-center justify-between">
 
@@ -1261,9 +1262,7 @@ const SignalsList = () => {
         );
       })}
 
-      {/* =====================================================
-          MOBILE SELECT ALL
-      ===================================================== */}
+      {/* MOBILE SELECT ALL */}
 
       {filteredSignals.length > 0 && (
         <div className="flex justify-center py-2 sm:hidden">
