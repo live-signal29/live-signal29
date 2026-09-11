@@ -7,6 +7,10 @@ import {
   XCircle,
   Lock,
   Crown,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   format,
@@ -111,6 +115,13 @@ const SignalCardNew = ({
     !isClosed &&
     !isPending &&
     ["open", "running", "active"].includes(lifecycle);
+
+  /* TOGGLE SHOW/HIDE BODY SECTION (Auto hide for closed signals) */
+  const [showBody, setShowBody] = useState(!isClosed);
+
+  useEffect(() => {
+    setShowBody(!isClosed);
+  }, [isClosed]);
 
   /* ENTRY LOGIC */
   const isLimitOrder =
@@ -441,26 +452,28 @@ const SignalCardNew = ({
   const noteStyle = getNoteStyle();
   const pairUpper = signal.pair?.toUpperCase() || "";
 
-  /* VERTICAL TARGET STATUS LOGIC */
+  /* TARGET STATUS LOGIC FOR OPEN VS CLOSED */
   const getTP1Status = () => {
-    if (signal.tp1_hit) return { text: "TP 1 Hit", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    return { text: "running", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
+    if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (!isClosed) return { text: "RUNNING", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
+    return { text: "", color: "" };
   };
 
   const getTP2Status = () => {
-    if (signal.tp2_hit) return { text: "TP 2 Hit", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (signal.tp1_hit) return { text: "running", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
+    if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (!isClosed && signal.tp1_hit) return { text: "RUNNING", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
     return { text: "", color: "" };
   };
 
   const getTP3Status = () => {
-    if (signal.tp3_hit) return { text: "TP 3 Hit", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (signal.tp2_hit) return { text: "running", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
+    if (signal.tp3_hit) return { text: "TP 3 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (!isClosed && signal.tp2_hit) return { text: "RUNNING", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
     return { text: "", color: "" };
   };
 
   const getSLStatus = () => {
-    if (signal.tp1_hit) return { text: "Move SL to Entry Point", color: "text-amber-500 dark:text-amber-400 font-bold" };
+    if (isSLHit || signal.sl_hit) return { text: "SL HIT ❌", color: "text-rose-500 font-bold" };
+    if (!isClosed && signal.tp1_hit) return { text: "MOVE SL TO ENTRY POINT", color: "text-amber-500 dark:text-amber-400 font-bold" };
     return { text: "", color: "" };
   };
 
@@ -528,6 +541,15 @@ const SignalCardNew = ({
             <Clock className="h-2.5 w-2.5 text-emerald-600 dark:text-cyan-400" />
             <span>{formatRealTime(signalTime)}</span>
           </div>
+
+          {/* TOGGLE VISIBILITY BUTTON */}
+          <button
+            onClick={() => setShowBody(!showBody)}
+            className="p-1.5 rounded-lg bg-black/5 dark:bg-cyan-950/40 border border-black/5 dark:border-cyan-500/10 text-slate-600 dark:text-cyan-300 hover:bg-black/10 transition-colors"
+            title={showBody ? "Hide Targets" : "Show Targets"}
+          >
+            {showBody ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
 
@@ -570,7 +592,7 @@ const SignalCardNew = ({
                 {signal.type.toUpperCase()} NOW
               </span>
 
-              {runningPL !== null ? (
+              {runningPL !== null && !isClosed ? (
                 <span className={cn("font-mono text-[8.5px] font-extrabold", runningPL > 0 ? "text-emerald-600 dark:text-emerald-400" : runningPL < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400 dark:text-cyan-300/60")}>
                   {runningPL > 0 ? `+${runningPL.toFixed(1)} pips` : runningPL < 0 ? `${runningPL.toFixed(1)} pips` : "0.0 pips"}
                 </span>
@@ -585,48 +607,50 @@ const SignalCardNew = ({
             </div>
           </div>
 
-          {/* VERTICAL BODY: TP 1, TP 2, TP 3 & SL */}
-          <div className="flex flex-col gap-2 rounded-[12px] bg-white/40 dark:bg-[#07101d]/40 border border-emerald-500/10 dark:border-cyan-500/10 p-2.5 mb-3">
-            {/* TP 1 */}
-            <div className="flex items-center justify-between text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
-              <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px]">TP 1</span>
-              <span className="font-extrabold text-slate-800 dark:text-cyan-100">{signal.tp1}</span>
-              <span className={cn("text-[9px] uppercase tracking-wider", tp1Status.color)}>
-                {tp1Status.text}
-              </span>
-            </div>
-
-            {/* TP 2 */}
-            {signal.tp2 && (
-              <div className="flex items-center justify-between text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
-                <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px]">TP 2</span>
-                <span className="font-extrabold text-slate-800 dark:text-cyan-100">{signal.tp2}</span>
-                <span className={cn("text-[9px] uppercase tracking-wider", tp2Status.color)}>
-                  {tp2Status.text}
+          {/* VERTICAL BODY: TP 1, TP 2, TP 3 & SL (EXPAND / COLLAPSE) */}
+          {showBody && (
+            <div className="flex flex-col gap-2 rounded-[12px] bg-white/40 dark:bg-[#07101d]/40 border border-emerald-500/10 dark:border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
+              {/* TP 1 */}
+              <div className="grid grid-cols-3 items-center text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
+                <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px] text-left">TP 1</span>
+                <span className="font-extrabold text-slate-800 dark:text-cyan-100 text-center">{signal.tp1}</span>
+                <span className={cn("text-[9px] uppercase tracking-wider text-right", tp1Status.color)}>
+                  {tp1Status.text}
                 </span>
               </div>
-            )}
 
-            {/* TP 3 */}
-            {signal.tp3 && (
-              <div className="flex items-center justify-between text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
-                <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px]">TP 3</span>
-                <span className="font-extrabold text-slate-800 dark:text-cyan-100">{signal.tp3}</span>
-                <span className={cn("text-[9px] uppercase tracking-wider", tp3Status.color)}>
-                  {tp3Status.text}
+              {/* TP 2 */}
+              {signal.tp2 && (
+                <div className="grid grid-cols-3 items-center text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
+                  <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px] text-left">TP 2</span>
+                  <span className="font-extrabold text-slate-800 dark:text-cyan-100 text-center">{signal.tp2}</span>
+                  <span className={cn("text-[9px] uppercase tracking-wider text-right", tp2Status.color)}>
+                    {tp2Status.text}
+                  </span>
+                </div>
+              )}
+
+              {/* TP 3 */}
+              {signal.tp3 && (
+                <div className="grid grid-cols-3 items-center text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
+                  <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px] text-left">TP 3</span>
+                  <span className="font-extrabold text-slate-800 dark:text-cyan-100 text-center">{signal.tp3}</span>
+                  <span className={cn("text-[9px] uppercase tracking-wider text-right", tp3Status.color)}>
+                    {tp3Status.text}
+                  </span>
+                </div>
+              )}
+
+              {/* SL */}
+              <div className="grid grid-cols-3 items-center text-[10px] font-mono pt-0.5">
+                <span className="font-bold text-rose-500 uppercase text-[9px] text-left">SL</span>
+                <span className="font-extrabold text-rose-500 dark:text-rose-400 text-center">{signal.sl}</span>
+                <span className={cn("text-[9px] uppercase tracking-wider text-right", slStatus.color)}>
+                  {slStatus.text}
                 </span>
               </div>
-            )}
-
-            {/* SL */}
-            <div className="flex items-center justify-between text-[10px] font-mono pt-0.5">
-              <span className="font-bold text-rose-500 uppercase text-[9px]">SL</span>
-              <span className="font-extrabold text-rose-500 dark:text-rose-400">{signal.sl}</span>
-              <span className={cn("text-[9px] uppercase tracking-wider", slStatus.color)}>
-                {slStatus.text}
-              </span>
             </div>
-          </div>
+          )}
 
           {/* PROFIT NOTE AT BOTTOM */}
           {signal.profit_note && (
