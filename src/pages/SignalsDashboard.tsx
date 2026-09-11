@@ -555,13 +555,7 @@ const SignalsDashboard = () => {
 
           <MT5CopierBanner />
 
-          <div key={mainCategory} className="animate-fade-slide-in">
-            {/* TOP AD */}
-            {subscriptionStatus !== "premium" && (
-              <div className="mb-4">
-                <AdBanner />
-              </div>
-            )}
+          <div key={mainCategory} className="animate-fade-slide-in mt-4">
 
             {/* SUBCATEGORY SELECTOR */}
             {mainCategory !== "MARKET IDEAS" &&
