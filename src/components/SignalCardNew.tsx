@@ -77,7 +77,6 @@ const SignalCardNew = ({
 
   // State for collapsible view
   const [isExpanded, setIsExpanded] = useState(true);
-
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -317,11 +316,11 @@ const SignalCardNew = ({
   const getStatusStyle = () => {
     switch (statusText) {
       case "CLOSED":
-        return "bg-rose-500/15 border-rose-500/40 text-rose-500 dark:text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
+        return "bg-rose-500/15 border-rose-500/40 text-rose-500 dark:text-rose-400";
       case "ACTIVE":
-        return "bg-emerald-500/15 border-emerald-500/40 text-emerald-500 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]";
+        return "bg-emerald-500/15 border-emerald-500/40 text-emerald-500 dark:text-emerald-400";
       case "PENDING":
-        return "bg-amber-500/15 border-amber-500/40 text-amber-500 dark:text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]";
+        return "bg-amber-500/15 border-amber-500/40 text-amber-500 dark:text-amber-400";
       default:
         return "bg-cyan-500/15 border-cyan-500/40 text-cyan-500 dark:text-cyan-400";
     }
@@ -352,40 +351,39 @@ const SignalCardNew = ({
   const isTPHit = !isSLHit && !isBreakEven && (isFullTPWin || isPartialSecured || /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(note));
 
   const getNoteStyle = () => {
-    if (isSLHit) return { container: "border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20", icon: "text-rose-500 dark:text-rose-400", text: "text-rose-600 dark:text-rose-300" };
-    if (isBreakEven) return { container: "border-blue-700/40 bg-blue-900/15 dark:bg-blue-950/40", icon: "text-blue-500 dark:text-blue-300", text: "text-blue-700 dark:text-blue-200" };
-    if (isFullTPWin) return { container: "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20", icon: "text-emerald-500 dark:text-emerald-400", text: "text-emerald-700 dark:text-emerald-300" };
-    if (isPartialSecured || isTPHit) return { container: "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20", icon: "text-amber-500 dark:text-amber-400", text: "text-amber-600 dark:text-amber-300" };
+    if (isSLHit) return { container: "border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20", icon: "text-rose-500", text: "text-rose-600 dark:text-rose-300" };
+    if (isBreakEven) return { container: "border-blue-700/40 bg-blue-900/15 dark:bg-blue-950/40", icon: "text-blue-500", text: "text-blue-700 dark:text-blue-200" };
+    if (isFullTPWin) return { container: "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20", icon: "text-emerald-500", text: "text-emerald-700 dark:text-emerald-300" };
+    if (isPartialSecured || isTPHit) return { container: "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20", icon: "text-amber-500", text: "text-amber-600 dark:text-amber-300" };
     return { container: "border-slate-500/30 bg-slate-500/10 dark:bg-slate-800/30", icon: "text-slate-400", text: "text-slate-500 dark:text-slate-300" };
   };
 
   const noteStyle = getNoteStyle();
   const pairUpper = signal.pair?.toUpperCase() || "";
-
+  
   // Helper to determine if TP1 is running
   const isTP1Running = isOpen && !signal.tp1_hit && !signal.sl_hit;
 
-  /* ============================================================
-   * RENDER
-   * ============================================================ */
   return (
     <div
       ref={cardRef}
       className={cn(
-        "relative mb-4 w-full rounded-[20px] p-4 transition-all duration-300 overflow-hidden border shadow-xl",
-        // Dark Theme Base (Matching Image 1)
-        "bg-gradient-to-br from-[#0c182b] via-[#09111e] to-[#04080f] border-cyan-500/20 shadow-[0_8px_30px_rgba(0,0,0,0.8)]",
-        // Light Theme Fallback (if user switches)
-        "dark:from-[#0c182b] dark:via-[#09111e] dark:to-[#04080f] dark:border-cyan-500/20"
+        "relative mb-4 w-full rounded-[24px] p-4 transition-all duration-300 overflow-hidden border shadow-xl font-sans",
+        // LIGHT THEME (Soft Green/White)
+        "bg-gradient-to-br from-[#f8fcfa] via-[#f3f9f6] to-[#ffffff] border-emerald-500/20 shadow-emerald-900/5",
+        // DARK THEME (Deep Navy/Cyan Glow)
+        "dark:bg-gradient-to-br dark:from-[#0c182b] dark:via-[#09111e] dark:to-[#04080f] dark:border-cyan-500/20 dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)]",
+        // HOVER
+        "hover:scale-[1.005] hover:border-emerald-500/40 dark:hover:border-cyan-400/50 dark:hover:shadow-[0_0_25px_rgba(6,182,212,0.2)]"
       )}
     >
-      {/* Top Glow Accent Line */}
+      {/* Top Glow Line */}
       <div className={cn("absolute top-0 left-0 right-0 h-[2px]", isBuy ? "bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80" : "bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-80")} />
 
       {/* ======================================================
-          HEADER
+          HEADER (Always Visible)
           ====================================================== */}
-      <div className="flex items-center justify-between mb-3 border-b border-cyan-500/20 pb-3">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/50 dark:border-cyan-500/20">
         {/* LEFT: ICON & PAIR */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-yellow-600/10 text-xl shadow-[0_0_15px_rgba(245,158,11,0.3)]">
@@ -393,71 +391,71 @@ const SignalCardNew = ({
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-black tracking-wide text-cyan-50 leading-tight">
+              <h3 className="text-base font-black tracking-wide text-slate-800 dark:text-cyan-50 leading-tight">
                 {signal.pair.replace("/", "")}
               </h3>
-              <span className={cn("rounded-md px-2 py-[2px] text-[9px] font-black uppercase tracking-wider", isBuy ? "bg-emerald-500 text-white" : "bg-rose-500 text-white")}>
+              <span className={cn("rounded-md px-2 py-[1px] text-[9px] font-black uppercase tracking-wider", isBuy ? "bg-emerald-500 text-white" : "bg-rose-500 text-white")}>
                 {isBuy ? "BUY" : "SELL"}
               </span>
             </div>
-            <p className="text-[10px] font-semibold text-cyan-300/60 leading-tight">
+            <p className="text-[10px] font-semibold text-slate-500 dark:text-cyan-300/60 leading-tight">
               {pairUpper.includes("XAU") ? "Gold Spot" : pairUpper.includes("BTC") ? "Bitcoin" : "Forex"}
             </p>
           </div>
         </div>
 
-        {/* CENTER: ENTRY (Only visible in header as per image) */}
+        {/* CENTER: ENTRY (Hidden on small screens) */}
         <div className="hidden md:flex flex-col items-center">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-300/50">Entry</span>
-            <span className="font-mono text-base font-black text-cyan-100">{signal.entry}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-cyan-300/50">Entry</span>
+            <span className="font-mono text-base font-black text-slate-800 dark:text-cyan-100">{signal.entry}</span>
         </div>
 
         {/* RIGHT: STATUS & TOGGLE */}
         <div className="flex items-center gap-2 shrink-0">
           <span className={cn("inline-flex items-center rounded-full border px-2.5 py-[4px] text-[9px] font-black uppercase tracking-wider leading-none", getStatusStyle())}>
-            <span className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", statusText === "CLOSED" ? "bg-rose-500" : statusText === "ACTIVE" ? "bg-emerald-400" : "bg-amber-400")} />
+            <span className={cn("mr-1.5 h-1.5 w-1.5 rounded-full animate-pulse", statusText === "CLOSED" ? "bg-rose-500" : statusText === "ACTIVE" ? "bg-emerald-400" : "bg-amber-400")} />
             {statusText}
           </span>
-          {/* Single Hide/Show Button in Header */}
-          <button onClick={() => setIsExpanded(!isExpanded)} className="p-1.5 rounded-full bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/20 transition-colors">
-            {isExpanded ? <ChevronUp className="h-4 w-4 text-cyan-300" /> : <ChevronDown className="h-4 w-4 text-cyan-300" />}
+          {/* SINGLE HIDE BUTTON (Header) */}
+          <button onClick={() => setIsExpanded(!isExpanded)} className="p-1.5 rounded-full bg-slate-200/50 dark:bg-cyan-950/50 hover:bg-slate-300/50 dark:hover:bg-cyan-900/50 border border-slate-300/50 dark:border-cyan-500/20 transition-colors">
+            {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-600 dark:text-cyan-300" /> : <ChevronDown className="h-4 w-4 text-slate-600 dark:text-cyan-300" />}
           </button>
         </div>
       </div>
 
       {/* ======================================================
-          COLLAPSIBLE CONTENT
+          COLLAPSIBLE BODY
           ====================================================== */}
       {isExpanded && (
         <>
           {isLocked ? (
-            <div onClick={() => navigate("/premium")} className="flex flex-col items-center justify-center gap-3 py-8 bg-cyan-950/30 hover:bg-cyan-900/40 active:scale-[0.98] rounded-[16px] border border-dashed border-cyan-500/30 cursor-pointer transition-all duration-200 select-none">
-              <div className="p-3 rounded-full bg-amber-500/10 border border-amber-500/30">
-                <Lock className="h-6 w-6 text-amber-400" />
+            <div onClick={() => navigate("/premium")} className="flex flex-col items-center justify-center gap-3 py-8 bg-slate-100/50 dark:bg-cyan-950/30 hover:bg-slate-200/50 dark:hover:bg-cyan-900/40 active:scale-[0.98] rounded-[16px] border border-dashed border-slate-300 dark:border-cyan-500/30 cursor-pointer transition-all duration-200 select-none">
+              <div className="p-3 rounded-full bg-amber-100 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30">
+                <Lock className="h-6 w-6 text-amber-500" />
               </div>
-              <span className="text-sm font-bold tracking-wide text-cyan-200">🔒 Premium Signal - Tap to Unlock</span>
+              <span className="text-sm font-bold tracking-wide text-slate-700 dark:text-cyan-200">🔒 Premium Signal - Tap to Unlock</span>
             </div>
           ) : (
             <>
               {/* ==================================================
-                  MAIN CONTENT GRID (Entry/Chart & TPs)
+                  MAIN GRID (Left: Chart & Info, Right: TPs)
                   ================================================== */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 
-                {/* LEFT SIDE: ENTRY, CHART, TREND, STRATEGY */}
-                <div className="flex flex-col justify-between rounded-[16px] bg-[#07101d]/80 border border-cyan-500/15 px-4 py-4 shadow-inner">
+                {/* LEFT COLUMN: ENTRY, CHART, TREND, STRATEGY */}
+                <div className="flex flex-col rounded-[16px] bg-white/60 dark:bg-[#07101d]/80 border border-slate-200/60 dark:border-cyan-500/15 px-4 py-4 shadow-inner">
+                  {/* Entry Price Box */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                        <Crosshair className="h-4 w-4 text-cyan-400" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300/50">Entry</span>
+                        <Crosshair className="h-4 w-4 text-cyan-500 dark:text-cyan-400" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/50">Entry</span>
                     </div>
-                    <span className="font-mono text-lg font-black text-cyan-100">{signal.entry}</span>
+                    <span className="font-mono text-lg font-black text-slate-800 dark:text-cyan-100">{signal.entry}</span>
                   </div>
                   
-                  {/* Mini Chart Area */}
-                  <div className="h-16 w-full mb-3 relative overflow-hidden rounded-xl bg-[#04080f] border border-cyan-500/10 flex items-center px-2">
+                  {/* Chart Area */}
+                  <div className="h-16 w-full mb-3 relative overflow-hidden rounded-xl bg-slate-100 dark:bg-[#04080f] border border-slate-200 dark:border-cyan-500/10 flex items-center px-2">
                     <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
-                      {/* Candlestick simulation */}
                       {isBuy ? (
                           <path d="M 0 25 Q 25 28, 50 15 T 100 5" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
                       ) : (
@@ -467,44 +465,43 @@ const SignalCardNew = ({
                   </div>
 
                   {/* Trend & Strategy */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 mt-auto">
                     <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-emerald-400" />
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
                         <div className="flex flex-col">
-                            <span className="text-[9px] font-bold text-cyan-300/50">Trend</span>
-                            <span className="text-[11px] font-black text-emerald-400">{isBuy ? "UPTREND" : "DOWNTREND"}</span>
+                            <span className="text-[9px] font-bold text-slate-400 dark:text-cyan-300/50">Trend</span>
+                            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400">{isBuy ? "UPTREND" : "DOWNTREND"}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Target className="h-4 w-4 text-cyan-400" />
+                        <Target className="h-4 w-4 text-cyan-500" />
                         <div className="flex flex-col">
-                            <span className="text-[9px] font-bold text-cyan-300/50">Strategy</span>
-                            <span className="text-[11px] font-black text-cyan-100">Pullback Entry</span>
+                            <span className="text-[9px] font-bold text-slate-400 dark:text-cyan-300/50">Strategy</span>
+                            <span className="text-[11px] font-black text-slate-700 dark:text-cyan-100">Pullback Entry</span>
                         </div>
                     </div>
                   </div>
                 </div>
 
-                {/* RIGHT SIDE: TP & SL VERTICAL LIST WITH STEPPER */}
-                <div className="relative flex flex-col gap-3 rounded-[16px] bg-[#07101d]/80 border border-cyan-500/15 px-4 py-4 shadow-inner">
+                {/* RIGHT COLUMN: TP & SL LIST WITH STEPPER */}
+                <div className="relative flex flex-col gap-3 rounded-[16px] bg-white/60 dark:bg-[#07101d]/80 border border-slate-200/60 dark:border-cyan-500/15 px-4 py-4 shadow-inner">
                   
-                  {/* Vertical Stepper Line Background */}
-                  <div className="absolute left-[21px] top-[30px] bottom-[30px] w-[2px] bg-cyan-950/50" />
+                  {/* Vertical Stepper Line (Visible behind the dots) */}
+                  <div className="absolute left-[21px] top-[30px] bottom-[30px] w-[2px] bg-slate-200 dark:bg-cyan-950/50" />
 
                   {/* TP 1 */}
                   <div className="relative flex items-center justify-between z-10">
                     <div className="flex items-center gap-3">
-                      {/* Stepper Dot */}
-                      <div className={cn("h-3 w-3 rounded-full border-2 border-[#04080f]", signal.tp1_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />
+                      <div className={cn("h-3 w-3 rounded-full border-2 border-white dark:border-[#04080f]", signal.tp1_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />
                       <div className="flex items-center gap-1.5">
-                        <Flag className={cn("h-3.5 w-3.5", signal.tp1_hit ? "text-emerald-400" : "text-cyan-400/50")} />
-                        <span className="text-[10px] font-bold text-cyan-300/60">TP 1</span>
+                        <Flag className={cn("h-3.5 w-3.5", signal.tp1_hit ? "text-emerald-500" : "text-slate-400 dark:text-cyan-400/50")} />
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-cyan-300/60">TP 1</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={cn("font-mono text-sm font-bold", getTargetColor("tp1"))}>{signal.tp1}</span>
                       {isTP1Running && (
-                          <span className="flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-[2px] text-[8px] font-black text-emerald-400">
+                          <span className="flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-[2px] text-[8px] font-black text-emerald-500">
                               <Activity className="h-3 w-3 animate-pulse" /> RUNNING
                           </span>
                       )}
@@ -516,10 +513,10 @@ const SignalCardNew = ({
                   {signal.tp2 && (
                     <div className="relative flex items-center justify-between z-10">
                       <div className="flex items-center gap-3">
-                        <div className={cn("h-3 w-3 rounded-full border-2 border-[#04080f]", signal.tp2_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />
+                        <div className={cn("h-3 w-3 rounded-full border-2 border-white dark:border-[#04080f]", signal.tp2_hit ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-emerald-500/30")} />
                         <div className="flex items-center gap-1.5">
-                            <Flag className={cn("h-3.5 w-3.5", signal.tp2_hit ? "text-emerald-400" : "text-cyan-400/50")} />
-                            <span className="text-[10px] font-bold text-cyan-300/60">TP 2</span>
+                            <Flag className={cn("h-3.5 w-3.5", signal.tp2_hit ? "text-emerald-500" : "text-slate-400 dark:text-cyan-400/50")} />
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-cyan-300/60">TP 2</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -533,10 +530,10 @@ const SignalCardNew = ({
                   {signal.tp3 && (
                     <div className="relative flex items-center justify-between z-10">
                       <div className="flex items-center gap-3">
-                        <div className={cn("h-3 w-3 rounded-full border-2 border-[#04080f]", signal.tp3_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />
+                        <div className={cn("h-3 w-3 rounded-full border-2 border-white dark:border-[#04080f]", signal.tp3_hit ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" : "bg-cyan-500/30")} />
                         <div className="flex items-center gap-1.5">
-                            <Flag className={cn("h-3.5 w-3.5", signal.tp3_hit ? "text-cyan-400" : "text-cyan-400/50")} />
-                            <span className="text-[10px] font-bold text-cyan-300/60">TP 3</span>
+                            <Flag className={cn("h-3.5 w-3.5", signal.tp3_hit ? "text-cyan-500" : "text-slate-400 dark:text-cyan-400/50")} />
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-cyan-300/60">TP 3</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -546,13 +543,13 @@ const SignalCardNew = ({
                     </div>
                   )}
 
-                  {/* SL (Separated by a small gap but on the same line conceptually) */}
-                  <div className="relative flex items-center justify-between z-10 mt-1 border-t border-cyan-500/10 pt-2">
+                  {/* SL */}
+                  <div className="relative flex items-center justify-between z-10 mt-1 border-t border-slate-200 dark:border-cyan-500/10 pt-2">
                     <div className="flex items-center gap-3">
-                      <div className={cn("h-3 w-3 rounded-full border-2 border-[#04080f]", signal.sl_hit ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "bg-rose-500/50")} />
+                      <div className={cn("h-3 w-3 rounded-full border-2 border-white dark:border-[#04080f]", signal.sl_hit ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "bg-rose-500/50")} />
                       <div className="flex items-center gap-1.5">
                         <Shield className={cn("h-3.5 w-3.5", signal.sl_hit ? "text-rose-500" : "text-rose-400/70")} />
-                        <span className="text-[10px] font-bold text-rose-400">SL</span>
+                        <span className="text-[10px] font-bold text-rose-500">SL</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -567,22 +564,22 @@ const SignalCardNew = ({
                   BOTTOM STATS (RISK, PROFIT, R:R)
                   ================================================== */}
               <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="flex flex-col items-center justify-center rounded-xl bg-[#07101d]/80 border border-cyan-500/15 py-2">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-300/50">Risk</span>
-                  <span className="font-mono text-sm font-black text-cyan-100">$3.50</span>
+                <div className="flex flex-col items-center justify-center rounded-xl bg-white/60 dark:bg-[#07101d]/80 border border-slate-200/60 dark:border-cyan-500/15 py-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/50">Risk</span>
+                  <span className="font-mono text-sm font-black text-slate-700 dark:text-cyan-100">$3.50</span>
                 </div>
-                <div className="flex flex-col items-center justify-center rounded-xl bg-[#07101d]/80 border border-cyan-500/15 py-2">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-300/50">Potential Profit</span>
-                  <span className="font-mono text-sm font-black text-emerald-400">$7.49 <span className="text-[8px] text-cyan-300/50">(TP3)</span></span>
+                <div className="flex flex-col items-center justify-center rounded-xl bg-white/60 dark:bg-[#07101d]/80 border border-slate-200/60 dark:border-cyan-500/15 py-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/50">Potential Profit</span>
+                  <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">$7.49 <span className="text-[8px] text-slate-400 dark:text-cyan-300/50">(TP3)</span></span>
                 </div>
-                <div className="flex flex-col items-center justify-center rounded-xl bg-[#07101d]/80 border border-cyan-500/15 py-2">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-300/50">Reward : Risk</span>
-                  <span className="font-mono text-sm font-black text-cyan-400">3.2 : 1</span>
+                <div className="flex flex-col items-center justify-center rounded-xl bg-white/60 dark:bg-[#07101d]/80 border border-slate-200/60 dark:border-cyan-500/15 py-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/50">Reward : Risk</span>
+                  <span className="font-mono text-sm font-black text-cyan-600 dark:text-cyan-400">3.2 : 1</span>
                 </div>
               </div>
 
               {/* ==================================================
-                  PROFIT / STATUS NOTE
+                  PROFIT NOTE
                   ================================================== */}
               {signal.profit_note && (
                 <div className={cn("flex items-center gap-3 rounded-xl border px-4 py-2 mb-4", noteStyle.container)}>
@@ -602,26 +599,26 @@ const SignalCardNew = ({
       {/* ======================================================
           FOOTER (Always Visible)
           ====================================================== */}
-      <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t border-cyan-500/20 gap-3">
+      <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t border-slate-200/50 dark:border-cyan-500/20 gap-3">
         {/* Left: Tags */}
-        <div className="flex flex-wrap items-center justify-center gap-4 text-[10px] font-bold text-cyan-300/60">
-            <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-cyan-400" /> Trade with Plan</span>
-            <span className="hidden sm:block text-cyan-500/30">|</span>
-            <span className="flex items-center gap-1"><Shield className="h-3.5 w-3.5 text-cyan-400" /> Manage Risk</span>
-            <span className="hidden sm:block text-cyan-500/30">|</span>
-            <span className="flex items-center gap-1"><BarChart3 className="h-3.5 w-3.5 text-cyan-400" /> Grow Your Account</span>
+        <div className="flex flex-wrap items-center justify-center gap-4 text-[10px] font-bold text-slate-500 dark:text-cyan-300/60">
+            <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-cyan-500 dark:text-cyan-400" /> Trade with Plan</span>
+            <span className="hidden sm:block text-slate-300 dark:text-cyan-500/30">|</span>
+            <span className="flex items-center gap-1"><Shield className="h-3.5 w-3.5 text-cyan-500 dark:text-cyan-400" /> Manage Risk</span>
+            <span className="hidden sm:block text-slate-300 dark:text-cyan-500/30">|</span>
+            <span className="flex items-center gap-1"><BarChart3 className="h-3.5 w-3.5 text-cyan-500 dark:text-cyan-400" /> Grow Your Account</span>
         </div>
 
-        {/* Right: Hide Details & Timestamp */}
+        {/* Right: Timestamp & Hide Button */}
         <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-[10px] font-medium text-cyan-200/50">
-                <Clock className="h-3.5 w-3.5 text-cyan-400" />
+            <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-cyan-200/50">
+                <Clock className="h-3.5 w-3.5 text-cyan-500 dark:text-cyan-400" />
                 <span>{formatRealTime(signalTime)}</span>
             </div>
-            {/* Single Hide Button */}
+            {/* SINGLE HIDE BUTTON (Footer) */}
             <button 
                 onClick={() => setIsExpanded(!isExpanded)} 
-                className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
+                className="flex items-center gap-1 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 transition-colors"
             >
                 {isExpanded ? "Hide Details" : "Show Details"} 
                 {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
