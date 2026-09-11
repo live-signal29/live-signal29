@@ -9,13 +9,8 @@ import {
   Crown,
   ChevronDown,
   ChevronUp,
-  Eye,
-  EyeOff,
 } from "lucide-react";
-import {
-  format,
-  differenceInHours,
-} from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,7 +72,6 @@ interface SignalCardProps {
 
 const SignalCardNew = ({
   signal,
-  hasAccess = true,
   subscriptionStatus,
   livePrice,
 }: SignalCardProps) => {
@@ -137,8 +131,7 @@ const SignalCardNew = ({
       ? limitPrice
       : parseEntryPrice(signal.entry);
 
-  const isBuy =
-    signal.type?.toLowerCase() === "buy";
+  const isBuy = signal.type?.toLowerCase() === "buy";
 
   /* CURRENT PRICE */
   const currentPriceNum =
@@ -174,8 +167,7 @@ const SignalCardNew = ({
       : "text-emerald-500 dark:text-emerald-400";
 
   /* PREMIUM */
-  const isPremiumUser =
-    subscriptionStatus === "premium";
+  const isPremiumUser = subscriptionStatus === "premium";
 
   const isLocked =
     !!signal.is_premium &&
@@ -188,36 +180,17 @@ const SignalCardNew = ({
       ? signal.activated_at
       : signal.created_at;
 
-  const signalAgeHours = differenceInHours(
-    new Date(),
-    new Date(signal.created_at)
-  );
-
-  const isNewSignal =
-    signalAgeHours < 24 &&
-    !isClosed;
-
   /* RUNNING P/L */
   const signalAgeMs =
-    Date.now() -
-    new Date(signal.created_at).getTime();
+    Date.now() - new Date(signal.created_at).getTime();
 
-  const isVeryNewSignal =
-    signalAgeMs < 60000;
+  const isVeryNewSignal = signalAgeMs < 60000;
 
-  const entryTouched =
-    isOpen &&
-    !isVeryNewSignal;
+  const entryTouched = isOpen && !isVeryNewSignal;
 
   const runningPL =
-    entryTouched &&
-    currentPriceNum > 0 &&
-    parsedEntryPrice > 0
-      ? calculateRunningPL(
-          currentPriceNum,
-          parsedEntryPrice,
-          signal.type
-        ).value
+    entryTouched && currentPriceNum > 0 && parsedEntryPrice > 0
+      ? calculateRunningPL(currentPriceNum, parsedEntryPrice, signal.type).value
       : null;
 
   /* CONFETTI */
@@ -361,18 +334,16 @@ const SignalCardNew = ({
     signal.sl_hit,
   ]);
 
-  /* TIME FORMATTING */
+  /* CLEAN TIME FORMATTING (WITHOUT "Closed at") */
   const formatRealTime = (dateString: string) => {
     try {
       if (!dateString) return "Just now";
       const rawDate = new Date(dateString);
-      const utcDate = dateString.endsWith("Z") || dateString.includes("+") ? rawDate : new Date(dateString + "Z");
-      const formattedTime = format(utcDate, "hh:mm a");
-
-      if (isClosed || signal.sl_hit || signal.tp4_hit || (!signal.tp4 && signal.tp3_hit)) {
-        return `Closed at ${formattedTime}`;
-      }
-      return formattedTime;
+      const utcDate =
+        dateString.endsWith("Z") || dateString.includes("+")
+          ? rawDate
+          : new Date(dateString + "Z");
+      return format(utcDate, "hh:mm a");
     } catch {
       return "Just now";
     }
@@ -514,20 +485,10 @@ const SignalCardNew = ({
                 {signal.pair.replace("/", "")}
               </h3>
 
-              {isNewSignal && !isLocked && (
-                <span className="animate-pulse bg-gradient-to-r from-emerald-500 to-teal-400 px-1.5 py-[1px] rounded-full text-[6.5px] font-black text-white">
-                  NEW
-                </span>
-              )}
-
               {signal.is_premium && (
                 <Crown className="h-3.5 w-3.5 text-amber-400 shrink-0" />
               )}
             </div>
-
-            <p className="text-[8px] font-semibold text-slate-500 dark:text-cyan-300/60 leading-tight">
-              {pairUpper.includes("XAU") ? "Gold" : pairUpper.includes("BTC") ? "Bitcoin" : "Forex"}
-            </p>
           </div>
         </div>
 
@@ -542,13 +503,12 @@ const SignalCardNew = ({
             <span>{formatRealTime(signalTime)}</span>
           </div>
 
-          {/* TOGGLE VISIBILITY BUTTON */}
+          {/* SINGLE TICK / CHEVRON TOGGLE BUTTON */}
           <button
             onClick={() => setShowBody(!showBody)}
-            className="p-1.5 rounded-lg bg-black/5 dark:bg-cyan-950/40 border border-black/5 dark:border-cyan-500/10 text-slate-600 dark:text-cyan-300 hover:bg-black/10 transition-colors"
-            title={showBody ? "Hide Targets" : "Show Targets"}
+            className="p-1 rounded-lg bg-black/5 dark:bg-cyan-950/40 border border-black/5 dark:border-cyan-500/10 text-slate-600 dark:text-cyan-300 hover:bg-black/10 transition-colors"
           >
-            {showBody ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {showBody ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
       </div>
@@ -607,7 +567,7 @@ const SignalCardNew = ({
             </div>
           </div>
 
-          {/* VERTICAL BODY: TP 1, TP 2, TP 3 & SL (EXPAND / COLLAPSE) */}
+          {/* VERTICAL BODY: TP 1, TP 2, TP 3 & SL */}
           {showBody && (
             <div className="flex flex-col gap-2 rounded-[12px] bg-white/40 dark:bg-[#07101d]/40 border border-emerald-500/10 dark:border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
               {/* TP 1 */}
