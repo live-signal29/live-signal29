@@ -334,7 +334,7 @@ const SignalCardNew = ({
     signal.sl_hit,
   ]);
 
-  /* CLEAN TIME FORMATTING (WITHOUT "Closed at") */
+  /* CLEAN TIME FORMATTING */
   const formatRealTime = (dateString: string) => {
     try {
       if (!dateString) return "Just now";
@@ -503,7 +503,7 @@ const SignalCardNew = ({
             <span>{formatRealTime(signalTime)}</span>
           </div>
 
-          {/* SINGLE TICK / CHEVRON TOGGLE BUTTON */}
+          {/* TOGGLE BUTTON */}
           <button
             onClick={() => setShowBody(!showBody)}
             className="p-1 rounded-lg bg-black/5 dark:bg-cyan-950/40 border border-black/5 dark:border-cyan-500/10 text-slate-600 dark:text-cyan-300 hover:bg-black/10 transition-colors"
@@ -573,7 +573,10 @@ const SignalCardNew = ({
               {/* TP 1 */}
               <div className="grid grid-cols-3 items-center text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
                 <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px] text-left">TP 1</span>
-                <span className="font-extrabold text-slate-800 dark:text-cyan-100 text-center">{signal.tp1}</span>
+                <span className={cn("font-extrabold text-center flex items-center justify-center gap-1", signal.tp1_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                  {signal.tp1}
+                  {signal.tp1_hit && <span className="text-[9px]">✓</span>}
+                </span>
                 <span className={cn("text-[9px] uppercase tracking-wider text-right", tp1Status.color)}>
                   {tp1Status.text}
                 </span>
@@ -583,7 +586,10 @@ const SignalCardNew = ({
               {signal.tp2 && (
                 <div className="grid grid-cols-3 items-center text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
                   <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px] text-left">TP 2</span>
-                  <span className="font-extrabold text-slate-800 dark:text-cyan-100 text-center">{signal.tp2}</span>
+                  <span className={cn("font-extrabold text-center flex items-center justify-center gap-1", signal.tp2_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                    {signal.tp2}
+                    {signal.tp2_hit && <span className="text-[9px]">✓</span>}
+                  </span>
                   <span className={cn("text-[9px] uppercase tracking-wider text-right", tp2Status.color)}>
                     {tp2Status.text}
                   </span>
@@ -594,7 +600,10 @@ const SignalCardNew = ({
               {signal.tp3 && (
                 <div className="grid grid-cols-3 items-center text-[10px] font-mono border-b border-black/5 dark:border-white/5 pb-1.5">
                   <span className="font-bold text-slate-500 dark:text-cyan-300/60 uppercase text-[9px] text-left">TP 3</span>
-                  <span className="font-extrabold text-slate-800 dark:text-cyan-100 text-center">{signal.tp3}</span>
+                  <span className={cn("font-extrabold text-center flex items-center justify-center gap-1", signal.tp3_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                    {signal.tp3}
+                    {signal.tp3_hit && <span className="text-[9px]">✓</span>}
+                  </span>
                   <span className={cn("text-[9px] uppercase tracking-wider text-right", tp3Status.color)}>
                     {tp3Status.text}
                   </span>
@@ -604,7 +613,10 @@ const SignalCardNew = ({
               {/* SL */}
               <div className="grid grid-cols-3 items-center text-[10px] font-mono pt-0.5">
                 <span className="font-bold text-rose-500 uppercase text-[9px] text-left">SL</span>
-                <span className="font-extrabold text-rose-500 dark:text-rose-400 text-center">{signal.sl}</span>
+                <span className={cn("font-extrabold text-center flex items-center justify-center gap-1", isSLHit || signal.sl_hit ? "text-rose-500 dark:text-rose-400" : "text-slate-800 dark:text-cyan-100")}>
+                  {signal.sl}
+                  {(isSLHit || signal.sl_hit) && <span className="text-[9px]">❌</span>}
+                </span>
                 <span className={cn("text-[9px] uppercase tracking-wider text-right", slStatus.color)}>
                   {slStatus.text}
                 </span>
