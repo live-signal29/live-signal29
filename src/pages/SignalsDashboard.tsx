@@ -165,7 +165,6 @@ const SignalsDashboard = () => {
     hasAccess,
     subscriptionStatus,
     trialExpired,
-    trialEndDate,
   } = useSubscriptionAccess();
 
   const [mainCategory, setMainCategory] = useState("COMMODITIES");
@@ -225,13 +224,13 @@ const SignalsDashboard = () => {
   );
 
   /*
-   * Trial popup
+   * Trial expired pop-up handling
    */
   useEffect(() => {
-    if (trialExpired && subscriptionStatus === "free_trial") {
+    if (trialExpired) {
       setShowTrialExpiredPopup(true);
     }
-  }, [trialExpired, subscriptionStatus]);
+  }, [trialExpired]);
 
   /*
    * Breadcrumb
@@ -352,14 +351,10 @@ const SignalsDashboard = () => {
     });
   }, [signalsData]);
 
+  // FIX: Passing all signals to let SignalCardNew manage the 🔒 Lock or Open state per user subscription
   const signals = useMemo(() => {
-    if (trialExpired && trialEndDate) {
-      return allSignals.filter(
-        (signal) => new Date(signal.created_at) <= trialEndDate
-      );
-    }
     return allSignals;
-  }, [allSignals, trialExpired, trialEndDate]);
+  }, [allSignals]);
 
   const getActiveSignalsCount = (category: string) => {
     if (category === "MARKET IDEAS" || category === "COPIER") {
