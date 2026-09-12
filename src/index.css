@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 /* =========================================================
-   FOREX 7STARZ EXACT DESIGN SYSTEM
-   Dark Theme : Deep Luxury Navy Blue Gradient + Neon Glows
+   FOREX 7STARZ / LIVE SIGNALS SYSTEM
+   Dark Theme : Deep Midnight Space Blue + Starfield + Neon Glow
    Light Theme: Crisp Porcelain White + Modern Emerald/Cyan
    ========================================================= */
 
@@ -51,42 +51,47 @@
     --sell: 346 84% 61%;
   }
 
-  /* ================= DARK THEME (DEEP NAVY BLUE EDITION) ================= */
+  /* ================= DARK THEME (EXACT SPACE BLUE CLONE) ================= */
   .dark {
-    --background: 222 47% 7%;            /* Rich Midnight Navy #0B0F19 */
+    /* Exact Background: Deep Midnight Blue #080E1A */
+    --background: 221 53% 7%;
     --foreground: 210 40% 98%;
 
-    --card: 222 40% 11%;                 /* Elevated Navy Card #101726 */
+    /* Cards: Darker Slate Blue Overlay #0E1726 */
+    --card: 218 45% 10%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 40% 11%;
+    --popover: 218 45% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 161 94% 40%;              /* Neon Emerald Green */
-    --primary-foreground: 225 40% 5%;
+    /* Neon Emerald Green Glow */
+    --primary: 160 84% 39%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 187 92% 45%;            /* Neon Cyan */
-    --secondary-foreground: 225 40% 5%;
+    /* Neon Cyan Glow */
+    --secondary: 187 92% 45%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 222 30% 16%;
+    --muted: 217 33% 15%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 45 93% 53%;                /* Forex Gold Accent */
-    --accent-foreground: 225 40% 5%;
+    /* Neon Amber/Orange Glow */
+    --accent: 38 92% 50%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 346 84% 65%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 161 94% 40%;
+    --border: 217 30% 18%;
+    --input: 217 30% 18%;
+    --ring: 160 84% 39%;
 
-    --success: 161 94% 40%;
-    --success-foreground: 225 40% 5%;
+    --success: 160 84% 39%;
+    --success-foreground: 210 40% 98%;
     --success-deep: 161 94% 28%;
-    --warning: 45 93% 53%;
-    --warning-foreground: 225 40% 5%;
-    --buy: 161 94% 40%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
+    --buy: 160 84% 39%;
     --sell: 346 84% 65%;
   }
 }
@@ -100,15 +105,27 @@
     @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
   }
 
-  /* Dark mode background ambient radial gradient for premium navy look */
+  /* Full App Deep Midnight Blue Gradient */
   .dark body {
-    background: radial-gradient(circle at top center, #111827 0%, #0b0f19 60%, #070a12 100%) !important;
+    background: radial-gradient(circle at 50% 0%, #0d1b2a 0%, #080e1a 60%, #04070d 100%) !important;
     background-attachment: fixed !important;
+  }
+
+  /* Background Star Dust / Particle Overlay */
+  .dark body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+    background-size: 36px 36px;
+    pointer-events: none;
+    opacity: 0.35;
+    z-index: 0;
   }
 }
 
 /* =========================================================
-   ANIMATED FOREX7STARZ COMPONENTS & NEON GLOWS
+   NEON GLOWS & COMPONENT OVERRIDES
    ========================================================= */
 
 @layer components {
@@ -141,7 +158,7 @@
     @apply rounded-2xl font-semibold px-6 py-3 shadow-md hover:opacity-95 active:scale-[0.98] transition-all;
   }
 
-  /* Neon Glowing Profile Ring (Exact Aziz Avatar Ring) */
+  /* Neon Profile Ring */
   .avatar-neon-ring {
     @apply relative flex items-center justify-center rounded-full p-[2px];
     background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #eab308 100%);
@@ -149,7 +166,7 @@
     animation: spin-glow 6s linear infinite;
   }
 
-  /* Category Badges (Gold, Forex Green, Crypto Cyan, Deriv Purple) */
+  /* Category Badges */
   .badge-gold {
     @apply bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 font-semibold rounded-xl px-3 py-1.5;
     box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.1);
@@ -216,8 +233,6 @@
     animation: pulse-slow 3s ease-in-out infinite;
   }
 
-  /* ===== Dashboard glow/animation refresh ===== */
-
   @keyframes fade-slide-in {
     from {
       opacity: 0;
@@ -259,13 +274,11 @@
     animation: glow-pulse-secondary 2.6s ease-in-out infinite;
   }
 
-  /* Active category tab pill — subtle 3D glow */
   .tab-pill-active {
     box-shadow: 0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45), inset 0 0 10px hsl(var(--primary) / 0.15);
     transform: translateY(-1px);
   }
 
-  /* 3D glowing hover for cards (signal cards, copier cards, banners) */
   .card-3d-hover {
     transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
   }
