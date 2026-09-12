@@ -182,30 +182,18 @@ const SignalCardNew = ({
       ? "text-rose-500 dark:text-rose-400"
       : "text-emerald-500 dark:text-emerald-400";
 
-  // --- SUBSCRIPTION ACCESS ---
-  // The database uses `free_trial`; older UI code also used `trial`.
-  // Normalize both forms here so a valid trial can never be locked by
-  // a string mismatch.
-  const normalizedStatus = (subscriptionStatus || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-
+  // Access is authoritative from the subscription hook; status is only a
+  // compatibility fallback for known active plans. Never unlock on a stale
+  // or unknown status.
+  const normalizedStatus = String(subscriptionStatus || "").trim().toLowerCase();
   const userHasValidAccess =
     hasAccess === true ||
-    normalizedStatus === "premium" ||
-    normalizedStatus === "pro" ||
-    normalizedStatus === "yearly" ||
-    normalizedStatus === "free_trial" ||
-    normalizedStatus === "trial" ||
-    normalizedStatus === "active";
+    (normalizedStatus === "premium" && hasAccess !== false) ||
+    ((normalizedStatus === "free_trial" || normalizedStatus === "trial") && hasAccess !== false) ||
+    ((normalizedStatus === "pro" || normalizedStatus === "yearly" || normalizedStatus === "active") && hasAccess !== false);
 
-  // Only an active premium signal is locked for users without access.
-  // Closed/history cards remain visible so everyone can see the result.
-  const isLocked =
-    !!signal.is_premium &&
-    !userHasValidAccess &&
-    !isClosed;
+  // Signal Tabhi lock hoga agar Premium signal ho, User ke paas Valid Access Na Ho, aur signal Closed na hua ho
+  const isLocked = !!signal.is_premium && !userHasValidAccess && !isClosed;
 
   const signalTime =
     isOpen && signal.activated_at
@@ -291,17 +279,17 @@ const SignalCardNew = ({
       if (!signal.tp1_hit && tp1Price > 0 && hasTPReached(currentPriceNum, tp1Price)) {
         updates.tp1_hit = true;
         updates.sl = String(entryPrice);
-        updates.profit_note = "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
+        updates.profit_note = "BOOM ðŸ’¥ ! TP 1 Hit! ðŸš€ First Profit Secured âœ…";
       }
 
       if (!signal.tp2_hit && tp2Price > 0 && hasTPReached(currentPriceNum, tp2Price)) {
         updates.tp2_hit = true;
-        updates.profit_note = "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
+        updates.profit_note = "BOOM! TP 2 Hit Secured! ðŸ’° Enjoy Profit ðŸ’µ âœ…âœ…";
       }
 
       if (!signal.tp3_hit && tp3Price > 0 && hasTPReached(currentPriceNum, tp3Price)) {
         updates.tp3_hit = true;
-        updates.profit_note = "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+        updates.profit_note = "AMAZING! TP 3 Hit Final target Hit ðŸŽ‰ Maximum Profit Secured ðŸ’µâœ…";
         if (!signal.tp4) {
           updates.signal_status = "close";
           updates.status = "CLOSED";
@@ -312,7 +300,7 @@ const SignalCardNew = ({
         updates.tp4_hit = true;
         updates.signal_status = "close";
         updates.status = "CLOSED";
-        updates.profit_note = "AMAZING! TP 4 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+        updates.profit_note = "AMAZING! TP 4 Hit Final target Hit ðŸŽ‰ Maximum Profit Secured ðŸ’µâœ…";
       }
 
       const effectiveTP1 = !!signal.tp1_hit || !!updates.tp1_hit;
@@ -328,13 +316,13 @@ const SignalCardNew = ({
 
         if (effectiveTP2) {
           updates.sl_hit = false;
-          updates.profit_note = "Signal Closed at Breakeven after TP2 Hit ✅✅";
+          updates.profit_note = "Signal Closed at Breakeven after TP2 Hit âœ…âœ…";
         } else if (effectiveTP1) {
           updates.sl_hit = false;
-          updates.profit_note = "Signal Closed at Breakeven after TP1 Hit ✅";
+          updates.profit_note = "Signal Closed at Breakeven after TP1 Hit âœ…";
         } else {
           updates.sl_hit = true;
-          updates.profit_note = "SL Hit ❌ - Staying patient for a better entry.";
+          updates.profit_note = "SL Hit âŒ - Staying patient for a better entry.";
         }
       }
 
@@ -383,16 +371,16 @@ const SignalCardNew = ({
 
   const getDynamicProfitNote = () => {
     if (signal.sl_hit || (signal.profit_note && /SL\s*Hit/i.test(signal.profit_note))) {
-      return "SL Hit ❌ - Staying patient for a better entry.";
+      return "SL Hit âŒ - Staying patient for a better entry.";
     }
     if (signal.tp3_hit || signal.tp4_hit || (signal.profit_note && /TP\s*[34]/i.test(signal.profit_note))) {
-      return "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+      return "AMAZING! TP 3 Hit Final target Hit ðŸŽ‰ Maximum Profit Secured ðŸ’µâœ…";
     }
     if (signal.tp2_hit || (signal.profit_note && /TP\s*2/i.test(signal.profit_note))) {
-      return "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
+      return "BOOM! TP 2 Hit Secured! ðŸ’° Enjoy Profit ðŸ’µ âœ…âœ…";
     }
     if (signal.tp1_hit || (signal.profit_note && /TP\s*1/i.test(signal.profit_note))) {
-      return "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
+      return "BOOM ðŸ’¥ ! TP 1 Hit! ðŸš€ First Profit Secured âœ…";
     }
     return signal.profit_note || "";
   };
@@ -456,7 +444,7 @@ const SignalCardNew = ({
   const isSLHit = signal.sl_hit || /SL\s*Hit/i.test(note);
 
   const getSLStatus = () => {
-    if (isSLHit) return { text: "SL HIT ❌", color: "text-rose-500 font-bold" };
+    if (isSLHit) return { text: "SL HIT âŒ", color: "text-rose-500 font-bold" };
     if (!isClosed && signal.tp1_hit) return { text: "MOVE SL TO ENTRY POINT", color: "text-amber-500 dark:text-amber-400 font-bold" };
     return { text: "", color: "" };
   };
@@ -524,7 +512,7 @@ const SignalCardNew = ({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-yellow-600/10 text-xs shadow-sm">
-            {pairUpper.includes("XAU") ? "🪙" : pairUpper.includes("BTC") ? "₿" : "💶"}
+            {pairUpper.includes("XAU") ? "ðŸª™" : pairUpper.includes("BTC") ? "â‚¿" : "ðŸ’¶"}
           </div>
 
           <div className="flex flex-col min-w-0">
@@ -570,7 +558,7 @@ const SignalCardNew = ({
             <Lock className="h-5 w-5 text-amber-400" />
           </div>
           <span className="text-[11px] font-extrabold tracking-wide text-amber-300/90 flex items-center gap-1.5">
-            🔒 Premium Signal - Tap to Unlock
+            ðŸ”’ Premium Signal - Tap to Unlock
           </span>
         </div>
       ) : (
@@ -622,7 +610,7 @@ const SignalCardNew = ({
               <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
                 <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp1_hit ? "text-emerald-400" : "text-cyan-300/70")}>
                   TP 1
-                  {signal.tp1_hit && <span className="text-[11px] font-bold">✓</span>}
+                  {signal.tp1_hit && <span className="text-[11px] font-bold">âœ“</span>}
                 </span>
                 <span className={cn("text-[11px] font-extrabold text-center", signal.tp1_hit ? "text-emerald-400" : "text-cyan-100")}>
                   {signal.tp1}
@@ -637,7 +625,7 @@ const SignalCardNew = ({
                 <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
                   <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp2_hit ? "text-emerald-400" : "text-cyan-300/70")}>
                     TP 2
-                    {signal.tp2_hit && <span className="text-[11px] font-bold">✓</span>}
+                    {signal.tp2_hit && <span className="text-[11px] font-bold">âœ“</span>}
                   </span>
                   <span className={cn("text-[11px] font-extrabold text-center", signal.tp2_hit ? "text-emerald-400" : "text-cyan-100")}>
                     {signal.tp2}
@@ -653,7 +641,7 @@ const SignalCardNew = ({
                 <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
                   <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp3_hit ? "text-emerald-400" : "text-cyan-300/70")}>
                     TP 3
-                    {signal.tp3_hit && <span className="text-[11px] font-bold">✓</span>}
+                    {signal.tp3_hit && <span className="text-[11px] font-bold">âœ“</span>}
                   </span>
                   <span className={cn("text-[11px] font-extrabold text-center", signal.tp3_hit ? "text-emerald-400" : "text-cyan-100")}>
                     {signal.tp3}
@@ -669,7 +657,7 @@ const SignalCardNew = ({
                 <span className="font-extrabold text-rose-500 uppercase text-[11px] text-left">SL</span>
                 <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", isSLHit ? "text-rose-400" : "text-cyan-100")}>
                   {signal.sl}
-                  {isSLHit && <span className="text-[10px]">❌</span>}
+                  {isSLHit && <span className="text-[10px]">âŒ</span>}
                 </span>
                 <span className={cn("text-[10px] uppercase tracking-wider text-right", slStatus.color)}>
                   {slStatus.text}
@@ -689,7 +677,7 @@ const SignalCardNew = ({
 
               {noteStyle.isSLText ? (
                 <span className="text-[9.5px] leading-tight tracking-wide">
-                  <span className="text-rose-400 font-extrabold">SL Hit ❌ </span>
+                  <span className="text-rose-400 font-extrabold">SL Hit âŒ </span>
                   <span className="text-slate-400 font-medium">- Staying patient for a better entry.</span>
                 </span>
               ) : (
