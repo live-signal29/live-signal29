@@ -52,25 +52,21 @@ const emptySummary: DailyTradeSummary = {
   win_rate: 0,
 };
 
-/**
- * Fetches the trade summary + full trade list for one calendar day,
- * optionally filtered to a single category (e.g. "COMMODITIES") or
- * a single exact pair (e.g. "XAU/USD (Gold)"). Pass both as
- * undefined/null for "all pairs, all categories".
- */
 export const useDailyTradeBreakdown = (
   date: Date | null,
   category?: string | null,
-  pair?: string | null
+  pair?: string | null,
+  periodType: "today" | "yesterday" | "week" | "month" = "today"
 ) => {
-  const dateStr = date ? format(date, "yyyy-MM-dd") : null;
+  const dateStr = date ? format(date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
 
   const summaryQuery = useQuery({
-    queryKey: ["daily-trade-summary", dateStr, category, pair],
+    queryKey: ["daily-trade-summary", dateStr, category, pair, periodType],
     queryFn: async () => {
       const { data, error } = await supabase.rpc(
-        "get_daily_trade_summary" as any,
+        "get_period_trade_summary" as any,
         {
+          p_period_type: periodType,
           p_date: dateStr,
           p_category: category || null,
           p_pair: pair || null,
@@ -95,12 +91,11 @@ export const useDailyTradeBreakdown = (
         win_rate: Number(row.win_rate) || 0,
       } as DailyTradeSummary;
     },
-    enabled: !!dateStr,
     staleTime: 30000,
   });
 
   const detailsQuery = useQuery({
-    queryKey: ["daily-trade-details", dateStr, category, pair],
+    queryKey: ["daily-trade-details", dateStr, category, pair, periodType],
     queryFn: async () => {
       const { data, error } = await supabase.rpc(
         "get_daily_trade_details" as any,
@@ -113,7 +108,6 @@ export const useDailyTradeBreakdown = (
       if (error) throw error;
       return (data || []) as DailyTradeDetail[];
     },
-    enabled: !!dateStr,
     staleTime: 30000,
   });
 
