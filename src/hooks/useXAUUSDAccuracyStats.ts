@@ -67,23 +67,20 @@ const defaultStats: XAUUSDAccuracyStats = {
 export const useXAUUSDAccuracyStats = () => {
   const queryClient = useQueryClient();
 
-  // Auto-refresh when any XAUUSD signal is updated
   useEffect(() => {
     const channel = supabase
       .channel("xauusd-accuracy-stats")
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "signals",
         },
         (payload: any) => {
-          const next = payload?.new;
+          const next = payload?.new || payload?.old;
           const pair = next?.pair?.toUpperCase() || "";
-          // Refresh when XAUUSD/Gold signal is closed
-          if ((pair.includes("XAUUSD") || pair.includes("GOLD")) && 
-              (next?.signal_status === "CLOSE" || next?.tp1_hit || next?.tp2_hit || next?.tp3_hit || next?.tp4_hit || next?.sl_hit)) {
+          if (pair.includes("XAU") || pair.includes("GOLD")) {
             queryClient.invalidateQueries({ queryKey: ["xauusd-accuracy-stats"] });
           }
         }
@@ -100,7 +97,10 @@ export const useXAUUSDAccuracyStats = () => {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_xauusd_accuracy_stats" as any);
 
-      if (error) throw error;
+      if (error) {
+        console.error("RPC Error:", error);
+        throw error;
+      }
 
       const stats = data?.[0] || defaultStats;
 
@@ -116,21 +116,22 @@ export const useXAUUSDAccuracyStats = () => {
         today_total: Number(stats.today_total) || 0,
         today_wins: Number(stats.today_wins) || 0,
         today_losses: Number(stats.today_losses) || 0,
-        today_accuracy: stats.today_accuracy !== null ? Number(stats.today_accuracy) : null,
+        today_accuracy: stats.today_accuracy !== null && stats.today_accuracy !== undefined ? Number(stats.today_accuracy) : null,
         yesterday_total: Number(stats.yesterday_total) || 0,
         yesterday_wins: Number(stats.yesterday_wins) || 0,
         yesterday_losses: Number(stats.yesterday_losses) || 0,
-        yesterday_accuracy: stats.yesterday_accuracy !== null ? Number(stats.yesterday_accuracy) : null,
+        yesterday_accuracy: stats.yesterday_accuracy !== null && stats.yesterday_accuracy !== undefined ? Number(stats.yesterday_accuracy) : null,
         week_total: Number(stats.week_total) || 0,
         week_wins: Number(stats.week_wins) || 0,
         week_losses: Number(stats.week_losses) || 0,
-        week_accuracy: stats.week_accuracy !== null ? Number(stats.week_accuracy) : null,
+        week_accuracy: stats.week_accuracy !== null && stats.week_accuracy !== undefined ? Number(stats.week_accuracy) : null,
         monthly_total: Number(stats.monthly_total) || 0,
         monthly_wins: Number(stats.monthly_wins) || 0,
         monthly_losses: Number(stats.monthly_losses) || 0,
-        monthly_accuracy: stats.monthly_accuracy !== null ? Number(stats.monthly_accuracy) : null,
+        monthly_accuracy: stats.monthly_accuracy !== null && stats.monthly_accuracy !== undefined ? Number(stats.monthly_accuracy) : null,
       } as XAUUSDAccuracyStats;
     },
-    staleTime: 30000,
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
   });
 };
