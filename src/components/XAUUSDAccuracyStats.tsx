@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, TrendingUp, TrendingDown, BarChart3, Activity, Zap, Calendar, Clock, CalendarDays } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { format, parseISO, subDays } from "date-fns";
+import { format, parseISO, subDays, startOfWeek, startOfMonth } from "date-fns";
 import DailyTradeBreakdown from "@/components/DailyTradeBreakdown";
 
 const XAUUSDAccuracyStats = () => {
@@ -13,18 +13,18 @@ const XAUUSDAccuracyStats = () => {
   const [breakdownLabel, setBreakdownLabel] = useState("");
   const [breakdownOpen, setBreakdownOpen] = useState(false);
 
-  // Only "Today" and "Yesterday" map to a single exact calendar day --
-  // "This Week" / "Monthly" are ranges, so they aren't wired to the
-  // day-by-day breakdown dialog here.
+  // Map each label to its reference date (Today, Yesterday, Week Start, Month Start)
   const clickableDateFor = (label: string): Date | null => {
-    if (label === "Today") return new Date();
-    if (label === "Yesterday") return subDays(new Date(), 1);
-    return null;
+    const now = new Date();
+    if (label === "Today") return now;
+    if (label === "Yesterday") return subDays(now, 1);
+    if (label === "This Week") return startOfWeek(now, { weekStartsOn: 1 });
+    if (label === "Monthly") return startOfMonth(now);
+    return now;
   };
 
   const openBreakdown = (label: string) => {
     const date = clickableDateFor(label);
-    if (!date) return;
     setBreakdownDate(date);
     setBreakdownLabel(label);
     setBreakdownOpen(true);
@@ -123,15 +123,12 @@ const XAUUSDAccuracyStats = () => {
         {dateCards.map((card) => {
           const hasCardData = card.total > 0;
           const Icon = card.icon;
-          const isClickable = card.label === "Today" || card.label === "Yesterday";
 
           return (
             <Card
               key={card.label}
-              onClick={() => isClickable && openBreakdown(card.label)}
-              className={`bg-gradient-to-br ${card.color} ${card.borderColor} overflow-hidden ${
-                isClickable ? "cursor-pointer active:scale-[0.98] transition-transform" : ""
-              }`}
+              onClick={() => openBreakdown(card.label)}
+              className={`bg-gradient-to-br ${card.color} ${card.borderColor} overflow-hidden cursor-pointer active:scale-[0.98] transition-transform`}
             >
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
