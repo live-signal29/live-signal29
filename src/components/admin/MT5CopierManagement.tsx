@@ -24,10 +24,9 @@ import {
   Gauge,
   ChevronDown,
   ChevronUp,
+  MessageSquare,
 } from "lucide-react";
 
-// The generated Supabase types haven't been regenerated to include this
-// table/view yet, so we cast the client to `any` for these calls.
 const db = supabase as any;
 
 interface CopierRequest {
@@ -83,7 +82,7 @@ const MT5CopierManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mt5-copier-requests"] });
-      toast.success("Saved");
+      toast.success("Saved successfully");
     },
     onError: (err: any) => {
       toast.error("Failed to save", { description: err?.message });
@@ -96,16 +95,40 @@ const MT5CopierManagement = () => {
   const setDraft = (id: string, field: keyof CopierRequest, value: any) =>
     setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
 
+  // Helper for opening WhatsApp chat
+  const openWhatsApp = (phone: string | null) => {
+    if (!phone) return;
+    const cleanNumber = phone.replace(/[^\d+]/g, "");
+    window.open(`https://wa.me/${cleanNumber.replace("+", "")}`, "_blank");
+  };
+
+  // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on %
   const savePerformance = (req: CopierRequest) => {
     const d = drafts[req.id] || {};
+    
+    let profitPercent = d.profit_percent !== undefined ? Number(d.profit_percent) || 0 : (req.profit_percent || 0);
+    let lossPercent = d.loss_percent !== undefined ? Number(d.loss_percent) || 0 : (req.loss_percent || 0);
+
+    // Dynamic auto calculations
+    let profitAmount = profitPercent > 0 ? profitPercent * 10 : 0;
+    let lossAmount = lossPercent > 0 ? lossPercent * 10 : 0;
+    
+    let riskReward = "1:1";
+    if (profitPercent > 0 && lossPercent === 0) {
+      riskReward = `1:${Math.round((profitPercent / 10) * 10) / 10 || 1}`;
+    } else if (profitPercent > 0 && lossPercent > 0) {
+      const ratio = (profitPercent / lossPercent).toFixed(1);
+      riskReward = `1:${ratio}`;
+    }
+
     updateMutation.mutate({
       id: req.id,
       updates: {
-        profit_amount: d.profit_amount !== undefined ? Number(d.profit_amount) || null : req.profit_amount,
-        loss_amount: d.loss_amount !== undefined ? Number(d.loss_amount) || null : req.loss_amount,
-        risk_reward_ratio: d.risk_reward_ratio !== undefined ? (d.risk_reward_ratio as string) : req.risk_reward_ratio,
-        profit_percent: d.profit_percent !== undefined ? Number(d.profit_percent) || null : req.profit_percent,
-        loss_percent: d.loss_percent !== undefined ? Number(d.loss_percent) || null : req.loss_percent,
+        profit_percent: profitPercent,
+        loss_percent: lossPercent,
+        profit_amount: profitAmount,
+        loss_amount: lossAmount,
+        risk_reward_ratio: riskReward,
       },
     });
   };
@@ -119,8 +142,6 @@ const MT5CopierManagement = () => {
         broker_name: d.broker_name !== undefined ? String(d.broker_name) : req.broker_name,
         broker_server: d.broker_server !== undefined ? String(d.broker_server) : req.broker_server,
         mt5_password: d.mt5_password !== undefined ? String(d.mt5_password) : req.mt5_password,
-        // Clear any old sync error and force a fresh MetaApi account
-        // lookup, since the login/server may have just changed.
         sync_error: null,
         meta_account_id: null,
       } as any,
@@ -160,9 +181,7 @@ const MT5CopierManagement = () => {
           )}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Enter each account's performance numbers by hand in "Performance details" below.
-          Flip "Show on public Copier List" to control visibility — login, password, broker
-          and contact stay admin-only either way.
+          Enter Profit % or Loss % below and save — amounts & R:R ratio auto-calculate. Click WhatsApp to instantly message users.
         </p>
       </CardHeader>
       <CardContent>
@@ -275,9 +294,15 @@ const MT5CopierManagement = () => {
                       <>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                           {req.contact_number && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Phone className="h-4 w-4" />
-                              <span>{req.contact_number}</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openWhatsApp(req.contact_number)}
+                                className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
+                              >
+                                <Phone className="h-4 w-4" />
+                                <span>{req.contact_number}</span>
+                              </button>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -290,31 +315,47 @@ const MT5CopierManagement = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-sm">
-                          <Lock className="h-4 w-4 text-amber-500" />
-                          <span className="font-mono text-xs text-muted-foreground">
-                            Pass: <span className="font-bold text-foreground">
-                              {visiblePasswords[req.id] ? req.mt5_password : "••••••••"}
+                        <div className="flex items-center gap-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4 text-amber-500" />
+                            <span className="font-mono text-xs text-muted-foreground">
+                              Pass: <span className="font-bold text-foreground">
+                                {visiblePasswords[req.id] ? req.mt5_password : "••••••••"}
+                              </span>
                             </span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => togglePasswordVisibility(req.id)}
-                            className="p-1 hover:bg-muted rounded transition-colors"
-                          >
-                            {visiblePasswords[req.id] ? (
-                              <EyeOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                            ) : (
-                              <Eye className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingConnId(req.id)}
-                            className="ml-1 text-xs font-medium text-primary underline underline-offset-2"
-                          >
-                            Edit
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => togglePasswordVisibility(req.id)}
+                              className="p-1 hover:bg-muted rounded transition-colors"
+                            >
+                              {visiblePasswords[req.id] ? (
+                                <EyeOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                              ) : (
+                                <Eye className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingConnId(req.id)}
+                              className="ml-1 text-xs font-medium text-primary underline underline-offset-2"
+                            >
+                              Edit
+                            </button>
+                          </div>
+
+                          {/* Account Management jaisa WhatsApp Direct Action Button */}
+                          {req.contact_number && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openWhatsApp(req.contact_number)}
+                              className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1.5 ml-auto"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 fill-current" />
+                              WhatsApp
+                            </Button>
+                          )}
                         </div>
                       </>
                     )}
@@ -337,71 +378,54 @@ const MT5CopierManagement = () => {
                         Performance details
                         {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                       </button>
-
                     </div>
 
                     {isExpanded && (
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-3 rounded-lg bg-muted/30 border border-border/30">
+                      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/30">
                         <div className="space-y-1">
                           <Label className="text-[11px] flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3 text-emerald-500" /> Profit ($)
+                            <TrendingUp className="h-3 w-3 text-emerald-500" /> Profit %
                           </Label>
                           <Input
                             type="number"
-                            className="h-8 text-sm"
-                            value={getDraft(req, "profit_amount") ?? ""}
-                            onChange={(e) => setDraft(req.id, "profit_amount", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] flex items-center gap-1">
-                            <TrendingDown className="h-3 w-3 text-destructive" /> Loss ($)
-                          </Label>
-                          <Input
-                            type="number"
-                            className="h-8 text-sm"
-                            value={getDraft(req, "loss_amount") ?? ""}
-                            onChange={(e) => setDraft(req.id, "loss_amount", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px]">Risk:Reward</Label>
-                          <Input
-                            placeholder="1:3"
-                            className="h-8 text-sm"
-                            value={getDraft(req, "risk_reward_ratio") ?? ""}
-                            onChange={(e) => setDraft(req.id, "risk_reward_ratio", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px]">Profit %</Label>
-                          <Input
-                            type="number"
+                            placeholder="e.g. 15"
                             className="h-8 text-sm"
                             value={getDraft(req, "profit_percent") ?? ""}
-                            onChange={(e) => setDraft(req.id, "profit_percent", e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDraft(req.id, "profit_percent", val);
+                              if (Number(val) > 0) setDraft(req.id, "loss_percent", 0);
+                            }}
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[11px]">Loss %</Label>
+                          <Label className="text-[11px] flex items-center gap-1">
+                            <TrendingDown className="h-3 w-3 text-destructive" /> Loss %
+                          </Label>
                           <Input
                             type="number"
+                            placeholder="e.g. 5"
                             className="h-8 text-sm"
                             value={getDraft(req, "loss_percent") ?? ""}
-                            onChange={(e) => setDraft(req.id, "loss_percent", e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDraft(req.id, "loss_percent", val);
+                              if (Number(val) > 0) setDraft(req.id, "profit_percent", 0);
+                            }}
                           />
                         </div>
-                        <div className="col-span-2 sm:col-span-5">
+                        
+                        <div className="col-span-2">
                           <Button
                             size="sm"
-                            className="h-8 text-xs"
+                            className="h-8 text-xs w-full sm:w-auto"
                             onClick={() => savePerformance(req)}
                             disabled={updateMutation.isPending}
                           >
                             {updateMutation.isPending ? (
                               <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                             ) : null}
-                            Save Performance
+                            Save & Sync Performance
                           </Button>
                         </div>
                       </div>
