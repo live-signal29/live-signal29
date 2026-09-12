@@ -181,11 +181,13 @@ const SignalCardNew = ({
       ? "text-rose-500 dark:text-rose-400"
       : "text-emerald-500 dark:text-emerald-400";
 
-  const isPremiumUser = subscriptionStatus === "premium";
+  // Check: Sirf 'premium' active subscribers hi values dekh sakte hain
+  const isPaidPremiumUser = (subscriptionStatus || "").toLowerCase() === "premium";
 
+  // Trial aur Free users ke liye detail values LOCK rahengi
   const isLocked =
     !!signal.is_premium &&
-    !isPremiumUser &&
+    !isPaidPremiumUser &&
     !isClosed;
 
   const signalTime =
@@ -405,7 +407,49 @@ const SignalCardNew = ({
     }
   };
 
-  const getNoteStyle = () => {
+  const noteStyle = getNoteStyle();
+  const pairUpper = signal.pair?.toUpperCase() || "";
+
+  const runningOrClosedText = marketClosed 
+    ? "MARKET CLOSED" 
+    : "RUNNING";
+
+  const runningOrClosedColor = marketClosed 
+    ? "text-rose-400 dark:text-rose-400 font-medium" 
+    : "text-amber-500 dark:text-amber-400 animate-pulse font-medium";
+
+  const getTP1Status = () => {
+    if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (!isClosed) return { text: runningOrClosedText, color: runningOrClosedColor };
+    return { text: "", color: "" };
+  };
+
+  const getTP2Status = () => {
+    if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (!isClosed && signal.tp1_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
+    return { text: "", color: "" };
+  };
+
+  const getTP3Status = () => {
+    if (signal.tp3_hit) return { text: "TP 3 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (!isClosed && signal.tp2_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
+    return { text: "", color: "" };
+  };
+
+  const isSLHit = signal.sl_hit || /SL\s*Hit/i.test(note);
+
+  const getSLStatus = () => {
+    if (isSLHit) return { text: "SL HIT ❌", color: "text-rose-500 font-bold" };
+    if (!isClosed && signal.tp1_hit) return { text: "MOVE SL TO ENTRY POINT", color: "text-amber-500 dark:text-amber-400 font-bold" };
+    return { text: "", color: "" };
+  };
+
+  const tp1Status = getTP1Status();
+  const tp2Status = getTP2Status();
+  const tp3Status = getTP3Status();
+  const slStatus = getSLStatus();
+
+  function getNoteStyle() {
     const isSL = signal.sl_hit || /SL\s*Hit/i.test(note);
     const isTP1 = !isSL && (signal.tp1_hit || /TP\s*1/i.test(note)) && !signal.tp2_hit && !signal.tp3_hit;
     const isTP2 = !isSL && (signal.tp2_hit || /TP\s*2/i.test(note)) && !signal.tp3_hit;
@@ -448,71 +492,18 @@ const SignalCardNew = ({
       icon: "text-slate-400 dark:text-slate-400",
       text: "text-slate-600 dark:text-slate-300 font-bold",
     };
-  };
-
-  const noteStyle = getNoteStyle();
-  const pairUpper = signal.pair?.toUpperCase() || "";
-
-  const runningOrClosedText = marketClosed 
-    ? "MARKET CLOSED" 
-    : "RUNNING";
-
-  const runningOrClosedColor = marketClosed 
-    ? "text-rose-400 dark:text-rose-400 font-medium" 
-    : "text-amber-500 dark:text-amber-400 animate-pulse font-medium";
-
-  // Dynamic green status texts for TP hits
-  const getTP1Status = () => {
-    if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (!isClosed) return { text: runningOrClosedText, color: runningOrClosedColor };
-    return { text: "", color: "" };
-  };
-
-  const getTP2Status = () => {
-    if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (!isClosed && signal.tp1_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
-    return { text: "", color: "" };
-  };
-
-  const getTP3Status = () => {
-    if (signal.tp3_hit) return { text: "TP 3 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (!isClosed && signal.tp2_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
-    return { text: "", color: "" };
-  };
-
-  const isSLHit = signal.sl_hit || /SL\s*Hit/i.test(note);
-
-  const getSLStatus = () => {
-    if (isSLHit) return { text: "SL HIT ❌", color: "text-rose-500 font-bold" };
-    if (!isClosed && signal.tp1_hit) return { text: "MOVE SL TO ENTRY POINT", color: "text-amber-500 dark:text-amber-400 font-bold" };
-    return { text: "", color: "" };
-  };
-
-  const tp1Status = getTP1Status();
-  const tp2Status = getTP2Status();
-  const tp3Status = getTP3Status();
-  const slStatus = getSLStatus();
+  }
 
   return (
     <div
       ref={cardRef}
       className={cn(
         "relative mb-3 w-full rounded-[16px] p-3.5 transition-all duration-300 overflow-hidden border backdrop-blur-md shadow-lg",
-        "bg-gradient-to-br from-[#f8fcfa] via-[#f3f9f6] to-[#ffffff] border-emerald-500/20 shadow-emerald-900/5",
-        "dark:bg-gradient-to-br dark:from-[#0c182b] dark:via-[#09111e] dark:to-[#04080f] dark:border-cyan-500/20 dark:shadow-[0_8px_25px_rgba(0,0,0,0.6)]",
+        "bg-[#091424] border-cyan-500/20 shadow-[0_8px_25px_rgba(0,0,0,0.6)]",
         "hover:scale-[1.01]"
       )}
     >
-      <div 
-        className={cn(
-          "absolute top-0 left-0 right-0 h-[2px]",
-          isBuy 
-            ? "bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80" 
-            : "bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-80"
-        )} 
-      />
-
-      {/* HEADER */}
+      {/* 1. CARD HEADER (Hamesha visible rahega jaisa SOLUSD screenshot me hai) */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-yellow-600/10 text-xs shadow-sm">
@@ -521,7 +512,7 @@ const SignalCardNew = ({
 
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
-              <h3 className="text-xs font-black tracking-wide text-slate-800 dark:text-cyan-50 leading-tight">
+              <h3 className="text-xs font-black tracking-wide text-cyan-50 leading-tight">
                 {signal.pair.replace("/", "")}
               </h3>
 
@@ -538,47 +529,48 @@ const SignalCardNew = ({
             {statusText}
           </span>
 
-          <div className="flex items-center gap-1 text-[8px] font-medium text-slate-500 dark:text-cyan-200/50 bg-black/5 dark:bg-cyan-950/40 px-2 py-1 rounded-lg border border-black/5 dark:border-cyan-500/10">
-            <Clock className="h-2.5 w-2.5 text-emerald-600 dark:text-cyan-400" />
+          <div className="flex items-center gap-1 text-[8px] font-medium text-cyan-200/50 bg-cyan-950/40 px-2 py-1 rounded-lg border border-cyan-500/10">
+            <Clock className="h-2.5 w-2.5 text-cyan-400" />
             <span>{formatRealTime(signalTime)}</span>
           </div>
 
           <button
             onClick={() => setShowBody(!showBody)}
-            className="p-1 rounded-lg bg-black/5 dark:bg-cyan-950/40 border border-black/5 dark:border-cyan-500/10 text-slate-600 dark:text-cyan-300 hover:bg-black/10 transition-colors"
+            className="p-1 rounded-lg bg-cyan-950/40 border border-cyan-500/10 text-cyan-300 hover:bg-black/10 transition-colors"
           >
             {showBody ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
+      {/* 2. BODY SECTION (Lock hai to Screenshot wala Lock Box aayega, aksar Premium hai to actual values) */}
       {isLocked ? (
         <div 
           onClick={() => navigate("/premium")}
-          className="flex flex-col items-center justify-center gap-2 py-5 bg-emerald-500/5 dark:bg-cyan-950/30 rounded-[12px] border border-dashed border-emerald-500/30 dark:border-cyan-500/30 cursor-pointer select-none"
+          className="flex flex-col items-center justify-center gap-2.5 py-7 px-4 rounded-[12px] border border-dashed border-amber-500/30 bg-[#06101e]/60 cursor-pointer hover:bg-amber-500/5 transition-all duration-200 shadow-inner"
         >
-          <div className="p-2 rounded-full bg-amber-500/10 border border-amber-500/30">
-            <Lock className="h-4 w-4 text-amber-400" />
+          <div className="p-2.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+            <Lock className="h-5 w-5 text-amber-400" />
           </div>
-          <span className="text-[10px] font-bold tracking-wide text-slate-700 dark:text-cyan-200">
+          <span className="text-[11px] font-extrabold tracking-wide text-amber-300/90 flex items-center gap-1.5">
             🔒 Premium Signal - Tap to Unlock
           </span>
         </div>
       ) : (
         <>
-          {/* SUB HEADER */}
-          <div className="flex items-center justify-between rounded-[12px] bg-white/70 dark:bg-[#07101d]/80 border border-emerald-500/15 dark:border-cyan-500/15 px-3 py-2 mb-3 shadow-inner">
+          {/* ENTRY & CURRENT PRICE BAR */}
+          <div className="flex items-center justify-between rounded-[12px] bg-[#07101d]/80 border border-cyan-500/15 px-3 py-2 mb-3 shadow-inner">
             <div className="flex flex-col">
-              <span className="text-[7.5px] font-bold uppercase tracking-wider text-slate-400 dark:text-cyan-300/50">
+              <span className="text-[7.5px] font-bold uppercase tracking-wider text-cyan-300/50">
                 Entry
               </span>
-              <span className="font-mono text-[11px] font-black text-slate-800 dark:text-cyan-100">
+              <span className="font-mono text-[11px] font-black text-cyan-100">
                 {signal.entry}
               </span>
             </div>
 
             <div className="flex flex-col items-center">
-              <span className="text-[7.5px] font-bold uppercase tracking-wider text-slate-400 dark:text-cyan-300/50">
+              <span className="text-[7.5px] font-bold uppercase tracking-wider text-cyan-300/50">
                 Current
               </span>
               <span className={cn("font-mono text-[11.5px] font-black transition-colors duration-200", currentPriceColor)}>
@@ -587,12 +579,12 @@ const SignalCardNew = ({
             </div>
 
             <div className="flex flex-col items-end gap-0.5">
-              <span className={cn("rounded-md px-2.5 py-[2px] text-[8px] font-black uppercase tracking-wider shadow-sm", isBuy ? "bg-emerald-500 text-white dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/40" : "bg-rose-500 text-white dark:bg-rose-500/20 dark:text-rose-300 dark:border dark:border-rose-500/40")}>
+              <span className={cn("rounded-md px-2.5 py-[2px] text-[8px] font-black uppercase tracking-wider shadow-sm", isBuy ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" : "bg-rose-500/20 text-rose-300 border border-rose-500/40")}>
                 {signal.type.toUpperCase()} NOW
               </span>
 
               {runningPL !== null && !isClosed ? (
-                <span className={cn("font-mono text-[8.5px] font-extrabold", runningPL > 0 ? "text-emerald-600 dark:text-emerald-400" : runningPL < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400 dark:text-cyan-300/60")}>
+                <span className={cn("font-mono text-[8.5px] font-extrabold", runningPL > 0 ? "text-emerald-400" : runningPL < 0 ? "text-rose-400" : "text-cyan-300/60")}>
                   {runningPL > 0 ? `+${runningPL.toFixed(1)} pips` : runningPL < 0 ? `${runningPL.toFixed(1)} pips` : "0.0 pips"}
                 </span>
               ) : (
@@ -606,16 +598,16 @@ const SignalCardNew = ({
             </div>
           </div>
 
-          {/* VERTICAL BODY */}
+          {/* TARGETS & STOP LOSS LIST */}
           {showBody && (
-            <div className="flex flex-col gap-2 rounded-[12px] bg-white/40 dark:bg-[#07101d]/40 border border-emerald-500/10 dark:border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
+            <div className="flex flex-col gap-2 rounded-[12px] bg-[#07101d]/40 border border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
               {/* TP 1 */}
-              <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
-                <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp1_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-600 dark:text-cyan-300/70")}>
+              <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
+                <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp1_hit ? "text-emerald-400" : "text-cyan-300/70")}>
                   TP 1
                   {signal.tp1_hit && <span className="text-[11px] font-bold">✓</span>}
                 </span>
-                <span className={cn("text-[11px] font-extrabold text-center", signal.tp1_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                <span className={cn("text-[11px] font-extrabold text-center", signal.tp1_hit ? "text-emerald-400" : "text-cyan-100")}>
                   {signal.tp1}
                 </span>
                 <span className={cn("text-[10px] uppercase tracking-wider text-right", tp1Status.color)}>
@@ -625,12 +617,12 @@ const SignalCardNew = ({
 
               {/* TP 2 */}
               {signal.tp2 && (
-                <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
-                  <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp2_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-600 dark:text-cyan-300/70")}>
+                <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
+                  <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp2_hit ? "text-emerald-400" : "text-cyan-300/70")}>
                     TP 2
                     {signal.tp2_hit && <span className="text-[11px] font-bold">✓</span>}
                   </span>
-                  <span className={cn("text-[11px] font-extrabold text-center", signal.tp2_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                  <span className={cn("text-[11px] font-extrabold text-center", signal.tp2_hit ? "text-emerald-400" : "text-cyan-100")}>
                     {signal.tp2}
                   </span>
                   <span className={cn("text-[10px] uppercase tracking-wider text-right", tp2Status.color)}>
@@ -641,12 +633,12 @@ const SignalCardNew = ({
 
               {/* TP 3 */}
               {signal.tp3 && (
-                <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
-                  <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp3_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-600 dark:text-cyan-300/70")}>
+                <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
+                  <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp3_hit ? "text-emerald-400" : "text-cyan-300/70")}>
                     TP 3
                     {signal.tp3_hit && <span className="text-[11px] font-bold">✓</span>}
                   </span>
-                  <span className={cn("text-[11px] font-extrabold text-center", signal.tp3_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                  <span className={cn("text-[11px] font-extrabold text-center", signal.tp3_hit ? "text-emerald-400" : "text-cyan-100")}>
                     {signal.tp3}
                   </span>
                   <span className={cn("text-[10px] uppercase tracking-wider text-right", tp3Status.color)}>
@@ -658,7 +650,7 @@ const SignalCardNew = ({
               {/* SL */}
               <div className="grid grid-cols-3 items-center font-mono pt-1">
                 <span className="font-extrabold text-rose-500 uppercase text-[11px] text-left">SL</span>
-                <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", isSLHit ? "text-rose-500 dark:text-rose-400" : "text-slate-800 dark:text-cyan-100")}>
+                <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", isSLHit ? "text-rose-400" : "text-cyan-100")}>
                   {signal.sl}
                   {isSLHit && <span className="text-[10px]">❌</span>}
                 </span>
@@ -669,7 +661,7 @@ const SignalCardNew = ({
             </div>
           )}
 
-          {/* PROFIT NOTE AT BOTTOM */}
+          {/* PROFIT NOTE */}
           {note && (
             <div className={cn("flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-all duration-300 backdrop-blur-md", noteStyle.container)}>
               {isSLHit ? (
@@ -680,8 +672,8 @@ const SignalCardNew = ({
 
               {noteStyle.isSLText ? (
                 <span className="text-[9.5px] leading-tight tracking-wide">
-                  <span className="text-rose-600 dark:text-rose-400 font-extrabold">SL Hit ❌ </span>
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">- Staying patient for a better entry.</span>
+                  <span className="text-rose-400 font-extrabold">SL Hit ❌ </span>
+                  <span className="text-slate-400 font-medium">- Staying patient for a better entry.</span>
                 </span>
               ) : (
                 <span className={cn("text-[9.5px] leading-tight tracking-wide", noteStyle.text)}>
