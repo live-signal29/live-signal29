@@ -307,7 +307,10 @@ const SignalsDashboard = () => {
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase.rpc("get_signals_filtered", {
         p_main_category: mainCategory,
+        p_category: null,
         p_sub_category: subCategory || "all",
+        p_status: null,
+        p_signal_id: null,
         p_limit: SIGNALS_PER_PAGE,
         p_offset: pageParam * SIGNALS_PER_PAGE,
       });
