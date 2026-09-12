@@ -41,7 +41,7 @@ export const MarketClosedBanner: React.FC<MarketClosedBannerProps> = ({ category
 
         <div className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/15 px-2.5 py-1 rounded-lg border border-amber-500/20">
           <Sparkles className="h-3 w-3" />
-          <span>Market Offline</span>
+          <span>Market Closed</span>
         </div>
       </div>
     </div>
