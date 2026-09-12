@@ -95,11 +95,14 @@ export const useSubscriptionAccess = () => {
         
         // If trialEnd date exists and is in future -> Active 5-Day Trial
         if (trialEnd && trialEnd > now) {
-          setHasAccess(true);
+          // FREE TRIAL is still a FREE plan.
+          // Trial users can see premium signal cards, but must tap
+          // "Premium Signal - Tap to Unlock" to open the Premium page.
+          setHasAccess(false);
           setTrialExpired(false);
         } else {
           // Trial expired
-          setHasAccess(false); // Lock premium open signals
+          setHasAccess(false);
           setTrialExpired(true);
         }
       }
