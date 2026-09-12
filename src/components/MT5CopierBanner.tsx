@@ -34,16 +34,9 @@ const EMPTY_FORM: FormState = {
   note: "",
 };
 
-// Compact field styles so the whole form fits on a small phone screen with
-// minimal scrolling.
 const fieldLabelClass = "text-xs font-medium";
 const fieldInputClass = "h-9 text-sm";
 
-/**
- * Simple stacked-candlestick "copier" mark — stands in as a lightweight
- * logo badge for the MT5 Copier feature without using any broker/MetaTrader
- * trademarked artwork.
- */
 const CopierLogo = () => (
   <svg viewBox="0 0 40 40" className="h-full w-full" aria-hidden="true">
     <rect width="40" height="40" rx="10" fill="currentColor" opacity="0.15" />
@@ -62,18 +55,20 @@ const CopierLogo = () => (
   </svg>
 );
 
-/**
- * Promotional banner shown once near the top of the signals feed (above the
- * signal cards, visible without scrolling, in every category). Opens a
- * dialog where a user can submit their MT5 account details so it can be
- * manually connected to the Telegram-to-MT5 copier. On submit, an edge
- * function saves the request and pings the admin's Telegram notification
- * bot.
- */
 export const MT5CopierBanner = () => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+
+  // Input change handler with auto-formatting for WhatsApp (Ensuring it starts with '+' and numbers only)
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    
+    // Allow only '+' at the very beginning and numbers anywhere else
+    value = value.replace(/(?!^\+)[^\d]/g, "");
+    
+    setForm((prev) => ({ ...prev, contact_number: value }));
+  };
 
   const update = (field: keyof FormState) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -90,7 +85,16 @@ export const MT5CopierBanner = () => {
       !form.broker_server.trim() ||
       !form.mt5_password.trim()
     ) {
-      toast.error("Please fill your name, contact number, MT5 login, broker name, server and password");
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    // Strict WhatsApp Validation (Must start with + and have 10 to 15 digits total)
+    const phoneRegex = /^\+[1-9]\d{9,14}$/;
+    if (!phoneRegex.test(form.contact_number.trim())) {
+      toast.error("Invalid WhatsApp Number!", {
+        description: "Please enter a correct WhatsApp number starting with '+' and country code (e.g., +923001234567).",
+      });
       return;
     }
 
@@ -105,8 +109,8 @@ export const MT5CopierBanner = () => {
         throw new Error(data?.error || error?.message || "Request failed");
       }
 
-      toast.success("Request submitted!", {
-        description: "Our team will contact you shortly to connect your MT5 account.",
+      toast.success("Request submitted successfully!", {
+        description: "Our team will contact you on WhatsApp shortly.",
       });
       setForm(EMPTY_FORM);
       setOpen(false);
@@ -142,9 +146,6 @@ export const MT5CopierBanner = () => {
         </span>
       </button>
 
-      {/* max-h + overflow-y-auto so the form scrolls inside the dialog on
-          small screens instead of getting cut off with no way to reach the
-          submit button. */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="space-y-1 pb-1">
@@ -155,7 +156,7 @@ export const MT5CopierBanner = () => {
               <DialogTitle className="text-base">Connect to MT5 Copier</DialogTitle>
             </div>
             <DialogDescription className="text-xs">
-              Share your MT5 details and our team will link your account to the signal copier.
+              Enter your correct WhatsApp number so our team can easily reach out to you.
             </DialogDescription>
           </DialogHeader>
 
@@ -172,14 +173,19 @@ export const MT5CopierBanner = () => {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="contact_number" className={fieldLabelClass}>Contact Number</Label>
+                <Label htmlFor="contact_number" className={fieldLabelClass}>
+                  WhatsApp Number <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="contact_number"
                   placeholder="+923001234567"
                   value={form.contact_number}
-                  onChange={update("contact_number")}
+                  onChange={handlePhoneChange}
                   className={fieldInputClass}
                 />
+                <span className="text-[10px] text-muted-foreground block">
+                  Must include '+' and country code.
+                </span>
               </div>
             </div>
 
@@ -229,16 +235,16 @@ export const MT5CopierBanner = () => {
                 className={fieldInputClass}
               />
               <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
-                <ShieldCheck className="h-3 w-3 shrink-0 mt-0.5" />
+                <ShieldCheck className="h-3 w-3 shrink-0 mt0.5" />
                 Used only to connect your account to the copier — kept private and secure.
               </p>
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="note" className={fieldLabelClass}>Note / Contact Details (optional)</Label>
+              <Label htmlFor="note" className={fieldLabelClass}>Note / Additional Details (optional)</Label>
               <Textarea
                 id="note"
-                placeholder="WhatsApp number, best time to contact, etc."
+                placeholder="Any special instructions..."
                 value={form.note}
                 onChange={update("note")}
                 rows={2}
