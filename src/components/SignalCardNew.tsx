@@ -90,6 +90,7 @@ const isMarketClosed = (pairSymbol: string) => {
 
 const SignalCardNew = ({
   signal,
+  hasAccess,
   subscriptionStatus,
   livePrice,
 }: SignalCardProps) => {
@@ -181,14 +182,17 @@ const SignalCardNew = ({
       ? "text-rose-500 dark:text-rose-400"
       : "text-emerald-500 dark:text-emerald-400";
 
-  // Check: Sirf 'premium' active subscribers hi values dekh sakte hain
-  const isPaidPremiumUser = (subscriptionStatus || "").toLowerCase() === "premium";
+  // --- FIXED ACCESS CHECK ---
+  // Agar hasAccess prop true hai YA subscriptionStatus premium/trial/active hai
+  const normalizedStatus = (subscriptionStatus || "").toLowerCase();
+  const userHasValidAccess =
+    hasAccess === true ||
+    normalizedStatus === "premium" ||
+    normalizedStatus === "trial" ||
+    normalizedStatus === "active";
 
-  // Trial aur Free users ke liye detail values LOCK rahengi
-  const isLocked =
-    !!signal.is_premium &&
-    !isPaidPremiumUser &&
-    !isClosed;
+  // Signal Tabhi lock hoga agar Premium signal ho, User ke paas Valid Access Na Ho, aur signal Closed na hua ho
+  const isLocked = !!signal.is_premium && !userHasValidAccess && !isClosed;
 
   const signalTime =
     isOpen && signal.activated_at
@@ -503,7 +507,7 @@ const SignalCardNew = ({
         "hover:scale-[1.01]"
       )}
     >
-      {/* 1. CARD HEADER (Hamesha visible rahega jaisa SOLUSD screenshot me hai) */}
+      {/* 1. HEADER */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-yellow-600/10 text-xs shadow-sm">
@@ -543,7 +547,7 @@ const SignalCardNew = ({
         </div>
       </div>
 
-      {/* 2. BODY SECTION (Lock hai to Screenshot wala Lock Box aayega, aksar Premium hai to actual values) */}
+      {/* 2. BODY SECTION */}
       {isLocked ? (
         <div 
           onClick={() => navigate("/premium")}
