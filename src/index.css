@@ -4,7 +4,7 @@
 
 /* =========================================================
    FOREX 7STARZ / LIVE SIGNALS SYSTEM
-   Dark Theme : Deep Midnight Space Blue + Starfield + Neon Glow
+   Dark Theme : Deep Midnight Royal Space Blue + Starfield + Neon Glow
    Light Theme: Crisp Porcelain White + Modern Emerald/Cyan
    ========================================================= */
 
@@ -51,17 +51,17 @@
     --sell: 346 84% 61%;
   }
 
-  /* ================= DARK THEME (EXACT SPACE BLUE CLONE) ================= */
+  /* ================= DARK THEME (EXACT ROYAL BLUE SPACE CLONE) ================= */
   .dark {
-    /* Exact Background: Deep Midnight Blue #080E1A */
-    --background: 221 53% 7%;
+    /* Background: Deep Midnight Royal Blue */
+    --background: 216 62% 7%;
     --foreground: 210 40% 98%;
 
-    /* Cards: Darker Slate Blue Overlay #0E1726 */
-    --card: 218 45% 10%;
+    /* Cards: Darker Blue Overlay */
+    --card: 217 50% 9%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 218 45% 10%;
+    --popover: 217 50% 9%;
     --popover-foreground: 210 40% 98%;
 
     /* Neon Emerald Green Glow */
@@ -105,9 +105,9 @@
     @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
   }
 
-  /* Full App Deep Midnight Blue Gradient */
+  /* Full App Deep Midnight Royal Blue Gradient (Exact Left App Match) */
   .dark body {
-    background: radial-gradient(circle at 50% 0%, #0d1b2a 0%, #080e1a 60%, #04070d 100%) !important;
+    background: radial-gradient(circle at 50% 0%, #0d1d33 0%, #081221 45%, #040a14 100%) !important;
     background-attachment: fixed !important;
   }
 
@@ -116,10 +116,10 @@
     content: "";
     position: fixed;
     inset: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px);
-    background-size: 36px 36px;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px);
+    background-size: 32px 32px;
     pointer-events: none;
-    opacity: 0.35;
+    opacity: 0.4;
     z-index: 0;
   }
 }
