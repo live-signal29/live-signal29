@@ -4,7 +4,7 @@
 
 /* =========================================================
    FOREX 7STARZ EXACT DESIGN SYSTEM
-   Dark Theme : Deep Pitch Obsidian + Neon Glows
+   Dark Theme : Deep Luxury Navy Blue Gradient + Neon Glows
    Light Theme: Crisp Porcelain White + Modern Emerald/Cyan
    ========================================================= */
 
@@ -51,16 +51,16 @@
     --sell: 346 84% 61%;
   }
 
-  /* ================= DARK THEME (FOREX7STARZ EXACT) ================= */
+  /* ================= DARK THEME (DEEP NAVY BLUE EDITION) ================= */
   .dark {
-    --background: 225 40% 5%;             /* Pitch Obsidian Black #060913 */
-    --foreground: 0 0% 100%;
+    --background: 222 47% 7%;            /* Rich Midnight Navy #0B0F19 */
+    --foreground: 210 40% 98%;
 
-    --card: 224 35% 8%;                  /* Elevated Dark Card #0C101D */
-    --card-foreground: 0 0% 100%;
+    --card: 222 40% 11%;                 /* Elevated Navy Card #101726 */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 224 35% 8%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 40% 98%;
 
     --primary: 161 94% 40%;              /* Neon Emerald Green */
     --primary-foreground: 225 40% 5%;
@@ -68,7 +68,7 @@
     --secondary: 187 92% 45%;            /* Neon Cyan */
     --secondary-foreground: 225 40% 5%;
 
-    --muted: 224 25% 14%;
+    --muted: 222 30% 16%;
     --muted-foreground: 215 20% 65%;
 
     --accent: 45 93% 53%;                /* Forex Gold Accent */
@@ -77,8 +77,8 @@
     --destructive: 346 84% 65%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 224 25% 16%;
-    --input: 224 25% 16%;
+    --border: 222 30% 18%;
+    --input: 222 30% 18%;
     --ring: 161 94% 40%;
 
     --success: 161 94% 40%;
@@ -98,6 +98,12 @@
 
   body {
     @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
+  }
+
+  /* Dark mode background ambient radial gradient for premium navy look */
+  .dark body {
+    background: radial-gradient(circle at top center, #111827 0%, #0b0f19 60%, #070a12 100%) !important;
+    background-attachment: fixed !important;
   }
 }
 
@@ -275,11 +281,7 @@
 }
 
 /* =========================================================
-   GOOGLE TRANSLATE WIDGET — hide Google's default UI chrome.
-   We drive language switching from our own menu (see
-   src/lib/googleTranslate.ts + the Language section in
-   SideDrawer), so none of Google's own banner/toolbar/tooltip
-   should ever be visible to the user.
+   GOOGLE TRANSLATE WIDGET
    ========================================================= */
 .goog-te-banner-frame,
 .goog-te-balloon-frame,
