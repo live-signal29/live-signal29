@@ -25,6 +25,7 @@ import { CopierLeaderboard } from "@/components/CopierLeaderboard";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
+import { MarketClosedBanner } from "@/components/MarketClosedBanner";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -552,6 +553,9 @@ const SignalsDashboard = () => {
               })}
             </div>
           </div>
+
+          {/* WEEKEND MARKET CLOSED BANNER */}
+          <MarketClosedBanner category={mainCategory} />
 
           <MT5CopierBanner />
 
