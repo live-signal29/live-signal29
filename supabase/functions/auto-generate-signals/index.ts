@@ -15,10 +15,12 @@ const supabase = createClient(
 );
 
 // =========================================================
-// MARKET HOURS CHECKER
+// MARKET HOURS CHECKER (FIXED)
 // =========================================================
 
-function isMarketOpen(category: string): boolean {
+function isMarketOpen(item: { pair: string; category: string }): boolean {
+  const { category } = item;
+
   // Crypto and Deriv indices run 24/7
   if (category === "CRYPTO" || category === "DERIV/BINARY") {
     return true;
@@ -432,11 +434,11 @@ Deno.serve(async (req) => {
       { pair: "VOL 100", pipMultiplier: 10, decimals: 2, category: "DERIV/BINARY" },
     ];
 
-    // FILTER OUT CLOSED MARKETS
-    const availableCommodities = commodities.filter((i) => isMarketOpen(i.category));
-    const availableForex = forex.filter((i) => isMarketOpen(i.category));
-    const availableCrypto = crypto.filter((i) => isMarketOpen(i.category));
-    const availableDeriv = deriv.filter((i) => isMarketOpen(i.category));
+    // FILTER OUT CLOSED MARKETS (FIXED)
+    const availableCommodities = commodities.filter((i) => isMarketOpen(i));
+    const availableForex = forex.filter((i) => isMarketOpen(i));
+    const availableCrypto = crypto.filter((i) => isMarketOpen(i));
+    const availableDeriv = deriv.filter((i) => isMarketOpen(i));
 
     const weighted: any[] = [];
 
