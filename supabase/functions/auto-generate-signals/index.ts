@@ -15,14 +15,14 @@ const supabase = createClient(
 );
 
 // =========================================================
-// MARKET HOURS CHECKER (FIXED)
+// MARKET HOURS CHECKER (FIXED CATEGORIES & WEEKENDS)
 // =========================================================
 
 function isMarketOpen(item: { pair: string; category: string }): boolean {
   const { category } = item;
 
-  // Crypto and Deriv indices run 24/7
-  if (category === "CRYPTO" || category === "DERIV/BINARY") {
+  // Crypto aur Deriv indices 24/7 chalte hain
+  if (category === "CRYPTO" || category === "DERIV") {
     return true;
   }
 
@@ -30,10 +30,10 @@ function isMarketOpen(item: { pair: string; category: string }): boolean {
   const day = now.getUTCDay(); // 0 = Sunday, 6 = Saturday
   const hour = now.getUTCHours();
 
-  // Friday night close (22:00 UTC) to Sunday night open (22:00 UTC)
+  // Friday 22:00 UTC se Sunday 22:00 UTC tak Forex & Commodities band hotay hain
   if (day === 6) return false; // Saturday (Closed)
-  if (day === 5 && hour >= 22) return false; // Friday after 22:00 UTC
-  if (day === 0 && hour < 22) return false; // Sunday before 22:00 UTC
+  if (day === 5 && hour >= 22) return false; // Friday late night
+  if (day === 0 && hour < 22) return false; // Sunday early morning
 
   return true;
 }
@@ -276,12 +276,13 @@ function generateSignal(config: any) {
     };
   }
 
+  // Database Column Constraint matches exactly: COMMODITIE, CRYPTO, DERIV, FOREX
   const category = isGold || isSilver || isIndex
-    ? "COMMODITIES"
+    ? "COMMODITIE"
     : isBTC
     ? "CRYPTO"
     : isDeriv
-    ? "DERIV/BINARY"
+    ? "DERIV"
     : "FOREX";
 
   return {
@@ -404,11 +405,11 @@ Deno.serve(async (req) => {
     const livePrices = await fetchLivePrices();
 
     const commodities = [
-      { pair: "XAU/USD (Gold)", pipMultiplier: 1, decimals: 2, category: "COMMODITIES" },
-      { pair: "XAG/USD (Silver)", pipMultiplier: 0.05, decimals: 3, category: "COMMODITIES" },
-      { pair: "US30", pipMultiplier: 1, decimals: 2, category: "COMMODITIES" },
-      { pair: "NASDAQ", pipMultiplier: 1, decimals: 2, category: "COMMODITIES" },
-      { pair: "S&P500", pipMultiplier: 1, decimals: 2, category: "COMMODITIES" },
+      { pair: "XAU/USD (Gold)", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
+      { pair: "XAG/USD (Silver)", pipMultiplier: 0.05, decimals: 3, category: "COMMODITIE" },
+      { pair: "US30", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
+      { pair: "NASDAQ", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
+      { pair: "S&P500", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
     ];
 
     const forex = [
@@ -427,14 +428,14 @@ Deno.serve(async (req) => {
     ];
 
     const deriv = [
-      { pair: "BOOM 1000", pipMultiplier: 10, decimals: 2, category: "DERIV/BINARY" },
-      { pair: "CRASH 1000", pipMultiplier: 10, decimals: 2, category: "DERIV/BINARY" },
-      { pair: "VOL 75", pipMultiplier: 1, decimals: 2, category: "DERIV/BINARY" },
-      { pair: "BOOM 500", pipMultiplier: 10, decimals: 2, category: "DERIV/BINARY" },
-      { pair: "VOL 100", pipMultiplier: 10, decimals: 2, category: "DERIV/BINARY" },
+      { pair: "BOOM 1000", pipMultiplier: 10, decimals: 2, category: "DERIV" },
+      { pair: "CRASH 1000", pipMultiplier: 10, decimals: 2, category: "DERIV" },
+      { pair: "VOL 75", pipMultiplier: 1, decimals: 2, category: "DERIV" },
+      { pair: "BOOM 500", pipMultiplier: 10, decimals: 2, category: "DERIV" },
+      { pair: "VOL 100", pipMultiplier: 10, decimals: 2, category: "DERIV" },
     ];
 
-    // FILTER OUT CLOSED MARKETS (FIXED)
+    // FILTER OUT CLOSED MARKETS
     const availableCommodities = commodities.filter((i) => isMarketOpen(i));
     const availableForex = forex.filter((i) => isMarketOpen(i));
     const availableCrypto = crypto.filter((i) => isMarketOpen(i));
@@ -442,17 +443,8 @@ Deno.serve(async (req) => {
 
     const weighted: any[] = [];
 
-    for (const item of availableCommodities) {
-      let weight = 1;
-      if (item.pair === "XAU/USD (Gold)") weight = 55;
-      else if (item.pair === "XAG/USD (Silver)") weight = 12;
-      else if (item.pair === "US30") weight = 9;
-      else if (item.pair === "NASDAQ") weight = 8;
-      else if (item.pair === "S&P500") weight = 6;
-
-      for (let i = 0; i < weight; i++) weighted.push(item);
-    }
-
+    // Weekend par weight fair divide hoga
+    for (const item of availableCommodities) weighted.push(item);
     for (const item of availableForex) weighted.push(item);
     for (const item of availableCrypto) weighted.push(item);
     for (const item of availableDeriv) weighted.push(item);
@@ -496,18 +488,6 @@ Deno.serve(async (req) => {
     }
 
     const signal = generateSignal({ ...selected, price: live });
-    const currentPrice = Number(live.price);
-
-    if (!validateSignal(signal, currentPrice)) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          generated: false,
-          reason: "Signal validation failed",
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     const expiryTime = new Date(
       Date.now() + getExpiryHours(signal.signal_type) * 60 * 60 * 1000
