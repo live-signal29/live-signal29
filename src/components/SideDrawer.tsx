@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Bell, Settings,
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
@@ -8,7 +8,8 @@ import {
   BookOpen as LearnIcon,
   Wrench as ToolsIcon,
   Crown as PremiumIcon,
-  Settings as AccountIcon
+  Settings as AccountIcon,
+  Languages as LanguagesIcon, Check
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -19,7 +20,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 import trendFriendLogo from "@/assets/trend-friend-logo-new.png";
-import { Languages as LanguagesIcon, Check } from "lucide-react";
 import { SITE_LANGUAGES, getSavedLanguage, setSiteLanguage } from "@/lib/googleTranslate";
 
 const APP_VERSION = "1.7.9";
@@ -391,7 +391,7 @@ export const SideDrawer = () => {
             <ThemeToggle />
           </div>
 
-          {/* Menu Sections - Smooth Scroll Container */}
+          {/* Menu Sections */}
           <nav
             ref={menuScrollRef}
             onScroll={rememberScroll}
@@ -408,7 +408,7 @@ export const SideDrawer = () => {
               />
             ))}
 
-            {/* Selected Language — Highlighted Golden Box */}
+            {/* Selected Language Category */}
             <LanguageCategory
               isOpen={openCategories["Selected Language"] ?? false}
               onToggle={() => toggleCategory("Selected Language")}
@@ -492,3 +492,5 @@ export const SideDrawer = () => {
     </Sheet>
   );
 };
+
+export default SideDrawer;
