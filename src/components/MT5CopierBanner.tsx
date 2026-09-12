@@ -60,19 +60,61 @@ export const MT5CopierBanner = () => {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
 
-  // Input change handler with auto-formatting for WhatsApp (Ensuring it starts with '+' and numbers only)
+  // Input change handler: Strict formatting (Only '+' at start and numbers)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
-    
-    // Allow only '+' at the very beginning and numbers anywhere else
+    // Keep '+' only if it's the first character, remove all non-digits elsewhere
     value = value.replace(/(?!^\+)[^\d]/g, "");
-    
     setForm((prev) => ({ ...prev, contact_number: value }));
   };
 
   const update = (field: keyof FormState) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  // Strict Validation logic to verify complete length behind country code
+  const validateWhatsAppNumber = (phone: string): { valid: boolean; message: string } => {
+    const cleanPhone = phone.trim();
+
+    if (!cleanPhone.startsWith("+")) {
+      return { 
+        valid: false, 
+        message: "WhatsApp number must start with '+' and country code (e.g., +92 or +91)." 
+      };
+    }
+
+    const digitsOnly = cleanPhone.substring(1); // remove '+'
+
+    // Pakistan (+92): 92 + 10 digits = 12 total digits
+    if (cleanPhone.startsWith("+92")) {
+      if (digitsOnly.length !== 12) {
+        return { 
+          valid: false, 
+          message: "Incomplete number! Pakistan WhatsApp numbers must have exactly 10 digits after +92." 
+        };
+      }
+    } 
+    // India (+91): 91 + 10 digits = 12 total digits
+    else if (cleanPhone.startsWith("+91")) {
+      if (digitsOnly.length !== 12) {
+        return { 
+          valid: false, 
+          message: "Incomplete number! India WhatsApp numbers must have exactly 10 digits after +91." 
+        };
+      }
+    } 
+    // Universal check for all other countries (10 to 15 digits total)
+    else {
+      if (digitsOnly.length < 11 || digitsOnly.length > 15) {
+        return { 
+          valid: false, 
+          message: "Please enter a complete and correct WhatsApp number with country code." 
+        };
+      }
+    }
+
+    return { valid: true, message: "" };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,11 +131,11 @@ export const MT5CopierBanner = () => {
       return;
     }
 
-    // Strict WhatsApp Validation (Must start with + and have 10 to 15 digits total)
-    const phoneRegex = /^\+[1-9]\d{9,14}$/;
-    if (!phoneRegex.test(form.contact_number.trim())) {
-      toast.error("Invalid WhatsApp Number!", {
-        description: "Please enter a correct WhatsApp number starting with '+' and country code (e.g., +923001234567).",
+    // Perform strict phone verification before submitting
+    const phoneCheck = validateWhatsAppNumber(form.contact_number);
+    if (!phoneCheck.valid) {
+      toast.error("Invalid WhatsApp Number", {
+        description: phoneCheck.message,
       });
       return;
     }
@@ -109,7 +151,7 @@ export const MT5CopierBanner = () => {
         throw new Error(data?.error || error?.message || "Request failed");
       }
 
-      toast.success("Request submitted successfully!", {
+      toast.success("Request submitted!", {
         description: "Our team will contact you on WhatsApp shortly.",
       });
       setForm(EMPTY_FORM);
@@ -156,7 +198,7 @@ export const MT5CopierBanner = () => {
               <DialogTitle className="text-base">Connect to MT5 Copier</DialogTitle>
             </div>
             <DialogDescription className="text-xs">
-              Enter your correct WhatsApp number so our team can easily reach out to you.
+              Share your MT5 details and correct WhatsApp number to link your account.
             </DialogDescription>
           </DialogHeader>
 
@@ -178,13 +220,13 @@ export const MT5CopierBanner = () => {
                 </Label>
                 <Input
                   id="contact_number"
-                  placeholder="+923001234567"
+                  placeholder="Enter WhatsApp Number"
                   value={form.contact_number}
                   onChange={handlePhoneChange}
                   className={fieldInputClass}
                 />
-                <span className="text-[10px] text-muted-foreground block">
-                  Must include '+' and country code.
+                <span className="text-[10px] text-muted-foreground block font-medium">
+                  + with country code (e.g. +923001234567)
                 </span>
               </div>
             </div>
@@ -235,7 +277,7 @@ export const MT5CopierBanner = () => {
                 className={fieldInputClass}
               />
               <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
-                <ShieldCheck className="h-3 w-3 shrink-0 mt0.5" />
+                <ShieldCheck className="h-3 w-3 shrink-0 mt-0.5" />
                 Used only to connect your account to the copier — kept private and secure.
               </p>
             </div>
