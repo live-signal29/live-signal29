@@ -70,6 +70,28 @@ interface SignalCardProps {
   livePrice?: number;
 }
 
+/* MARKET CLOSED CHECKER HELPER */
+const isMarketClosed = (pairSymbol: string) => {
+  const upper = (pairSymbol || "").toUpperCase();
+  
+  // Crypto markets 24/7 open rehti hain
+  if (upper.includes("BTC") || upper.includes("ETH") || upper.includes("SOL") || upper.includes("XRP") || upper.includes("LTC") || upper.includes("ADA")) {
+    return false;
+  }
+
+  // Forex, Gold, Commodities, Indices weekend par close hote hain
+  const now = new Date();
+  const day = now.getUTCDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
+  const hour = now.getUTCHours();
+
+  // Friday night (22:00 UTC) se Sunday night (22:00 UTC) tak closed
+  if (day === 6) return true; // Saturday FULL CLOSED
+  if (day === 5 && hour >= 22) return true; // Friday Night Closed
+  if (day === 0 && hour < 22) return true; // Sunday Day Closed
+
+  return false;
+};
+
 const SignalCardNew = ({
   signal,
   subscriptionStatus,
@@ -90,6 +112,9 @@ const SignalCardNew = ({
 
     return () => window.clearInterval(interval);
   }, []);
+
+  /* MARKET CLOSED CHECK */
+  const marketClosed = isMarketClosed(signal.pair);
 
   /* SIGNAL STATUS */
   const lifecycle = (
@@ -238,7 +263,7 @@ const SignalCardNew = ({
   const slBreachStreakRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen || !currentPriceNum || parsedEntryPrice <= 0) {
+    if (!isOpen || !currentPriceNum || parsedEntryPrice <= 0 || marketClosed) {
       primedForChecksRef.current = false;
       slBreachStreakRef.current = 0;
       return;
@@ -320,6 +345,7 @@ const SignalCardNew = ({
     isOpen,
     currentPriceNum,
     parsedEntryPrice,
+    marketClosed,
     signal.id,
     signal.type,
     signal.tp1,
@@ -423,22 +449,30 @@ const SignalCardNew = ({
   const noteStyle = getNoteStyle();
   const pairUpper = signal.pair?.toUpperCase() || "";
 
-  /* TARGET STATUS LOGIC FOR OPEN VS CLOSED */
+  /* TARGET STATUS LOGIC FOR OPEN VS CLOSED VS MARKET CLOSED */
+  const runningOrClosedText = marketClosed 
+    ? "MARKET CLOSED" 
+    : "RUNNING";
+
+  const runningOrClosedColor = marketClosed 
+    ? "text-rose-400 dark:text-rose-400 font-medium" 
+    : "text-amber-500 dark:text-amber-400 animate-pulse font-medium";
+
   const getTP1Status = () => {
     if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (!isClosed) return { text: "RUNNING", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
+    if (!isClosed) return { text: runningOrClosedText, color: runningOrClosedColor };
     return { text: "", color: "" };
   };
 
   const getTP2Status = () => {
     if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (!isClosed && signal.tp1_hit) return { text: "RUNNING", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
+    if (!isClosed && signal.tp1_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
     return { text: "", color: "" };
   };
 
   const getTP3Status = () => {
     if (signal.tp3_hit) return { text: "TP 3 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
-    if (!isClosed && signal.tp2_hit) return { text: "RUNNING", color: "text-amber-500 dark:text-amber-400 animate-pulse font-medium" };
+    if (!isClosed && signal.tp2_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
     return { text: "", color: "" };
   };
 
@@ -567,7 +601,7 @@ const SignalCardNew = ({
             </div>
           </div>
 
-          {/* VERTICAL BODY: TP 1, TP 2, TP 3 & SL (With Increased Font Size) */}
+          {/* VERTICAL BODY: TP 1, TP 2, TP 3 & SL */}
           {showBody && (
             <div className="flex flex-col gap-2 rounded-[12px] bg-white/40 dark:bg-[#07101d]/40 border border-emerald-500/10 dark:border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
               {/* TP 1 */}
