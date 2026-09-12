@@ -405,7 +405,6 @@ const SignalCardNew = ({
     }
   };
 
-  /* Exact Theme Configuration requested */
   const getNoteStyle = () => {
     const isSL = signal.sl_hit || /SL\s*Hit/i.test(note);
     const isTP1 = !isSL && (signal.tp1_hit || /TP\s*1/i.test(note)) && !signal.tp2_hit && !signal.tp3_hit;
@@ -462,14 +461,15 @@ const SignalCardNew = ({
     ? "text-rose-400 dark:text-rose-400 font-medium" 
     : "text-amber-500 dark:text-amber-400 animate-pulse font-medium";
 
+  // Dynamic green status texts for TP hits
   const getTP1Status = () => {
-    if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-purple-500 dark:text-purple-400 font-bold" };
+    if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
     if (!isClosed) return { text: runningOrClosedText, color: runningOrClosedColor };
     return { text: "", color: "" };
   };
 
   const getTP2Status = () => {
-    if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-blue-500 dark:text-blue-400 font-bold" };
+    if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
     if (!isClosed && signal.tp1_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
     return { text: "", color: "" };
   };
@@ -611,10 +611,12 @@ const SignalCardNew = ({
             <div className="flex flex-col gap-2 rounded-[12px] bg-white/40 dark:bg-[#07101d]/40 border border-emerald-500/10 dark:border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
               {/* TP 1 */}
               <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
-                <span className="font-extrabold text-slate-600 dark:text-cyan-300/70 uppercase text-[11px] text-left">TP 1</span>
-                <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", signal.tp1_hit ? "text-purple-500 dark:text-purple-400" : "text-slate-800 dark:text-cyan-100")}>
+                <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp1_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-600 dark:text-cyan-300/70")}>
+                  TP 1
+                  {signal.tp1_hit && <span className="text-[11px] font-bold">✓</span>}
+                </span>
+                <span className={cn("text-[11px] font-extrabold text-center", signal.tp1_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
                   {signal.tp1}
-                  {signal.tp1_hit && <span className="text-[10px]">✓</span>}
                 </span>
                 <span className={cn("text-[10px] uppercase tracking-wider text-right", tp1Status.color)}>
                   {tp1Status.text}
@@ -624,10 +626,12 @@ const SignalCardNew = ({
               {/* TP 2 */}
               {signal.tp2 && (
                 <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
-                  <span className="font-extrabold text-slate-600 dark:text-cyan-300/70 uppercase text-[11px] text-left">TP 2</span>
-                  <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", signal.tp2_hit ? "text-blue-500 dark:text-blue-400" : "text-slate-800 dark:text-cyan-100")}>
+                  <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp2_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-600 dark:text-cyan-300/70")}>
+                    TP 2
+                    {signal.tp2_hit && <span className="text-[11px] font-bold">✓</span>}
+                  </span>
+                  <span className={cn("text-[11px] font-extrabold text-center", signal.tp2_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
                     {signal.tp2}
-                    {signal.tp2_hit && <span className="text-[10px]">✓</span>}
                   </span>
                   <span className={cn("text-[10px] uppercase tracking-wider text-right", tp2Status.color)}>
                     {tp2Status.text}
@@ -638,10 +642,12 @@ const SignalCardNew = ({
               {/* TP 3 */}
               {signal.tp3 && (
                 <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
-                  <span className="font-extrabold text-slate-600 dark:text-cyan-300/70 uppercase text-[11px] text-left">TP 3</span>
-                  <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", signal.tp3_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                  <span className={cn("font-extrabold uppercase text-[11px] text-left flex items-center gap-1", signal.tp3_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-600 dark:text-cyan-300/70")}>
+                    TP 3
+                    {signal.tp3_hit && <span className="text-[11px] font-bold">✓</span>}
+                  </span>
+                  <span className={cn("text-[11px] font-extrabold text-center", signal.tp3_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
                     {signal.tp3}
-                    {signal.tp3_hit && <span className="text-[10px]">✓</span>}
                   </span>
                   <span className={cn("text-[10px] uppercase tracking-wider text-right", tp3Status.color)}>
                     {tp3Status.text}
@@ -663,7 +669,7 @@ const SignalCardNew = ({
             </div>
           )}
 
-          {/* PROFIT NOTE AT BOTTOM WITH EXACT CUSTOM STYLING */}
+          {/* PROFIT NOTE AT BOTTOM */}
           {note && (
             <div className={cn("flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-all duration-300 backdrop-blur-md", noteStyle.container)}>
               {isSLHit ? (
