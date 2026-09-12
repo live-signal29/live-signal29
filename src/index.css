@@ -1,334 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* =========================================================
-   FOREX 7STARZ / LIVE SIGNALS SYSTEM
-   Dark Theme : Deep Midnight Space Navy + Glowing Stars Overlay
-   Light Theme: Crisp Porcelain White + Modern Emerald/Cyan
-   ========================================================= */
-
+   1. GLOBAL STYLES & BASE RESET
+========================================================= */
 @layer base {
-  /* ================= LIGHT THEME ================= */
   :root {
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 161 94% 30%;             /* Emerald Green */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 187 92% 38%;           /* Cyan */
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 220 14% 93%;
-    --muted-foreground: 215 16% 45%;
-
-    --accent: 45 93% 47%;               /* Gold Accent */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 346 84% 61%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 161 94% 30%;
-
-    --radius: 1rem;
-
-    /* Trading Colors */
-    --success: 161 94% 30%;
-    --success-foreground: 0 0% 100%;
-    --success-deep: 161 94% 22%;
-    --warning: 45 93% 47%;
-    --warning-foreground: 222 47% 11%;
-    --buy: 161 94% 30%;
-    --sell: 346 84% 61%;
+    --color-dark-bg: #020617;
+    --color-card-bg: #081426;
+    --color-emerald: #10b981;
+    --color-cyan: #06b6d4;
+    --color-sky: #0284c7;
+    --color-gold: #f59e0b;
   }
 
-  /* ================= DARK THEME (EXACT NAVY SPACE CLONE) ================= */
-  .dark {
-    /* Exact Navy Background & Card Colors */
-    --background: 222 60% 5%;
-    --foreground: 210 40% 98%;
-
-    --card: 220 45% 8%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 220 45% 8%;
-    --popover-foreground: 210 40% 98%;
-
-    /* Neon Primary Glows */
-    --primary: 160 84% 39%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 187 92% 45%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217 33% 15%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 38 92% 50%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 346 84% 65%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 217 30% 18%;
-    --input: 217 30% 18%;
-    --ring: 160 84% 39%;
-
-    --success: 160 84% 39%;
-    --success-foreground: 210 40% 98%;
-    --success-deep: 161 94% 28%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 210 40% 98%;
-    --buy: 160 84% 39%;
-    --sell: 346 84% 65%;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
   }
 
+  html, 
   body {
-    @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
+    max-width: 100vw;
+    min-height: 100vh;
+    overflow-x: hidden !important;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: 
+      radial-gradient(circle at 12% 8%, rgba(14, 165, 233, 0.15), transparent 27%),
+      radial-gradient(circle at 88% 18%, rgba(16, 185, 129, 0.11), transparent 29%),
+      radial-gradient(circle at 48% 92%, rgba(37, 99, 235, 0.13), transparent 34%),
+      linear-gradient(135deg, #020617 0%, #061326 42%, #071a30 70%, #030b18 100%);
+    background-color: var(--color-dark-bg);
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Exact Deep Ocean / Space Blue Background */
-  .dark body {
-    background-color: #030712 !important;
-    background-image: 
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 116, 144, 0.25), transparent),
-      radial-gradient(circle at 50% 30%, #0c1a2e 0%, #070e1b 60%, #030712 100%) !important;
-    background-attachment: fixed !important;
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
 
-  /* Glowing Scattered Stars Overlay */
-  .dark body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background-image: 
-      radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.9), rgba(0,0,0,0)),
-      radial-gradient(2px 2px at 40px 70px, rgba(56, 189, 248, 0.8), rgba(0,0,0,0)),
-      radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.8), rgba(0,0,0,0)),
-      radial-gradient(2px 2px at 160px 120px, rgba(16, 185, 129, 0.8), rgba(0,0,0,0)),
-      radial-gradient(1.5px 1.5px at 230px 190px, rgba(255, 255, 255, 0.7), rgba(0,0,0,0)),
-      radial-gradient(2px 2px at 310px 80px, rgba(56, 189, 248, 0.8), rgba(0,0,0,0));
-    background-repeat: repeat;
-    background-size: 350px 350px;
-    pointer-events: none;
-    opacity: 0.6;
-    z-index: 0;
-    animation: starGlow 4s ease-in-out infinite alternate;
+  ::-webkit-scrollbar-track {
+    background: #030712;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #06b6d4;
   }
 }
 
 /* =========================================================
-   NEON GLOWS & COMPONENT OVERRIDES
-   ========================================================= */
+   2. CANVAS CONTAINER
+========================================================= */
+#canvas-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0.85;
+}
 
+#stars-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================
+   3. COMPONENTS & GLASSMORPHISM
+========================================================= */
 @layer components {
-
-  /* Modern Card */
-  .modern-card, .starz-card {
-    background: hsl(var(--card));
-    color: hsl(var(--card-foreground));
-    border: 1px solid hsl(var(--border));
-    @apply rounded-2xl p-4 transition-all duration-300;
+  /* Glassmorphism Panel */
+  .glass-panel {
+    background: linear-gradient(145deg, rgba(8, 20, 38, 0.88), rgba(3, 12, 28, 0.82));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(148, 163, 184, 0.10);
+    transform-style: preserve-3d;
   }
 
-  .modern-card:hover, .starz-card:hover {
-    @apply border-primary/40;
-    box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.15);
+  /* Interactive Glass Card */
+  .glass-card {
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.65), rgba(8, 14, 26, 0.75));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Modern Input */
-  .modern-input {
-    background-color: hsl(var(--muted));
-    color: hsl(var(--foreground));
-    border: 1px solid hsl(var(--border));
-    @apply rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all;
-  }
-
-  /* Modern Button */
-  .btn-modern {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
-    color: #ffffff;
-    @apply rounded-2xl font-semibold px-6 py-3 shadow-md hover:opacity-95 active:scale-[0.98] transition-all;
-  }
-
-  /* Neon Profile Ring */
-  .avatar-neon-ring {
-    @apply relative flex items-center justify-center rounded-full p-[2px];
-    background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #eab308 100%);
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 35px rgba(6, 182, 212, 0.2);
-    animation: spin-glow 6s linear infinite;
-  }
-
-  /* Category Badges */
-  .badge-gold {
-    @apply bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 font-semibold rounded-xl px-3 py-1.5;
-    box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.1);
-  }
-
-  .badge-emerald {
-    @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold rounded-xl px-3 py-1.5;
-    box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.1);
-  }
-
-  .badge-cyan {
-    @apply bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-semibold rounded-xl px-3 py-1.5;
-    box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.1);
-  }
-
-  .badge-purple {
-    @apply bg-purple-500/10 text-purple-400 border border-purple-500/30 font-semibold rounded-xl px-3 py-1.5;
-    box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.1);
-  }
-
-  /* Glowing Text Gradients */
-  .text-neon-emerald {
-    @apply text-emerald-400;
-    text-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
-  }
-
-  .text-neon-cyan {
-    @apply text-cyan-400;
-    text-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
-  }
-
-  .text-neon-gold {
-    @apply text-yellow-400;
-    text-shadow: 0 0 12px rgba(234, 179, 8, 0.5);
+  .glass-card:hover {
+    border-color: rgba(6, 182, 212, 0.35);
+    box-shadow: 0 25px 50px -12px rgba(6, 182, 212, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
   }
 }
 
 /* =========================================================
-   ANIMATIONS
-   ========================================================= */
-
+   4. UTILITIES & NEON GLOW EFFECTS
+========================================================= */
 @layer utilities {
-  @keyframes starGlow {
-    0% { opacity: 0.35; }
-    100% { opacity: 0.8; }
+  /* Text Gradient Utilities */
+  .text-gradient-cyan {
+    background: linear-gradient(135deg, #38bdf8 0%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
-  @keyframes spin-glow {
-    0% {
-      filter: hue-rotate(0deg);
-    }
-    100% {
-      filter: hue-rotate(360deg);
-    }
+  .text-gradient-emerald {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
-  @keyframes pulse-slow {
-    0%, 100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.85;
-      transform: scale(1.02);
-    }
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
-  .animate-pulse-slow {
-    animation: pulse-slow 3s ease-in-out infinite;
+  /* Neon Glow Shadows */
+  .glow-emerald {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.30);
   }
 
-  @keyframes fade-slide-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px) scale(0.99);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+  .glow-sky {
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.30);
   }
 
-  .animate-fade-slide-in {
-    animation: fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.30);
   }
 
-  @keyframes glow-pulse {
-    0%, 100% {
-      box-shadow: 0 0 12px hsl(var(--primary) / 0.35), 0 0 0 hsl(var(--primary) / 0);
-    }
-    50% {
-      box-shadow: 0 0 26px hsl(var(--primary) / 0.6), 0 0 10px hsl(var(--primary) / 0.35);
-    }
-  }
-
-  .glow-pulse {
-    animation: glow-pulse 2.6s ease-in-out infinite;
-  }
-
-  @keyframes glow-pulse-secondary {
-    0%, 100% {
-      box-shadow: 0 0 12px hsl(var(--secondary) / 0.35), 0 0 0 hsl(var(--secondary) / 0);
-    }
-    50% {
-      box-shadow: 0 0 26px hsl(var(--secondary) / 0.6), 0 0 10px hsl(var(--secondary) / 0.35);
-    }
-  }
-
-  .glow-pulse-secondary {
-    animation: glow-pulse-secondary 2.6s ease-in-out infinite;
-  }
-
-  .tab-pill-active {
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45), inset 0 0 10px hsl(var(--primary) / 0.15);
-    transform: translateY(-1px);
-  }
-
-  .card-3d-hover {
-    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
-  }
-
-  .card-3d-hover:hover {
-    transform: translateY(-4px) scale(1.015);
-    box-shadow: 0 16px 32px -12px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.25);
-  }
-
-  .card-3d-hover:active {
-    transform: translateY(-1px) scale(0.995);
+  /* Pulsing Animation Class */
+  .pulse-glow {
+    animation: pulseGlow 5s infinite ease-in-out;
   }
 }
 
 /* =========================================================
-   GOOGLE TRANSLATE WIDGET
-   ========================================================= */
-.goog-te-banner-frame,
-.goog-te-balloon-frame,
-#goog-gt-tt,
-.goog-tooltip,
-.goog-tooltip:hover,
-.goog-text-highlight {
-  display: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
+   5. KEYFRAME ANIMATIONS
+========================================================= */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.22;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.42;
+    transform: scale(1.04);
+  }
 }
 
-body {
-  top: 0 !important;
-  position: static !important;
-}
-
-#google_translate_element {
-  display: none !important;
-}
-
-.skiptranslate iframe {
-  display: none !important;
+/* =========================================================
+   6. RESPONSIVE BREAKPOINTS & OPTIMIZATIONS
+========================================================= */
+@media (max-width: 767px) {
+  .glass-panel,
+  .glass-card {
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+  
+  .pulse-glow {
+    animation-duration: 7s;
+  }
 }
