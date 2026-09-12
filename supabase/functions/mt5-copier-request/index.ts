@@ -9,13 +9,8 @@ const corsHeaders = {
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get(
-  "SUPABASE_SERVICE_ROLE_KEY"
-)!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Separate from TELEGRAM_CHANNEL_ID (the public signals channel) so these
-// private requests land in the admin's own chat/notification bot instead of
-// the public channel.
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const TELEGRAM_ADMIN_CHAT_ID = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID");
 
@@ -34,6 +29,50 @@ function escapeHtml(value: unknown): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+// Function to validate strict WhatsApp number format and complete digits
+function validateWhatsAppNumber(phone: string): { valid: boolean; error?: string } {
+  const cleanPhone = phone.trim();
+
+  if (!cleanPhone.startsWith("+")) {
+    return {
+      valid: false,
+      error: "WhatsApp number must start with '+' and country code (e.g. +923001234567).",
+    };
+  }
+
+  const digitsOnly = cleanPhone.substring(1); // Remove '+'
+
+  // Pakistan (+92): 92 + 10 digits = 12 total digits
+  if (cleanPhone.startsWith("+92")) {
+    if (digitsOnly.length !== 12) {
+      return {
+        valid: false,
+        error: "Incomplete number! Pakistani WhatsApp numbers must have exactly 10 digits after +92.",
+      };
+    }
+  } 
+  // India (+91): 91 + 10 digits = 12 total digits
+  else if (cleanPhone.startsWith("+91")) {
+    if (digitsOnly.length !== 12) {
+      return {
+        valid: false,
+        error: "Incomplete number! Indian WhatsApp numbers must have exactly 10 digits after +91.",
+      };
+    }
+  } 
+  // International format: 11 to 15 digits total behind '+'
+  else {
+    if (digitsOnly.length < 11 || digitsOnly.length > 15) {
+      return {
+        valid: false,
+        error: "Please enter a valid complete WhatsApp number with full country code.",
+      };
+    }
+  }
+
+  return { valid: true };
 }
 
 async function notifyAdmin(row: {
@@ -64,7 +103,7 @@ async function notifyAdmin(row: {
   }
 
   if (row.contact_number) {
-    message += `📞 Contact: <code>${escapeHtml(row.contact_number)}</code>\n`;
+    message += `💬 WhatsApp: <code>${escapeHtml(row.contact_number)}</code>\n`;
   }
 
   message += `👤 Login: <code>${escapeHtml(row.mt5_login)}</code>\n`;
@@ -160,6 +199,21 @@ serve(async (req) => {
       );
     }
 
+    // Backend WhatsApp Number Verification
+    const phoneCheck = validateWhatsAppNumber(contact_number);
+    if (!phoneCheck.valid) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: phoneCheck.error || "Invalid WhatsApp number provided.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: inserted, error: insertError } = await supabase
@@ -172,9 +226,6 @@ serve(async (req) => {
         broker_server,
         mt5_password,
         note,
-        // Show up on the public Copier List immediately with 0% stats.
-        // Real profit/loss numbers get filled in (by the admin, from
-        // actual trade results) once the account starts trading.
         is_public: true,
         profit_amount: 0,
         loss_amount: 0,
