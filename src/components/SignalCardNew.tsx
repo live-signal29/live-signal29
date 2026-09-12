@@ -182,17 +182,30 @@ const SignalCardNew = ({
       ? "text-rose-500 dark:text-rose-400"
       : "text-emerald-500 dark:text-emerald-400";
 
-  // --- FIXED ACCESS CHECK ---
-  // Agar hasAccess prop true hai YA subscriptionStatus premium/trial/active hai
-  const normalizedStatus = (subscriptionStatus || "").toLowerCase();
+  // --- SUBSCRIPTION ACCESS ---
+  // The database uses `free_trial`; older UI code also used `trial`.
+  // Normalize both forms here so a valid trial can never be locked by
+  // a string mismatch.
+  const normalizedStatus = (subscriptionStatus || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
   const userHasValidAccess =
     hasAccess === true ||
     normalizedStatus === "premium" ||
+    normalizedStatus === "pro" ||
+    normalizedStatus === "yearly" ||
+    normalizedStatus === "free_trial" ||
     normalizedStatus === "trial" ||
     normalizedStatus === "active";
 
-  // Signal Tabhi lock hoga agar Premium signal ho, User ke paas Valid Access Na Ho, aur signal Closed na hua ho
-  const isLocked = !!signal.is_premium && !userHasValidAccess && !isClosed;
+  // Only an active premium signal is locked for users without access.
+  // Closed/history cards remain visible so everyone can see the result.
+  const isLocked =
+    !!signal.is_premium &&
+    !userHasValidAccess &&
+    !isClosed;
 
   const signalTime =
     isOpen && signal.activated_at
