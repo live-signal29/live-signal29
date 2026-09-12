@@ -20,7 +20,7 @@ const fetchWithRetry = async <T>(
 
 export const useSubscriptionAccess = () => {
   const [hasAccess, setHasAccess] = useState(true); // Optimistically assume access
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialExpired, setTrialExpired] = useState(false);
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
@@ -48,6 +48,7 @@ export const useSubscriptionAccess = () => {
       
       if (!user) {
         setHasAccess(false);
+        setSubscriptionStatus("free");
         setLoading(false);
         return;
       }
@@ -55,7 +56,7 @@ export const useSubscriptionAccess = () => {
       const profile = await fetchWithRetry(async () => {
         const { data, error } = await supabase
           .from('profiles')
-          .select('subscription_status, trial_end_date, subscription_end_date')
+          .select('subscription_status, plan_type, trial_end_date, trial_expires_at, subscription_end_date')
           .eq('id', user.id)
           .single();
         if (error) throw error;
@@ -64,61 +65,60 @@ export const useSubscriptionAccess = () => {
 
       if (!profile) {
         setHasAccess(false);
+        setSubscriptionStatus("free");
         setLoading(false);
         return;
       }
 
-      setSubscriptionStatus(profile.subscription_status);
+      const status = (profile.subscription_status || profile.plan_type || 'free').toLowerCase();
+      setSubscriptionStatus(status);
       retryCountRef.current = 0; // Reset on success
 
       const now = new Date();
 
-      // Check if premium
-      if (profile.subscription_status === 'premium') {
+      // Check if Premium User
+      if (status === 'premium' || status === 'yearly' || status === 'pro') {
         const endDate = profile.subscription_end_date ? new Date(profile.subscription_end_date) : null;
-        if (endDate && endDate > now) {
+        if (!endDate || endDate > now) {
           setHasAccess(true);
           setTrialExpired(false);
         } else {
           setHasAccess(false);
-          setTrialExpired(false);
+          setTrialExpired(true);
         }
       }
-      // Check if free trial
-      else if (profile.subscription_status === 'free_trial') {
-        const trialEnd = profile.trial_end_date ? new Date(profile.trial_end_date) : null;
+      // Check if Free Trial User (Active or Expired)
+      else if (status === 'free_trial' || status === 'trial') {
+        // Safe check for both trial_end_date or trial_expires_at
+        const trialEndRaw = profile.trial_end_date || profile.trial_expires_at;
+        const trialEnd = trialEndRaw ? new Date(trialEndRaw) : null;
         setTrialEndDate(trialEnd);
         
+        // If trialEnd date exists and is in future -> Active 5-Day Trial
         if (trialEnd && trialEnd > now) {
-          // Trial is still active
           setHasAccess(true);
           setTrialExpired(false);
         } else {
-          // Trial has expired - but still allow dashboard access with filtered signals
-          setHasAccess(true); // Allow access to dashboard
-          setTrialExpired(true); // Mark trial as expired for filtering
+          // Trial expired
+          setHasAccess(false); // Lock premium open signals
+          setTrialExpired(true);
         }
       }
-      // Otherwise no access
+      // Default Free User
       else {
         setHasAccess(false);
-        setTrialExpired(false);
+        setTrialExpired(true);
       }
     } catch (error) {
       retryCountRef.current++;
       
-      // Only log first few errors to avoid spam
       if (retryCountRef.current <= 2) {
         console.error("Error checking access:", error);
       }
       
-      // On network errors, keep optimistic access instead of blocking user
-      // This prevents VPN/proxy users from being locked out
       if (retryCountRef.current < maxRetries) {
-        // Retry after delay
         setTimeout(checkAccess, 2000 * retryCountRef.current);
       }
-      // Keep hasAccess as true (optimistic) on persistent failures
     } finally {
       setLoading(false);
     }
