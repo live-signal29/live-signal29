@@ -169,6 +169,25 @@ const SignalForm = memo(
       []
     );
 
+    const resolveMainCategory = useCallback((pair: string, selected: string) => {
+      const normalized = String(pair || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (normalized.includes("XAUUSD") || normalized.includes("XAGUSD") ||
+          normalized.includes("GOLD") || normalized.includes("SILVER") ||
+          normalized === "US30" || normalized === "NASDAQ" || normalized === "SP500" ||
+          normalized === "DAX" || normalized === "FTSE100" || normalized === "NIKKEI") {
+        return "COMMODITIES";
+      }
+      if (normalized.includes("BTCUSD") || normalized.includes("ETHUSD") ||
+          normalized.includes("XRPUSD") || normalized.includes("LTCUSD") ||
+          normalized.includes("ADAUSD") || normalized.includes("SOLUSD")) {
+        return "CRYPTO";
+      }
+      if (normalized.includes("BOOM") || normalized.includes("CRASH") || normalized.includes("VOL")) {
+        return "DERIV/BINARY";
+      }
+      return String(selected || "FOREX").trim().toUpperCase();
+    }, []);
+
     const handleSubmit = async (
       e: React.FormEvent
     ) => {
@@ -209,14 +228,18 @@ const SignalForm = memo(
             ? String(entryPrice)
             : String(formData.entry || "");
 
+        const resolvedMainCategory = resolveMainCategory(
+          validation.data.pair,
+          validation.data.main_category
+        );
+
         const cleanedData = {
           pair: validation.data.pair,
           type: validation.data.type,
-          category: validation.data.category,
-          main_category:
-            validation.data.main_category,
+          category: resolvedMainCategory,
+          main_category: resolvedMainCategory,
           sub_category:
-            validation.data.sub_category || null,
+            validation.data.sub_category || validation.data.pair || null,
 
           entry: formData.entry,
           current_price: initialCurrentPrice,
@@ -255,6 +278,7 @@ const SignalForm = memo(
             validation.data.analysis_reason || null,
 
           is_premium: formData.is_premium,
+          published: editSignal?.published ?? true,
           tag: formData.tag || null,
           signal_raw_text: null,
         };
