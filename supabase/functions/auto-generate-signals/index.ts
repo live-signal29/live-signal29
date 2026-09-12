@@ -15,30 +15,6 @@ const supabase = createClient(
 );
 
 // =========================================================
-// MARKET HOURS CHECKER (FIXED CATEGORIES & WEEKENDS)
-// =========================================================
-
-function isMarketOpen(item: { pair: string; category: string }): boolean {
-  const { category } = item;
-
-  // Crypto aur Deriv indices 24/7 chalte hain
-  if (category === "CRYPTO" || category === "DERIV") {
-    return true;
-  }
-
-  const now = new Date();
-  const day = now.getUTCDay(); // 0 = Sunday, 6 = Saturday
-  const hour = now.getUTCHours();
-
-  // Friday 22:00 UTC se Sunday 22:00 UTC tak Forex & Commodities band hotay hain
-  if (day === 6) return false; // Saturday (Closed)
-  if (day === 5 && hour >= 22) return false; // Friday late night
-  if (day === 0 && hour < 22) return false; // Sunday early morning
-
-  return true;
-}
-
-// =========================================================
 // HELPERS
 // =========================================================
 
@@ -92,6 +68,7 @@ async function fetchLivePrices() {
   }
 
   const data = await response.json();
+
   const prices = data?.prices || data || {};
 
   const aliases: Record<string, string[]> = {
@@ -154,7 +131,7 @@ const sellReasons = [
 ];
 
 // =========================================================
-// LEVEL GENERATORS
+// GOLD - KEEP EXISTING WORKING LOGIC
 // =========================================================
 
 function generateGoldLevels(entry: number, isBuy: boolean) {
@@ -176,6 +153,10 @@ function generateGoldLevels(entry: number, isBuy: boolean) {
   };
 }
 
+// =========================================================
+// SILVER - FIXED LOGIC
+// =========================================================
+
 function generateSilverLevels(entry: number, isBuy: boolean) {
   const slDistance = rand(1.5, 3);
   const tp1Distance = rand(0.5, 1);
@@ -194,6 +175,10 @@ function generateSilverLevels(entry: number, isBuy: boolean) {
     tp3: Number(tp3.toFixed(3)),
   };
 }
+
+// =========================================================
+// BTC - FIXED LOGIC
+// =========================================================
 
 function generateBTCLevels(entry: number, isBuy: boolean) {
   const slDistance = rand(30, 60);
@@ -219,95 +204,305 @@ function generateBTCLevels(entry: number, isBuy: boolean) {
 // =========================================================
 
 function generateSignal(config: any) {
-  const { pair, price, pipMultiplier, decimals } = config;
+  const {
+    pair,
+    price,
+    pipMultiplier,
+    decimals,
+  } = config;
+
   const currentPrice = Number(price.price);
 
   const isGold = pair === "XAU/USD (Gold)";
   const isSilver = pair === "XAG/USD (Silver)";
   const isBTC = pair === "BTC/USD";
-  const isIndex = ["US30", "NASDAQ", "S&P500"].includes(pair);
+
+  const isIndex = [
+    "US30",
+    "NASDAQ",
+    "S&P500",
+  ].includes(pair);
+
   const isVol75 = pair === "VOL 75";
-  const isDeriv = ["BOOM 1000", "CRASH 1000", "VOL 75", "BOOM 500", "VOL 100"].includes(pair);
+
+  const isDeriv = [
+    "BOOM 1000",
+    "CRASH 1000",
+    "VOL 75",
+    "BOOM 500",
+    "VOL 100",
+  ].includes(pair);
 
   const isBuy = Math.random() > 0.5;
 
-  let entryOffset = 0;
-  if (isGold) entryOffset = rand(-0.50, 0.50);
-  else if (isSilver) entryOffset = rand(-0.10, 0.10);
-  else if (isBTC) entryOffset = rand(-10, 10);
-  else if (isIndex) entryOffset = rand(-2, 2);
-  else if (isVol75 || isDeriv) entryOffset = rand(-5, 5);
-  else entryOffset = rand(-pipMultiplier * 3, pipMultiplier * 3);
+  // =======================================================
+  // ENTRY DISTANCE
+  // =======================================================
 
-  const entry = Number((currentPrice + entryOffset).toFixed(decimals));
+  let entryOffset = 0;
+
+  if (isGold) {
+    // GOLD: existing working logic
+    entryOffset = rand(-0.50, 0.50);
+  } else if (isSilver) {
+    // SILVER: maximum $0.10 away
+    entryOffset = rand(-0.10, 0.10);
+  } else if (isBTC) {
+    // BTC: maximum $10 away
+    entryOffset = rand(-10, 10);
+  } else if (isIndex) {
+    entryOffset = rand(-2, 2);
+  } else if (isVol75) {
+    entryOffset = rand(-5, 5);
+  } else if (isDeriv) {
+    entryOffset = rand(-5, 5);
+  } else {
+    entryOffset = rand(
+      -pipMultiplier * 3,
+      pipMultiplier * 3
+    );
+  }
+
+  const entry = Number(
+    (currentPrice + entryOffset).toFixed(decimals)
+  );
+
+  // =======================================================
+  // LEVELS
+  // =======================================================
 
   let levels;
-  if (isGold) levels = generateGoldLevels(entry, isBuy);
-  else if (isSilver) levels = generateSilverLevels(entry, isBuy);
-  else if (isBTC) levels = generateBTCLevels(entry, isBuy);
+
+  if (isGold) {
+    levels = generateGoldLevels(entry, isBuy);
+  }
+
+  // SILVER
+  else if (isSilver) {
+    levels = generateSilverLevels(entry, isBuy);
+  }
+
+  // BTC
+  else if (isBTC) {
+    levels = generateBTCLevels(entry, isBuy);
+  }
+
+  // INDICES
   else if (isIndex) {
-    const slDist = rand(20, 35);
+    const slDistance = rand(20, 35);
+    const tp1Distance = rand(10, 18);
+    const tp2Distance = rand(20, 30);
+    const tp3Distance = rand(30, 50);
+
     levels = {
-      sl: Number((isBuy ? entry - slDist : entry + slDist).toFixed(2)),
-      tp1: Number((isBuy ? entry + rand(10, 18) : entry - rand(10, 18)).toFixed(2)),
-      tp2: Number((isBuy ? entry + rand(20, 30) : entry - rand(20, 30)).toFixed(2)),
-      tp3: Number((isBuy ? entry + rand(30, 50) : entry - rand(30, 50)).toFixed(2)),
-    };
-  } else if (isVol75) {
-    levels = {
-      sl: Number((isBuy ? entry - rand(150, 250) : entry + rand(150, 250)).toFixed(2)),
-      tp1: Number((isBuy ? entry + rand(150, 250) : entry - rand(150, 250)).toFixed(2)),
-      tp2: Number((isBuy ? entry + rand(300, 450) : entry - rand(300, 450)).toFixed(2)),
-      tp3: Number((isBuy ? entry + rand(500, 700) : entry - rand(500, 700)).toFixed(2)),
-    };
-  } else if (isDeriv) {
-    levels = {
-      sl: Number((isBuy ? entry - rand(40, 80) : entry + rand(40, 80)).toFixed(2)),
-      tp1: Number((isBuy ? entry + rand(40, 80) : entry - rand(40, 80)).toFixed(2)),
-      tp2: Number((isBuy ? entry + rand(90, 150) : entry - rand(90, 150)).toFixed(2)),
-      tp3: Number((isBuy ? entry + rand(160, 250) : entry - rand(160, 250)).toFixed(2)),
-    };
-  } else {
-    levels = {
-      sl: Number((isBuy ? entry - rand(12, 20) * pipMultiplier : entry + rand(12, 20) * pipMultiplier).toFixed(decimals)),
-      tp1: Number((isBuy ? entry + rand(15, 25) * pipMultiplier : entry - rand(15, 25) * pipMultiplier).toFixed(decimals)),
-      tp2: Number((isBuy ? entry + rand(30, 45) * pipMultiplier : entry - rand(30, 45) * pipMultiplier).toFixed(decimals)),
-      tp3: Number((isBuy ? entry + rand(50, 75) * pipMultiplier : entry - rand(50, 75) * pipMultiplier).toFixed(decimals)),
+      sl: Number(
+        (isBuy
+          ? entry - slDistance
+          : entry + slDistance
+        ).toFixed(2)
+      ),
+
+      tp1: Number(
+        (isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance
+        ).toFixed(2)
+      ),
+
+      tp2: Number(
+        (isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance
+        ).toFixed(2)
+      ),
+
+      tp3: Number(
+        (isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance
+        ).toFixed(2)
+      ),
     };
   }
 
-  // Database Column Constraint matches exactly: COMMODITIE, CRYPTO, DERIV, FOREX
-  const category = isGold || isSilver || isIndex
-    ? "COMMODITIE"
-    : isBTC
-    ? "CRYPTO"
-    : isDeriv
-    ? "DERIV"
-    : "FOREX";
+  // VOL 75
+  else if (isVol75) {
+    const slDistance = rand(150, 250);
+    const tp1Distance = rand(150, 250);
+    const tp2Distance = rand(300, 450);
+    const tp3Distance = rand(500, 700);
+
+    levels = {
+      sl: Number(
+        (isBuy
+          ? entry - slDistance
+          : entry + slDistance
+        ).toFixed(2)
+      ),
+
+      tp1: Number(
+        (isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance
+        ).toFixed(2)
+      ),
+
+      tp2: Number(
+        (isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance
+        ).toFixed(2)
+      ),
+
+      tp3: Number(
+        (isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance
+        ).toFixed(2)
+      ),
+    };
+  }
+
+  // OTHER DERIV
+  else if (isDeriv) {
+    const slDistance = rand(40, 80);
+    const tp1Distance = rand(40, 80);
+    const tp2Distance = rand(90, 150);
+    const tp3Distance = rand(160, 250);
+
+    levels = {
+      sl: Number(
+        (isBuy
+          ? entry - slDistance
+          : entry + slDistance
+        ).toFixed(2)
+      ),
+
+      tp1: Number(
+        (isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance
+        ).toFixed(2)
+      ),
+
+      tp2: Number(
+        (isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance
+        ).toFixed(2)
+      ),
+
+      tp3: Number(
+        (isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance
+        ).toFixed(2)
+      ),
+    };
+  }
+
+  // FOREX / OTHER CRYPTO
+  else {
+    const slDistance = rand(12, 20) * pipMultiplier;
+    const tp1Distance = rand(15, 25) * pipMultiplier;
+    const tp2Distance = rand(30, 45) * pipMultiplier;
+    const tp3Distance = rand(50, 75) * pipMultiplier;
+
+    levels = {
+      sl: Number(
+        (isBuy
+          ? entry - slDistance
+          : entry + slDistance
+        ).toFixed(decimals)
+      ),
+
+      tp1: Number(
+        (isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance
+        ).toFixed(decimals)
+      ),
+
+      tp2: Number(
+        (isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance
+        ).toFixed(decimals)
+      ),
+
+      tp3: Number(
+        (isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance
+        ).toFixed(decimals)
+      ),
+    };
+  }
 
   return {
     pair,
     symbol: pair,
-    category,
+    category:
+      isGold || isSilver
+        ? "COMMODITIES"
+        : isBTC
+        ? "CRYPTO"
+        : isDeriv
+        ? "DERIV/BINARY"
+        : isIndex
+        ? "COMMODITIES"
+        : "FOREX",
+
     action: isBuy ? "BUY" : "SELL",
+
     direction: isBuy ? "BUY" : "SELL",
+
     entry,
+
     current_price: currentPrice,
     currentPrice,
+
     sl: levels.sl,
     tp1: levels.tp1,
     tp2: levels.tp2,
     tp3: levels.tp3,
+
     stop_loss: levels.sl,
     target1: levels.tp1,
     target2: levels.tp2,
     target3: levels.tp3,
-    reason: pick(isBuy ? buyReasons : sellReasons),
-    signal_type: isGold ? "Scalping" : pick(["Scalping", "Intraday", "Swing"]),
+
+    reason: pick(
+      isBuy ? buyReasons : sellReasons
+    ),
+
+    signal_type: isGold
+      ? "Scalping"
+      : pick([
+          "Scalping",
+          "Intraday",
+          "Swing",
+        ]),
+
+    // FIX: the `signals` table's real direction column is `type`
+    // (NOT `action`/`direction`) — the frontend card reads
+    // `signal.type` to show the BUY/SELL badge. We keep
+    // action/direction too for backward compatibility with any
+    // code still reading those.
     type: isBuy ? "BUY" : "SELL",
+
     created_at: new Date().toISOString(),
   };
 }
+
+// =========================================================
+// EXPIRY TIME
+// -----------------------------------------------------------
+// Auto-generated signals never got an expiry_time before, so the
+// client-side auto-close timer (useSignalTimer) had nothing to
+// expire and signals stayed OPEN forever. This also feeds the
+// server-side safety-close timeout in auto-close-signals.
+// =========================================================
 
 function getExpiryHours(signalType: string): number {
   if (signalType === "Scalping") return 3;
@@ -317,24 +512,141 @@ function getExpiryHours(signalType: string): number {
 }
 
 // =========================================================
-// VALIDATION HELPERS
+// SILVER VALIDATION
 // =========================================================
 
-function validateSignal(signal: any, currentPrice: number) {
+function validateSilverSignal(
+  signal: any,
+  currentPrice: number
+) {
   const entry = Number(signal.entry);
   const sl = Number(signal.sl);
   const tp1 = Number(signal.tp1);
   const tp2 = Number(signal.tp2);
   const tp3 = Number(signal.tp3);
 
-  if ([entry, sl, tp1, tp2, tp3].some((v) => !Number.isFinite(v))) return false;
+  // Entry must stay very close to live price
+  if (Math.abs(entry - currentPrice) > 0.15) {
+    return false;
+  }
 
   if (signal.action === "BUY") {
-    return sl < entry && entry < tp1 && tp1 < tp2 && tp2 < tp3;
+    if (!(sl < entry && entry < tp1 && tp1 < tp2 && tp2 < tp3)) {
+      return false;
+    }
+
+    // Current price must not already be below SL
+    if (currentPrice <= sl) {
+      return false;
+    }
   } else {
-    return sl > entry && entry > tp1 && tp1 > tp2 && tp2 > tp3;
+    if (!(sl > entry && entry > tp1 && tp1 > tp2 && tp2 > tp3)) {
+      return false;
+    }
+
+    // Current price must not already be above SL
+    if (currentPrice >= sl) {
+      return false;
+    }
   }
+
+  // Maximum distances
+  if (Math.abs(sl - entry) > 3.1) return false;
+  if (Math.abs(tp1 - entry) > 1.1) return false;
+  if (Math.abs(tp2 - entry) > 2.1) return false;
+  if (Math.abs(tp3 - entry) > 3.1) return false;
+
+  return true;
 }
+
+// =========================================================
+// BTC VALIDATION
+// =========================================================
+
+function validateBTCSignal(
+  signal: any,
+  currentPrice: number
+) {
+  const entry = Number(signal.entry);
+  const sl = Number(signal.sl);
+  const tp1 = Number(signal.tp1);
+  const tp2 = Number(signal.tp2);
+  const tp3 = Number(signal.tp3);
+
+  // Entry must stay within $10.50 of live price
+  if (Math.abs(entry - currentPrice) > 10.5) {
+    return false;
+  }
+
+  if (signal.action === "BUY") {
+    if (!(sl < entry && entry < tp1 && tp1 < tp2 && tp2 < tp3)) {
+      return false;
+    }
+
+    // Current price must be above SL
+    if (currentPrice <= sl) {
+      return false;
+    }
+  } else {
+    if (!(sl > entry && entry > tp1 && tp1 > tp2 && tp2 > tp3)) {
+      return false;
+    }
+
+    // Current price must be below SL
+    if (currentPrice >= sl) {
+      return false;
+    }
+  }
+
+  // Maximum distances
+  if (Math.abs(sl - entry) > 60) return false;
+  if (Math.abs(tp1 - entry) > 35) return false;
+  if (Math.abs(tp2 - entry) > 70) return false;
+  if (Math.abs(tp3 - entry) > 120) return false;
+
+  return true;
+}
+
+// =========================================================
+// GENERAL VALIDATION
+// =========================================================
+
+function validateSignal(
+  signal: any,
+  currentPrice: number
+) {
+  const entry = Number(signal.entry);
+  const sl = Number(signal.sl);
+  const tp1 = Number(signal.tp1);
+  const tp2 = Number(signal.tp2);
+  const tp3 = Number(signal.tp3);
+
+  if (
+    !Number.isFinite(entry) ||
+    !Number.isFinite(sl) ||
+    !Number.isFinite(tp1) ||
+    !Number.isFinite(tp2) ||
+    !Number.isFinite(tp3)
+  ) {
+    return false;
+  }
+
+  if (signal.action === "BUY") {
+    if (!(sl < entry && entry < tp1 && tp1 < tp2 && tp2 < tp3)) {
+      return false;
+    }
+  } else {
+    if (!(sl > entry && entry > tp1 && tp1 > tp2 && tp2 > tp3)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// =========================================================
+// CHECK ACTIVE SIGNAL
+// =========================================================
 
 async function evaluatePair(pair: string) {
   const { data, error } = await supabase
@@ -352,6 +664,10 @@ async function evaluatePair(pair: string) {
   return !data || data.length === 0;
 }
 
+// =========================================================
+// TELEGRAM POST
+// =========================================================
+
 async function postTelegram(signal: any) {
   try {
     const response = await fetch(
@@ -365,6 +681,9 @@ async function postTelegram(signal: any) {
         },
         body: JSON.stringify({
           action: "new_signal",
+          // send `type` explicitly too so telegram-signal-post
+          // always has a direction to render even if its own
+          // fallback logic ever changes.
           signal: {
             ...signal,
             type: signal.type || signal.action || signal.direction,
@@ -374,17 +693,44 @@ async function postTelegram(signal: any) {
     );
 
     const resultText = await response.text();
+
+    console.log(
+      "Telegram response:",
+      response.status,
+      resultText
+    );
+
     let parsed: any = null;
-    try { parsed = JSON.parse(resultText); } catch {}
+    try {
+      parsed = JSON.parse(resultText);
+    } catch {
+      // non-JSON response — fall through, treated as failure below
+    }
 
     const ok = response.ok && parsed?.success === true;
+
+    if (!ok) {
+      // IMPORTANT: this used to fail silently. Log loudly so the
+      // reason (missing TELEGRAM_BOT_TOKEN/TELEGRAM_CHANNEL_ID,
+      // wrong chat id, bot not admin in channel, etc.) is visible
+      // in the auto-generate-signals function logs.
+      console.error(
+        "TELEGRAM POST FAILED:",
+        response.status,
+        parsed?.error || resultText
+      );
+    }
+
     return {
       success: ok,
       error: parsed?.error || null,
+      // Stored on the signal row so a later TP/SL update can EDIT
+      // this exact channel message instead of posting a new one.
       message_id: parsed?.message_id ?? null,
       chat_id: parsed?.chat_id ?? null,
     };
   } catch (error) {
+    console.error("Telegram post error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
@@ -393,89 +739,211 @@ async function postTelegram(signal: any) {
 }
 
 // =========================================================
-// MAIN SERVER
+// MAIN
 // =========================================================
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", {
+      headers: corsHeaders,
+    });
   }
 
   try {
     const livePrices = await fetchLivePrices();
 
+    // =====================================================
+    // PAIRS
+    // =====================================================
+
     const commodities = [
-      { pair: "XAU/USD (Gold)", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
-      { pair: "XAG/USD (Silver)", pipMultiplier: 0.05, decimals: 3, category: "COMMODITIE" },
-      { pair: "US30", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
-      { pair: "NASDAQ", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
-      { pair: "S&P500", pipMultiplier: 1, decimals: 2, category: "COMMODITIE" },
+      {
+        pair: "XAU/USD (Gold)",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
+      {
+        pair: "XAG/USD (Silver)",
+        pipMultiplier: 0.05,
+        decimals: 3,
+      },
+      {
+        pair: "US30",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
+      {
+        pair: "NASDAQ",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
+      {
+        pair: "S&P500",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
     ];
 
     const forex = [
-      { pair: "EUR/USD", pipMultiplier: 0.001, decimals: 5, category: "FOREX" },
-      { pair: "GBP/USD", pipMultiplier: 0.001, decimals: 5, category: "FOREX" },
-      { pair: "USD/JPY", pipMultiplier: 0.1, decimals: 3, category: "FOREX" },
-      { pair: "AUD/USD", pipMultiplier: 0.001, decimals: 5, category: "FOREX" },
-      { pair: "GBP/JPY", pipMultiplier: 0.1, decimals: 3, category: "FOREX" },
-      { pair: "USD/CAD", pipMultiplier: 0.001, decimals: 5, category: "FOREX" },
+      {
+        pair: "EUR/USD",
+        pipMultiplier: 0.001,
+        decimals: 5,
+      },
+      {
+        pair: "GBP/USD",
+        pipMultiplier: 0.001,
+        decimals: 5,
+      },
+      {
+        pair: "USD/JPY",
+        pipMultiplier: 0.1,
+        decimals: 3,
+      },
+      {
+        pair: "AUD/USD",
+        pipMultiplier: 0.001,
+        decimals: 5,
+      },
+      {
+        pair: "GBP/JPY",
+        pipMultiplier: 0.1,
+        decimals: 3,
+      },
+      {
+        pair: "USD/CAD",
+        pipMultiplier: 0.001,
+        decimals: 5,
+      },
     ];
 
     const crypto = [
-      { pair: "BTC/USD", pipMultiplier: 1, decimals: 2, category: "CRYPTO" },
-      { pair: "ETH/USD", pipMultiplier: 1, decimals: 2, category: "CRYPTO" },
-      { pair: "SOL/USD", pipMultiplier: 1, decimals: 2, category: "CRYPTO" },
+      {
+        pair: "BTC/USD",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
+      {
+        pair: "ETH/USD",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
+      {
+        pair: "SOL/USD",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
     ];
 
     const deriv = [
-      { pair: "BOOM 1000", pipMultiplier: 10, decimals: 2, category: "DERIV" },
-      { pair: "CRASH 1000", pipMultiplier: 10, decimals: 2, category: "DERIV" },
-      { pair: "VOL 75", pipMultiplier: 1, decimals: 2, category: "DERIV" },
-      { pair: "BOOM 500", pipMultiplier: 10, decimals: 2, category: "DERIV" },
-      { pair: "VOL 100", pipMultiplier: 10, decimals: 2, category: "DERIV" },
+      {
+        pair: "BOOM 1000",
+        pipMultiplier: 10,
+        decimals: 2,
+      },
+      {
+        pair: "CRASH 1000",
+        pipMultiplier: 10,
+        decimals: 2,
+      },
+      {
+        pair: "VOL 75",
+        pipMultiplier: 1,
+        decimals: 2,
+      },
+      {
+        pair: "BOOM 500",
+        pipMultiplier: 10,
+        decimals: 2,
+      },
+      {
+        pair: "VOL 100",
+        pipMultiplier: 10,
+        decimals: 2,
+      },
     ];
 
-    // FILTER OUT CLOSED MARKETS
-    const availableCommodities = commodities.filter((i) => isMarketOpen(i));
-    const availableForex = forex.filter((i) => isMarketOpen(i));
-    const availableCrypto = crypto.filter((i) => isMarketOpen(i));
-    const availableDeriv = deriv.filter((i) => isMarketOpen(i));
+    const allPairs = [
+      ...commodities,
+      ...forex,
+      ...crypto,
+      ...deriv,
+    ];
+
+    // =====================================================
+    // WEIGHTED SELECTION
+    // =====================================================
 
     const weighted: any[] = [];
 
-    // Weekend par weight fair divide hoga
-    for (const item of availableCommodities) weighted.push(item);
-    for (const item of availableForex) weighted.push(item);
-    for (const item of availableCrypto) weighted.push(item);
-    for (const item of availableDeriv) weighted.push(item);
+    for (const item of commodities) {
+      let weight = 1;
 
-    // IF ALL MARKETS ARE CLOSED
-    if (weighted.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          generated: false,
-          reason: "Markets are currently closed for selection",
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (item.pair === "XAU/USD (Gold)") {
+        weight = 55;
+      } else if (item.pair === "XAG/USD (Silver)") {
+        weight = 12;
+      } else if (item.pair === "US30") {
+        weight = 9;
+      } else if (item.pair === "NASDAQ") {
+        weight = 8;
+      } else if (item.pair === "S&P500") {
+        weight = 6;
+      }
+
+      for (let i = 0; i < weight; i++) {
+        weighted.push(item);
+      }
+    }
+
+    for (const item of forex) {
+      weighted.push(item);
+    }
+
+    for (const item of crypto) {
+      weighted.push(item);
+    }
+
+    for (const item of deriv) {
+      weighted.push(item);
     }
 
     const selected = pick(weighted);
+
+    // =====================================================
+    // LIVE PRICE CHECK
+    // =====================================================
+
     const live = livePrices[selected.pair];
 
     if (!live || !Number.isFinite(Number(live.price))) {
+      console.log(
+        `No live price for ${selected.pair}`
+      );
+
       return new Response(
         JSON.stringify({
           success: true,
           generated: false,
           reason: `No live price for ${selected.pair}`,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
-    const canGenerate = await evaluatePair(selected.pair);
+    // =====================================================
+    // ONLY ONE OPEN SIGNAL PER PAIR
+    // =====================================================
+
+    const canGenerate = await evaluatePair(
+      selected.pair
+    );
+
     if (!canGenerate) {
       return new Response(
         JSON.stringify({
@@ -483,61 +951,207 @@ Deno.serve(async (req) => {
           generated: false,
           reason: `${selected.pair} already has an open signal`,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
-    const signal = generateSignal({ ...selected, price: live });
+    // =====================================================
+    // GENERATE
+    // =====================================================
+
+    const signal = generateSignal({
+      ...selected,
+      price: live,
+    });
+
+    const currentPrice = Number(live.price);
+
+    // =====================================================
+    // VALIDATE
+    // =====================================================
+
+    if (
+      !validateSignal(
+        signal,
+        currentPrice
+      )
+    ) {
+      console.log(
+        "General signal validation failed:",
+        signal
+      );
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          generated: false,
+          reason: "Signal validation failed",
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // SILVER SPECIAL VALIDATION
+    if (
+      selected.pair ===
+      "XAG/USD (Silver)"
+    ) {
+      if (
+        !validateSilverSignal(
+          signal,
+          currentPrice
+        )
+      ) {
+        console.log(
+          "Silver validation failed:",
+          signal
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            generated: false,
+            reason:
+              "Silver signal validation failed",
+          }),
+          {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+    }
+
+    // BTC SPECIAL VALIDATION
+    if (
+      selected.pair === "BTC/USD"
+    ) {
+      if (
+        !validateBTCSignal(
+          signal,
+          currentPrice
+        )
+      ) {
+        console.log(
+          "BTC validation failed:",
+          signal
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            generated: false,
+            reason:
+              "BTC signal validation failed",
+          }),
+          {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+    }
+
+    // =====================================================
+    // INSERT DATABASE
+    // =====================================================
 
     const expiryTime = new Date(
-      Date.now() + getExpiryHours(signal.signal_type) * 60 * 60 * 1000
+      Date.now() +
+        getExpiryHours(signal.signal_type) * 60 * 60 * 1000
     ).toISOString();
 
     const insertData = {
       pair: signal.pair,
       symbol: signal.symbol,
       category: signal.category,
+
       type: signal.type,
       action: signal.action,
       direction: signal.direction,
+
       entry: signal.entry,
       current_price: signal.currentPrice,
+
       sl: signal.sl,
       tp1: signal.tp1,
       tp2: signal.tp2,
       tp3: signal.tp3,
+
       stop_loss: signal.stop_loss,
       target1: signal.target1,
       target2: signal.target2,
       target3: signal.target3,
+
       analysis_reason: signal.reason,
       reason: signal.reason,
       signal_type: signal.signal_type,
+
       status: "OPEN",
       signal_status: "OPEN",
+
       expiry_time: expiryTime,
+
       created_at: signal.created_at,
     };
 
-    const { data: inserted, error } = await supabase
-      .from("signals")
-      .insert(insertData)
-      .select()
-      .single();
+    const { data: inserted, error } =
+      await supabase
+        .from("signals")
+        .insert(insertData)
+        .select()
+        .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error(
+        "Signal insert error:",
+        error
+      );
 
-    const telegramResult = await postTelegram({ ...signal, id: inserted?.id });
+      throw error;
+    }
 
+    // =====================================================
+    // TELEGRAM
+    // =====================================================
+
+    const telegramResult = await postTelegram({
+      ...signal,
+      id: inserted?.id,
+    });
+
+    // Save the Telegram message id/chat id on the signal row so a
+    // later TP1/TP2/TP3/SL update can edit THIS exact channel post
+    // instead of spamming a new message for every target hit.
     if (inserted?.id && telegramResult.message_id) {
       await supabase
         .from("signals")
         .update({
           telegram_message_id: telegramResult.message_id,
-          telegram_chat_id: telegramResult.chat_id ? String(telegramResult.chat_id) : null,
+          telegram_chat_id: telegramResult.chat_id
+            ? String(telegramResult.chat_id)
+            : null,
         })
         .eq("id", inserted.id);
     }
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
 
     return new Response(
       JSON.stringify({
@@ -545,17 +1159,37 @@ Deno.serve(async (req) => {
         generated: true,
         signal: inserted,
         telegram_posted: telegramResult.success,
+        telegram_error: telegramResult.error,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   } catch (error) {
+    console.error(
+      "AUTO GENERATE ERROR:",
+      error
+    );
+
     return new Response(
       JSON.stringify({
         success: false,
         generated: false,
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   }
 });
