@@ -4,7 +4,7 @@
 
 /* =========================================================
    FOREX 7STARZ / LIVE SIGNALS SYSTEM
-   Dark Theme : Deep Midnight Royal Space Blue + Starfield + Neon Glow
+   Dark Theme : Deep Midnight Space Navy + Glowing Stars Overlay
    Light Theme: Crisp Porcelain White + Modern Emerald/Cyan
    ========================================================= */
 
@@ -51,31 +51,28 @@
     --sell: 346 84% 61%;
   }
 
-  /* ================= DARK THEME (EXACT ROYAL BLUE SPACE CLONE) ================= */
+  /* ================= DARK THEME (EXACT NAVY SPACE CLONE) ================= */
   .dark {
-    /* Background: Deep Midnight Royal Blue */
-    --background: 216 62% 7%;
+    /* Exact Navy Background & Card Colors */
+    --background: 222 60% 5%;
     --foreground: 210 40% 98%;
 
-    /* Cards: Darker Blue Overlay */
-    --card: 217 50% 9%;
+    --card: 220 45% 8%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 217 50% 9%;
+    --popover: 220 45% 8%;
     --popover-foreground: 210 40% 98%;
 
-    /* Neon Emerald Green Glow */
+    /* Neon Primary Glows */
     --primary: 160 84% 39%;
     --primary-foreground: 210 40% 98%;
 
-    /* Neon Cyan Glow */
     --secondary: 187 92% 45%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217 33% 15%;
     --muted-foreground: 215 20% 65%;
 
-    /* Neon Amber/Orange Glow */
     --accent: 38 92% 50%;
     --accent-foreground: 210 40% 98%;
 
@@ -105,22 +102,33 @@
     @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
   }
 
-  /* Full App Deep Midnight Royal Blue Gradient (Exact Left App Match) */
+  /* Exact Deep Ocean / Space Blue Background */
   .dark body {
-    background: radial-gradient(circle at 50% 0%, #0d1d33 0%, #081221 45%, #040a14 100%) !important;
+    background-color: #030712 !important;
+    background-image: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 116, 144, 0.25), transparent),
+      radial-gradient(circle at 50% 30%, #0c1a2e 0%, #070e1b 60%, #030712 100%) !important;
     background-attachment: fixed !important;
   }
 
-  /* Background Star Dust / Particle Overlay */
+  /* Glowing Scattered Stars Overlay */
   .dark body::before {
     content: "";
     position: fixed;
     inset: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.9), rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 40px 70px, rgba(56, 189, 248, 0.8), rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.8), rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 160px 120px, rgba(16, 185, 129, 0.8), rgba(0,0,0,0)),
+      radial-gradient(1.5px 1.5px at 230px 190px, rgba(255, 255, 255, 0.7), rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 310px 80px, rgba(56, 189, 248, 0.8), rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 350px 350px;
     pointer-events: none;
-    opacity: 0.4;
+    opacity: 0.6;
     z-index: 0;
+    animation: starGlow 4s ease-in-out infinite alternate;
   }
 }
 
@@ -209,6 +217,11 @@
    ========================================================= */
 
 @layer utilities {
+  @keyframes starGlow {
+    0% { opacity: 0.35; }
+    100% { opacity: 0.8; }
+  }
+
   @keyframes spin-glow {
     0% {
       filter: hue-rotate(0deg);
