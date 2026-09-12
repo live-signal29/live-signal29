@@ -70,7 +70,6 @@ interface SignalCardProps {
   livePrice?: number;
 }
 
-/* MARKET CLOSED CHECKER HELPER */
 const isMarketClosed = (pairSymbol: string) => {
   const upper = (pairSymbol || "").toUpperCase();
   
@@ -244,7 +243,6 @@ const SignalCardNew = ({
     return isBuy ? current <= sl : current >= sl;
   };
 
-  /* AUTO TP / SL UPDATE WITH NEW PROFIT NOTES */
   const primedForChecksRef = useRef(false);
   const slBreachStreakRef = useRef(0);
 
@@ -364,7 +362,23 @@ const SignalCardNew = ({
     }
   };
 
-  const note = signal.profit_note || "";
+  const getDynamicProfitNote = () => {
+    if (signal.sl_hit || (signal.profit_note && /SL\s*Hit/i.test(signal.profit_note))) {
+      return "SL Hit ❌ - Staying patient for a better entry.";
+    }
+    if (signal.tp3_hit || signal.tp4_hit || (signal.profit_note && /TP\s*[34]/i.test(signal.profit_note))) {
+      return "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+    }
+    if (signal.tp2_hit || (signal.profit_note && /TP\s*2/i.test(signal.profit_note))) {
+      return "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
+    }
+    if (signal.tp1_hit || (signal.profit_note && /TP\s*1/i.test(signal.profit_note))) {
+      return "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
+    }
+    return signal.profit_note || "";
+  };
+
+  const note = getDynamicProfitNote();
 
   const getSignalStatus = () => {
     if (isClosed || signal.sl_hit || signal.tp4_hit || (!signal.tp4 && signal.tp3_hit)) {
@@ -391,45 +405,49 @@ const SignalCardNew = ({
     }
   };
 
-  const isBreakEven = /BREAKEVEN/i.test(note) || /B\.E/i.test(note);
-  const isSLHit = !isBreakEven && (!!signal.sl_hit || /\bSL\s+HIT\b/i.test(note));
-  const isFullTPWin = !isBreakEven && (/MAXIMUM PROFIT/i.test(note) || /AMAZING/i.test(note) || /TP\s*[34]\s*(HIT|FINAL)/i.test(note));
-  const isPartialSecured = !isBreakEven && !isSLHit && !isFullTPWin && (/SECURED/i.test(note) || /BOOM/i.test(note));
-  const isTPHit = !isSLHit && !isBreakEven && (isFullTPWin || isPartialSecured || /TP\s*[1-4]\s*(HIT|CLEARED|FINAL|TARGET)/i.test(note));
-
+  /* Exact Theme Configuration requested */
   const getNoteStyle = () => {
-    if (isSLHit) {
+    const isSL = signal.sl_hit || /SL\s*Hit/i.test(note);
+    const isTP1 = !isSL && (signal.tp1_hit || /TP\s*1/i.test(note)) && !signal.tp2_hit && !signal.tp3_hit;
+    const isTP2 = !isSL && (signal.tp2_hit || /TP\s*2/i.test(note)) && !signal.tp3_hit;
+    const isTP3or4 = !isSL && (signal.tp3_hit || signal.tp4_hit || /TP\s*[34]/i.test(note));
+
+    if (isSL) {
       return {
-        container: "border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20",
+        container: "border-rose-500/35 bg-rose-500/10 dark:bg-rose-950/25",
         icon: "text-rose-500 dark:text-rose-400",
-        text: "text-rose-600 dark:text-rose-300",
+        isSLText: true,
       };
     }
-    if (isBreakEven) {
+
+    if (isTP1) {
       return {
-        container: "border-blue-700/40 bg-blue-900/15 dark:bg-blue-950/40",
-        icon: "text-blue-500 dark:text-blue-300",
-        text: "text-blue-700 dark:text-blue-200",
+        container: "border-purple-500/35 bg-purple-500/10 dark:bg-purple-950/30",
+        icon: "text-purple-500 dark:text-purple-400",
+        text: "text-purple-700 dark:text-purple-300 font-bold",
       };
     }
-    if (isFullTPWin) {
+
+    if (isTP2) {
       return {
-        container: "border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20",
+        container: "border-blue-500/35 bg-blue-500/10 dark:bg-blue-950/30",
+        icon: "text-blue-500 dark:text-blue-400",
+        text: "text-blue-700 dark:text-blue-300 font-bold",
+      };
+    }
+
+    if (isTP3or4) {
+      return {
+        container: "border-emerald-500/35 bg-emerald-500/10 dark:bg-emerald-950/25",
         icon: "text-emerald-500 dark:text-emerald-400",
-        text: "text-emerald-700 dark:text-emerald-300",
+        text: "text-emerald-700 dark:text-emerald-300 font-bold",
       };
     }
-    if (isPartialSecured || isTPHit) {
-      return {
-        container: "border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20",
-        icon: "text-amber-500 dark:text-amber-400",
-        text: "text-amber-600 dark:text-amber-300",
-      };
-    }
+
     return {
       container: "border-slate-500/30 bg-slate-500/10 dark:bg-slate-800/30",
       icon: "text-slate-400 dark:text-slate-400",
-      text: "text-slate-500 dark:text-slate-300",
+      text: "text-slate-600 dark:text-slate-300 font-bold",
     };
   };
 
@@ -445,13 +463,13 @@ const SignalCardNew = ({
     : "text-amber-500 dark:text-amber-400 animate-pulse font-medium";
 
   const getTP1Status = () => {
-    if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (signal.tp1_hit) return { text: "TP 1 HIT", color: "text-purple-500 dark:text-purple-400 font-bold" };
     if (!isClosed) return { text: runningOrClosedText, color: runningOrClosedColor };
     return { text: "", color: "" };
   };
 
   const getTP2Status = () => {
-    if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-emerald-500 dark:text-emerald-400 font-bold" };
+    if (signal.tp2_hit) return { text: "TP 2 HIT", color: "text-blue-500 dark:text-blue-400 font-bold" };
     if (!isClosed && signal.tp1_hit) return { text: runningOrClosedText, color: runningOrClosedColor };
     return { text: "", color: "" };
   };
@@ -462,8 +480,10 @@ const SignalCardNew = ({
     return { text: "", color: "" };
   };
 
+  const isSLHit = signal.sl_hit || /SL\s*Hit/i.test(note);
+
   const getSLStatus = () => {
-    if (isSLHit || signal.sl_hit) return { text: "SL HIT ❌", color: "text-rose-500 font-bold" };
+    if (isSLHit) return { text: "SL HIT ❌", color: "text-rose-500 font-bold" };
     if (!isClosed && signal.tp1_hit) return { text: "MOVE SL TO ENTRY POINT", color: "text-amber-500 dark:text-amber-400 font-bold" };
     return { text: "", color: "" };
   };
@@ -592,7 +612,7 @@ const SignalCardNew = ({
               {/* TP 1 */}
               <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
                 <span className="font-extrabold text-slate-600 dark:text-cyan-300/70 uppercase text-[11px] text-left">TP 1</span>
-                <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", signal.tp1_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", signal.tp1_hit ? "text-purple-500 dark:text-purple-400" : "text-slate-800 dark:text-cyan-100")}>
                   {signal.tp1}
                   {signal.tp1_hit && <span className="text-[10px]">✓</span>}
                 </span>
@@ -605,7 +625,7 @@ const SignalCardNew = ({
               {signal.tp2 && (
                 <div className="grid grid-cols-3 items-center font-mono border-b border-black/5 dark:border-white/5 pb-2">
                   <span className="font-extrabold text-slate-600 dark:text-cyan-300/70 uppercase text-[11px] text-left">TP 2</span>
-                  <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", signal.tp2_hit ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-cyan-100")}>
+                  <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", signal.tp2_hit ? "text-blue-500 dark:text-blue-400" : "text-slate-800 dark:text-cyan-100")}>
                     {signal.tp2}
                     {signal.tp2_hit && <span className="text-[10px]">✓</span>}
                   </span>
@@ -632,9 +652,9 @@ const SignalCardNew = ({
               {/* SL */}
               <div className="grid grid-cols-3 items-center font-mono pt-1">
                 <span className="font-extrabold text-rose-500 uppercase text-[11px] text-left">SL</span>
-                <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", isSLHit || signal.sl_hit ? "text-rose-500 dark:text-rose-400" : "text-slate-800 dark:text-cyan-100")}>
+                <span className={cn("text-[11px] font-extrabold text-center flex items-center justify-center gap-1", isSLHit ? "text-rose-500 dark:text-rose-400" : "text-slate-800 dark:text-cyan-100")}>
                   {signal.sl}
-                  {(isSLHit || signal.sl_hit) && <span className="text-[10px]">❌</span>}
+                  {isSLHit && <span className="text-[10px]">❌</span>}
                 </span>
                 <span className={cn("text-[10px] uppercase tracking-wider text-right", slStatus.color)}>
                   {slStatus.text}
@@ -643,17 +663,25 @@ const SignalCardNew = ({
             </div>
           )}
 
-          {/* PROFIT NOTE AT BOTTOM */}
-          {signal.profit_note && (
+          {/* PROFIT NOTE AT BOTTOM WITH EXACT CUSTOM STYLING */}
+          {note && (
             <div className={cn("flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-all duration-300 backdrop-blur-md", noteStyle.container)}>
               {isSLHit ? (
                 <XCircle className={cn("h-3.5 w-3.5 shrink-0", noteStyle.icon)} />
               ) : (
                 <CheckCircle2 className={cn("h-3.5 w-3.5 shrink-0", noteStyle.icon)} />
               )}
-              <span className={cn("text-[9.5px] font-bold leading-tight tracking-wide", noteStyle.text)}>
-                {signal.profit_note}
-              </span>
+
+              {noteStyle.isSLText ? (
+                <span className="text-[9.5px] leading-tight tracking-wide">
+                  <span className="text-rose-600 dark:text-rose-400 font-extrabold">SL Hit ❌ </span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">- Staying patient for a better entry.</span>
+                </span>
+              ) : (
+                <span className={cn("text-[9.5px] leading-tight tracking-wide", noteStyle.text)}>
+                  {note}
+                </span>
+              )}
             </div>
           )}
         </>
