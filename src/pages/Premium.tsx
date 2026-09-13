@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import CountdownTimer from "@/components/CountdownTimer";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
 import SEO from "@/components/SEO";
 
@@ -205,6 +204,10 @@ const Premium = () => {
 
   /* =====================================================
      SPECIAL OFFERS
+     
+     IMPORTANT:
+     Only the Special Offer banner is shown.
+     CountdownTimer has been completely removed.
   ====================================================== */
 
   const { data: specialOffers } = useQuery({
@@ -225,28 +228,6 @@ const Premium = () => {
       }
 
       return data || [];
-    },
-  });
-
-  const { data: activeOffer } = useQuery({
-    queryKey: ["active-special-offer"],
-
-    queryFn: async () => {
-      // maybeSingle + order/limit instead of single(): now that more
-      // than one special offer can be active at once (for the
-      // carousel), .single() would error out and silently hide this
-      // countdown widget. Just take the most recently activated one.
-      const { data, error } = await supabase
-        .from("special_offers")
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) return null;
-
-      return data;
     },
   });
 
@@ -339,9 +320,6 @@ const Premium = () => {
 
   /* =====================================================
      COUPON
-     IMPORTANT:
-     Function accepts optional code so banner Apply Now
-     works immediately without React state delay.
   ====================================================== */
 
   const applyCoupon = async (
@@ -659,70 +637,81 @@ const Premium = () => {
 
         <MT5CopierBanner />
 
-        {specialOffers && specialOffers.length > 0 && (
-          <div className="mb-8">
+        {/* =====================================================
+            SPECIAL OFFER
+            ONLY SPECIAL OFFER BANNER
+            NO COUNTDOWN TIMER
+        ====================================================== */}
 
-            <Carousel
-              className="w-full max-w-5xl mx-auto"
-              plugins={[autoplayPlugin]}
-              opts={{ loop: true }}
-            >
+        {specialOffers &&
+          specialOffers.length > 0 && (
+            <div className="mb-8">
 
-              <CarouselContent>
+              <Carousel
+                className="w-full max-w-5xl mx-auto"
+                plugins={[autoplayPlugin]}
+                opts={{ loop: true }}
+              >
 
-                {specialOffers.map(
-                  (offer, index) => (
-                    <CarouselItem
-                      key={offer.id}
-                    >
+                <CarouselContent>
 
-                      <div
-                        className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
-                          index % 4 === 0
-                            ? "bg-gradient-to-br from-green-500 via-teal-500 to-blue-600"
-                            : index % 4 === 1
-                            ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-600"
-                            : index % 4 === 2
-                            ? "bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600"
-                            : "bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600"
-                        }`}
+                  {specialOffers.map(
+                    (offer, index) => (
+                      <CarouselItem
+                        key={offer.id}
                       >
 
-                        <div className="absolute inset-0 bg-black/10" />
+                        <div
+                          className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
+                            index % 4 === 0
+                              ? "bg-gradient-to-br from-green-500 via-teal-500 to-blue-600"
+                              : index % 4 === 1
+                              ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-600"
+                              : index % 4 === 2
+                              ? "bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600"
+                              : "bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600"
+                          }`}
+                        >
 
-                        <div className="text-center text-white p-6 relative z-10">
+                          <div className="absolute inset-0 bg-black/10" />
 
-                          <Badge className="mb-4 bg-white/20 backdrop-blur-sm text-white border-white/30">
-                            🎁 SPECIAL OFFER
-                          </Badge>
+                          <div className="text-center text-white p-6 relative z-10">
 
-                          <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-lg">
-                            {offer.title}
-                          </h2>
+                            <Badge className="mb-4 bg-white/20 backdrop-blur-sm text-white border-white/30">
+                              🎁 SPECIAL OFFER
+                            </Badge>
 
-                          {offer.description && (
-                            <p className="text-lg md:text-2xl font-semibold">
-                              {offer.description}
-                            </p>
-                          )}
+                            <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-lg">
+                              {offer.title}
+                            </h2>
+
+                            {offer.description && (
+                              <p className="text-lg md:text-2xl font-semibold">
+                                {offer.description}
+                              </p>
+                            )}
+
+                          </div>
 
                         </div>
 
-                      </div>
+                      </CarouselItem>
+                    )
+                  )}
 
-                    </CarouselItem>
-                  )
+                </CarouselContent>
+
+                {specialOffers.length > 1 && (
+                  <>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                  </>
                 )}
 
-              </CarouselContent>
+              </Carousel>
 
-              <CarouselPrevious className="left-2" />
-              <CarouselNext className="right-2" />
-
-            </Carousel>
-
-          </div>
-        )}
+            </div>
+          )}
 
         {/* =====================================================
             COUPON BANNER
@@ -805,8 +794,6 @@ const Premium = () => {
 
                               </div>
 
-                              {/* FIXED APPLY BUTTON */}
-
                               <Button
                                 onClick={() =>
                                   applyCoupon(
@@ -830,7 +817,6 @@ const Premium = () => {
                         </Card>
 
                       </CarouselItem>
-
                     )
                   )}
 
@@ -848,25 +834,6 @@ const Premium = () => {
 
             </div>
           )}
-
-        {/* =====================================================
-            COUNTDOWN
-        ====================================================== */}
-
-        {activeOffer && (
-          <CountdownTimer
-            endDate={
-              new Date(
-                activeOffer.end_date
-              )
-            }
-            title={activeOffer.title}
-            description={
-              activeOffer.description ||
-              undefined
-            }
-          />
-        )}
 
         {/* =====================================================
             COUPON INPUT
@@ -1049,7 +1016,7 @@ const Premium = () => {
             <CarouselContent className="-ml-2 md:-ml-4">
 
               {plans.map(
-                (plan, index) => {
+                (plan) => {
 
                   const originalPrice =
                     plan.payOnly;
@@ -1356,8 +1323,6 @@ const Premium = () => {
 
           <DialogContent className="max-w-lg w-[calc(100%-24px)] max-h-[92vh] overflow-y-auto rounded-2xl p-0">
 
-            {/* HEADER */}
-
             <div className="px-5 pt-5 pb-4 border-b bg-gradient-to-r from-primary/10 via-background to-primary/5">
 
               <DialogHeader>
@@ -1378,14 +1343,10 @@ const Premium = () => {
 
             </div>
 
-            {/* PAYMENT FORM */}
-
             {paymentDetails &&
               !paymentSubmitted && (
 
                 <div className="p-5 space-y-4">
-
-                  {/* ORDER */}
 
                   <div className="rounded-xl border bg-muted/30 p-4">
 
@@ -1469,8 +1430,6 @@ const Premium = () => {
 
                   </div>
 
-                  {/* STEP 1 */}
-
                   <div className="space-y-2">
 
                     <div className="flex items-center gap-2">
@@ -1520,8 +1479,6 @@ const Premium = () => {
                     </Select>
 
                   </div>
-
-                  {/* STEP 2 */}
 
                   <div className="space-y-2">
 
@@ -1608,8 +1565,6 @@ const Premium = () => {
 
                   </div>
 
-                  {/* STEP 3 */}
-
                   <div className="space-y-2">
 
                     <div className="flex items-center gap-2">
@@ -1651,8 +1606,6 @@ const Premium = () => {
 
                   </div>
 
-                  {/* SECURITY */}
-
                   <div className="rounded-xl border border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/10 p-3">
 
                     <div className="flex gap-2">
@@ -1678,8 +1631,6 @@ const Premium = () => {
                     </div>
 
                   </div>
-
-                  {/* SUBMIT */}
 
                   <Button
                     type="button"
@@ -1720,8 +1671,6 @@ const Premium = () => {
 
                 </div>
               )}
-
-            {/* SUCCESS */}
 
             {paymentSubmitted && (
 
