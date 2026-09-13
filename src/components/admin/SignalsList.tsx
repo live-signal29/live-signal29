@@ -168,9 +168,18 @@ const SignalsList = () => {
 
   const selectedCount = selectedSignals.size;
 
+  /*
+   * Only the currently filtered signals are checked here.
+   * This means Select All works correctly with Search/Filters.
+   */
   const allSelected =
     filteredSignals.length > 0 &&
     filteredSignals.every((signal: any) =>
+      selectedSignals.has(signal.id)
+    );
+
+  const someSelected =
+    filteredSignals.some((signal: any) =>
       selectedSignals.has(signal.id)
     );
 
@@ -189,18 +198,27 @@ const SignalsList = () => {
   };
 
   const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelectedSignals(new Set());
-      return;
-    }
+    setSelectedSignals((previous) => {
+      const next = new Set(previous);
 
-    setSelectedSignals(
-      new Set(
-        filteredSignals.map(
-          (signal: any) => signal.id
-        )
-      )
-    );
+      if (allSelected) {
+        // Remove only currently filtered signals
+        filteredSignals.forEach((signal: any) => {
+          next.delete(signal.id);
+        });
+      } else {
+        // Add all currently filtered signals
+        filteredSignals.forEach((signal: any) => {
+          next.add(signal.id);
+        });
+      }
+
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedSignals(new Set());
   };
 
   /* =========================================================
@@ -641,14 +659,19 @@ const SignalsList = () => {
     <div className="space-y-2">
 
       {/* =====================================================
-          SEARCH + SELECT ALL
+          TOP TOOLBAR
+          SEARCH / FILTER / SELECT ALL / BULK ACTIONS
       ===================================================== */}
 
       <div className="sticky top-[64px] z-30 rounded-xl border bg-white p-2 shadow-sm">
 
-        <div className="flex gap-2">
+        {/* TOP ROW */}
 
-          <div className="relative min-w-0 flex-1">
+        <div className="flex flex-wrap gap-2">
+
+          {/* SEARCH */}
+
+          <div className="relative min-w-[180px] flex-1">
 
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
@@ -672,6 +695,8 @@ const SignalsList = () => {
 
           </div>
 
+          {/* FILTER */}
+
           <Button
             variant="outline"
             onClick={() =>
@@ -684,14 +709,20 @@ const SignalsList = () => {
             }`}
           >
             <Filter className="mr-1.5 h-4 w-4" />
+
             <span className="hidden sm:inline">
               Filter
             </span>
           </Button>
 
           {/* SELECT ALL */}
+
           <Button
-            variant={allSelected ? "default" : "outline"}
+            variant={
+              allSelected
+                ? "default"
+                : "outline"
+            }
             onClick={toggleSelectAll}
             disabled={
               filteredSignals.length === 0
@@ -711,215 +742,95 @@ const SignalsList = () => {
             </span>
           </Button>
 
-        </div>
+          {/* SELECTED COUNT */}
 
-        <div className="mt-1 flex items-center justify-between px-1">
-
-          <span className="text-[11px] text-muted-foreground">
-            {filteredSignals.length} signal
-            {filteredSignals.length !== 1
-              ? "s"
-              : ""}
-            {search
-              ? ` for "${search}"`
-              : ""}
-          </span>
-
-          {filtersActive && (
-            <button
-              onClick={clearFilters}
-              className="text-[11px] font-medium text-primary"
+          {selectedCount > 0 && (
+            <Badge
+              variant="secondary"
+              className="flex h-10 shrink-0 items-center rounded-lg px-3 text-xs font-bold"
             >
-              Clear filters
-            </button>
+              <CheckSquare className="mr-1.5 h-4 w-4 text-primary" />
+              {selectedCount} Selected
+            </Badge>
           )}
 
         </div>
 
-      </div>
+        {/* ===================================================
+            BULK CONTROLS
+            THESE ARE NOW DIRECTLY ABOVE SIGNAL LIST
+        =================================================== */}
 
-      {/* =====================================================
-          FILTERS
-      ===================================================== */}
+        {selectedCount > 0 && (
+          <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2">
 
-      {showFilters && (
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-3">
+            {/* DIRECT ACTION BUTTONS */}
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="flex flex-wrap items-center gap-1.5">
 
-              <Select
-                value={riskFilter}
-                onValueChange={setRiskFilter}
+              {/* CLEAR */}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSelection}
+                disabled={processing}
+                className="h-8 rounded-lg text-xs"
               >
-                <SelectTrigger className="h-10 bg-background text-sm">
-                  <SelectValue placeholder="Risk" />
-                </SelectTrigger>
+                <X className="mr-1 h-3.5 w-3.5" />
+                Clear
+              </Button>
 
-                <SelectContent>
-                  <SelectItem value="all">
-                    All Risk Levels
-                  </SelectItem>
+              {/* PUBLISH */}
 
-                  <SelectItem value="Low">
-                    Low Risk
-                  </SelectItem>
-
-                  <SelectItem value="Medium">
-                    Medium Risk
-                  </SelectItem>
-
-                  <SelectItem value="High">
-                    High Risk
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={statusFilter}
-                onValueChange={setStatusFilter}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  bulkPublish(true)
+                }
+                disabled={processing}
+                className="h-8 rounded-lg border-emerald-200 text-xs text-emerald-600 hover:bg-emerald-50"
               >
-                <SelectTrigger className="h-10 bg-background text-sm">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
+                <Upload className="mr-1 h-3.5 w-3.5" />
+                Publish Selected
+              </Button>
 
-                <SelectContent>
-                  <SelectItem value="all">
-                    All Statuses
-                  </SelectItem>
+              {/* UNPUBLISH */}
 
-                  <SelectItem value="pending">
-                    🟡 Pending
-                  </SelectItem>
-
-                  <SelectItem value="open">
-                    🟢 Open
-                  </SelectItem>
-
-                  <SelectItem value="close">
-                    🔴 Close
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={typeFilter}
-                onValueChange={setTypeFilter}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  bulkPublish(false)
+                }
+                disabled={processing}
+                className="h-8 rounded-lg border-orange-200 text-xs text-orange-600 hover:bg-orange-50"
               >
-                <SelectTrigger className="h-10 bg-background text-sm">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
+                <Download className="mr-1 h-3.5 w-3.5" />
+                Unpublish Selected
+              </Button>
 
-                <SelectContent>
-                  <SelectItem value="all">
-                    All Types
-                  </SelectItem>
+              {/* DELETE */}
 
-                  <SelectItem value="Scalping">
-                    Scalping
-                  </SelectItem>
-
-                  <SelectItem value="Intraday">
-                    Intraday
-                  </SelectItem>
-
-                  <SelectItem value="Swing">
-                    Swing
-                  </SelectItem>
-
-                  <SelectItem value="Long Term">
-                    Long Term
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={bulkDelete}
+                disabled={processing}
+                className="h-8 rounded-lg text-xs"
+              >
+                <Trash className="mr-1 h-3.5 w-3.5" />
+                Delete Selected
+              </Button>
 
             </div>
 
-          </CardContent>
-        </Card>
-      )}
+            {/* MORE BULK ACTIONS */}
 
-      {/* =====================================================
-          BULK ACTION BAR
-      ===================================================== */}
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
 
-      {selectedCount > 0 && (
-        <Card className="border-primary/30 bg-primary/5 shadow-sm">
-
-          <CardContent className="p-3">
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-
-              <div className="flex items-center gap-2">
-
-                <CheckSquare className="h-5 w-5 text-primary" />
-
-                <span className="text-sm font-bold">
-                  {selectedCount} Selected
-                </span>
-
-              </div>
-
-              <div className="flex gap-1.5">
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setSelectedSignals(
-                      new Set()
-                    )
-                  }
-                  disabled={processing}
-                  className="h-8 rounded-lg text-xs"
-                >
-                  Clear
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    bulkPublish(true)
-                  }
-                  disabled={processing}
-                  className="h-8 rounded-lg text-xs text-emerald-600"
-                >
-                  <Upload className="mr-1 h-3.5 w-3.5" />
-                  Publish
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    bulkPublish(false)
-                  }
-                  disabled={processing}
-                  className="h-8 rounded-lg text-xs text-orange-600"
-                >
-                  <Download className="mr-1 h-3.5 w-3.5" />
-                  Unpublish
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={bulkDelete}
-                  disabled={processing}
-                  className="h-8 rounded-lg text-xs"
-                >
-                  <Trash className="mr-1 h-3.5 w-3.5" />
-                  Delete
-                </Button>
-
-              </div>
-
-            </div>
-
-            {/* OTHER BULK ACTIONS */}
-
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {/* ACTION */}
 
               <Select
                 value={bulkAction}
@@ -946,33 +857,18 @@ const SignalsList = () => {
                     Change Type
                   </SelectItem>
 
-                  <SelectItem value="publish">
-                    Publish Selected
-                  </SelectItem>
-
-                  <SelectItem value="unpublish">
-                    Unpublish Selected
-                  </SelectItem>
-
-                  <SelectItem value="delete">
-                    Delete Selected
-                  </SelectItem>
-
                 </SelectContent>
               </Select>
+
+              {/* VALUE */}
 
               <Select
                 value={bulkValue}
                 onValueChange={setBulkValue}
-                disabled={
-                  !bulkAction ||
-                  bulkAction === "publish" ||
-                  bulkAction === "unpublish" ||
-                  bulkAction === "delete"
-                }
+                disabled={!bulkAction}
               >
                 <SelectTrigger className="h-9 bg-background text-xs">
-                  <SelectValue placeholder="Value" />
+                  <SelectValue placeholder="Select value" />
                 </SelectTrigger>
 
                 <SelectContent>
@@ -1032,24 +928,166 @@ const SignalsList = () => {
                 </SelectContent>
               </Select>
 
+              {/* APPLY */}
+
               <Button
                 onClick={applyBulkAction}
                 disabled={
                   processing ||
                   !bulkAction ||
-                  (
-                    !bulkValue &&
-                    bulkAction !== "publish" &&
-                    bulkAction !== "unpublish" &&
-                    bulkAction !== "delete"
-                  )
+                  !bulkValue
                 }
                 className="h-9"
               >
                 {processing
                   ? "Processing..."
-                  : "Apply Bulk Action"}
+                  : "Apply"}
               </Button>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* COUNT */}
+
+        <div className="mt-1 flex items-center justify-between px-1">
+
+          <span className="text-[11px] text-muted-foreground">
+
+            {filteredSignals.length} signal
+            {filteredSignals.length !== 1
+              ? "s"
+              : ""}
+
+            {search
+              ? ` for "${search}"`
+              : ""}
+
+            {selectedCount > 0 &&
+              ` • ${selectedCount} selected`}
+
+          </span>
+
+          {filtersActive && (
+            <button
+              onClick={clearFilters}
+              className="text-[11px] font-medium text-primary"
+            >
+              Clear filters
+            </button>
+          )}
+
+        </div>
+
+      </div>
+
+      {/* =====================================================
+          FILTERS
+      ===================================================== */}
+
+      {showFilters && (
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="p-3">
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+
+              {/* RISK */}
+
+              <Select
+                value={riskFilter}
+                onValueChange={setRiskFilter}
+              >
+                <SelectTrigger className="h-10 bg-background text-sm">
+                  <SelectValue placeholder="Risk" />
+                </SelectTrigger>
+
+                <SelectContent>
+
+                  <SelectItem value="all">
+                    All Risk Levels
+                  </SelectItem>
+
+                  <SelectItem value="Low">
+                    Low Risk
+                  </SelectItem>
+
+                  <SelectItem value="Medium">
+                    Medium Risk
+                  </SelectItem>
+
+                  <SelectItem value="High">
+                    High Risk
+                  </SelectItem>
+
+                </SelectContent>
+              </Select>
+
+              {/* STATUS */}
+
+              <Select
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              >
+                <SelectTrigger className="h-10 bg-background text-sm">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+
+                <SelectContent>
+
+                  <SelectItem value="all">
+                    All Statuses
+                  </SelectItem>
+
+                  <SelectItem value="pending">
+                    🟡 Pending
+                  </SelectItem>
+
+                  <SelectItem value="open">
+                    🟢 Open
+                  </SelectItem>
+
+                  <SelectItem value="close">
+                    🔴 Close
+                  </SelectItem>
+
+                </SelectContent>
+              </Select>
+
+              {/* TYPE */}
+
+              <Select
+                value={typeFilter}
+                onValueChange={setTypeFilter}
+              >
+                <SelectTrigger className="h-10 bg-background text-sm">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+
+                <SelectContent>
+
+                  <SelectItem value="all">
+                    All Types
+                  </SelectItem>
+
+                  <SelectItem value="Scalping">
+                    Scalping
+                  </SelectItem>
+
+                  <SelectItem value="Intraday">
+                    Intraday
+                  </SelectItem>
+
+                  <SelectItem value="Swing">
+                    Swing
+                  </SelectItem>
+
+                  <SelectItem value="Long Term">
+                    Long Term
+                  </SelectItem>
+
+                </SelectContent>
+              </Select>
 
             </div>
 
@@ -1560,35 +1598,6 @@ const SignalsList = () => {
           </Card>
         );
       })}
-
-      {/* =====================================================
-          MOBILE SELECT ALL
-      ===================================================== */}
-
-      {filteredSignals.length > 0 && (
-        <div className="flex justify-center py-2 sm:hidden">
-
-          <Button
-            variant={allSelected ? "default" : "outline"}
-            size="sm"
-            onClick={toggleSelectAll}
-            className="h-9 rounded-lg text-xs"
-          >
-            {allSelected ? (
-              <>
-                <CheckSquare className="mr-1.5 h-3.5 w-3.5" />
-                Deselect All
-              </>
-            ) : (
-              <>
-                <Square className="mr-1.5 h-3.5 w-3.5" />
-                Select All
-              </>
-            )}
-          </Button>
-
-        </div>
-      )}
 
     </div>
   );
