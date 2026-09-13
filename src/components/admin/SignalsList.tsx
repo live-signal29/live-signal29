@@ -68,10 +68,7 @@ const SignalsList = () => {
      FETCH SIGNALS
   ========================================================= */
 
-  const {
-    data: signals,
-    isLoading,
-  } = useQuery({
+  const { data: signals, isLoading } = useQuery({
     queryKey: ["admin-signals"],
 
     queryFn: async () => {
@@ -112,10 +109,15 @@ const SignalsList = () => {
         riskFilter === "all" ||
         signal.risk_level === riskFilter;
 
+      const currentStatus = String(
+        signal.signal_status || signal.status || "open"
+      ).toLowerCase();
+
+      const selectedStatus = statusFilter.toLowerCase();
+
       const matchesStatus =
         statusFilter === "all" ||
-        (signal.signal_status || signal.status || "open") ===
-          statusFilter;
+        currentStatus === selectedStatus;
 
       const matchesType =
         typeFilter === "all" ||
@@ -163,15 +165,21 @@ const SignalsList = () => {
   ]);
 
   /* =========================================================
-     SELECTION
+     FILTER-AWARE SELECTION
   ========================================================= */
 
   const selectedCount = selectedSignals.size;
 
   /*
-   * Only the currently filtered signals are checked here.
-   * This means Select All works correctly with Search/Filters.
-   */
+    Select All is ALWAYS based on the CURRENT filtered list.
+
+    Example:
+    Status = Open
+    Pair = XAU/USD
+
+    Select All will select ONLY XAU/USD + Open signals.
+  */
+
   const allSelected =
     filteredSignals.length > 0 &&
     filteredSignals.every((signal: any) =>
@@ -181,7 +189,7 @@ const SignalsList = () => {
   const someSelected =
     filteredSignals.some((signal: any) =>
       selectedSignals.has(signal.id)
-    );
+    ) && !allSelected;
 
   const toggleSelectSignal = (id: string) => {
     setSelectedSignals((previous) => {
@@ -197,28 +205,53 @@ const SignalsList = () => {
     });
   };
 
+  /*
+    IMPORTANT:
+    This does NOT clear selections outside the current filter.
+
+    If Open is filtered:
+      Select All = only Open signals.
+
+    If Close is filtered later:
+      Select All = only Close signals.
+
+    Existing selections remain safe.
+  */
+
   const toggleSelectAll = () => {
     setSelectedSignals((previous) => {
       const next = new Set(previous);
 
       if (allSelected) {
-        // Remove only currently filtered signals
         filteredSignals.forEach((signal: any) => {
           next.delete(signal.id);
         });
-      } else {
-        // Add all currently filtered signals
-        filteredSignals.forEach((signal: any) => {
-          next.add(signal.id);
-        });
+
+        return next;
       }
+
+      filteredSignals.forEach((signal: any) => {
+        next.add(signal.id);
+      });
 
       return next;
     });
   };
 
-  const clearSelection = () => {
-    setSelectedSignals(new Set());
+  /* =========================================================
+     CLEAR FILTERED SELECTION
+  ========================================================= */
+
+  const clearFilteredSelection = () => {
+    setSelectedSignals((previous) => {
+      const next = new Set(previous);
+
+      filteredSignals.forEach((signal: any) => {
+        next.delete(signal.id);
+      });
+
+      return next;
+    });
   };
 
   /* =========================================================
@@ -601,7 +634,8 @@ const SignalsList = () => {
   const filtersActive =
     riskFilter !== "all" ||
     statusFilter !== "all" ||
-    typeFilter !== "all";
+    typeFilter !== "all" ||
+    search.trim() !== "";
 
   /* =========================================================
      LOADING
@@ -659,19 +693,18 @@ const SignalsList = () => {
     <div className="space-y-2">
 
       {/* =====================================================
-          TOP TOOLBAR
-          SEARCH / FILTER / SELECT ALL / BULK ACTIONS
+          SEARCH + FILTER + SELECT ALL
       ===================================================== */}
 
       <div className="sticky top-[64px] z-30 rounded-xl border bg-white p-2 shadow-sm">
 
-        {/* TOP ROW */}
+        {/* TOP CONTROLS */}
 
         <div className="flex flex-wrap gap-2">
 
           {/* SEARCH */}
 
-          <div className="relative min-w-[180px] flex-1">
+          <div className="relative min-w-[160px] flex-1">
 
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
@@ -686,6 +719,7 @@ const SignalsList = () => {
 
             {search && (
               <button
+                type="button"
                 onClick={() => setSearch("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-slate-200"
               >
@@ -721,6 +755,8 @@ const SignalsList = () => {
             variant={
               allSelected
                 ? "default"
+                : someSelected
+                ? "secondary"
                 : "outline"
             }
             onClick={toggleSelectAll}
@@ -742,44 +778,70 @@ const SignalsList = () => {
             </span>
           </Button>
 
-          {/* SELECTED COUNT */}
+        </div>
 
-          {selectedCount > 0 && (
-            <Badge
-              variant="secondary"
-              className="flex h-10 shrink-0 items-center rounded-lg px-3 text-xs font-bold"
-            >
-              <CheckSquare className="mr-1.5 h-4 w-4 text-primary" />
-              {selectedCount} Selected
-            </Badge>
-          )}
+        {/* FILTER RESULT COUNT */}
+
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 px-1">
+
+          <span className="text-[11px] text-muted-foreground">
+            {filteredSignals.length} signal
+            {filteredSignals.length !== 1
+              ? "s"
+              : ""}
+
+            {search
+              ? ` for "${search}"`
+              : ""}
+
+            {statusFilter !== "all"
+              ? ` • ${statusFilter}`
+              : ""}
+          </span>
+
+          <div className="flex items-center gap-2">
+
+            {selectedCount > 0 && (
+              <span className="text-[11px] font-semibold text-primary">
+                {selectedCount} selected
+              </span>
+            )}
+
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-[11px] font-medium text-primary"
+              >
+                Clear filters
+              </button>
+            )}
+
+          </div>
 
         </div>
 
         {/* ===================================================
-            BULK CONTROLS
-            THESE ARE NOW DIRECTLY ABOVE SIGNAL LIST
+            BULK ACTIONS
+            DIRECTLY UNDER FILTER / SELECT ALL
         =================================================== */}
 
         {selectedCount > 0 && (
-          <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2">
-
-            {/* DIRECT ACTION BUTTONS */}
+          <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
 
             <div className="flex flex-wrap items-center gap-1.5">
 
-              {/* CLEAR */}
+              {/* SELECTED COUNT */}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearSelection}
-                disabled={processing}
-                className="h-8 rounded-lg text-xs"
-              >
-                <X className="mr-1 h-3.5 w-3.5" />
-                Clear
-              </Button>
+              <div className="mr-auto flex items-center gap-1.5 px-1">
+
+                <CheckSquare className="h-4 w-4 text-primary" />
+
+                <span className="text-xs font-bold text-primary">
+                  {selectedCount} Selected
+                </span>
+
+              </div>
 
               {/* PUBLISH */}
 
@@ -790,10 +852,10 @@ const SignalsList = () => {
                   bulkPublish(true)
                 }
                 disabled={processing}
-                className="h-8 rounded-lg border-emerald-200 text-xs text-emerald-600 hover:bg-emerald-50"
+                className="h-8 rounded-lg px-2.5 text-xs text-emerald-600"
               >
                 <Upload className="mr-1 h-3.5 w-3.5" />
-                Publish Selected
+                Publish
               </Button>
 
               {/* UNPUBLISH */}
@@ -805,10 +867,10 @@ const SignalsList = () => {
                   bulkPublish(false)
                 }
                 disabled={processing}
-                className="h-8 rounded-lg border-orange-200 text-xs text-orange-600 hover:bg-orange-50"
+                className="h-8 rounded-lg px-2.5 text-xs text-orange-600"
               >
                 <Download className="mr-1 h-3.5 w-3.5" />
-                Unpublish Selected
+                Unpublish
               </Button>
 
               {/* DELETE */}
@@ -818,19 +880,30 @@ const SignalsList = () => {
                 size="sm"
                 onClick={bulkDelete}
                 disabled={processing}
-                className="h-8 rounded-lg text-xs"
+                className="h-8 rounded-lg px-2.5 text-xs"
               >
                 <Trash className="mr-1 h-3.5 w-3.5" />
-                Delete Selected
+                Delete
+              </Button>
+
+              {/* CLEAR SELECTION */}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilteredSelection}
+                disabled={processing}
+                className="h-8 rounded-lg px-2.5 text-xs"
+              >
+                <X className="mr-1 h-3.5 w-3.5" />
+                Clear
               </Button>
 
             </div>
 
             {/* MORE BULK ACTIONS */}
 
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
-
-              {/* ACTION */}
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
 
               <Select
                 value={bulkAction}
@@ -857,18 +930,33 @@ const SignalsList = () => {
                     Change Type
                   </SelectItem>
 
+                  <SelectItem value="publish">
+                    Publish Selected
+                  </SelectItem>
+
+                  <SelectItem value="unpublish">
+                    Unpublish Selected
+                  </SelectItem>
+
+                  <SelectItem value="delete">
+                    Delete Selected
+                  </SelectItem>
+
                 </SelectContent>
               </Select>
-
-              {/* VALUE */}
 
               <Select
                 value={bulkValue}
                 onValueChange={setBulkValue}
-                disabled={!bulkAction}
+                disabled={
+                  !bulkAction ||
+                  bulkAction === "publish" ||
+                  bulkAction === "unpublish" ||
+                  bulkAction === "delete"
+                }
               >
                 <SelectTrigger className="h-9 bg-background text-xs">
-                  <SelectValue placeholder="Select value" />
+                  <SelectValue placeholder="Value" />
                 </SelectTrigger>
 
                 <SelectContent>
@@ -928,57 +1016,29 @@ const SignalsList = () => {
                 </SelectContent>
               </Select>
 
-              {/* APPLY */}
-
               <Button
                 onClick={applyBulkAction}
                 disabled={
                   processing ||
                   !bulkAction ||
-                  !bulkValue
+                  (
+                    !bulkValue &&
+                    bulkAction !== "publish" &&
+                    bulkAction !== "unpublish" &&
+                    bulkAction !== "delete"
+                  )
                 }
                 className="h-9"
               >
                 {processing
                   ? "Processing..."
-                  : "Apply"}
+                  : "Apply Bulk Action"}
               </Button>
 
             </div>
 
           </div>
         )}
-
-        {/* COUNT */}
-
-        <div className="mt-1 flex items-center justify-between px-1">
-
-          <span className="text-[11px] text-muted-foreground">
-
-            {filteredSignals.length} signal
-            {filteredSignals.length !== 1
-              ? "s"
-              : ""}
-
-            {search
-              ? ` for "${search}"`
-              : ""}
-
-            {selectedCount > 0 &&
-              ` • ${selectedCount} selected`}
-
-          </span>
-
-          {filtersActive && (
-            <button
-              onClick={clearFilters}
-              className="text-[11px] font-medium text-primary"
-            >
-              Clear filters
-            </button>
-          )}
-
-        </div>
 
       </div>
 
