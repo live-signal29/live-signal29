@@ -70,21 +70,13 @@ interface SignalCardProps {
   livePrice?: number;
 }
 
-/**
- * Determines whether the market is closed.
- *
- * IMPORTANT:
- * - Deriv Synthetic Indices run 24/7.
- * - Crypto runs 24/7.
- * - Traditional markets use the weekend UTC schedule.
- */
+/* =========================================================
+   MARKET STATUS
+   ========================================================= */
+
 const isMarketClosed = (pairSymbol: string) => {
   const upper = (pairSymbol || "").toUpperCase();
 
-  // ============================================
-  // DERIV SYNTHETIC INDICES
-  // BOOM / CRASH / VOL etc. run 24/7.
-  // ============================================
   const isDerivSynthetic =
     upper.includes("BOOM") ||
     upper.includes("CRASH") ||
@@ -95,14 +87,8 @@ const isMarketClosed = (pairSymbol: string) => {
     upper.includes("DRIFT") ||
     upper.includes("RANGE");
 
-  if (isDerivSynthetic) {
-    return false;
-  }
+  if (isDerivSynthetic) return false;
 
-  // ============================================
-  // CRYPTO
-  // Crypto markets run 24/7.
-  // ============================================
   const isCrypto =
     upper.includes("BTC") ||
     upper.includes("ETH") ||
@@ -113,36 +99,24 @@ const isMarketClosed = (pairSymbol: string) => {
     upper.includes("DOGE") ||
     upper.includes("BNB");
 
-  if (isCrypto) {
-    return false;
-  }
+  if (isCrypto) return false;
 
-  // ============================================
-  // TRADITIONAL MARKETS
-  // Forex / Metals / Indices etc.
-  // Weekend closure based on UTC.
-  // ============================================
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
 
-  // Saturday
-  if (day === 6) {
-    return true;
-  }
+  if (day === 6) return true;
 
-  // Friday after 22:00 UTC
-  if (day === 5 && hour >= 22) {
-    return true;
-  }
+  if (day === 5 && hour >= 22) return true;
 
-  // Sunday before 22:00 UTC
-  if (day === 0 && hour < 22) {
-    return true;
-  }
+  if (day === 0 && hour < 22) return true;
 
   return false;
 };
+
+/* =========================================================
+   COMPONENT
+   ========================================================= */
 
 const SignalCardNew = ({
   signal,
@@ -158,7 +132,10 @@ const SignalCardNew = ({
 
   const [, forceUpdate] = useState(0);
 
-  // Refresh market status periodically
+  /* =======================================================
+     REFRESH MARKET STATUS
+     ======================================================= */
+
   useEffect(() => {
     const interval = window.setInterval(() => {
       forceUpdate((value) => value + 1);
@@ -168,6 +145,10 @@ const SignalCardNew = ({
   }, []);
 
   const marketClosed = isMarketClosed(signal.pair);
+
+  /* =======================================================
+     LIFECYCLE
+     ======================================================= */
 
   const lifecycle = (
     signal.signal_status ||
@@ -193,6 +174,10 @@ const SignalCardNew = ({
     setShowBody(!isClosed);
   }, [isClosed]);
 
+  /* =======================================================
+     ENTRY
+     ======================================================= */
+
   const isLimitOrder =
     signal.entry_mode?.toLowerCase() === "limit";
 
@@ -206,7 +191,18 @@ const SignalCardNew = ({
       ? limitPrice
       : parseEntryPrice(signal.entry);
 
-  const isBuy = signal.type?.toLowerCase() === "buy";
+  const isBuy =
+    signal.type?.toLowerCase() === "buy";
+
+  const pairUpper =
+    signal.pair?.toUpperCase() || "";
+
+  const isBTC =
+    pairUpper.replace(/[^A-Z0-9]/g, "").includes("BTC");
+
+  /* =======================================================
+     CURRENT PRICE
+     ======================================================= */
 
   const currentPriceNum =
     typeof livePrice === "number" && livePrice > 0
@@ -215,16 +211,26 @@ const SignalCardNew = ({
         ? parseFloat(signal.current_price)
         : 0;
 
-  const previousLivePriceRef = useRef<number | null>(null);
+  const previousLivePriceRef =
+    useRef<number | null>(null);
 
-  const [priceDirection, setPriceDirection] = useState<
+  const [
+    priceDirection,
+    setPriceDirection,
+  ] = useState<
     "up" | "down" | "neutral"
   >("neutral");
 
   useEffect(() => {
-    if (typeof livePrice !== "number" || livePrice <= 0) return;
+    if (
+      typeof livePrice !== "number" ||
+      livePrice <= 0
+    ) {
+      return;
+    }
 
-    const previous = previousLivePriceRef.current;
+    const previous =
+      previousLivePriceRef.current;
 
     if (previous !== null) {
       if (livePrice > previous) {
@@ -234,7 +240,8 @@ const SignalCardNew = ({
       }
     }
 
-    previousLivePriceRef.current = livePrice;
+    previousLivePriceRef.current =
+      livePrice;
   }, [livePrice]);
 
   const currentPriceColor =
@@ -242,15 +249,21 @@ const SignalCardNew = ({
       ? "text-rose-500 dark:text-rose-400"
       : "text-emerald-500 dark:text-emerald-400";
 
-  // Only the subscription hook can grant Premium access.
-  const userHasValidAccess = hasAccess === true;
+  /* =======================================================
+     ACCESS
+     ======================================================= */
 
-  // Premium OPEN/PENDING signals are locked for Free + Free Trial users.
-  // CLOSED signals remain visible with their result/details.
+  const userHasValidAccess =
+    hasAccess === true;
+
   const isLocked =
     !!signal.is_premium &&
     !userHasValidAccess &&
     !isClosed;
+
+  /* =======================================================
+     TIME
+     ======================================================= */
 
   const signalTime =
     isOpen && signal.activated_at
@@ -258,11 +271,18 @@ const SignalCardNew = ({
       : signal.created_at;
 
   const signalAgeMs =
-    Date.now() - new Date(signal.created_at).getTime();
+    Date.now() -
+    new Date(signal.created_at).getTime();
 
-  const isVeryNewSignal = signalAgeMs < 60000;
+  const isVeryNewSignal =
+    signalAgeMs < 60000;
 
-  const entryTouched = isOpen && !isVeryNewSignal;
+  const entryTouched =
+    isOpen && !isVeryNewSignal;
+
+  /* =======================================================
+     RUNNING P/L
+     ======================================================= */
 
   const runningPL =
     entryTouched &&
@@ -275,12 +295,22 @@ const SignalCardNew = ({
         ).value
       : null;
 
+  /* =======================================================
+     CONFETTI
+     ======================================================= */
+
   const triggerConfetti = useCallback(() => {
-    if (!cardRef.current || confettiFiredRef.current) return;
+    if (
+      !cardRef.current ||
+      confettiFiredRef.current
+    ) {
+      return;
+    }
 
     confettiFiredRef.current = true;
 
-    const rect = cardRef.current.getBoundingClientRect();
+    const rect =
+      cardRef.current.getBoundingClientRect();
 
     const x =
       (rect.left + rect.width / 2) /
@@ -314,13 +344,25 @@ const SignalCardNew = ({
     ) {
       triggerConfetti();
     }
-  }, [signal.tp3_hit, triggerConfetti]);
+  }, [
+    signal.tp3_hit,
+    triggerConfetti,
+  ]);
+
+  /* =======================================================
+     TP / SL HELPERS
+     ======================================================= */
 
   const hasTPReached = (
     current: number,
     target: number
   ) => {
-    if (current <= 0 || target <= 0) return false;
+    if (
+      current <= 0 ||
+      target <= 0
+    ) {
+      return false;
+    }
 
     return isBuy
       ? current >= target
@@ -331,195 +373,354 @@ const SignalCardNew = ({
     current: number,
     sl: number
   ) => {
-    if (current <= 0 || sl <= 0) return false;
+    if (
+      current <= 0 ||
+      sl <= 0
+    ) {
+      return false;
+    }
 
     return isBuy
       ? current <= sl
       : current >= sl;
   };
 
-  const primedForChecksRef = useRef(false);
-  const slBreachStreakRef = useRef(0);
+  const primedForChecksRef =
+    useRef(false);
+
+  const slBreachStreakRef =
+    useRef(0);
+
+  /* =======================================================
+     IMPORTANT BTC FIX
+     
+     Once ANY TP is hit:
+     - SL must NEVER become a real SL loss.
+     - SL at entry = BREAKEVEN.
+     - sl_hit remains false.
+     
+     This specifically protects BTC from the issue shown
+     in your screenshot.
+     ======================================================= */
+
+  const hasAnyTPHit =
+    !!signal.tp1_hit ||
+    !!signal.tp2_hit ||
+    !!signal.tp3_hit ||
+    !!signal.tp4_hit;
 
   useEffect(() => {
-    /**
-     * IMPORTANT:
-     *
-     * Synthetic markets such as BOOM/VOL are 24/7.
-     * Because isMarketClosed() returns false for them,
-     * TP/SL checking continues normally.
-     */
     if (
       !isOpen ||
       !currentPriceNum ||
       parsedEntryPrice <= 0 ||
       marketClosed
     ) {
-      primedForChecksRef.current = false;
-      slBreachStreakRef.current = 0;
+      primedForChecksRef.current =
+        false;
+
+      slBreachStreakRef.current =
+        0;
+
       return;
     }
 
     if (!primedForChecksRef.current) {
-      primedForChecksRef.current = true;
+      primedForChecksRef.current =
+        true;
+
       return;
     }
 
     let cancelled = false;
 
-    const checkAndUpdate = async () => {
-      const updates: Record<
-        string,
-        boolean | string | null
-      > = {};
+    const checkAndUpdate =
+      async () => {
+        const updates: Record<
+          string,
+          boolean | string | null
+        > = {};
 
-      const entryPrice = parsedEntryPrice;
+        const entryPrice =
+          parsedEntryPrice;
 
-      const tp1Price = signal.tp1
-        ? parseEntryPrice(signal.tp1)
-        : 0;
-
-      const tp2Price = signal.tp2
-        ? parseEntryPrice(signal.tp2)
-        : 0;
-
-      const tp3Price = signal.tp3
-        ? parseEntryPrice(signal.tp3)
-        : 0;
-
-      const tp4Price = signal.tp4
-        ? parseEntryPrice(signal.tp4)
-        : 0;
-
-      const slPrice = signal.sl
-        ? parseEntryPrice(signal.sl)
-        : 0;
-
-      // ============================================
-      // TP 1
-      // ============================================
-      if (
-        !signal.tp1_hit &&
-        tp1Price > 0 &&
-        hasTPReached(currentPriceNum, tp1Price)
-      ) {
-        updates.tp1_hit = true;
-        updates.sl = String(entryPrice);
-        updates.profit_note =
-          "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
-      }
-
-      // ============================================
-      // TP 2
-      // ============================================
-      if (
-        !signal.tp2_hit &&
-        tp2Price > 0 &&
-        hasTPReached(currentPriceNum, tp2Price)
-      ) {
-        updates.tp2_hit = true;
-        updates.profit_note =
-          "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
-      }
-
-      // ============================================
-      // TP 3
-      // ============================================
-      if (
-        !signal.tp3_hit &&
-        tp3Price > 0 &&
-        hasTPReached(currentPriceNum, tp3Price)
-      ) {
-        updates.tp3_hit = true;
-        updates.profit_note =
-          "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
-
-        if (!signal.tp4) {
-          updates.signal_status = "close";
-          updates.status = "CLOSED";
-        }
-      }
-
-      // ============================================
-      // TP 4
-      // ============================================
-      if (
-        !signal.tp4_hit &&
-        tp4Price > 0 &&
-        hasTPReached(currentPriceNum, tp4Price)
-      ) {
-        updates.tp4_hit = true;
-        updates.signal_status = "close";
-        updates.status = "CLOSED";
-        updates.profit_note =
-          "AMAZING! TP 4 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
-      }
-
-      const effectiveTP1 =
-        !!signal.tp1_hit ||
-        !!updates.tp1_hit;
-
-      const effectiveTP2 =
-        !!signal.tp2_hit ||
-        !!updates.tp2_hit;
-
-      const effectiveSL = updates.sl
-        ? parseEntryPrice(String(updates.sl))
-        : slPrice;
-
-      // ============================================
-      // SL CHECK
-      // ============================================
-      const slBreachThisTick =
-        !signal.sl_hit &&
-        effectiveSL > 0 &&
-        hasSLReached(
-          currentPriceNum,
-          effectiveSL
-        );
-
-      slBreachStreakRef.current =
-        slBreachThisTick
-          ? slBreachStreakRef.current + 1
+        const tp1Price = signal.tp1
+          ? parseEntryPrice(
+              signal.tp1
+            )
           : 0;
 
-      /**
-       * Require 2 consecutive checks before SL is
-       * considered hit. This helps prevent false SL
-       * triggers caused by a single price tick.
-       */
-      if (
-        slBreachThisTick &&
-        slBreachStreakRef.current >= 2
-      ) {
-        updates.signal_status = "close";
-        updates.status = "CLOSED";
+        const tp2Price = signal.tp2
+          ? parseEntryPrice(
+              signal.tp2
+            )
+          : 0;
 
-        if (effectiveTP2) {
+        const tp3Price = signal.tp3
+          ? parseEntryPrice(
+              signal.tp3
+            )
+          : 0;
+
+        const tp4Price = signal.tp4
+          ? parseEntryPrice(
+              signal.tp4
+            )
+          : 0;
+
+        const originalSLPrice =
+          signal.sl
+            ? parseEntryPrice(
+                signal.sl
+              )
+            : 0;
+
+        /* =================================================
+           TP1
+           ================================================= */
+
+        if (
+          !signal.tp1_hit &&
+          tp1Price > 0 &&
+          hasTPReached(
+            currentPriceNum,
+            tp1Price
+          )
+        ) {
+          updates.tp1_hit = true;
+
+          // Move SL to Entry
+          updates.sl =
+            String(entryPrice);
+
           updates.sl_hit = false;
+
           updates.profit_note =
-            "Signal Closed at Breakeven after TP2 Hit ✅✅";
-        } else if (effectiveTP1) {
-          updates.sl_hit = false;
-          updates.profit_note =
-            "Signal Closed at Breakeven after TP1 Hit ✅";
-        } else {
-          updates.sl_hit = true;
-          updates.profit_note =
-            "SL Hit ❌ - Staying patient for a better entry.";
+            "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
         }
-      }
 
-      if (
-        !cancelled &&
-        Object.keys(updates).length > 0
-      ) {
-        await supabase
-          .from("signals")
-          .update(updates)
-          .eq("id", signal.id);
-      }
-    };
+        /* =================================================
+           TP2
+           ================================================= */
+
+        if (
+          !signal.tp2_hit &&
+          tp2Price > 0 &&
+          hasTPReached(
+            currentPriceNum,
+            tp2Price
+          )
+        ) {
+          updates.tp2_hit = true;
+
+          // Keep SL at Entry
+          updates.sl =
+            String(entryPrice);
+
+          updates.sl_hit = false;
+
+          updates.profit_note =
+            "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
+        }
+
+        /* =================================================
+           TP3
+           ================================================= */
+
+        if (
+          !signal.tp3_hit &&
+          tp3Price > 0 &&
+          hasTPReached(
+            currentPriceNum,
+            tp3Price
+          )
+        ) {
+          updates.tp3_hit = true;
+
+          updates.sl =
+            String(entryPrice);
+
+          updates.sl_hit = false;
+
+          updates.profit_note =
+            "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+
+          if (!signal.tp4) {
+            updates.signal_status =
+              "close";
+
+            updates.status =
+              "CLOSED";
+          }
+        }
+
+        /* =================================================
+           TP4
+           ================================================= */
+
+        if (
+          !signal.tp4_hit &&
+          tp4Price > 0 &&
+          hasTPReached(
+            currentPriceNum,
+            tp4Price
+          )
+        ) {
+          updates.tp4_hit = true;
+
+          updates.signal_status =
+            "close";
+
+          updates.status =
+            "CLOSED";
+
+          updates.sl_hit = false;
+
+          updates.profit_note =
+            "AMAZING! TP 4 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+        }
+
+        /* =================================================
+           EFFECTIVE TP STATE
+           ================================================= */
+
+        const effectiveTP1 =
+          !!signal.tp1_hit ||
+          !!updates.tp1_hit;
+
+        const effectiveTP2 =
+          !!signal.tp2_hit ||
+          !!updates.tp2_hit;
+
+        const effectiveTP3 =
+          !!signal.tp3_hit ||
+          !!updates.tp3_hit;
+
+        const effectiveTP4 =
+          !!signal.tp4_hit ||
+          !!updates.tp4_hit;
+
+        const anyTPHit =
+          effectiveTP1 ||
+          effectiveTP2 ||
+          effectiveTP3 ||
+          effectiveTP4;
+
+        /* =================================================
+           EFFECTIVE SL
+
+           If TP1 hit, SL becomes Entry.
+           Otherwise use original SL.
+           ================================================= */
+
+        const effectiveSL =
+          updates.sl
+            ? parseEntryPrice(
+                String(updates.sl)
+              )
+            : effectiveTP1
+              ? entryPrice
+              : originalSLPrice;
+
+        /* =================================================
+           BTC SPECIAL PROTECTION
+
+           BTC must NEVER be marked SL HIT after TP.
+           ================================================= */
+
+        const btcAfterTP =
+          isBTC && anyTPHit;
+
+        /* =================================================
+           SL CHECK
+
+           If ANY TP already hit:
+           - Do NOT set sl_hit=true
+           - Close as breakeven
+           ================================================= */
+
+        const slBreachThisTick =
+          !signal.sl_hit &&
+          effectiveSL > 0 &&
+          hasSLReached(
+            currentPriceNum,
+            effectiveSL
+          );
+
+        slBreachStreakRef.current =
+          slBreachThisTick
+            ? slBreachStreakRef.current + 1
+            : 0;
+
+        /* =================================================
+           2 CONSECUTIVE SL CHECKS
+           ================================================= */
+
+        if (
+          slBreachThisTick &&
+          slBreachStreakRef.current >= 2
+        ) {
+          updates.signal_status =
+            "close";
+
+          updates.status =
+            "CLOSED";
+
+          /* ---------------------------------------------
+             CRITICAL FIX:
+             If TP1/TP2/TP3/TP4 hit, this is BREAKEVEN.
+             Never mark sl_hit true.
+             --------------------------------------------- */
+
+          if (
+            anyTPHit ||
+            btcAfterTP
+          ) {
+            updates.sl_hit = false;
+
+            updates.sl =
+              String(entryPrice);
+
+            if (effectiveTP2) {
+              updates.profit_note =
+                "Signal Closed at Breakeven after TP2 Hit ✅✅";
+            } else if (effectiveTP1) {
+              updates.profit_note =
+                "Signal Closed at Breakeven after TP1 Hit ✅";
+            } else {
+              updates.profit_note =
+                "Signal Closed at Breakeven after TP Hit ✅";
+            }
+          } else {
+            /* -------------------------------------------
+               REAL SL LOSS
+               Only allowed when NO TP was hit.
+               ------------------------------------------- */
+
+            updates.sl_hit = true;
+
+            updates.profit_note =
+              "SL Hit ❌ - Staying patient for a better entry.";
+          }
+        }
+
+        /* =================================================
+           DATABASE UPDATE
+           ================================================= */
+
+        if (
+          !cancelled &&
+          Object.keys(updates).length > 0
+        ) {
+          await supabase
+            .from("signals")
+            .update(updates)
+            .eq(
+              "id",
+              signal.id
+            );
+        }
+      };
 
     checkAndUpdate();
 
@@ -543,21 +744,31 @@ const SignalCardNew = ({
     signal.tp3_hit,
     signal.tp4_hit,
     signal.sl_hit,
+    isBTC,
   ]);
+
+  /* =======================================================
+     TIME FORMAT
+     ======================================================= */
 
   const formatRealTime = (
     dateString: string
   ) => {
     try {
-      if (!dateString) return "Just now";
+      if (!dateString) {
+        return "Just now";
+      }
 
-      const rawDate = new Date(dateString);
+      const rawDate =
+        new Date(dateString);
 
       const utcDate =
         dateString.endsWith("Z") ||
         dateString.includes("+")
           ? rawDate
-          : new Date(dateString + "Z");
+          : new Date(
+              dateString + "Z"
+            );
 
       return format(
         utcDate,
@@ -568,245 +779,333 @@ const SignalCardNew = ({
     }
   };
 
-  const getDynamicProfitNote = () => {
-    if (
-      signal.sl_hit ||
-      (signal.profit_note &&
-        /SL\s*Hit/i.test(
-          signal.profit_note
-        ))
-    ) {
-      return "SL Hit ❌ - Staying patient for a better entry.";
-    }
+  /* =======================================================
+     DYNAMIC NOTE
+     
+     IMPORTANT:
+     TP has priority over stale sl_hit.
+     ======================================================= */
 
-    if (
-      signal.tp3_hit ||
-      signal.tp4_hit ||
-      (signal.profit_note &&
-        /TP\s*[34]/i.test(
-          signal.profit_note
-        ))
-    ) {
-      return "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
-    }
+  const getDynamicProfitNote =
+    () => {
+      const anyTPHit =
+        !!signal.tp1_hit ||
+        !!signal.tp2_hit ||
+        !!signal.tp3_hit ||
+        !!signal.tp4_hit;
 
-    if (
-      signal.tp2_hit ||
-      (signal.profit_note &&
-        /TP\s*2/i.test(
-          signal.profit_note
-        ))
-    ) {
-      return "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
-    }
+      /* -----------------------------------------------
+         BTC:
+         If TP was hit, never display SL Hit.
+         ----------------------------------------------- */
 
-    if (
-      signal.tp1_hit ||
-      (signal.profit_note &&
-        /TP\s*1/i.test(
-          signal.profit_note
-        ))
-    ) {
-      return "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
-    }
+      if (
+        isBTC &&
+        anyTPHit
+      ) {
+        if (
+          signal.tp3_hit ||
+          signal.tp4_hit
+        ) {
+          return "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+        }
 
-    return signal.profit_note || "";
-  };
+        if (
+          signal.tp2_hit
+        ) {
+          return "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
+        }
 
-  const note = getDynamicProfitNote();
+        return "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
+      }
 
-  const getSignalStatus = () => {
-    if (
-      isClosed ||
-      signal.sl_hit ||
-      signal.tp4_hit ||
-      (!signal.tp4 && signal.tp3_hit)
-    ) {
-      return "CLOSED";
-    }
+      /* -----------------------------------------------
+         Normal symbols:
+         TP state also protects against stale SL flag
+         once TP has actually been reached.
+         ----------------------------------------------- */
 
-    if (isPending) {
-      return "PENDING";
-    }
+      if (
+        anyTPHit
+      ) {
+        if (
+          signal.tp3_hit ||
+          signal.tp4_hit
+        ) {
+          return "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+        }
 
-    return "OPEN";
-  };
+        if (
+          signal.tp2_hit
+        ) {
+          return "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
+        }
 
-  const statusText = getSignalStatus();
+        return "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
+      }
 
-  const getStatusStyle = () => {
-    switch (statusText) {
-      case "CLOSED":
-        return "bg-rose-500/15 border-rose-500/40 text-rose-500 dark:text-rose-400";
+      if (
+        signal.sl_hit ||
+        (signal.profit_note &&
+          /SL\s*Hit/i.test(
+            signal.profit_note
+          ))
+      ) {
+        return "SL Hit ❌ - Staying patient for a better entry.";
+      }
 
-      case "OPEN":
-        return "bg-emerald-500/15 border-emerald-500/40 text-emerald-500 dark:text-emerald-400";
-
-      case "PENDING":
-        return "bg-amber-500/15 border-amber-500/40 text-amber-500 dark:text-amber-400";
-
-      default:
-        return "bg-cyan-500/15 border-cyan-500/40 text-cyan-500 dark:text-cyan-400";
-    }
-  };
-
-  const noteStyle = getNoteStyle();
-
-  const pairUpper =
-    signal.pair?.toUpperCase() || "";
-
-  // ============================================
-  // RUNNING / MARKET CLOSED TEXT
-  //
-  // Deriv Synthetic = RUNNING
-  // Crypto = RUNNING
-  // Traditional closed market = MARKET CLOSED
-  // ============================================
-  const runningOrClosedText = marketClosed
-    ? "MARKET CLOSED"
-    : "RUNNING";
-
-  const runningOrClosedColor = marketClosed
-    ? "text-rose-400 dark:text-rose-400 font-medium"
-    : "text-amber-500 dark:text-amber-400 animate-pulse font-medium";
-
-  // ============================================
-  // TP 1 STATUS
-  // ============================================
-  const getTP1Status = () => {
-    if (signal.tp1_hit) {
-      return {
-        text: "TP 1 HIT",
-        color:
-          "text-emerald-500 dark:text-emerald-400 font-bold",
-      };
-    }
-
-    if (!isClosed) {
-      return {
-        text: runningOrClosedText,
-        color: runningOrClosedColor,
-      };
-    }
-
-    return {
-      text: "",
-      color: "",
+      return (
+        signal.profit_note || ""
+      );
     };
-  };
 
-  // ============================================
-  // TP 2 STATUS
-  // ============================================
-  const getTP2Status = () => {
-    if (signal.tp2_hit) {
-      return {
-        text: "TP 2 HIT",
-        color:
-          "text-emerald-500 dark:text-emerald-400 font-bold",
-      };
-    }
+  const note =
+    getDynamicProfitNote();
 
-    if (!isClosed && signal.tp1_hit) {
-      return {
-        text: runningOrClosedText,
-        color: runningOrClosedColor,
-      };
-    }
+  /* =======================================================
+     SIGNAL STATUS
+     ======================================================= */
 
-    return {
-      text: "",
-      color: "",
+  const getSignalStatus =
+    () => {
+      if (
+        isClosed ||
+        signal.tp4_hit ||
+        (!signal.tp4 &&
+          signal.tp3_hit)
+      ) {
+        return "CLOSED";
+      }
+
+      if (isPending) {
+        return "PENDING";
+      }
+
+      return "OPEN";
     };
-  };
 
-  // ============================================
-  // TP 3 STATUS
-  // ============================================
-  const getTP3Status = () => {
-    if (signal.tp3_hit) {
-      return {
-        text: "TP 3 HIT",
-        color:
-          "text-emerald-500 dark:text-emerald-400 font-bold",
-      };
-    }
+  const statusText =
+    getSignalStatus();
 
-    if (!isClosed && signal.tp2_hit) {
-      return {
-        text: runningOrClosedText,
-        color: runningOrClosedColor,
-      };
-    }
+  const getStatusStyle =
+    () => {
+      switch (
+        statusText
+      ) {
+        case "CLOSED":
+          return "bg-rose-500/15 border-rose-500/40 text-rose-500 dark:text-rose-400";
 
-    return {
-      text: "",
-      color: "",
+        case "OPEN":
+          return "bg-emerald-500/15 border-emerald-500/40 text-emerald-500 dark:text-emerald-400";
+
+        case "PENDING":
+          return "bg-amber-500/15 border-amber-500/40 text-amber-500 dark:text-amber-400";
+
+        default:
+          return "bg-cyan-500/15 border-cyan-500/40 text-cyan-500 dark:text-cyan-400";
+      }
     };
-  };
+
+  /* =======================================================
+     RUNNING / CLOSED
+     ======================================================= */
+
+  const runningOrClosedText =
+    marketClosed
+      ? "MARKET CLOSED"
+      : "RUNNING";
+
+  const runningOrClosedColor =
+    marketClosed
+      ? "text-rose-400 dark:text-rose-400 font-medium"
+      : "text-amber-500 dark:text-amber-400 animate-pulse font-medium";
+
+  /* =======================================================
+     TP STATUS
+     ======================================================= */
+
+  const getTP1Status =
+    () => {
+      if (
+        signal.tp1_hit
+      ) {
+        return {
+          text: "TP 1 HIT",
+          color:
+            "text-emerald-500 dark:text-emerald-400 font-bold",
+        };
+      }
+
+      if (!isClosed) {
+        return {
+          text:
+            runningOrClosedText,
+          color:
+            runningOrClosedColor,
+        };
+      }
+
+      return {
+        text: "",
+        color: "",
+      };
+    };
+
+  const getTP2Status =
+    () => {
+      if (
+        signal.tp2_hit
+      ) {
+        return {
+          text: "TP 2 HIT",
+          color:
+            "text-emerald-500 dark:text-emerald-400 font-bold",
+        };
+      }
+
+      if (
+        !isClosed &&
+        signal.tp1_hit
+      ) {
+        return {
+          text:
+            runningOrClosedText,
+          color:
+            runningOrClosedColor,
+        };
+      }
+
+      return {
+        text: "",
+        color: "",
+      };
+    };
+
+  const getTP3Status =
+    () => {
+      if (
+        signal.tp3_hit
+      ) {
+        return {
+          text: "TP 3 HIT",
+          color:
+            "text-emerald-500 dark:text-emerald-400 font-bold",
+        };
+      }
+
+      if (
+        !isClosed &&
+        signal.tp2_hit
+      ) {
+        return {
+          text:
+            runningOrClosedText,
+          color:
+            runningOrClosedColor,
+        };
+      }
+
+      return {
+        text: "",
+        color: "",
+      };
+    };
+
+  /* =======================================================
+     SL DISPLAY FIX
+     ======================================================= */
+
+  const anyTPHitForDisplay =
+    !!signal.tp1_hit ||
+    !!signal.tp2_hit ||
+    !!signal.tp3_hit ||
+    !!signal.tp4_hit;
 
   const isSLHit =
-    signal.sl_hit ||
-    /SL\s*Hit/i.test(note);
+    !!signal.sl_hit &&
+    !anyTPHitForDisplay;
 
-  // ============================================
-  // SL STATUS
-  // ============================================
-  const getSLStatus = () => {
-    if (isSLHit) {
+  const isBreakeven =
+    anyTPHitForDisplay &&
+    !!signal.sl_hit === false;
+
+  const getSLStatus =
+    () => {
+      /* -----------------------------------------------
+         TP HIT = MOVE SL / BREAKEVEN
+         ----------------------------------------------- */
+
+      if (
+        anyTPHitForDisplay &&
+        !isClosed
+      ) {
+        return {
+          text:
+            "MOVE SL TO ENTRY POINT",
+          color:
+            "text-amber-500 dark:text-amber-400 font-bold",
+        };
+      }
+
+      /* -----------------------------------------------
+         Actual SL before TP
+         ----------------------------------------------- */
+
+      if (
+        isSLHit
+      ) {
+        return {
+          text: "SL HIT ❌",
+          color:
+            "text-rose-500 font-bold",
+        };
+      }
+
       return {
-        text: "SL HIT ❌",
-        color: "text-rose-500 font-bold",
+        text: "",
+        color: "",
       };
-    }
-
-    if (
-      !isClosed &&
-      signal.tp1_hit
-    ) {
-      return {
-        text: "MOVE SL TO ENTRY POINT",
-        color:
-          "text-amber-500 dark:text-amber-400 font-bold",
-      };
-    }
-
-    return {
-      text: "",
-      color: "",
     };
-  };
 
-  const tp1Status = getTP1Status();
-  const tp2Status = getTP2Status();
-  const tp3Status = getTP3Status();
-  const slStatus = getSLStatus();
+  const tp1Status =
+    getTP1Status();
+
+  const tp2Status =
+    getTP2Status();
+
+  const tp3Status =
+    getTP3Status();
+
+  const slStatus =
+    getSLStatus();
+
+  /* =======================================================
+     NOTE STYLE
+     ======================================================= */
 
   function getNoteStyle() {
-    const isSL =
-      signal.sl_hit ||
-      /SL\s*Hit/i.test(note);
+    const actualSL =
+      isSLHit;
 
     const isTP1 =
-      !isSL &&
-      (signal.tp1_hit ||
-        /TP\s*1/i.test(note)) &&
+      !actualSL &&
+      signal.tp1_hit &&
       !signal.tp2_hit &&
       !signal.tp3_hit;
 
     const isTP2 =
-      !isSL &&
-      (signal.tp2_hit ||
-        /TP\s*2/i.test(note)) &&
+      !actualSL &&
+      signal.tp2_hit &&
       !signal.tp3_hit;
 
     const isTP3or4 =
-      !isSL &&
-      (signal.tp3_hit ||
-        signal.tp4_hit ||
-        /TP\s*[34]/i.test(note));
+      !actualSL &&
+      (
+        signal.tp3_hit ||
+        signal.tp4_hit
+      );
 
-    if (isSL) {
+    if (actualSL) {
       return {
         container:
           "border-rose-500/35 bg-rose-500/10 dark:bg-rose-950/25",
@@ -859,6 +1158,13 @@ const SignalCardNew = ({
     };
   }
 
+  const noteStyle =
+    getNoteStyle();
+
+  /* =======================================================
+     RENDER
+     ======================================================= */
+
   return (
     <div
       ref={cardRef}
@@ -868,9 +1174,8 @@ const SignalCardNew = ({
         "hover:scale-[1.01]"
       )}
     >
-      {/* ============================================
-          1. HEADER
-          ============================================ */}
+      {/* HEADER */}
+
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <div
@@ -884,7 +1189,6 @@ const SignalCardNew = ({
                   ""
                 );
 
-              // Metals / commodities
               if (
                 p.includes("XAU") ||
                 p.includes("GOLD")
@@ -910,8 +1214,9 @@ const SignalCardNew = ({
               )
                 return "🔥";
 
-              // Major indices
-              if (p.includes("NASDAQ"))
+              if (
+                p.includes("NASDAQ")
+              )
                 return "📊";
 
               if (
@@ -926,10 +1231,14 @@ const SignalCardNew = ({
               )
                 return "📈";
 
-              if (p.includes("DAX"))
+              if (
+                p.includes("DAX")
+              )
                 return "🇩🇪";
 
-              if (p.includes("FTSE"))
+              if (
+                p.includes("FTSE")
+              )
                 return "🇬🇧";
 
               if (
@@ -938,7 +1247,6 @@ const SignalCardNew = ({
               )
                 return "🇯🇵";
 
-              // Crypto
               if (
                 p.includes("BTC") ||
                 p.includes("BITCOIN")
@@ -951,7 +1259,9 @@ const SignalCardNew = ({
               )
                 return "Ξ";
 
-              if (p.includes("XRP"))
+              if (
+                p.includes("XRP")
+              )
                 return "✕";
 
               if (
@@ -972,39 +1282,59 @@ const SignalCardNew = ({
               )
                 return "◎";
 
-              // Deriv
-              if (p.includes("BOOM"))
+              if (
+                p.includes("BOOM")
+              )
                 return "🚀";
 
-              if (p.includes("CRASH"))
+              if (
+                p.includes("CRASH")
+              )
                 return "💥";
 
-              if (p.includes("VOL"))
+              if (
+                p.includes("VOL")
+              )
                 return "⚡";
 
-              // Forex
-              if (p.includes("EUR"))
+              if (
+                p.includes("EUR")
+              )
                 return "€";
 
-              if (p.includes("GBP"))
+              if (
+                p.includes("GBP")
+              )
                 return "£";
 
-              if (p.includes("JPY"))
+              if (
+                p.includes("JPY")
+              )
                 return "¥";
 
-              if (p.includes("CHF"))
+              if (
+                p.includes("CHF")
+              )
                 return "₣";
 
-              if (p.includes("CAD"))
+              if (
+                p.includes("CAD")
+              )
                 return "C$";
 
-              if (p.includes("AUD"))
+              if (
+                p.includes("AUD")
+              )
                 return "A$";
 
-              if (p.includes("NZD"))
+              if (
+                p.includes("NZD")
+              )
                 return "NZ$";
 
-              if (p.includes("USD"))
+              if (
+                p.includes("USD")
+              )
                 return "$";
 
               return "📈";
@@ -1028,7 +1358,6 @@ const SignalCardNew = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Signal Status */}
           <span
             className={cn(
               "inline-flex items-center rounded-full border px-2 py-[2.5px] text-[7px] font-black uppercase tracking-wider leading-none backdrop-blur-md",
@@ -1038,9 +1367,11 @@ const SignalCardNew = ({
             <span
               className={cn(
                 "mr-1 h-1.5 w-1.5 rounded-full animate-pulse",
-                statusText === "CLOSED"
+                statusText ===
+                  "CLOSED"
                   ? "bg-rose-500"
-                  : statusText === "OPEN"
+                  : statusText ===
+                      "OPEN"
                     ? "bg-emerald-400"
                     : "bg-amber-400"
               )}
@@ -1049,19 +1380,21 @@ const SignalCardNew = ({
             {statusText}
           </span>
 
-          {/* Time */}
           <div className="flex items-center gap-1 text-[8px] font-medium text-cyan-200/50 bg-cyan-950/40 px-2 py-1 rounded-lg border border-cyan-500/10">
             <Clock className="h-2.5 w-2.5 text-cyan-400" />
 
             <span>
-              {formatRealTime(signalTime)}
+              {formatRealTime(
+                signalTime
+              )}
             </span>
           </div>
 
-          {/* Expand / Collapse */}
           <button
             onClick={() =>
-              setShowBody(!showBody)
+              setShowBody(
+                !showBody
+              )
             }
             className="p-1 rounded-lg bg-cyan-950/40 border border-cyan-500/10 text-cyan-300 hover:bg-black/10 transition-colors"
           >
@@ -1074,16 +1407,17 @@ const SignalCardNew = ({
         </div>
       </div>
 
-      {/* ============================================
-          2. BODY
-          ============================================ */}
+      {/* BODY */}
+
       {isLocked ? (
         <div
           role="button"
           tabIndex={0}
           aria-label="Premium Signal - Tap to Unlock"
           onClick={() =>
-            navigate("/premium")
+            navigate(
+              "/premium"
+            )
           }
           onKeyDown={(e) => {
             if (
@@ -1091,7 +1425,10 @@ const SignalCardNew = ({
               e.key === " "
             ) {
               e.preventDefault();
-              navigate("/premium");
+
+              navigate(
+                "/premium"
+              );
             }
           }}
           className="flex flex-col items-center justify-center gap-2.5 py-7 px-4 rounded-[12px] border border-dashed border-amber-500/30 bg-[#06101e]/60 cursor-pointer hover:bg-amber-500/5 active:scale-[0.99] transition-all duration-200 shadow-inner"
@@ -1106,11 +1443,9 @@ const SignalCardNew = ({
         </div>
       ) : (
         <>
-          {/* ========================================
-              ENTRY & CURRENT PRICE BAR
-              ======================================== */}
+          {/* ENTRY / CURRENT */}
+
           <div className="flex items-center justify-between rounded-[12px] bg-[#07101d]/80 border border-cyan-500/15 px-3 py-2 mb-3 shadow-inner">
-            {/* Entry */}
             <div className="flex flex-col">
               <span className="text-[7.5px] font-bold uppercase tracking-wider text-cyan-300/50">
                 Entry
@@ -1121,7 +1456,6 @@ const SignalCardNew = ({
               </span>
             </div>
 
-            {/* Current Price */}
             <div className="flex flex-col items-center">
               <span className="text-[7.5px] font-bold uppercase tracking-wider text-cyan-300/50">
                 Current
@@ -1133,13 +1467,15 @@ const SignalCardNew = ({
                   currentPriceColor
                 )}
               >
-                {currentPriceNum > 0
-                  ? currentPriceNum.toFixed(2)
+                {currentPriceNum >
+                0
+                  ? currentPriceNum.toFixed(
+                      2
+                    )
                   : signal.entry}
               </span>
             </div>
 
-            {/* Buy / Sell */}
             <div className="flex flex-col items-end gap-0.5">
               <span
                 className={cn(
@@ -1149,26 +1485,34 @@ const SignalCardNew = ({
                     : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                 )}
               >
-                {signal.type.toUpperCase()} NOW
+                {signal.type.toUpperCase()}{" "}
+                NOW
               </span>
 
-              {/* Running P/L */}
-              {runningPL !== null &&
+              {runningPL !==
+                null &&
               !isClosed ? (
                 <span
                   className={cn(
                     "font-mono text-[8.5px] font-extrabold",
                     runningPL > 0
                       ? "text-emerald-400"
-                      : runningPL < 0
+                      : runningPL <
+                          0
                         ? "text-rose-400"
                         : "text-cyan-300/60"
                   )}
                 >
-                  {runningPL > 0
-                    ? `+${runningPL.toFixed(1)} pips`
-                    : runningPL < 0
-                      ? `${runningPL.toFixed(1)} pips`
+                  {runningPL >
+                  0
+                    ? `+${runningPL.toFixed(
+                        1
+                      )} pips`
+                    : runningPL <
+                        0
+                      ? `${runningPL.toFixed(
+                          1
+                        )} pips`
                       : "0.0 pips"}
                 </span>
               ) : (
@@ -1186,20 +1530,21 @@ const SignalCardNew = ({
                     )}
                   >
                     <AlertCircle className="h-2.5 w-2.5" />
-                    {signal.risk_level}
+                    {
+                      signal.risk_level
+                    }
                   </span>
                 )
               )}
             </div>
           </div>
 
-          {/* ========================================
-              TARGETS & STOP LOSS
-              ======================================== */}
+          {/* TARGETS */}
+
           {showBody && (
             <div className="flex flex-col gap-2 rounded-[12px] bg-[#07101d]/40 border border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
-              
-              {/* TP 1 */}
+              {/* TP1 */}
+
               <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
                 <span
                   className={cn(
@@ -1235,11 +1580,14 @@ const SignalCardNew = ({
                     tp1Status.color
                   )}
                 >
-                  {tp1Status.text}
+                  {
+                    tp1Status.text
+                  }
                 </span>
               </div>
 
-              {/* TP 2 */}
+              {/* TP2 */}
+
               {signal.tp2 && (
                 <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
                   <span
@@ -1276,12 +1624,15 @@ const SignalCardNew = ({
                       tp2Status.color
                     )}
                   >
-                    {tp2Status.text}
+                    {
+                      tp2Status.text
+                    }
                   </span>
                 </div>
               )}
 
-              {/* TP 3 */}
+              {/* TP3 */}
+
               {signal.tp3 && (
                 <div className="grid grid-cols-3 items-center font-mono border-b border-white/5 pb-2">
                   <span
@@ -1318,12 +1669,15 @@ const SignalCardNew = ({
                       tp3Status.color
                     )}
                   >
-                    {tp3Status.text}
+                    {
+                      tp3Status.text
+                    }
                   </span>
                 </div>
               )}
 
               {/* SL */}
+
               <div className="grid grid-cols-3 items-center font-mono pt-1">
                 <span className="font-extrabold text-rose-500 uppercase text-[11px] text-left">
                   SL
@@ -1337,7 +1691,9 @@ const SignalCardNew = ({
                       : "text-cyan-100"
                   )}
                 >
-                  {signal.sl}
+                  {anyTPHitForDisplay
+                    ? parsedEntryPrice.toString()
+                    : signal.sl}
 
                   {isSLHit && (
                     <span className="text-[10px]">
@@ -1352,15 +1708,16 @@ const SignalCardNew = ({
                     slStatus.color
                   )}
                 >
-                  {slStatus.text}
+                  {
+                    slStatus.text
+                  }
                 </span>
               </div>
             </div>
           )}
 
-          {/* ========================================
-              PROFIT NOTE
-              ======================================== */}
+          {/* PROFIT NOTE */}
+
           {note && (
             <div
               className={cn(
