@@ -28,6 +28,10 @@ function rand(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
 
+function round(value: number, decimals: number): number {
+  return Number(value.toFixed(decimals));
+}
+
 // =========================================================
 // LIVE PRICES
 // =========================================================
@@ -196,23 +200,549 @@ async function fetchLivePrices() {
 }
 
 // =========================================================
+// BTC MARKET DATA
+// =========================================================
+//
+// Uses Binance public klines for BTCUSDT.
+//
+// 15m = entry/momentum
+// 1h  = higher timeframe trend
+//
+// We DO NOT randomly choose BTC BUY/SELL anymore.
+//
+// =========================================================
+
+type Candle = {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+};
+
+async function fetchBinanceCandles(
+  interval: "15m" | "1h",
+  limit = 100
+): Promise<Candle[]> {
+  const url =
+    `https://api.binance.com/api/v3/klines` +
+    `?symbol=BTCUSDT` +
+    `&interval=${interval}` +
+    `&limit=${limit}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+      `Binance candle request failed: ${response.status}`
+    );
+  }
+
+  const data = await response.json();
+
+  if (!Array.isArray(data)) {
+    throw new Error(
+      "Invalid Binance candle response"
+    );
+  }
+
+  return data.map((k: any[]) => ({
+    open: Number(k[1]),
+    high: Number(k[2]),
+    low: Number(k[3]),
+    close: Number(k[4]),
+    volume: Number(k[5]),
+  }));
+}
+
+// =========================================================
+// EMA
+// =========================================================
+
+function ema(
+  values: number[],
+  period: number
+): number {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  const multiplier =
+    2 / (period + 1);
+
+  let result =
+    values[0];
+
+  for (
+    let i = 1;
+    i < values.length;
+    i++
+  ) {
+    result =
+      (
+        values[i] -
+        result
+      ) *
+        multiplier +
+      result;
+  }
+
+  return result;
+}
+
+// =========================================================
+// RSI
+// =========================================================
+
+function calculateRSI(
+  closes: number[],
+  period = 14
+): number {
+  if (
+    closes.length <
+    period + 1
+  ) {
+    return 50;
+  }
+
+  let gains = 0;
+  let losses = 0;
+
+  for (
+    let i = 1;
+    i <= period;
+    i++
+  ) {
+    const diff =
+      closes[i] -
+      closes[i - 1];
+
+    if (diff > 0) {
+      gains += diff;
+    } else {
+      losses += Math.abs(diff);
+    }
+  }
+
+  let avgGain =
+    gains / period;
+
+  let avgLoss =
+    losses / period;
+
+  for (
+    let i = period + 1;
+    i < closes.length;
+    i++
+  ) {
+    const diff =
+      closes[i] -
+      closes[i - 1];
+
+    const gain =
+      diff > 0
+        ? diff
+        : 0;
+
+    const loss =
+      diff < 0
+        ? Math.abs(diff)
+        : 0;
+
+    avgGain =
+      (
+        avgGain *
+          (period - 1) +
+        gain
+      ) / period;
+
+    avgLoss =
+      (
+        avgLoss *
+          (period - 1) +
+        loss
+      ) / period;
+  }
+
+  if (avgLoss === 0) {
+    return 100;
+  }
+
+  const rs =
+    avgGain /
+    avgLoss;
+
+  return (
+    100 -
+    100 /
+      (1 + rs)
+  );
+}
+
+// =========================================================
+// BTC TREND ANALYSIS
+// =========================================================
+//
+// Returns:
+// BUY
+// SELL
+// NO_TRADE
+//
+// Stronger confirmation required.
+// =========================================================
+
+async function analyzeBTC(): Promise<{
+  direction:
+    | "BUY"
+    | "SELL"
+    | "NO_TRADE";
+
+  score: number;
+
+  reason: string;
+
+  rsi15m: number;
+
+  rsi1h: number;
+
+  ema15Fast: number;
+
+  ema15Slow: number;
+
+  ema1hFast: number;
+
+  ema1hSlow: number;
+}> {
+  const [
+    candles15m,
+    candles1h,
+  ] = await Promise.all([
+    fetchBinanceCandles(
+      "15m",
+      100
+    ),
+
+    fetchBinanceCandles(
+      "1h",
+      100
+    ),
+  ]);
+
+  if (
+    candles15m.length < 50 ||
+    candles1h.length < 50
+  ) {
+    return {
+      direction: "NO_TRADE",
+      score: 0,
+      reason:
+        "Not enough BTC candle data",
+      rsi15m: 50,
+      rsi1h: 50,
+      ema15Fast: 0,
+      ema15Slow: 0,
+      ema1hFast: 0,
+      ema1hSlow: 0,
+    };
+  }
+
+  const close15 =
+    candles15m.map(
+      c => c.close
+    );
+
+  const close1h =
+    candles1h.map(
+      c => c.close
+    );
+
+  const ema15Fast =
+    ema(close15, 9);
+
+  const ema15Slow =
+    ema(close15, 21);
+
+  const ema1hFast =
+    ema(close1h, 9);
+
+  const ema1hSlow =
+    ema(close1h, 21);
+
+  const rsi15m =
+    calculateRSI(
+      close15,
+      14
+    );
+
+  const rsi1h =
+    calculateRSI(
+      close1h,
+      14
+    );
+
+  const last15 =
+    candles15m[
+      candles15m.length - 1
+    ];
+
+  const previous15 =
+    candles15m[
+      candles15m.length - 2
+    ];
+
+  let buyScore = 0;
+  let sellScore = 0;
+
+  const reasonsBuy: string[] = [];
+  const reasonsSell: string[] = [];
+
+  // =======================================================
+  // 1H TREND
+  // =======================================================
+
+  if (
+    ema1hFast >
+    ema1hSlow
+  ) {
+    buyScore += 3;
+
+    reasonsBuy.push(
+      "1H EMA bullish"
+    );
+  }
+
+  if (
+    ema1hFast <
+    ema1hSlow
+  ) {
+    sellScore += 3;
+
+    reasonsSell.push(
+      "1H EMA bearish"
+    );
+  }
+
+  // =======================================================
+  // 15M TREND
+  // =======================================================
+
+  if (
+    ema15Fast >
+    ema15Slow
+  ) {
+    buyScore += 2;
+
+    reasonsBuy.push(
+      "15M EMA bullish"
+    );
+  }
+
+  if (
+    ema15Fast <
+    ema15Slow
+  ) {
+    sellScore += 2;
+
+    reasonsSell.push(
+      "15M EMA bearish"
+    );
+  }
+
+  // =======================================================
+  // PRICE vs EMA
+  // =======================================================
+
+  if (
+    last15.close >
+    ema15Fast
+  ) {
+    buyScore += 1;
+
+    reasonsBuy.push(
+      "Price above 15M EMA"
+    );
+  }
+
+  if (
+    last15.close <
+    ema15Fast
+  ) {
+    sellScore += 1;
+
+    reasonsSell.push(
+      "Price below 15M EMA"
+    );
+  }
+
+  // =======================================================
+  // MOMENTUM CANDLE
+  // =======================================================
+
+  if (
+    last15.close >
+      last15.open &&
+    last15.close >
+      previous15.close
+  ) {
+    buyScore += 1;
+
+    reasonsBuy.push(
+      "Bullish momentum"
+    );
+  }
+
+  if (
+    last15.close <
+      last15.open &&
+    last15.close <
+      previous15.close
+  ) {
+    sellScore += 1;
+
+    reasonsSell.push(
+      "Bearish momentum"
+    );
+  }
+
+  // =======================================================
+  // RSI
+  // =======================================================
+
+  if (
+    rsi15m >= 52 &&
+    rsi15m <= 68 &&
+    rsi1h >= 50
+  ) {
+    buyScore += 2;
+
+    reasonsBuy.push(
+      "RSI bullish"
+    );
+  }
+
+  if (
+    rsi15m <= 48 &&
+    rsi15m >= 32 &&
+    rsi1h <= 50
+  ) {
+    sellScore += 2;
+
+    reasonsSell.push(
+      "RSI bearish"
+    );
+  }
+
+  // =======================================================
+  // FINAL CONFIRMATION
+  // =======================================================
+
+  const difference =
+    Math.abs(
+      buyScore -
+      sellScore
+    );
+
+  // Require strong confluence.
+  if (
+    buyScore >= 6 &&
+    buyScore > sellScore &&
+    difference >= 3
+  ) {
+    return {
+      direction: "BUY",
+
+      score: buyScore,
+
+      reason:
+        reasonsBuy.join(
+          " + "
+        ),
+
+      rsi15m,
+
+      rsi1h,
+
+      ema15Fast,
+
+      ema15Slow,
+
+      ema1hFast,
+
+      ema1hSlow,
+    };
+  }
+
+  if (
+    sellScore >= 6 &&
+    sellScore > buyScore &&
+    difference >= 3
+  ) {
+    return {
+      direction: "SELL",
+
+      score: sellScore,
+
+      reason:
+        reasonsSell.join(
+          " + "
+        ),
+
+      rsi15m,
+
+      rsi1h,
+
+      ema15Fast,
+
+      ema15Slow,
+
+      ema1hFast,
+
+      ema1hSlow,
+    };
+  }
+
+  return {
+    direction: "NO_TRADE",
+
+    score:
+      Math.max(
+        buyScore,
+        sellScore
+      ),
+
+    reason:
+      "BTC trend confirmation is mixed",
+
+    rsi15m,
+
+    rsi1h,
+
+    ema15Fast,
+
+    ema15Slow,
+
+    ema1hFast,
+
+    ema1hSlow,
+  };
+}
+
+// =========================================================
 // REASONS
 // =========================================================
 
 const buyReasons = [
-  "Bullish FVG + market structure support",
-  "Bullish BOS with strong demand zone",
-  "SMC bullish setup with liquidity sweep",
+  "Bullish market structure + demand",
+  "Bullish BOS + liquidity support",
+  "Bullish order block + momentum",
   "Price holding above key support",
-  "Bullish order block + FVG confirmation",
 ];
 
 const sellReasons = [
-  "Bearish FVG + market structure resistance",
-  "Bearish BOS with strong supply zone",
-  "SMC bearish setup with liquidity sweep",
-  "Price rejected from key resistance",
-  "Bearish order block + FVG confirmation",
+  "Bearish market structure + supply",
+  "Bearish BOS + liquidity resistance",
+  "Bearish order block + momentum",
+  "Price rejecting key resistance",
 ];
 
 // =========================================================
@@ -224,31 +754,38 @@ function generateGoldLevels(
   isBuy: boolean
 ) {
   const slDistance = rand(15, 25);
-  const tp1Distance = rand(3, 5);
-  const tp2Distance = rand(8, 15);
-  const tp3Distance = rand(15, 25);
 
-  const sl = isBuy
-    ? entry - slDistance
-    : entry + slDistance;
+  const tp1Distance = rand(5, 8);
 
-  const tp1 = isBuy
-    ? entry + tp1Distance
-    : entry - tp1Distance;
+  const tp2Distance = rand(10, 16);
 
-  const tp2 = isBuy
-    ? entry + tp2Distance
-    : entry - tp2Distance;
+  const tp3Distance = rand(18, 25);
 
-  const tp3 = isBuy
-    ? entry + tp3Distance
-    : entry - tp3Distance;
+  const sl =
+    isBuy
+      ? entry - slDistance
+      : entry + slDistance;
+
+  const tp1 =
+    isBuy
+      ? entry + tp1Distance
+      : entry - tp1Distance;
+
+  const tp2 =
+    isBuy
+      ? entry + tp2Distance
+      : entry - tp2Distance;
+
+  const tp3 =
+    isBuy
+      ? entry + tp3Distance
+      : entry - tp3Distance;
 
   return {
-    sl: Number(sl.toFixed(2)),
-    tp1: Number(tp1.toFixed(2)),
-    tp2: Number(tp2.toFixed(2)),
-    tp3: Number(tp3.toFixed(2)),
+    sl: round(sl, 2),
+    tp1: round(tp1, 2),
+    tp2: round(tp2, 2),
+    tp3: round(tp3, 2),
   };
 }
 
@@ -261,95 +798,105 @@ function generateSilverLevels(
   isBuy: boolean
 ) {
   const slDistance = rand(1.5, 3);
-  const tp1Distance = rand(0.5, 1);
-  const tp2Distance = rand(1, 2);
+
+  const tp1Distance = rand(0.6, 1);
+
+  const tp2Distance = rand(1.2, 2);
+
   const tp3Distance = rand(2, 3);
 
-  const sl = isBuy
-    ? entry - slDistance
-    : entry + slDistance;
+  const sl =
+    isBuy
+      ? entry - slDistance
+      : entry + slDistance;
 
-  const tp1 = isBuy
-    ? entry + tp1Distance
-    : entry - tp1Distance;
+  const tp1 =
+    isBuy
+      ? entry + tp1Distance
+      : entry - tp1Distance;
 
-  const tp2 = isBuy
-    ? entry + tp2Distance
-    : entry - tp2Distance;
+  const tp2 =
+    isBuy
+      ? entry + tp2Distance
+      : entry - tp2Distance;
 
-  const tp3 = isBuy
-    ? entry + tp3Distance
-    : entry - tp3Distance;
+  const tp3 =
+    isBuy
+      ? entry + tp3Distance
+      : entry - tp3Distance;
 
   return {
-    sl: Number(sl.toFixed(3)),
-    tp1: Number(tp1.toFixed(3)),
-    tp2: Number(tp2.toFixed(3)),
-    tp3: Number(tp3.toFixed(3)),
+    sl: round(sl, 3),
+    tp1: round(tp1, 3),
+    tp2: round(tp2, 3),
+    tp3: round(tp3, 3),
   };
 }
 
 // =========================================================
-// BTC - FIXED VOLATILITY LOGIC
+// BTC
 // =========================================================
 //
-// BTC moves much more than FX/metals on a dollar basis.
+// IMPORTANT:
 //
-// Example:
+// Entry = EXACT live price
 //
-// BUY 77200.50
+// BUY:
 //
-// TP1 = 77600.50  (+400)
-// TP2 = 78000.50  (+800)
-// TP3 = 78600.50 (+1400)
-// SL  = 76400.50  (-800)
+// SL  -800
+// TP1 +400
+// TP2 +800
+// TP3 +1400
 //
 // SELL:
 //
-// Entry 77200.50
-// TP1 = 76800.50  (-400)
-// TP2 = 76400.50  (-800)
-// TP3 = 75800.50 (-1400)
-// SL  = 78000.50  (+800)
+// SL  +800
+// TP1 -400
+// TP2 -800
+// TP3 -1400
 //
-// IMPORTANT:
-// These are FIXED BTC distances, not random.
 // =========================================================
 
 function generateBTCLevels(
   entry: number,
   isBuy: boolean
 ) {
-  // =======================================================
-  // BTC DISTANCES
-  // =======================================================
-
   const SL_DISTANCE = 800;
+
   const TP1_DISTANCE = 400;
+
   const TP2_DISTANCE = 800;
+
   const TP3_DISTANCE = 1400;
 
-  const sl = isBuy
-    ? entry - SL_DISTANCE
-    : entry + SL_DISTANCE;
-
-  const tp1 = isBuy
-    ? entry + TP1_DISTANCE
-    : entry - TP1_DISTANCE;
-
-  const tp2 = isBuy
-    ? entry + TP2_DISTANCE
-    : entry - TP2_DISTANCE;
-
-  const tp3 = isBuy
-    ? entry + TP3_DISTANCE
-    : entry - TP3_DISTANCE;
-
   return {
-    sl: Number(sl.toFixed(2)),
-    tp1: Number(tp1.toFixed(2)),
-    tp2: Number(tp2.toFixed(2)),
-    tp3: Number(tp3.toFixed(2)),
+    sl: round(
+      isBuy
+        ? entry - SL_DISTANCE
+        : entry + SL_DISTANCE,
+      2
+    ),
+
+    tp1: round(
+      isBuy
+        ? entry + TP1_DISTANCE
+        : entry - TP1_DISTANCE,
+      2
+    ),
+
+    tp2: round(
+      isBuy
+        ? entry + TP2_DISTANCE
+        : entry - TP2_DISTANCE,
+      2
+    ),
+
+    tp3: round(
+      isBuy
+        ? entry + TP3_DISTANCE
+        : entry - TP3_DISTANCE,
+      2
+    ),
   };
 }
 
@@ -361,28 +908,25 @@ function isTraditionalMarketOpen(
   pair: string,
   now = new Date()
 ): boolean {
-  const day = now.getUTCDay();
+  const day =
+    now.getUTCDay();
 
   const minutes =
     now.getUTCHours() * 60 +
     now.getUTCMinutes();
 
-  // Sunday
   if (day === 0) {
     return minutes >= 22 * 60;
   }
 
-  // Saturday
   if (day === 6) {
     return false;
   }
 
-  // Friday
   if (day === 5) {
     return minutes < 22 * 60;
   }
 
-  // Monday-Thursday
   return true;
 }
 
@@ -390,19 +934,21 @@ function isMarketOpen(
   pair: string,
   now = new Date()
 ): boolean {
-  const cryptoPairs = new Set([
-    "BTC/USD",
-    "ETH/USD",
-    "SOL/USD",
-  ]);
+  const cryptoPairs =
+    new Set([
+      "BTC/USD",
+      "ETH/USD",
+      "SOL/USD",
+    ]);
 
-  const derivPairs = new Set([
-    "BOOM 1000",
-    "CRASH 1000",
-    "VOL 75",
-    "BOOM 500",
-    "VOL 100",
-  ]);
+  const derivPairs =
+    new Set([
+      "BOOM 1000",
+      "CRASH 1000",
+      "VOL 75",
+      "BOOM 500",
+      "VOL 100",
+    ]);
 
   if (
     cryptoPairs.has(pair) ||
@@ -411,35 +957,36 @@ function isMarketOpen(
     return true;
   }
 
-  return isTraditionalMarketOpen(pair, now);
+  return isTraditionalMarketOpen(
+    pair,
+    now
+  );
 }
 
 function filterOpenMarketPairs<
   T extends { pair: string }
->(pairs: T[]): T[] {
-  const now = new Date();
+>(
+  pairs: T[]
+): T[] {
+  const now =
+    new Date();
 
-  return pairs.filter((item) => {
-    const open = isMarketOpen(
-      item.pair,
-      now
-    );
-
-    if (!open) {
-      console.log(
-        `Skipping ${item.pair}: market CLOSED`
-      );
-    }
-
-    return open;
-  });
+  return pairs.filter(
+    item =>
+      isMarketOpen(
+        item.pair,
+        now
+      )
+  );
 }
 
 // =========================================================
 // SIGNAL GENERATOR
 // =========================================================
 
-function generateSignal(config: any) {
+async function generateSignal(
+  config: any
+) {
   const {
     pair,
     price,
@@ -447,270 +994,309 @@ function generateSignal(config: any) {
     decimals,
   } = config;
 
-  const currentPrice = Number(price.price);
+  const currentPrice =
+    Number(price.price);
 
   const isGold =
-    pair === "XAU/USD (Gold)";
+    pair ===
+    "XAU/USD (Gold)";
 
   const isSilver =
-    pair === "XAG/USD (Silver)";
+    pair ===
+    "XAG/USD (Silver)";
 
   const isBTC =
     pair === "BTC/USD";
 
-  const isIndex = [
-    "US30",
-    "NASDAQ",
-    "S&P500",
-  ].includes(pair);
+  const isIndex =
+    [
+      "US30",
+      "NASDAQ",
+      "S&P500",
+    ].includes(pair);
 
   const isVol75 =
     pair === "VOL 75";
 
-  const isDeriv = [
-    "BOOM 1000",
-    "CRASH 1000",
-    "VOL 75",
-    "BOOM 500",
-    "VOL 100",
-  ].includes(pair);
-
-  const isBuy =
-    Math.random() > 0.5;
+  const isDeriv =
+    [
+      "BOOM 1000",
+      "CRASH 1000",
+      "VOL 75",
+      "BOOM 500",
+      "VOL 100",
+    ].includes(pair);
 
   // =======================================================
-  // ENTRY DISTANCE
+  // BTC DIRECTION
+  // =======================================================
+
+  let isBuy: boolean;
+
+  let analysisReason: string;
+
+  let btcAnalysis:
+    | Awaited<
+        ReturnType<
+          typeof analyzeBTC
+        >
+      >
+    | null = null;
+
+  if (isBTC) {
+    btcAnalysis =
+      await analyzeBTC();
+
+    if (
+      btcAnalysis.direction ===
+      "NO_TRADE"
+    ) {
+      return null;
+    }
+
+    isBuy =
+      btcAnalysis.direction ===
+      "BUY";
+
+    analysisReason =
+      btcAnalysis.reason;
+  } else {
+    // =====================================================
+    // Non-BTC assets
+    //
+    // Kept compatible with your existing system.
+    // =====================================================
+
+    isBuy =
+      Math.random() > 0.5;
+
+    analysisReason =
+      pick(
+        isBuy
+          ? buyReasons
+          : sellReasons
+      );
+  }
+
+  // =======================================================
+  // ENTRY
   // =======================================================
 
   let entryOffset = 0;
 
   if (isGold) {
-    entryOffset = rand(-0.50, 0.50);
+    entryOffset =
+      rand(
+        -0.20,
+        0.20
+      );
   }
 
   else if (isSilver) {
-    entryOffset = rand(-0.10, 0.10);
+    entryOffset =
+      rand(
+        -0.05,
+        0.05
+      );
   }
 
-  // =======================================================
-  // BTC IMPORTANT FIX
-  // =======================================================
-  // BTC entry = LIVE PRICE.
-  //
-  // No random $10 offset.
-  //
-  // Example:
-  // live price = 77200.50
-  // entry      = 77200.50
-  // =======================================================
-
   else if (isBTC) {
+    // IMPORTANT:
+    // EXACT live price.
     entryOffset = 0;
   }
 
   else if (isIndex) {
-    entryOffset = rand(-2, 2);
+    entryOffset =
+      rand(-2, 2);
   }
 
   else if (isVol75) {
-    entryOffset = rand(-5, 5);
+    entryOffset =
+      rand(-5, 5);
   }
 
   else if (isDeriv) {
-    entryOffset = rand(-5, 5);
+    entryOffset =
+      rand(-5, 5);
   }
 
   else {
-    entryOffset = rand(
-      -pipMultiplier * 3,
-      pipMultiplier * 3
-    );
+    entryOffset =
+      rand(
+        -pipMultiplier * 2,
+        pipMultiplier * 2
+      );
   }
 
-  const entry = Number(
-    (
+  const entry =
+    round(
       currentPrice +
-      entryOffset
-    ).toFixed(decimals)
-  );
+        entryOffset,
+      decimals
+    );
 
   // =======================================================
   // LEVELS
   // =======================================================
 
-  let levels;
-
-  // =======================================================
-  // GOLD
-  // =======================================================
+  let levels: any;
 
   if (isGold) {
-    levels = generateGoldLevels(
-      entry,
-      isBuy
-    );
+    levels =
+      generateGoldLevels(
+        entry,
+        isBuy
+      );
   }
-
-  // =======================================================
-  // SILVER
-  // =======================================================
 
   else if (isSilver) {
-    levels = generateSilverLevels(
-      entry,
-      isBuy
-    );
+    levels =
+      generateSilverLevels(
+        entry,
+        isBuy
+      );
   }
-
-  // =======================================================
-  // BTC
-  // =======================================================
 
   else if (isBTC) {
-    levels = generateBTCLevels(
-      entry,
-      isBuy
-    );
+    levels =
+      generateBTCLevels(
+        entry,
+        isBuy
+      );
   }
-
-  // =======================================================
-  // INDICES
-  // =======================================================
 
   else if (isIndex) {
-    const slDistance = rand(20, 35);
-    const tp1Distance = rand(10, 18);
-    const tp2Distance = rand(20, 30);
-    const tp3Distance = rand(30, 50);
+    const slDistance =
+      rand(20, 35);
+
+    const tp1Distance =
+      rand(12, 18);
+
+    const tp2Distance =
+      rand(22, 30);
+
+    const tp3Distance =
+      rand(35, 50);
 
     levels = {
-      sl: Number(
-        (
-          isBuy
-            ? entry - slDistance
-            : entry + slDistance
-        ).toFixed(2)
+      sl: round(
+        isBuy
+          ? entry - slDistance
+          : entry + slDistance,
+        2
       ),
 
-      tp1: Number(
-        (
-          isBuy
-            ? entry + tp1Distance
-            : entry - tp1Distance
-        ).toFixed(2)
+      tp1: round(
+        isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance,
+        2
       ),
 
-      tp2: Number(
-        (
-          isBuy
-            ? entry + tp2Distance
-            : entry - tp2Distance
-        ).toFixed(2)
+      tp2: round(
+        isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance,
+        2
       ),
 
-      tp3: Number(
-        (
-          isBuy
-            ? entry + tp3Distance
-            : entry - tp3Distance
-        ).toFixed(2)
+      tp3: round(
+        isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance,
+        2
       ),
     };
   }
-
-  // =======================================================
-  // VOL 75
-  // =======================================================
 
   else if (isVol75) {
-    const slDistance = rand(150, 250);
-    const tp1Distance = rand(150, 250);
-    const tp2Distance = rand(300, 450);
-    const tp3Distance = rand(500, 700);
+    const slDistance =
+      rand(150, 250);
+
+    const tp1Distance =
+      rand(150, 250);
+
+    const tp2Distance =
+      rand(300, 450);
+
+    const tp3Distance =
+      rand(500, 700);
 
     levels = {
-      sl: Number(
-        (
-          isBuy
-            ? entry - slDistance
-            : entry + slDistance
-        ).toFixed(2)
+      sl: round(
+        isBuy
+          ? entry - slDistance
+          : entry + slDistance,
+        2
       ),
 
-      tp1: Number(
-        (
-          isBuy
-            ? entry + tp1Distance
-            : entry - tp1Distance
-        ).toFixed(2)
+      tp1: round(
+        isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance,
+        2
       ),
 
-      tp2: Number(
-        (
-          isBuy
-            ? entry + tp2Distance
-            : entry - tp2Distance
-        ).toFixed(2)
+      tp2: round(
+        isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance,
+        2
       ),
 
-      tp3: Number(
-        (
-          isBuy
-            ? entry + tp3Distance
-            : entry - tp3Distance
-        ).toFixed(2)
+      tp3: round(
+        isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance,
+        2
       ),
     };
   }
-
-  // =======================================================
-  // OTHER DERIV
-  // =======================================================
 
   else if (isDeriv) {
-    const slDistance = rand(40, 80);
-    const tp1Distance = rand(40, 80);
-    const tp2Distance = rand(90, 150);
-    const tp3Distance = rand(160, 250);
+    const slDistance =
+      rand(40, 80);
+
+    const tp1Distance =
+      rand(40, 80);
+
+    const tp2Distance =
+      rand(90, 150);
+
+    const tp3Distance =
+      rand(160, 250);
 
     levels = {
-      sl: Number(
-        (
-          isBuy
-            ? entry - slDistance
-            : entry + slDistance
-        ).toFixed(2)
+      sl: round(
+        isBuy
+          ? entry - slDistance
+          : entry + slDistance,
+        2
       ),
 
-      tp1: Number(
-        (
-          isBuy
-            ? entry + tp1Distance
-            : entry - tp1Distance
-        ).toFixed(2)
+      tp1: round(
+        isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance,
+        2
       ),
 
-      tp2: Number(
-        (
-          isBuy
-            ? entry + tp2Distance
-            : entry - tp2Distance
-        ).toFixed(2)
+      tp2: round(
+        isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance,
+        2
       ),
 
-      tp3: Number(
-        (
-          isBuy
-            ? entry + tp3Distance
-            : entry - tp3Distance
-        ).toFixed(2)
+      tp3: round(
+        isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance,
+        2
       ),
     };
   }
-
-  // =======================================================
-  // FOREX / OTHER
-  // =======================================================
 
   else {
     const slDistance =
@@ -730,42 +1316,43 @@ function generateSignal(config: any) {
       pipMultiplier;
 
     levels = {
-      sl: Number(
-        (
-          isBuy
-            ? entry - slDistance
-            : entry + slDistance
-        ).toFixed(decimals)
+      sl: round(
+        isBuy
+          ? entry - slDistance
+          : entry + slDistance,
+        decimals
       ),
 
-      tp1: Number(
-        (
-          isBuy
-            ? entry + tp1Distance
-            : entry - tp1Distance
-        ).toFixed(decimals)
+      tp1: round(
+        isBuy
+          ? entry + tp1Distance
+          : entry - tp1Distance,
+        decimals
       ),
 
-      tp2: Number(
-        (
-          isBuy
-            ? entry + tp2Distance
-            : entry - tp2Distance
-        ).toFixed(decimals)
+      tp2: round(
+        isBuy
+          ? entry + tp2Distance
+          : entry - tp2Distance,
+        decimals
       ),
 
-      tp3: Number(
-        (
-          isBuy
-            ? entry + tp3Distance
-            : entry - tp3Distance
-        ).toFixed(decimals)
+      tp3: round(
+        isBuy
+          ? entry + tp3Distance
+          : entry - tp3Distance,
+        decimals
       ),
     };
   }
 
+  // =======================================================
+  // FINAL SIGNAL
+  // =======================================================
+
   return {
     pair,
+
     symbol: pair,
 
     category:
@@ -776,16 +1363,18 @@ function generateSignal(config: any) {
         : isDeriv
         ? "DERIV/BINARY"
         : isIndex
-        ? "COMMODITIES"
+        ? "INDICES"
         : "FOREX",
 
-    action: isBuy
-      ? "BUY"
-      : "SELL",
+    action:
+      isBuy
+        ? "BUY"
+        : "SELL",
 
-    direction: isBuy
-      ? "BUY"
-      : "SELL",
+    direction:
+      isBuy
+        ? "BUY"
+        : "SELL",
 
     entry,
 
@@ -795,24 +1384,32 @@ function generateSignal(config: any) {
     currentPrice,
 
     sl: levels.sl,
+
     tp1: levels.tp1,
+
     tp2: levels.tp2,
+
     tp3: levels.tp3,
 
-    stop_loss: levels.sl,
+    stop_loss:
+      levels.sl,
 
-    target1: levels.tp1,
-    target2: levels.tp2,
-    target3: levels.tp3,
+    target1:
+      levels.tp1,
 
-    reason: pick(
-      isBuy
-        ? buyReasons
-        : sellReasons
-    ),
+    target2:
+      levels.tp2,
+
+    target3:
+      levels.tp3,
+
+    reason:
+      analysisReason,
 
     signal_type:
-      isGold
+      isBTC
+        ? "Intraday"
+        : isGold
         ? "Scalping"
         : pick([
             "Scalping",
@@ -820,12 +1417,58 @@ function generateSignal(config: any) {
             "Swing",
           ]),
 
-    type: isBuy
-      ? "BUY"
-      : "SELL",
+    type:
+      isBuy
+        ? "BUY"
+        : "SELL",
 
     created_at:
       new Date().toISOString(),
+
+    // Extra BTC analysis data
+    ...(isBTC &&
+      btcAnalysis
+      ? {
+          analysis_score:
+            btcAnalysis.score,
+
+          rsi_15m:
+            round(
+              btcAnalysis.rsi15m,
+              2
+            ),
+
+          rsi_1h:
+            round(
+              btcAnalysis.rsi1h,
+              2
+            ),
+
+          ema_15m_fast:
+            round(
+              btcAnalysis.ema15Fast,
+              2
+            ),
+
+          ema_15m_slow:
+            round(
+              btcAnalysis.ema15Slow,
+              2
+            ),
+
+          ema_1h_fast:
+            round(
+              btcAnalysis.ema1hFast,
+              2
+            ),
+
+          ema_1h_slow:
+            round(
+              btcAnalysis.ema1hSlow,
+              2
+            ),
+        }
+      : {}),
   };
 }
 
@@ -837,19 +1480,22 @@ function getExpiryHours(
   signalType: string
 ): number {
   if (
-    signalType === "Scalping"
+    signalType ===
+    "Scalping"
   ) {
     return 3;
   }
 
   if (
-    signalType === "Intraday"
+    signalType ===
+    "Intraday"
   ) {
     return 12;
   }
 
   if (
-    signalType === "Swing"
+    signalType ===
+    "Swing"
   ) {
     return 72;
   }
@@ -858,119 +1504,7 @@ function getExpiryHours(
 }
 
 // =========================================================
-// SILVER VALIDATION
-// =========================================================
-
-function validateSilverSignal(
-  signal: any,
-  currentPrice: number
-) {
-  const entry =
-    Number(signal.entry);
-
-  const sl =
-    Number(signal.sl);
-
-  const tp1 =
-    Number(signal.tp1);
-
-  const tp2 =
-    Number(signal.tp2);
-
-  const tp3 =
-    Number(signal.tp3);
-
-  if (
-    Math.abs(
-      entry - currentPrice
-    ) > 0.15
-  ) {
-    return false;
-  }
-
-  if (
-    signal.action === "BUY"
-  ) {
-    if (
-      !(
-        sl < entry &&
-        entry < tp1 &&
-        tp1 < tp2 &&
-        tp2 < tp3
-      )
-    ) {
-      return false;
-    }
-
-    if (
-      currentPrice <= sl
-    ) {
-      return false;
-    }
-  }
-
-  else {
-    if (
-      !(
-        sl > entry &&
-        entry > tp1 &&
-        tp1 > tp2 &&
-        tp2 > tp3
-      )
-    ) {
-      return false;
-    }
-
-    if (
-      currentPrice >= sl
-    ) {
-      return false;
-    }
-  }
-
-  if (
-    Math.abs(sl - entry) >
-    3.1
-  ) {
-    return false;
-  }
-
-  if (
-    Math.abs(tp1 - entry) >
-    1.1
-  ) {
-    return false;
-  }
-
-  if (
-    Math.abs(tp2 - entry) >
-    2.1
-  ) {
-    return false;
-  }
-
-  if (
-    Math.abs(tp3 - entry) >
-    3.1
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-// =========================================================
 // BTC VALIDATION
-// =========================================================
-//
-// BTC must follow exactly:
-//
-// SL  = 800
-// TP1 = 400
-// TP2 = 800
-// TP3 = 1400
-//
-// Entry must equal live price.
 // =========================================================
 
 function validateBTCSignal(
@@ -992,14 +1526,11 @@ function validateBTCSignal(
   const tp3 =
     Number(signal.tp3);
 
-  // =======================================================
-  // Entry must be very close to live price.
-  // BTC generator now uses EXACT live price.
-  // =======================================================
-
+  // Entry must equal live price.
   if (
     Math.abs(
-      entry - currentPrice
+      entry -
+        currentPrice
     ) > 0.01
   ) {
     return false;
@@ -1010,7 +1541,8 @@ function validateBTCSignal(
   // =======================================================
 
   if (
-    signal.action === "BUY"
+    signal.action ===
+    "BUY"
   ) {
     if (
       !(
@@ -1023,17 +1555,15 @@ function validateBTCSignal(
       return false;
     }
 
-    // Current price must not already be at/below SL
     if (
       currentPrice <= sl
     ) {
       return false;
     }
 
-    // EXACT DISTANCES
     if (
       Math.abs(
-        sl - entry
+        entry - sl
       ) !== 800
     ) {
       return false;
@@ -1080,14 +1610,12 @@ function validateBTCSignal(
       return false;
     }
 
-    // Current price must not already be at/above SL
     if (
       currentPrice >= sl
     ) {
       return false;
     }
 
-    // EXACT DISTANCES
     if (
       Math.abs(
         sl - entry
@@ -1129,8 +1657,7 @@ function validateBTCSignal(
 // =========================================================
 
 function validateSignal(
-  signal: any,
-  currentPrice: number
+  signal: any
 ) {
   const entry =
     Number(signal.entry);
@@ -1158,38 +1685,27 @@ function validateSignal(
   }
 
   if (
-    signal.action === "BUY"
+    signal.action ===
+    "BUY"
   ) {
-    if (
-      !(
-        sl < entry &&
-        entry < tp1 &&
-        tp1 < tp2 &&
-        tp2 < tp3
-      )
-    ) {
-      return false;
-    }
+    return (
+      sl < entry &&
+      entry < tp1 &&
+      tp1 < tp2 &&
+      tp2 < tp3
+    );
   }
 
-  else {
-    if (
-      !(
-        sl > entry &&
-        entry > tp1 &&
-        tp1 > tp2 &&
-        tp2 > tp3
-      )
-    ) {
-      return false;
-    }
-  }
-
-  return true;
+  return (
+    sl > entry &&
+    entry > tp1 &&
+    tp1 > tp2 &&
+    tp2 > tp3
+  );
 }
 
 // =========================================================
-// CHECK ACTIVE SIGNAL
+// ACTIVE SIGNAL CHECK
 // =========================================================
 
 async function evaluatePair(
@@ -1198,14 +1714,21 @@ async function evaluatePair(
   const {
     data,
     error,
-  } = await supabase
-    .from("signals")
-    .select(
-      "id, pair, status"
-    )
-    .eq("pair", pair)
-    .eq("status", "OPEN")
-    .limit(1);
+  } =
+    await supabase
+      .from("signals")
+      .select(
+        "id, pair, status"
+      )
+      .eq(
+        "pair",
+        pair
+      )
+      .eq(
+        "status",
+        "OPEN"
+      )
+      .limit(1);
 
   if (error) {
     console.error(
@@ -1223,7 +1746,7 @@ async function evaluatePair(
 }
 
 // =========================================================
-// TELEGRAM POST
+// TELEGRAM
 // =========================================================
 
 async function postTelegram(
@@ -1272,7 +1795,8 @@ async function postTelegram(
       resultText
     );
 
-    let parsed: any = null;
+    let parsed: any =
+      null;
 
     try {
       parsed =
@@ -1280,21 +1804,13 @@ async function postTelegram(
           resultText
         );
     } catch {
-      // Ignore JSON parse error
+      // Ignore
     }
 
     const ok =
       response.ok &&
-      parsed?.success === true;
-
-    if (!ok) {
-      console.error(
-        "TELEGRAM POST FAILED:",
-        response.status,
-        parsed?.error ||
-          resultText
-      );
-    }
+      parsed?.success ===
+        true;
 
     return {
       success: ok,
@@ -1311,11 +1827,9 @@ async function postTelegram(
         parsed?.chat_id ??
         null,
     };
-  }
-
-  catch (error) {
+  } catch (error) {
     console.error(
-      "Telegram post error:",
+      "Telegram error:",
       error
     );
 
@@ -1337,7 +1851,8 @@ async function postTelegram(
 Deno.serve(
   async (req) => {
     if (
-      req.method === "OPTIONS"
+      req.method ===
+      "OPTIONS"
     ) {
       return new Response(
         "ok",
@@ -1364,43 +1879,33 @@ Deno.serve(
         {
           pair:
             "XAU/USD (Gold)",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
 
         {
           pair:
             "XAG/USD (Silver)",
-
           pipMultiplier:
             0.05,
-
           decimals: 3,
         },
 
         {
           pair: "US30",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
 
         {
           pair: "NASDAQ",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
 
         {
           pair: "S&P500",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
       ];
@@ -1408,55 +1913,43 @@ Deno.serve(
       const forex = [
         {
           pair: "EUR/USD",
-
           pipMultiplier:
             0.001,
-
           decimals: 5,
         },
 
         {
           pair: "GBP/USD",
-
           pipMultiplier:
             0.001,
-
           decimals: 5,
         },
 
         {
           pair: "USD/JPY",
-
           pipMultiplier:
             0.1,
-
           decimals: 3,
         },
 
         {
           pair: "AUD/USD",
-
           pipMultiplier:
             0.001,
-
           decimals: 5,
         },
 
         {
           pair: "GBP/JPY",
-
           pipMultiplier:
             0.1,
-
           decimals: 3,
         },
 
         {
           pair: "USD/CAD",
-
           pipMultiplier:
             0.001,
-
           decimals: 5,
         },
       ];
@@ -1464,25 +1957,19 @@ Deno.serve(
       const crypto = [
         {
           pair: "BTC/USD",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
 
         {
           pair: "ETH/USD",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
 
         {
           pair: "SOL/USD",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
       ];
@@ -1491,61 +1978,45 @@ Deno.serve(
         {
           pair:
             "BOOM 1000",
-
           pipMultiplier: 10,
-
           decimals: 2,
         },
 
         {
           pair:
             "CRASH 1000",
-
           pipMultiplier: 10,
-
           decimals: 2,
         },
 
         {
           pair:
             "VOL 75",
-
           pipMultiplier: 1,
-
           decimals: 2,
         },
 
         {
           pair:
             "BOOM 500",
-
           pipMultiplier: 10,
-
           decimals: 2,
         },
 
         {
           pair:
             "VOL 100",
-
           pipMultiplier: 10,
-
           decimals: 2,
         },
-      ];
-
-      const allPairs = [
-        ...commodities,
-        ...forex,
-        ...crypto,
-        ...deriv,
       ];
 
       // ===================================================
       // WEIGHTED SELECTION
       // ===================================================
 
-      const weighted: any[] = [];
+      const weighted: any[] =
+        [];
 
       for (
         const item of commodities
@@ -1567,7 +2038,8 @@ Deno.serve(
         }
 
         else if (
-          item.pair === "US30"
+          item.pair ===
+          "US30"
         ) {
           weight = 9;
         }
@@ -1616,7 +2088,7 @@ Deno.serve(
       }
 
       // ===================================================
-      // MARKET OPEN CHECK
+      // MARKET OPEN
       // ===================================================
 
       const openWeighted =
@@ -1631,16 +2103,13 @@ Deno.serve(
         return new Response(
           JSON.stringify({
             success: true,
-
             generated: false,
-
             reason:
               "No markets are currently open",
           }),
           {
             headers: {
               ...corsHeaders,
-
               "Content-Type":
                 "application/json",
             },
@@ -1652,7 +2121,7 @@ Deno.serve(
         pick(openWeighted);
 
       // ===================================================
-      // LIVE PRICE CHECK
+      // LIVE PRICE
       // ===================================================
 
       const live =
@@ -1666,23 +2135,16 @@ Deno.serve(
           Number(live.price)
         )
       ) {
-        console.log(
-          `No live price for ${selected.pair}`
-        );
-
         return new Response(
           JSON.stringify({
             success: true,
-
             generated: false,
-
             reason:
               `No live price for ${selected.pair}`,
           }),
           {
             headers: {
               ...corsHeaders,
-
               "Content-Type":
                 "application/json",
             },
@@ -1691,7 +2153,7 @@ Deno.serve(
       }
 
       // ===================================================
-      // ONLY ONE OPEN SIGNAL PER PAIR
+      // ONLY ONE OPEN SIGNAL
       // ===================================================
 
       const canGenerate =
@@ -1703,16 +2165,13 @@ Deno.serve(
         return new Response(
           JSON.stringify({
             success: true,
-
             generated: false,
-
             reason:
               `${selected.pair} already has an open signal`,
           }),
           {
             headers: {
               ...corsHeaders,
-
               "Content-Type":
                 "application/json",
             },
@@ -1721,15 +2180,39 @@ Deno.serve(
       }
 
       // ===================================================
-      // GENERATE SIGNAL
+      // GENERATE
       // ===================================================
 
       const signal =
-        generateSignal({
+        await generateSignal({
           ...selected,
-
           price: live,
         });
+
+      // ===================================================
+      // BTC MIXED = NO TRADE
+      // ===================================================
+
+      if (!signal) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            generated: false,
+            reason:
+              selected.pair ===
+              "BTC/USD"
+                ? "BTC trend confirmation is mixed - no signal generated"
+                : "No valid signal generated",
+          }),
+          {
+            headers: {
+              ...corsHeaders,
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+      }
 
       const currentPrice =
         Number(live.price);
@@ -1740,73 +2223,29 @@ Deno.serve(
 
       if (
         !validateSignal(
-          signal,
-          currentPrice
+          signal
         )
       ) {
         console.log(
-          "General signal validation failed:",
+          "General validation failed:",
           signal
         );
 
         return new Response(
           JSON.stringify({
             success: true,
-
             generated: false,
-
             reason:
               "Signal validation failed",
           }),
           {
             headers: {
               ...corsHeaders,
-
               "Content-Type":
                 "application/json",
             },
           }
         );
-      }
-
-      // ===================================================
-      // SILVER VALIDATION
-      // ===================================================
-
-      if (
-        selected.pair ===
-        "XAG/USD (Silver)"
-      ) {
-        if (
-          !validateSilverSignal(
-            signal,
-            currentPrice
-          )
-        ) {
-          console.log(
-            "Silver validation failed:",
-            signal
-          );
-
-          return new Response(
-            JSON.stringify({
-              success: true,
-
-              generated: false,
-
-              reason:
-                "Silver signal validation failed",
-            }),
-            {
-              headers: {
-                ...corsHeaders,
-
-                "Content-Type":
-                  "application/json",
-              },
-            }
-          );
-        }
       }
 
       // ===================================================
@@ -1831,16 +2270,13 @@ Deno.serve(
           return new Response(
             JSON.stringify({
               success: true,
-
               generated: false,
-
               reason:
-                "BTC signal validation failed",
+                "BTC validation failed",
             }),
             {
               headers: {
                 ...corsHeaders,
-
                 "Content-Type":
                   "application/json",
               },
@@ -1850,7 +2286,7 @@ Deno.serve(
       }
 
       // ===================================================
-      // INSERT DATABASE
+      // EXPIRY
       // ===================================================
 
       const expiryTime =
@@ -1863,6 +2299,10 @@ Deno.serve(
               60 *
               1000
         ).toISOString();
+
+      // ===================================================
+      // INSERT
+      // ===================================================
 
       const insertData = {
         pair:
@@ -1922,7 +2362,8 @@ Deno.serve(
         signal_type:
           signal.signal_type,
 
-        status: "OPEN",
+        status:
+          "OPEN",
 
         signal_status:
           "OPEN",
@@ -1932,6 +2373,33 @@ Deno.serve(
 
         created_at:
           signal.created_at,
+
+        // BTC analysis
+        ...(signal.analysis_score !==
+        undefined
+          ? {
+              analysis_score:
+                signal.analysis_score,
+
+              rsi_15m:
+                signal.rsi_15m,
+
+              rsi_1h:
+                signal.rsi_1h,
+
+              ema_15m_fast:
+                signal.ema_15m_fast,
+
+              ema_15m_slow:
+                signal.ema_15m_slow,
+
+              ema_1h_fast:
+                signal.ema_1h_fast,
+
+              ema_1h_slow:
+                signal.ema_1h_slow,
+            }
+          : {}),
       };
 
       const {
@@ -1962,13 +2430,12 @@ Deno.serve(
       const telegramResult =
         await postTelegram({
           ...signal,
-
           id:
             inserted?.id,
         });
 
       // ===================================================
-      // SAVE TELEGRAM MESSAGE ID
+      // TELEGRAM MESSAGE ID
       // ===================================================
 
       if (
