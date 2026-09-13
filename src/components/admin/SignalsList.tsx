@@ -19,8 +19,6 @@ import {
 import {
   Check,
   CheckSquare,
-  ChevronDown,
-  ChevronUp,
   Crown,
   Edit,
   Eye,
@@ -30,6 +28,9 @@ import {
   Square,
   Trash2,
   X,
+  Upload,
+  Download,
+  Trash,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -61,11 +62,16 @@ const SignalsList = () => {
   const [bulkAction, setBulkAction] = useState("");
   const [bulkValue, setBulkValue] = useState("");
 
+  const [processing, setProcessing] = useState(false);
+
   /* =========================================================
      FETCH SIGNALS
   ========================================================= */
 
-  const { data: signals, isLoading } = useQuery({
+  const {
+    data: signals,
+    isLoading,
+  } = useQuery({
     queryKey: ["admin-signals"],
 
     queryFn: async () => {
@@ -81,7 +87,7 @@ const SignalsList = () => {
   });
 
   /* =========================================================
-     FILTER + SEARCH + SORTING (OPEN TOP, CLOSE BOTTOM)
+     FILTER + SORT
   ========================================================= */
 
   const filteredSignals = useMemo(() => {
@@ -89,7 +95,6 @@ const SignalsList = () => {
 
     const q = search.trim().toLowerCase();
 
-    // 1. Filter logic
     const filtered = signals.filter((signal: any) => {
       const matchesSearch =
         !q ||
@@ -109,7 +114,8 @@ const SignalsList = () => {
 
       const matchesStatus =
         statusFilter === "all" ||
-        (signal.signal_status || signal.status || "open") === statusFilter;
+        (signal.signal_status || signal.status || "open") ===
+          statusFilter;
 
       const matchesType =
         typeFilter === "all" ||
@@ -123,20 +129,26 @@ const SignalsList = () => {
       );
     });
 
-    // 2. Sorting logic: Open & Pending Upar, Close Niche
     return filtered.sort((a: any, b: any) => {
-      const statusA = (a.signal_status || a.status || "open").toLowerCase();
-      const statusB = (b.signal_status || b.status || "open").toLowerCase();
+      const statusA = String(
+        a.signal_status || a.status || "open"
+      ).toLowerCase();
 
-      const isAClosed = statusA === "close" || statusA === "closed";
-      const isBClosed = statusB === "close" || statusB === "closed";
+      const statusB = String(
+        b.signal_status || b.status || "open"
+      ).toLowerCase();
 
-      // Agar A open hai aur B close hai, toh A upar aayega (-1)
-      if (!isAClosed && isBClosed) return -1;
-      // Agar A close hai aur B open hai, toh A niche jaayega (1)
-      if (isAClosed && !isBClosed) return 1;
+      const closedA =
+        statusA === "close" ||
+        statusA === "closed";
 
-      // Agar dono ka status same hai, toh Latest created_at ke hisab se sort karein
+      const closedB =
+        statusB === "close" ||
+        statusB === "closed";
+
+      if (!closedA && closedB) return -1;
+      if (closedA && !closedB) return 1;
+
       return (
         new Date(b.created_at || 0).getTime() -
         new Date(a.created_at || 0).getTime()
@@ -151,51 +163,62 @@ const SignalsList = () => {
   ]);
 
   /* =========================================================
-     SELECT
+     SELECTION
   ========================================================= */
 
+  const selectedCount = selectedSignals.size;
+
+  const allSelected =
+    filteredSignals.length > 0 &&
+    filteredSignals.every((signal: any) =>
+      selectedSignals.has(signal.id)
+    );
+
   const toggleSelectSignal = (id: string) => {
-    const next = new Set(selectedSignals);
+    setSelectedSignals((previous) => {
+      const next = new Set(previous);
 
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
 
-    setSelectedSignals(next);
+      return next;
+    });
   };
 
   const toggleSelectAll = () => {
-    if (
-      filteredSignals.length > 0 &&
-      selectedSignals.size === filteredSignals.length
-    ) {
+    if (allSelected) {
       setSelectedSignals(new Set());
       return;
     }
 
     setSelectedSignals(
-      new Set(filteredSignals.map((signal: any) => signal.id))
+      new Set(
+        filteredSignals.map(
+          (signal: any) => signal.id
+        )
+      )
     );
   };
 
   /* =========================================================
-     INVALIDATE
+     REFRESH
   ========================================================= */
 
-  const refreshSignals = () => {
-    queryClient.invalidateQueries({
+  const refreshSignals = async () => {
+    await queryClient.invalidateQueries({
       queryKey: ["admin-signals"],
     });
 
-    queryClient.invalidateQueries({
+    await queryClient.invalidateQueries({
       queryKey: ["signals"],
     });
   };
 
   /* =========================================================
-     TP / SL QUICK HIT
+     TP / SL HIT
   ========================================================= */
 
   const toggleHit = async (
@@ -213,20 +236,26 @@ const SignalsList = () => {
 
       if (error) throw error;
 
-      refreshSignals();
+      await refreshSignals();
 
       toast.success(
         !currentValue
-          ? `${field.replace("_hit", "").toUpperCase()} marked HIT`
-          : `${field.replace("_hit", "").toUpperCase()} marked active`
+          ? `${field
+              .replace("_hit", "")
+              .toUpperCase()} marked HIT`
+          : `${field
+              .replace("_hit", "")
+              .toUpperCase()} marked active`
       );
     } catch (error: any) {
-      toast.error(error?.message || "Update failed");
+      toast.error(
+        error?.message || "Update failed"
+      );
     }
   };
 
   /* =========================================================
-     PUBLISH
+     INDIVIDUAL PUBLISH
   ========================================================= */
 
   const togglePublished = async (
@@ -243,7 +272,7 @@ const SignalsList = () => {
 
       if (error) throw error;
 
-      refreshSignals();
+      await refreshSignals();
 
       toast.success(
         currentValue
@@ -251,7 +280,9 @@ const SignalsList = () => {
           : "Signal published"
       );
     } catch (error: any) {
-      toast.error(error?.message || "Update failed");
+      toast.error(
+        error?.message || "Update failed"
+      );
     }
   };
 
@@ -273,7 +304,7 @@ const SignalsList = () => {
 
       if (error) throw error;
 
-      refreshSignals();
+      await refreshSignals();
 
       toast.success(
         currentValue
@@ -281,7 +312,9 @@ const SignalsList = () => {
           : "Premium lock enabled"
       );
     } catch (error: any) {
-      toast.error(error?.message || "Update failed");
+      toast.error(
+        error?.message || "Update failed"
+      );
     }
   };
 
@@ -304,18 +337,19 @@ const SignalsList = () => {
 
       if (error) throw error;
 
-      refreshSignals();
+      await refreshSignals();
 
       toast.success(`Status: ${newStatus}`);
     } catch (error: any) {
       toast.error(
-        error?.message || "Failed to update status"
+        error?.message ||
+          "Failed to update status"
       );
     }
   };
 
   /* =========================================================
-     DELETE
+     INDIVIDUAL DELETE
   ========================================================= */
 
   const deleteSignal = async (id: string) => {
@@ -328,6 +362,8 @@ const SignalsList = () => {
     }
 
     try {
+      setProcessing(true);
+
       const { error } = await supabase
         .from("signals")
         .delete()
@@ -335,30 +371,160 @@ const SignalsList = () => {
 
       if (error) throw error;
 
-      refreshSignals();
+      setSelectedSignals((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+
+      await refreshSignals();
 
       toast.success("Signal deleted");
     } catch (error: any) {
-      toast.error(error?.message || "Delete failed");
+      toast.error(
+        error?.message || "Delete failed"
+      );
+    } finally {
+      setProcessing(false);
     }
   };
 
   /* =========================================================
-     BULK ACTION
+     BULK PUBLISH
   ========================================================= */
 
-  const applyBulkAction = async () => {
-    if (selectedSignals.size === 0) {
+  const bulkPublish = async (
+    published: boolean
+  ) => {
+    if (selectedCount === 0) {
       toast.error("Select at least one signal");
       return;
     }
 
-    if (!bulkAction || !bulkValue) {
-      toast.error("Select action and value");
+    try {
+      setProcessing(true);
+
+      const ids = Array.from(selectedSignals);
+
+      const { error } = await supabase
+        .from("signals")
+        .update({
+          published,
+        })
+        .in("id", ids);
+
+      if (error) throw error;
+
+      await refreshSignals();
+
+      setSelectedSignals(new Set());
+
+      toast.success(
+        published
+          ? `${ids.length} signals published`
+          : `${ids.length} signals unpublished`
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          "Bulk publish update failed"
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  /* =========================================================
+     BULK DELETE
+  ========================================================= */
+
+  const bulkDelete = async () => {
+    if (selectedCount === 0) {
+      toast.error("Select at least one signal");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to DELETE ${selectedCount} selected signal${
+        selectedCount > 1 ? "s" : ""
+      }?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setProcessing(true);
+
+      const ids = Array.from(selectedSignals);
+
+      const { error } = await supabase
+        .from("signals")
+        .delete()
+        .in("id", ids);
+
+      if (error) throw error;
+
+      setSelectedSignals(new Set());
+
+      await refreshSignals();
+
+      toast.success(
+        `${ids.length} signals deleted`
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          "Bulk delete failed"
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  /* =========================================================
+     BULK OTHER ACTIONS
+  ========================================================= */
+
+  const applyBulkAction = async () => {
+    if (selectedCount === 0) {
+      toast.error("Select at least one signal");
+      return;
+    }
+
+    if (!bulkAction) {
+      toast.error("Select an action");
+      return;
+    }
+
+    if (bulkAction === "publish") {
+      await bulkPublish(true);
+      setBulkAction("");
+      setBulkValue("");
+      return;
+    }
+
+    if (bulkAction === "unpublish") {
+      await bulkPublish(false);
+      setBulkAction("");
+      setBulkValue("");
+      return;
+    }
+
+    if (bulkAction === "delete") {
+      await bulkDelete();
+      setBulkAction("");
+      setBulkValue("");
+      return;
+    }
+
+    if (!bulkValue) {
+      toast.error("Select a value");
       return;
     }
 
     try {
+      setProcessing(true);
+
       const updates: any = {};
 
       if (bulkAction === "risk_level") {
@@ -377,14 +543,17 @@ const SignalsList = () => {
       const { error } = await supabase
         .from("signals")
         .update(updates)
-        .in("id", Array.from(selectedSignals));
+        .in(
+          "id",
+          Array.from(selectedSignals)
+        );
 
       if (error) throw error;
 
-      refreshSignals();
+      await refreshSignals();
 
       toast.success(
-        `${selectedSignals.size} signals updated`
+        `${selectedCount} signals updated`
       );
 
       setSelectedSignals(new Set());
@@ -392,8 +561,11 @@ const SignalsList = () => {
       setBulkValue("");
     } catch (error: any) {
       toast.error(
-        error?.message || "Bulk update failed"
+        error?.message ||
+          "Bulk update failed"
       );
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -426,7 +598,7 @@ const SignalsList = () => {
   }
 
   /* =========================================================
-     EDIT MODE
+     EDIT
   ========================================================= */
 
   if (editingSignal) {
@@ -436,7 +608,9 @@ const SignalsList = () => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setEditingSignal(null)}
+          onClick={() =>
+            setEditingSignal(null)
+          }
           className="rounded-xl"
         >
           <X className="mr-2 h-4 w-4" />
@@ -466,7 +640,9 @@ const SignalsList = () => {
   return (
     <div className="space-y-2">
 
-      {/* SEARCH BAR */}
+      {/* =====================================================
+          SEARCH + SELECT ALL
+      ===================================================== */}
 
       <div className="sticky top-[64px] z-30 rounded-xl border bg-white p-2 shadow-sm">
 
@@ -478,8 +654,10 @@ const SignalsList = () => {
 
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search pair... XAU/USD, EUR/USD"
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+              placeholder="Search pair... XAU/USD, BTC/USD"
               className="h-10 w-full rounded-lg border bg-slate-50 pl-9 pr-9 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
             />
 
@@ -496,41 +674,55 @@ const SignalsList = () => {
 
           <Button
             variant="outline"
-            size="icon"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`h-10 w-10 shrink-0 rounded-lg ${
+            onClick={() =>
+              setShowFilters(!showFilters)
+            }
+            className={`h-10 shrink-0 rounded-lg px-3 ${
               filtersActive
                 ? "border-primary text-primary"
                 : ""
             }`}
           >
-            <Filter className="h-4 w-4" />
+            <Filter className="mr-1.5 h-4 w-4" />
+            <span className="hidden sm:inline">
+              Filter
+            </span>
           </Button>
 
+          {/* SELECT ALL */}
           <Button
-            variant="outline"
-            size="icon"
+            variant={allSelected ? "default" : "outline"}
             onClick={toggleSelectAll}
-            className="hidden h-10 w-10 shrink-0 rounded-lg sm:flex"
+            disabled={
+              filteredSignals.length === 0
+            }
+            className="h-10 shrink-0 rounded-lg px-3"
           >
-            {selectedSignals.size === filteredSignals.length &&
-            filteredSignals.length > 0 ? (
-              <CheckSquare className="h-4 w-4" />
+            {allSelected ? (
+              <CheckSquare className="mr-1.5 h-4 w-4" />
             ) : (
-              <Square className="h-4 w-4" />
+              <Square className="mr-1.5 h-4 w-4" />
             )}
+
+            <span className="text-xs sm:text-sm">
+              {allSelected
+                ? "Deselect All"
+                : "Select All"}
+            </span>
           </Button>
 
         </div>
-
-        {/* RESULT COUNT */}
 
         <div className="mt-1 flex items-center justify-between px-1">
 
           <span className="text-[11px] text-muted-foreground">
             {filteredSignals.length} signal
-            {filteredSignals.length !== 1 ? "s" : ""}
-            {search ? ` for "${search}"` : ""}
+            {filteredSignals.length !== 1
+              ? "s"
+              : ""}
+            {search
+              ? ` for "${search}"`
+              : ""}
           </span>
 
           {filtersActive && (
@@ -546,11 +738,12 @@ const SignalsList = () => {
 
       </div>
 
-      {/* FILTERS */}
+      {/* =====================================================
+          FILTERS
+      ===================================================== */}
 
       {showFilters && (
         <Card className="border-slate-200 shadow-sm">
-
           <CardContent className="p-3">
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -646,37 +839,87 @@ const SignalsList = () => {
         </Card>
       )}
 
-      {/* BULK ACTIONS */}
+      {/* =====================================================
+          BULK ACTION BAR
+      ===================================================== */}
 
-      {selectedSignals.size > 0 && (
-        <Card className="border-primary/20 bg-primary/5">
+      {selectedCount > 0 && (
+        <Card className="border-primary/30 bg-primary/5 shadow-sm">
 
           <CardContent className="p-3">
 
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
 
               <div className="flex items-center gap-2">
-                <CheckSquare className="h-4 w-4 text-primary" />
 
-                <span className="text-xs font-semibold">
-                  {selectedSignals.size} selected
+                <CheckSquare className="h-5 w-5 text-primary" />
+
+                <span className="text-sm font-bold">
+                  {selectedCount} Selected
                 </span>
+
               </div>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setSelectedSignals(new Set())
-                }
-                className="h-7 text-xs"
-              >
-                Clear
-              </Button>
+              <div className="flex gap-1.5">
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setSelectedSignals(
+                      new Set()
+                    )
+                  }
+                  disabled={processing}
+                  className="h-8 rounded-lg text-xs"
+                >
+                  Clear
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    bulkPublish(true)
+                  }
+                  disabled={processing}
+                  className="h-8 rounded-lg text-xs text-emerald-600"
+                >
+                  <Upload className="mr-1 h-3.5 w-3.5" />
+                  Publish
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    bulkPublish(false)
+                  }
+                  disabled={processing}
+                  className="h-8 rounded-lg text-xs text-orange-600"
+                >
+                  <Download className="mr-1 h-3.5 w-3.5" />
+                  Unpublish
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={bulkDelete}
+                  disabled={processing}
+                  className="h-8 rounded-lg text-xs"
+                >
+                  <Trash className="mr-1 h-3.5 w-3.5" />
+                  Delete
+                </Button>
+
+              </div>
 
             </div>
 
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {/* OTHER BULK ACTIONS */}
+
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
 
               <Select
                 value={bulkAction}
@@ -686,10 +929,11 @@ const SignalsList = () => {
                 }}
               >
                 <SelectTrigger className="h-9 bg-background text-xs">
-                  <SelectValue placeholder="Action" />
+                  <SelectValue placeholder="More bulk actions" />
                 </SelectTrigger>
 
                 <SelectContent>
+
                   <SelectItem value="risk_level">
                     Change Risk
                   </SelectItem>
@@ -701,13 +945,31 @@ const SignalsList = () => {
                   <SelectItem value="signal_type">
                     Change Type
                   </SelectItem>
+
+                  <SelectItem value="publish">
+                    Publish Selected
+                  </SelectItem>
+
+                  <SelectItem value="unpublish">
+                    Unpublish Selected
+                  </SelectItem>
+
+                  <SelectItem value="delete">
+                    Delete Selected
+                  </SelectItem>
+
                 </SelectContent>
               </Select>
 
               <Select
                 value={bulkValue}
                 onValueChange={setBulkValue}
-                disabled={!bulkAction}
+                disabled={
+                  !bulkAction ||
+                  bulkAction === "publish" ||
+                  bulkAction === "unpublish" ||
+                  bulkAction === "delete"
+                }
               >
                 <SelectTrigger className="h-9 bg-background text-xs">
                   <SelectValue placeholder="Value" />
@@ -772,10 +1034,21 @@ const SignalsList = () => {
 
               <Button
                 onClick={applyBulkAction}
-                disabled={!bulkAction || !bulkValue}
+                disabled={
+                  processing ||
+                  !bulkAction ||
+                  (
+                    !bulkValue &&
+                    bulkAction !== "publish" &&
+                    bulkAction !== "unpublish" &&
+                    bulkAction !== "delete"
+                  )
+                }
                 className="h-9"
               >
-                Apply
+                {processing
+                  ? "Processing..."
+                  : "Apply Bulk Action"}
               </Button>
 
             </div>
@@ -784,7 +1057,9 @@ const SignalsList = () => {
         </Card>
       )}
 
-      {/* SIGNAL LIST */}
+      {/* =====================================================
+          NO SIGNALS
+      ===================================================== */}
 
       {filteredSignals.length === 0 && (
         <Card className="border-dashed">
@@ -816,13 +1091,20 @@ const SignalsList = () => {
         </Card>
       )}
 
+      {/* =====================================================
+          SIGNAL CARDS
+      ===================================================== */}
+
       {filteredSignals.map((signal: any) => {
 
         const isBuy =
-          String(signal.type || "").toLowerCase() === "buy";
+          String(signal.type || "")
+            .toLowerCase() === "buy";
 
         const status =
-          signal.signal_status || signal.status || "open";
+          signal.signal_status ||
+          signal.status ||
+          "open";
 
         return (
           <Card
@@ -838,21 +1120,23 @@ const SignalsList = () => {
 
               <div className="flex items-start gap-2">
 
-                {/* CHECK */}
+                {/* CHECKBOX */}
 
                 <Checkbox
-                  checked={selectedSignals.has(signal.id)}
+                  checked={selectedSignals.has(
+                    signal.id
+                  )}
                   onCheckedChange={() =>
-                    toggleSelectSignal(signal.id)
+                    toggleSelectSignal(
+                      signal.id
+                    )
                   }
                   className="mt-1 shrink-0"
                 />
 
-                {/* MAIN */}
-
                 <div className="min-w-0 flex-1">
 
-                  {/* PAIR + BUY/SELL */}
+                  {/* PAIR + ACTIONS */}
 
                   <div className="flex items-center justify-between gap-2">
 
@@ -874,20 +1158,24 @@ const SignalsList = () => {
 
                     </div>
 
-                    {/* ACTIONS */}
-
                     <div className="flex shrink-0 items-center gap-1">
+
+                      {/* EDIT */}
 
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() =>
-                          setEditingSignal(signal)
+                          setEditingSignal(
+                            signal
+                          )
                         }
                         className="h-8 w-8 rounded-lg"
                       >
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
+
+                      {/* PUBLISH */}
 
                       <Button
                         variant="outline"
@@ -899,20 +1187,30 @@ const SignalsList = () => {
                           )
                         }
                         className="h-8 w-8 rounded-lg"
+                        title={
+                          signal.published
+                            ? "Unpublish"
+                            : "Publish"
+                        }
                       >
                         {signal.published ? (
-                          <Eye className="h-3.5 w-3.5" />
+                          <Eye className="h-3.5 w-3.5 text-emerald-600" />
                         ) : (
-                          <EyeOff className="h-3.5 w-3.5" />
+                          <EyeOff className="h-3.5 w-3.5 text-slate-500" />
                         )}
                       </Button>
+
+                      {/* DELETE */}
 
                       <Button
                         variant="destructive"
                         size="icon"
                         onClick={() =>
-                          deleteSignal(signal.id)
+                          deleteSignal(
+                            signal.id
+                          )
                         }
+                        disabled={processing}
                         className="h-8 w-8 rounded-lg"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -982,6 +1280,7 @@ const SignalsList = () => {
                       </SelectTrigger>
 
                       <SelectContent>
+
                         <SelectItem value="pending">
                           🟡 Pending
                         </SelectItem>
@@ -993,6 +1292,7 @@ const SignalsList = () => {
                         <SelectItem value="close">
                           🔴 Close
                         </SelectItem>
+
                       </SelectContent>
                     </Select>
 
@@ -1005,7 +1305,9 @@ const SignalsList = () => {
                       </span>
 
                       <Switch
-                        checked={!!signal.is_premium}
+                        checked={
+                          !!signal.is_premium
+                        }
                         onCheckedChange={() =>
                           togglePremium(
                             signal.id,
@@ -1019,7 +1321,7 @@ const SignalsList = () => {
 
                   </div>
 
-                  {/* PRICE ROW */}
+                  {/* PRICE */}
 
                   <div className="mt-2 grid grid-cols-4 gap-1.5">
 
@@ -1065,7 +1367,7 @@ const SignalsList = () => {
 
                   </div>
 
-                  {/* QUICK HIT BUTTONS */}
+                  {/* QUICK RESULT */}
 
                   <div className="mt-2">
 
@@ -1092,10 +1394,9 @@ const SignalsList = () => {
                             : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                         }`}
                       >
-                        {signal.tp1_hit ? (
+                        {signal.tp1_hit && (
                           <Check className="h-3 w-3" />
-                        ) : null}
-
+                        )}
                         TP1
                       </button>
 
@@ -1117,10 +1418,9 @@ const SignalsList = () => {
                               : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                           }`}
                         >
-                          {signal.tp2_hit ? (
+                          {signal.tp2_hit && (
                             <Check className="h-3 w-3" />
-                          ) : null}
-
+                          )}
                           TP2
                         </button>
                       )}
@@ -1143,10 +1443,9 @@ const SignalsList = () => {
                               : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                           }`}
                         >
-                          {signal.tp3_hit ? (
+                          {signal.tp3_hit && (
                             <Check className="h-3 w-3" />
-                          ) : null}
-
+                          )}
                           TP3
                         </button>
                       )}
@@ -1169,10 +1468,9 @@ const SignalsList = () => {
                               : "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100"
                           }`}
                         >
-                          {signal.tp4_hit ? (
+                          {signal.tp4_hit && (
                             <Check className="h-3 w-3" />
-                          ) : null}
-
+                          )}
                           TP4
                         </button>
                       )}
@@ -1194,10 +1492,9 @@ const SignalsList = () => {
                             : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
                         }`}
                       >
-                        {signal.sl_hit ? (
+                        {signal.sl_hit && (
                           <Check className="h-3 w-3" />
-                        ) : null}
-
+                        )}
                         SL
                       </button>
 
@@ -1212,7 +1509,9 @@ const SignalsList = () => {
                     <span className="text-[9px] text-muted-foreground">
                       {signal.created_at
                         ? format(
-                            new Date(signal.created_at),
+                            new Date(
+                              signal.created_at
+                            ),
                             "MMM dd, HH:mm"
                           )
                         : ""}
@@ -1262,18 +1561,20 @@ const SignalsList = () => {
         );
       })}
 
-      {/* MOBILE SELECT ALL */}
+      {/* =====================================================
+          MOBILE SELECT ALL
+      ===================================================== */}
 
       {filteredSignals.length > 0 && (
         <div className="flex justify-center py-2 sm:hidden">
 
           <Button
-            variant="outline"
+            variant={allSelected ? "default" : "outline"}
             size="sm"
             onClick={toggleSelectAll}
-            className="h-8 rounded-lg text-xs"
+            className="h-9 rounded-lg text-xs"
           >
-            {selectedSignals.size === filteredSignals.length ? (
+            {allSelected ? (
               <>
                 <CheckSquare className="mr-1.5 h-3.5 w-3.5" />
                 Deselect All
