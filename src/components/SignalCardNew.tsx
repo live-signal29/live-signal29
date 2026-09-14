@@ -1170,8 +1170,8 @@ const SignalCardNew = ({
       ref={cardRef}  
       className={cn(  
         "relative mb-3 w-full rounded-[16px] p-3.5 transition-all duration-300 overflow-hidden border backdrop-blur-md shadow-lg",  
-        "bg-gradient-to-br from-emerald-50/50 via-cyan-50/30 to-white border-border shadow-[0_8px_25px_rgba(0,0,0,0.08)]",  
-        "dark:bg-card dark:from-transparent dark:via-transparent dark:to-transparent dark:shadow-[0_8px_25px_rgba(0,0,0,0.45)]",  
+        "bg-card border-border shadow-[0_8px_25px_rgba(0,0,0,0.08)]",  
+        "dark:shadow-[0_8px_25px_rgba(0,0,0,0.45)]",  
         "hover:scale-[1.01]"  
       )}  
     >  
@@ -1446,7 +1446,7 @@ const SignalCardNew = ({
         <>  
           {/* ENTRY / CURRENT */}  
   
-          <div className="flex items-center justify-between rounded-[12px] bg-muted border border-border px-3 py-2 mb-3 shadow-inner">  
+          <div className="flex items-center justify-between rounded-[12px] bg-gradient-to-r from-emerald-50/70 via-cyan-50/50 to-emerald-50/70 dark:bg-muted border border-border px-3 py-2 mb-3 shadow-inner">  
             <div className="flex flex-col">  
               <span className="text-[7.5px] font-bold uppercase tracking-wider text-muted-foreground">  
                 Entry  
@@ -1543,7 +1543,7 @@ const SignalCardNew = ({
           {/* TARGETS */}  
   
           {showBody && (  
-            <div className="flex flex-col gap-2 rounded-[12px] bg-muted/60 border border-border p-2.5 mb-3 transition-all duration-300">  
+            <div className="flex flex-col gap-2 rounded-[12px] bg-gradient-to-b from-emerald-50/60 via-cyan-50/40 to-emerald-50/30 dark:bg-muted/60 border border-border p-2.5 mb-3 transition-all duration-300">  
               {/* TP1 */}  
   
               <div className="grid grid-cols-3 items-center font-mono border-b border-border pb-2">  
