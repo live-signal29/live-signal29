@@ -97,7 +97,12 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-200;
+    @apply text-foreground font-sans min-h-screen transition-colors duration-200;
+    background: linear-gradient(180deg, hsl(161 60% 96%) 0%, hsl(var(--background)) 100%);
+  }
+
+  .dark body {
+    background: hsl(var(--background));
   }
 }
 
