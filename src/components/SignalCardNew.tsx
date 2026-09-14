@@ -1170,8 +1170,8 @@ const SignalCardNew = ({
       ref={cardRef}
       className={cn(
         "relative mb-3 w-full rounded-[16px] p-3.5 transition-all duration-300 overflow-hidden border backdrop-blur-md shadow-lg",
-        "bg-white border-slate-200 shadow-[0_8px_25px_rgba(0,0,0,0.08)]",
-        "dark:bg-[#0a1628] dark:border-cyan-500/20 dark:shadow-[0_8px_25px_rgba(0,0,0,0.6)]",
+        "bg-card border-border shadow-[0_8px_25px_rgba(0,0,0,0.08)]",
+        "dark:shadow-[0_8px_25px_rgba(0,0,0,0.45)]",
         "hover:scale-[1.01]"
       )}
     >
@@ -1344,7 +1344,7 @@ const SignalCardNew = ({
 
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
-              <h3 className="text-xs font-black tracking-wide text-slate-900 dark:text-cyan-50 leading-tight">
+              <h3 className="text-xs font-black tracking-wide text-foreground leading-tight">
                 {signal.pair.replace(
                   "/",
                   ""
@@ -1381,7 +1381,7 @@ const SignalCardNew = ({
             {statusText}
           </span>
 
-          <div className="flex items-center gap-1 text-[8px] font-medium text-slate-500 bg-slate-100 border border-slate-200 dark:text-cyan-200/50 dark:bg-cyan-950/40 dark:border-cyan-500/10 px-2 py-1 rounded-lg">
+          <div className="flex items-center gap-1 text-[8px] font-medium text-muted-foreground bg-muted border border-border px-2 py-1 rounded-lg">
             <Clock className="h-2.5 w-2.5 text-cyan-500 dark:text-cyan-400" />
 
             <span>
@@ -1397,7 +1397,7 @@ const SignalCardNew = ({
                 !showBody
               )
             }
-            className="p-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 dark:bg-cyan-950/40 dark:border-cyan-500/10 dark:text-cyan-300 dark:hover:bg-black/10 transition-colors"
+            className="p-1 rounded-lg bg-muted border border-border text-muted-foreground hover:bg-muted/70 transition-colors"
           >
             {showBody ? (
               <ChevronUp className="h-4 w-4" />
@@ -1432,7 +1432,7 @@ const SignalCardNew = ({
               );
             }
           }}
-          className="flex flex-col items-center justify-center gap-2.5 py-7 px-4 rounded-[12px] border border-dashed border-amber-500/30 bg-amber-50/60 dark:bg-[#06101e]/60 cursor-pointer hover:bg-amber-500/5 active:scale-[0.99] transition-all duration-200 shadow-inner"
+          className="flex flex-col items-center justify-center gap-2.5 py-7 px-4 rounded-[12px] border border-dashed border-amber-500/30 bg-amber-50/60 dark:bg-muted/60 cursor-pointer hover:bg-amber-500/5 active:scale-[0.99] transition-all duration-200 shadow-inner"
         >
           <div className="p-2.5 rounded-full bg-amber-500/10 border border-amber-500/30">
             <Lock className="h-5 w-5 text-amber-500 dark:text-amber-400" />
@@ -1446,19 +1446,19 @@ const SignalCardNew = ({
         <>
           {/* ENTRY / CURRENT */}
 
-          <div className="flex items-center justify-between rounded-[12px] bg-slate-50 border border-slate-200 dark:bg-[#07101d]/80 dark:border-cyan-500/15 px-3 py-2 mb-3 shadow-inner">
+          <div className="flex items-center justify-between rounded-[12px] bg-muted border border-border px-3 py-2 mb-3 shadow-inner">
             <div className="flex flex-col">
-              <span className="text-[7.5px] font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/50">
+              <span className="text-[7.5px] font-bold uppercase tracking-wider text-muted-foreground">
                 Entry
               </span>
 
-              <span className="font-mono text-[11px] font-black text-slate-900 dark:text-cyan-100">
+              <span className="font-mono text-[11px] font-black text-foreground">
                 {signal.entry}
               </span>
             </div>
 
             <div className="flex flex-col items-center">
-              <span className="text-[7.5px] font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/50">
+              <span className="text-[7.5px] font-bold uppercase tracking-wider text-muted-foreground">
                 Current
               </span>
 
@@ -1501,7 +1501,7 @@ const SignalCardNew = ({
                       : runningPL <
                           0
                         ? "text-rose-500 dark:text-rose-400"
-                        : "text-slate-500 dark:text-cyan-300/60"
+                        : "text-muted-foreground"
                   )}
                 >
                   {runningPL >
@@ -1543,16 +1543,16 @@ const SignalCardNew = ({
           {/* TARGETS */}
 
           {showBody && (
-            <div className="flex flex-col gap-2 rounded-[12px] bg-slate-50 border border-slate-200 dark:bg-[#07101d]/40 dark:border-cyan-500/10 p-2.5 mb-3 transition-all duration-300">
+            <div className="flex flex-col gap-2 rounded-[12px] bg-muted/60 border border-border p-2.5 mb-3 transition-all duration-300">
               {/* TP1 */}
 
-              <div className="grid grid-cols-3 items-center font-mono border-b border-slate-200 dark:border-white/5 pb-2">
+              <div className="grid grid-cols-3 items-center font-mono border-b border-border pb-2">
                 <span
                   className={cn(
                     "font-extrabold uppercase text-[11px] text-left flex items-center gap-1",
                     signal.tp1_hit
                       ? "text-emerald-500 dark:text-emerald-400"
-                      : "text-slate-500 dark:text-cyan-300/70"
+                      : "text-muted-foreground"
                   )}
                 >
                   TP 1
@@ -1569,7 +1569,7 @@ const SignalCardNew = ({
                     "text-[11px] font-extrabold text-center",
                     signal.tp1_hit
                       ? "text-emerald-500 dark:text-emerald-400"
-                      : "text-slate-800 dark:text-cyan-100"
+                      : "text-foreground"
                   )}
                 >
                   {signal.tp1}
@@ -1590,13 +1590,13 @@ const SignalCardNew = ({
               {/* TP2 */}
 
               {signal.tp2 && (
-                <div className="grid grid-cols-3 items-center font-mono border-b border-slate-200 dark:border-white/5 pb-2">
+                <div className="grid grid-cols-3 items-center font-mono border-b border-border pb-2">
                   <span
                     className={cn(
                       "font-extrabold uppercase text-[11px] text-left flex items-center gap-1",
                       signal.tp2_hit
                         ? "text-emerald-500 dark:text-emerald-400"
-                        : "text-slate-500 dark:text-cyan-300/70"
+                        : "text-muted-foreground"
                     )}
                   >
                     TP 2
@@ -1613,7 +1613,7 @@ const SignalCardNew = ({
                       "text-[11px] font-extrabold text-center",
                       signal.tp2_hit
                         ? "text-emerald-500 dark:text-emerald-400"
-                        : "text-slate-800 dark:text-cyan-100"
+                        : "text-foreground"
                     )}
                   >
                     {signal.tp2}
@@ -1635,13 +1635,13 @@ const SignalCardNew = ({
               {/* TP3 */}
 
               {signal.tp3 && (
-                <div className="grid grid-cols-3 items-center font-mono border-b border-slate-200 dark:border-white/5 pb-2">
+                <div className="grid grid-cols-3 items-center font-mono border-b border-border pb-2">
                   <span
                     className={cn(
                       "font-extrabold uppercase text-[11px] text-left flex items-center gap-1",
                       signal.tp3_hit
                         ? "text-emerald-500 dark:text-emerald-400"
-                        : "text-slate-500 dark:text-cyan-300/70"
+                        : "text-muted-foreground"
                     )}
                   >
                     TP 3
@@ -1658,7 +1658,7 @@ const SignalCardNew = ({
                       "text-[11px] font-extrabold text-center",
                       signal.tp3_hit
                         ? "text-emerald-500 dark:text-emerald-400"
-                        : "text-slate-800 dark:text-cyan-100"
+                        : "text-foreground"
                     )}
                   >
                     {signal.tp3}
@@ -1689,7 +1689,7 @@ const SignalCardNew = ({
                     "text-[11px] font-extrabold text-center flex items-center justify-center gap-1",
                     isSLHit
                       ? "text-rose-500 dark:text-rose-400"
-                      : "text-slate-800 dark:text-cyan-100"
+                      : "text-foreground"
                   )}
                 >
                   {anyTPHitForDisplay
