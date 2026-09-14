@@ -2,7 +2,11 @@
 // Fixed for WebView APK + VPN compatibility
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
 
-const CACHE = "trendisfriend-v3";
+// Bumped v3 -> v4 to force-evict any stale CSS/JS cached under the old
+// cache-first strategy (this is what was serving the old theme colors
+// after deploys). Bump this again any time you need to force a hard
+// cache clear for all users.
+const CACHE = "trendisfriend-v4";
 const offlineFallbackPage = "/offline.html";
 
 // Skip waiting to activate new service worker immediately
@@ -146,8 +150,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets, use cache-first with network fallback
-  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
+  // For CSS/JS: NETWORK-FIRST. These are the app's own code/styles, so a
+  // fresh deploy must be visible immediately — cache is only a fallback
+  // for when the network is unreachable (offline/VPN drop).
+  if (url.pathname.match(/\.(js|css)$/)) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // For other static assets (images/fonts/icons), cache-first is fine —
+  // these rarely change and don't affect what theme/colors the user sees.
+  if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
