@@ -7,9 +7,8 @@ export const ThemeToggle = () => {
   useEffect(() => {
     // Check localStorage for saved theme preference
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    
-    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
+
+    const initialTheme = savedTheme || "dark";
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
   }, []);
