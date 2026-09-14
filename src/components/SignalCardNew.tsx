@@ -1170,8 +1170,8 @@ const SignalCardNew = ({
       ref={cardRef}  
       className={cn(  
         "relative mb-3 w-full rounded-[16px] p-3.5 transition-all duration-300 overflow-hidden border backdrop-blur-md shadow-lg",  
-        "bg-card border-border shadow-[0_8px_25px_rgba(0,0,0,0.08)]",  
-        "dark:shadow-[0_8px_25px_rgba(0,0,0,0.45)]",  
+        "bg-gradient-to-br from-emerald-50/50 via-cyan-50/30 to-white border-border shadow-[0_8px_25px_rgba(0,0,0,0.08)]",  
+        "dark:bg-card dark:from-transparent dark:via-transparent dark:to-transparent dark:shadow-[0_8px_25px_rgba(0,0,0,0.45)]",  
         "hover:scale-[1.01]"  
       )}  
     >  
@@ -1770,5 +1770,4 @@ const SignalCardNew = ({
   );  
 };  
   
-export default SignalCardNew;  
-  
+export default SignalCardNew;
