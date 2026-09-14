@@ -496,7 +496,7 @@ const SignalsDashboard = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col text-foreground transition-colors duration-200 bg-gradient-to-b from-emerald-50 to-background dark:bg-none dark:bg-background"
+      className="min-h-screen flex flex-col text-foreground transition-colors duration-200 bg-gradient-to-b from-emerald-50/40 via-emerald-50/10 to-background bg-fixed dark:bg-none dark:bg-background"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
