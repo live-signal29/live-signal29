@@ -129,6 +129,26 @@ const SignalCardNew = ({
   
   const confettiFiredRef = useRef(false);  
   const initialTP3StateRef = useRef(!!signal.tp3_hit);  
+
+  // Track signal view (once per mount)
+  const viewTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (viewTrackedRef.current) return;
+    viewTrackedRef.current = true;
+
+    const trackView = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        await supabase.from("user_signal_views").insert({
+          user_id: data.user.id,
+          signal_id: signal.id,
+        });
+      }
+    };
+
+    trackView();
+  }, [signal.id]);
   
   const [, forceUpdate] = useState(0);  
   
@@ -1770,5 +1790,4 @@ const SignalCardNew = ({
   );  
 };  
   
-export default SignalCardNew;  
-  
+export default SignalCardNew;
