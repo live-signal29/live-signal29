@@ -496,7 +496,7 @@ const SignalsDashboard = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-background dark:bg-[#0B0E14] text-foreground transition-colors duration-200"
+      className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -535,7 +535,7 @@ const SignalsDashboard = () => {
                       "relative flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 border",
                       isActive
                         ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
-                        : "bg-card dark:bg-[#151921] text-muted-foreground border-border/60 dark:border-slate-800 hover:bg-accent/50 dark:hover:bg-slate-800/60 hover:text-foreground"
+                        : "bg-card text-muted-foreground border-border hover:bg-accent/50 hover:text-foreground"
                     )}
                   >
                     <span>{tab.label}</span>
@@ -567,7 +567,7 @@ const SignalsDashboard = () => {
                   <select
                     value={subCategory}
                     onChange={(e) => setSubCategory(e.target.value)}
-                    className="w-full sm:w-[220px] rounded-xl border border-border/70 dark:border-slate-800 bg-card dark:bg-[#151921] px-3.5 py-2 text-xs sm:text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                    className="w-full sm:w-[220px] rounded-xl border border-border bg-card px-3.5 py-2 text-xs sm:text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
                   >
                     <option value="all">All Pairs</option>
                     {subCategoryOptions[mainCategory].map((pair) => (
@@ -600,11 +600,11 @@ const SignalsDashboard = () => {
                       return (
                         <Card
                           key={analysis.id}
-                          className="group overflow-hidden rounded-2xl bg-card dark:bg-[#151921] border border-border/60 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-lg transition-all duration-300"
+                          className="group overflow-hidden rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-lg transition-all duration-300"
                         >
                           {hasImage && (
                             <div
-                              className="relative aspect-video w-full overflow-hidden bg-muted dark:bg-slate-900 cursor-pointer"
+                              className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
                               onClick={() => openLightbox(index)}
                             >
                               <img
@@ -617,7 +617,7 @@ const SignalsDashboard = () => {
                                 <Button
                                   size="icon"
                                   variant="secondary"
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/90 dark:bg-slate-900/90 text-foreground"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/90 text-foreground"
                                 >
                                   <Maximize2 className="h-5 w-5" />
                                 </Button>
@@ -645,7 +645,7 @@ const SignalsDashboard = () => {
                             </CardContent>
                           )}
 
-                          <CardContent className="px-4 sm:px-5 py-3 border-t border-border/40 dark:border-slate-800/80 bg-muted/20 dark:bg-slate-900/30">
+                          <CardContent className="px-4 sm:px-5 py-3 border-t border-border bg-muted/20">
                             <ChartReactions chartId={analysis.id} />
                           </CardContent>
                         </Card>
@@ -664,7 +664,7 @@ const SignalsDashboard = () => {
                 )}
 
                 {!isLoadingCharts && chartAnalysis?.length === 0 && (
-                  <div className="text-center py-20 bg-card dark:bg-[#151921] rounded-2xl border border-border/60 dark:border-slate-800">
+                  <div className="text-center py-20 bg-card rounded-2xl border border-border">
                     <p className="text-muted-foreground text-base sm:text-lg font-medium">
                       No chart analysis available
                     </p>
@@ -750,7 +750,7 @@ const SignalsDashboard = () => {
                         );
                       })()
                     ) : (
-                      <div className="text-center py-20 bg-card dark:bg-[#151921] rounded-2xl border border-border/60 dark:border-slate-800">
+                      <div className="text-center py-20 bg-card rounded-2xl border border-border">
                         <p className="text-muted-foreground text-base sm:text-lg font-medium">
                           No signals found
                         </p>
