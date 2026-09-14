@@ -35,9 +35,6 @@ import { MarketClosedBanner } from "@/components/MarketClosedBanner";
 
 const SIGNALS_PER_PAGE = 20;
 
-/*
- * Dashboard refresh settings
- */
 const SIGNALS_REFRESH_MS = 5000;
 const MARKET_IDEAS_REFRESH_MS = 30000;
 
@@ -50,9 +47,49 @@ const CATEGORIES = [
 ];
 
 /*
- * EXNESS SIGNAL BANNER
+ * ============================================================
+ * EXNESS AUTO SLIDER
+ * ============================================================
  */
+
+const EXNESS_BANNERS = [
+  {
+    image:
+      "https://d3dpet1g0ty5ed.cloudfront.net/EN_GLOBAL_C1_EXT_C2_T1_PROMO_ADVANCED_T2_PERFORMANCE_D-3-3_STATIC_970x250.jpg",
+    alt: "Exness",
+  },
+  {
+    image:
+      "https://d3dpet1g0ty5ed.cloudfront.net/EN_GLOBAL_C1_EXT_C2_T1_PROMO_TRY_T2_PERFORMANCE_D-3-3_STATIC_970x250.jpg",
+    alt: "Exness",
+  },
+  {
+    image:
+      "https://d3dpet1g0ty5ed.cloudfront.net/EN_GLOBAL_C1_EXT_C2_T1_PROMO_TRY_T2_PERFORMANCE_D-3-3_STATIC_970x250.jpg",
+    alt: "Exness",
+  },
+];
+
 const ExnessSignalBanner = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  /*
+   * Automatically change banner every 4 seconds.
+   */
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCurrentSlide((previous) => {
+        return (previous + 1) % EXNESS_BANNERS.length;
+      });
+    }, 4000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const currentBanner = EXNESS_BANNERS[currentSlide];
+
   return (
     <div className="md:col-span-2 w-full my-2">
       <a
@@ -61,15 +98,43 @@ const ExnessSignalBanner = () => {
         rel="noopener noreferrer"
         className="block w-full overflow-hidden rounded-xl"
       >
-        <img
-          src="https://d3dpet1g0ty5ed.cloudfront.net/EN_GLOBAL_C1_EXT_C2_T1_PROMO_ADVANCED_T2_PERFORMANCE_D-3-3_STATIC_970x250.jpg"
-          width="970"
-          height="250"
-          alt="Exness"
-          className="block w-full h-auto object-contain"
-          loading="lazy"
-        />
+        <div className="relative w-full overflow-hidden rounded-xl">
+          <div
+            key={currentSlide}
+            className="w-full animate-fade-slide-in"
+          >
+            <img
+              src={currentBanner.image}
+              width="970"
+              height="250"
+              alt={currentBanner.alt}
+              className="block w-full h-auto object-contain rounded-xl"
+              loading="lazy"
+            />
+          </div>
+        </div>
       </a>
+
+      {/* Slider dots */}
+      <div className="flex justify-center items-center gap-1.5 mt-2">
+        {EXNESS_BANNERS.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            aria-label={`Go to Exness banner ${index + 1}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setCurrentSlide(index);
+            }}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              currentSlide === index
+                ? "w-5 bg-primary"
+                : "w-1.5 bg-muted-foreground/40"
+            )}
+          />
+        ))}
+      </div>
     </div>
   );
 };
@@ -229,24 +294,46 @@ const SignalsDashboard = () => {
    */
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
-      if (touchStartX.current === null || touchStartY.current === null) {
+      if (
+        touchStartX.current === null ||
+        touchStartY.current === null
+      ) {
         return;
       }
 
-      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-      const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+      const deltaX =
+        e.changedTouches[0].clientX -
+        touchStartX.current;
+
+      const deltaY =
+        e.changedTouches[0].clientY -
+        touchStartY.current;
 
       touchStartX.current = null;
       touchStartY.current = null;
 
-      if (Math.abs(deltaX) > 80 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-        const currentIndex = CATEGORIES.indexOf(mainCategory);
+      if (
+        Math.abs(deltaX) > 80 &&
+        Math.abs(deltaX) > Math.abs(deltaY) * 1.5
+      ) {
+        const currentIndex =
+          CATEGORIES.indexOf(mainCategory);
 
-        if (deltaX < 0 && currentIndex < CATEGORIES.length - 1) {
-          setMainCategory(CATEGORIES[currentIndex + 1]);
+        if (
+          deltaX < 0 &&
+          currentIndex < CATEGORIES.length - 1
+        ) {
+          setMainCategory(
+            CATEGORIES[currentIndex + 1]
+          );
           setSubCategory("all");
-        } else if (deltaX > 0 && currentIndex > 0) {
-          setMainCategory(CATEGORIES[currentIndex - 1]);
+        } else if (
+          deltaX > 0 &&
+          currentIndex > 0
+        ) {
+          setMainCategory(
+            CATEGORIES[currentIndex - 1]
+          );
           setSubCategory("all");
         }
       }
@@ -292,6 +379,7 @@ const SignalsDashboard = () => {
       "USD/CAD",
       "USD/CHF",
     ],
+
     COMMODITIES: [
       "XAU/USD (Gold)",
       "XAG/USD (Silver)",
@@ -305,6 +393,7 @@ const SignalsDashboard = () => {
       "FTSE100",
       "Nikkei",
     ],
+
     CRYPTO: [
       "BTC/USD",
       "ETH/USD",
@@ -313,6 +402,7 @@ const SignalsDashboard = () => {
       "ADA/USD",
       "SOL/USD",
     ],
+
     "DERIV/BINARY": [
       "BOOM 1000",
       "BOOM 500",
@@ -334,31 +424,43 @@ const SignalsDashboard = () => {
     isFetchingNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["signals-infinite", mainCategory, subCategory],
+    queryKey: [
+      "signals-infinite",
+      mainCategory,
+      subCategory,
+    ],
 
     queryFn: async ({ pageParam = 0 }) => {
-      const { data, error } = await supabase.rpc("get_signals_filtered", {
-        p_main_category: mainCategory,
-        p_category: null,
-        p_sub_category: subCategory || "all",
-        p_status: null,
-        p_signal_id: null,
-        p_limit: SIGNALS_PER_PAGE,
-        p_offset: pageParam * SIGNALS_PER_PAGE,
-      });
+      const { data, error } =
+        await supabase.rpc(
+          "get_signals_filtered",
+          {
+            p_main_category: mainCategory,
+            p_category: null,
+            p_sub_category:
+              subCategory || "all",
+            p_status: null,
+            p_signal_id: null,
+            p_limit: SIGNALS_PER_PAGE,
+            p_offset:
+              pageParam * SIGNALS_PER_PAGE,
+          }
+        );
 
       if (error) throw error;
 
       return {
         data: data || [],
         nextPage:
-          (data?.length || 0) === SIGNALS_PER_PAGE
+          (data?.length || 0) ===
+          SIGNALS_PER_PAGE
             ? pageParam + 1
             : undefined,
       };
     },
 
-    getNextPageParam: (lastPage) => lastPage.nextPage,
+    getNextPageParam: (lastPage) =>
+      lastPage.nextPage,
 
     initialPageParam: 0,
 
@@ -376,12 +478,14 @@ const SignalsDashboard = () => {
   /*
    * SORTING LOGIC
    *
-   * Open / Running / Active signals stay at the top.
-   * Closed / Completed / Pending signals stay below.
+   * OPEN / RUNNING / ACTIVE
+   * signals always come first.
    */
   const allSignals = useMemo(() => {
     const rawList =
-      signalsData?.pages.flatMap((page) => page.data) || [];
+      signalsData?.pages.flatMap(
+        (page) => page.data
+      ) || [];
 
     const isOpenSignal = (signal: any) => {
       const status = String(
@@ -390,33 +494,31 @@ const SignalsDashboard = () => {
           "open"
       ).toLowerCase();
 
-      return ["open", "running", "active"].includes(status);
+      return [
+        "open",
+        "running",
+        "active",
+      ].includes(status);
     };
 
     return [...rawList].sort((a, b) => {
       const aOpen = isOpenSignal(a);
       const bOpen = isOpenSignal(b);
 
-      /*
-       * Open signals first
-       */
       if (aOpen && !bOpen) return -1;
       if (!aOpen && bOpen) return 1;
 
-      /*
-       * Same status group:
-       * newest first
-       */
       return (
-        new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
+        new Date(
+          b.created_at || 0
+        ).getTime() -
+        new Date(
+          a.created_at || 0
+        ).getTime()
       );
     });
   }, [signalsData]);
 
-  /*
-   * Passing all signals to SignalCardNew
-   */
   const signals = useMemo(() => {
     return allSignals;
   }, [allSignals]);
@@ -424,7 +526,9 @@ const SignalsDashboard = () => {
   /*
    * Active signals count
    */
-  const getActiveSignalsCount = (category: string) => {
+  const getActiveSignalsCount = (
+    category: string
+  ) => {
     if (
       category === "MARKET IDEAS" ||
       category === "COPIER"
@@ -441,15 +545,20 @@ const SignalsDashboard = () => {
         ).toLowerCase();
 
         return (
-          signal.main_category === category &&
-          ["open", "running", "active"].includes(status)
+          signal.main_category ===
+            category &&
+          [
+            "open",
+            "running",
+            "active",
+          ].includes(status)
         );
       }).length || 0
     );
   };
 
   /*
-   * Open signal pairs for live prices
+   * Open signal pairs
    */
   const openSignalPairs = signals
     .filter((signal) => {
@@ -459,7 +568,11 @@ const SignalsDashboard = () => {
           "open"
       ).toLowerCase();
 
-      return ["open", "running", "active"].includes(status);
+      return [
+        "open",
+        "running",
+        "active",
+      ].includes(status);
     })
     .map((signal) =>
       normalizeSymbolKey(signal.pair)
@@ -470,10 +583,11 @@ const SignalsDashboard = () => {
         arr.indexOf(pair) === index
     );
 
-  const { prices: livePrices } = useLivePricesFetch(
-    openSignalPairs,
-    openSignalPairs.length > 0
-  );
+  const { prices: livePrices } =
+    useLivePricesFetch(
+      openSignalPairs,
+      openSignalPairs.length > 0
+    );
 
   /*
    * SUPABASE REALTIME
@@ -511,7 +625,8 @@ const SignalsDashboard = () => {
   useEffect(() => {
     const handleVisibility = () => {
       if (
-        document.visibilityState === "visible"
+        document.visibilityState ===
+        "visible"
       ) {
         refetch();
       }
@@ -534,26 +649,28 @@ const SignalsDashboard = () => {
    * INFINITE SCROLL
    */
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          hasNextPage &&
-          !isFetchingNextPage
-        ) {
-          fetchNextPage();
+    const observer =
+      new IntersectionObserver(
+        (entries) => {
+          if (
+            entries[0].isIntersecting &&
+            hasNextPage &&
+            !isFetchingNextPage
+          ) {
+            fetchNextPage();
+          }
+        },
+        {
+          threshold: 0.1,
         }
-      },
-      {
-        threshold: 0.1,
-      }
-    );
+      );
 
     if (loadMoreRef.current) {
       observer.observe(loadMoreRef.current);
     }
 
-    return () => observer.disconnect();
+    return () =>
+      observer.disconnect();
   }, [
     hasNextPage,
     isFetchingNextPage,
@@ -567,54 +684,69 @@ const SignalsDashboard = () => {
     data: chartAnalysis,
     isLoading: isLoadingCharts,
   } = useQuery({
-    queryKey: ["chart-analysis-and-ideas"],
+    queryKey: [
+      "chart-analysis-and-ideas",
+    ],
 
     queryFn: async () => {
-      const [charts, ideas] = await Promise.all([
-        supabase
-          .from("chart_analysis")
-          .select("*")
-          .eq("published", true)
-          .order("created_at", {
-            ascending: false,
-          })
-          .limit(30),
+      const [charts, ideas] =
+        await Promise.all([
+          supabase
+            .from("chart_analysis")
+            .select("*")
+            .eq("published", true)
+            .order("created_at", {
+              ascending: false,
+            })
+            .limit(30),
 
-        supabase
-          .from("market_ideas")
-          .select("*")
-          .eq("published", true)
-          .order("created_at", {
-            ascending: false,
-          })
-          .limit(30),
-      ]);
+          supabase
+            .from("market_ideas")
+            .select("*")
+            .eq("published", true)
+            .order("created_at", {
+              ascending: false,
+            })
+            .limit(30),
+        ]);
 
-      if (charts.error) throw charts.error;
-      if (ideas.error) throw ideas.error;
+      if (charts.error)
+        throw charts.error;
+
+      if (ideas.error)
+        throw ideas.error;
 
       const merged = [
         ...(charts.data || []),
         ...(ideas.data || []),
       ].sort(
         (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
+          new Date(
+            b.created_at
+          ).getTime() -
+          new Date(
+            a.created_at
+          ).getTime()
       );
 
       return merged;
     },
 
-    enabled: mainCategory === "MARKET IDEAS",
+    enabled:
+      mainCategory === "MARKET IDEAS",
 
-    refetchInterval: MARKET_IDEAS_REFRESH_MS,
+    refetchInterval:
+      MARKET_IDEAS_REFRESH_MS,
+
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 0,
   });
 
-  const openLightbox = (index: number) => {
+  const openLightbox = (
+    index: number
+  ) => {
     setSelectedChartIndex(index);
     setLightboxOpen(true);
   };
@@ -664,51 +796,64 @@ const SignalsDashboard = () => {
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
 
           <TrialExpiredPopup
-            open={showTrialExpiredPopup}
+            open={
+              showTrialExpiredPopup
+            }
             onClose={() =>
-              setShowTrialExpiredPopup(false)
+              setShowTrialExpiredPopup(
+                false
+              )
             }
           />
 
           {/* CATEGORY TABS */}
           <div className="mb-4">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              {categoryTabs.map((tab) => {
-                const isActive =
-                  mainCategory === tab.key;
+              {categoryTabs.map(
+                (tab) => {
+                  const isActive =
+                    mainCategory ===
+                    tab.key;
 
-                const activeCount =
-                  getActiveSignalsCount(tab.key);
+                  const activeCount =
+                    getActiveSignalsCount(
+                      tab.key
+                    );
 
-                const hasActiveSignals =
-                  activeCount > 0;
+                  const hasActiveSignals =
+                    activeCount > 0;
 
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() =>
-                      handleCategoryChange(tab.key)
-                    }
-                    className={cn(
-                      "relative flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 border",
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() =>
+                        handleCategoryChange(
+                          tab.key
+                        )
+                      }
+                      className={cn(
+                        "relative flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 border",
 
-                      isActive
-                        ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
-                        : "bg-card text-muted-foreground border-border hover:bg-accent/50 hover:text-foreground"
-                    )}
-                  >
-                    <span>{tab.label}</span>
-
-                    {hasActiveSignals && (
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
+                          : "bg-card text-muted-foreground border-border hover:bg-accent/50 hover:text-foreground"
+                      )}
+                    >
+                      <span>
+                        {tab.label}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+
+                      {hasActiveSignals && (
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                }
+              )}
             </div>
           </div>
 
@@ -725,12 +870,17 @@ const SignalsDashboard = () => {
           >
 
             {/* SUBCATEGORY SELECTOR */}
-            {mainCategory !== "MARKET IDEAS" &&
+            {mainCategory !==
+              "MARKET IDEAS" &&
               mainCategory !== "COPIER" &&
-              subCategoryOptions[mainCategory] && (
+              subCategoryOptions[
+                mainCategory
+              ] && (
                 <div className="mb-4">
                   <select
-                    value={subCategory}
+                    value={
+                      subCategory
+                    }
                     onChange={(e) =>
                       setSubCategory(
                         e.target.value
@@ -744,20 +894,23 @@ const SignalsDashboard = () => {
 
                     {subCategoryOptions[
                       mainCategory
-                    ].map((pair) => (
-                      <option
-                        key={pair}
-                        value={pair}
-                      >
-                        {pair}
-                      </option>
-                    ))}
+                    ].map(
+                      (pair) => (
+                        <option
+                          key={pair}
+                          value={pair}
+                        >
+                          {pair}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
               )}
 
             {/* MARKET IDEAS */}
-            {mainCategory === "MARKET IDEAS" && (
+            {mainCategory ===
+              "MARKET IDEAS" && (
               <>
                 {isLoadingCharts ? (
                   <div className="flex justify-center items-center py-20">
@@ -766,12 +919,16 @@ const SignalsDashboard = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     {chartAnalysis?.map(
-                      (analysis, index) => {
+                      (
+                        analysis,
+                        index
+                      ) => {
                         const hasImage =
                           !!analysis.image_url &&
                           String(
                             analysis.image_url
-                          ).trim() !== "";
+                          ).trim() !==
+                            "";
 
                         const displayTime =
                           formatExactRealTime(
@@ -780,14 +937,18 @@ const SignalsDashboard = () => {
 
                         return (
                           <Card
-                            key={analysis.id}
+                            key={
+                              analysis.id
+                            }
                             className="group overflow-hidden rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-lg transition-all duration-300"
                           >
                             {hasImage && (
                               <div
                                 className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer"
                                 onClick={() =>
-                                  openLightbox(index)
+                                  openLightbox(
+                                    index
+                                  )
                                 }
                               >
                                 <img
@@ -817,12 +978,16 @@ const SignalsDashboard = () => {
                             <CardHeader className="p-4 sm:p-5 pb-2">
                               {analysis.title && (
                                 <CardTitle className="text-base sm:text-lg font-bold group-hover:text-primary transition-colors text-foreground">
-                                  {analysis.title}
+                                  {
+                                    analysis.title
+                                  }
                                 </CardTitle>
                               )}
 
                               <p className="text-xs text-muted-foreground">
-                                {displayTime}
+                                {
+                                  displayTime
+                                }
                               </p>
                             </CardHeader>
 
@@ -851,13 +1016,20 @@ const SignalsDashboard = () => {
                 )}
 
                 {chartAnalysis &&
-                  chartAnalysis.length > 0 && (
+                  chartAnalysis.length >
+                    0 && (
                     <ChartLightbox
-                      isOpen={lightboxOpen}
-                      onClose={() =>
-                        setLightboxOpen(false)
+                      isOpen={
+                        lightboxOpen
                       }
-                      charts={chartAnalysis}
+                      onClose={() =>
+                        setLightboxOpen(
+                          false
+                        )
+                      }
+                      charts={
+                        chartAnalysis
+                      }
                       initialIndex={
                         selectedChartIndex
                       }
@@ -865,7 +1037,8 @@ const SignalsDashboard = () => {
                   )}
 
                 {!isLoadingCharts &&
-                  chartAnalysis?.length === 0 && (
+                  chartAnalysis?.length ===
+                    0 && (
                     <div className="text-center py-20 bg-card rounded-2xl border border-border">
                       <p className="text-muted-foreground text-base sm:text-lg font-medium">
                         No chart analysis
@@ -877,13 +1050,16 @@ const SignalsDashboard = () => {
             )}
 
             {/* COPIER */}
-            {mainCategory === "COPIER" && (
+            {mainCategory ===
+              "COPIER" && (
               <CopierLeaderboard />
             )}
 
             {/* SIGNALS LIST */}
-            {mainCategory !== "MARKET IDEAS" &&
-              mainCategory !== "COPIER" && (
+            {mainCategory !==
+              "MARKET IDEAS" &&
+              mainCategory !==
+                "COPIER" && (
                 <>
                   {isLoading ? (
                     <SignalsSkeleton />
@@ -891,35 +1067,34 @@ const SignalsDashboard = () => {
                     <div className="space-y-6">
 
                       {signals &&
-                      signals.length > 0 ? (
+                      signals.length >
+                        0 ? (
                         (() => {
                           /*
-                           * Determine OPEN signals.
+                           * OPEN SIGNAL
                            */
-                          const isOpenSignal = (
-                            signal: any
-                          ) => {
-                            const status =
-                              String(
-                                signal.signal_status ||
-                                  signal.status ||
-                                  "open"
-                              ).toLowerCase();
+                          const isOpenSignal =
+                            (
+                              signal: any
+                            ) => {
+                              const status =
+                                String(
+                                  signal.signal_status ||
+                                    signal.status ||
+                                    "open"
+                                ).toLowerCase();
 
-                            return [
-                              "open",
-                              "running",
-                              "active",
-                            ].includes(status);
-                          };
+                              return [
+                                "open",
+                                "running",
+                                "active",
+                              ].includes(
+                                status
+                              );
+                            };
 
                           /*
-                           * Count all OPEN signals.
-                           *
-                           * Because allSignals is sorted with
-                           * open signals first, this tells us
-                           * exactly where the Exness banner
-                           * should appear.
+                           * Total OPEN signals
                            */
                           const openSignalCount =
                             signals.filter(
@@ -927,7 +1102,7 @@ const SignalsDashboard = () => {
                             ).length;
 
                           /*
-                           * Group signals by date.
+                           * Group by date
                            */
                           const groupedSignals: {
                             [key: string]: typeof signals;
@@ -954,19 +1129,20 @@ const SignalsDashboard = () => {
 
                               groupedSignals[
                                 date
-                              ].push(signal);
+                              ].push(
+                                signal
+                              );
                             }
                           );
 
-                          let globalSignalIndex = 0;
+                          let globalSignalIndex =
+                            0;
 
                           return (
                             <>
                               {/*
-                               * IF THERE ARE ZERO OPEN SIGNALS:
-                               *
-                               * Banner is displayed
-                               * at the very top.
+                               * NO OPEN SIGNALS:
+                               * banner goes at TOP.
                                */}
                               {openSignalCount ===
                                 0 && (
@@ -980,9 +1156,12 @@ const SignalsDashboard = () => {
                                   date,
                                   daySignals,
                                 ]) => (
-                                  <div key={date}>
+                                  <div
+                                    key={
+                                      date
+                                    }
+                                  >
                                     <div className="space-y-3">
-
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
 
                                         {daySignals.map(
@@ -1005,32 +1184,21 @@ const SignalsDashboard = () => {
                                                   )
                                                 : undefined;
 
-                                            /*
-                                             * Increase global
-                                             * position.
-                                             */
-                                            globalSignalIndex += 1;
+                                            globalSignalIndex +=
+                                              1;
 
-                                            /*
-                                             * Existing affiliate
-                                             * banner logic.
-                                             */
                                             const showBanner =
                                               globalSignalIndex %
                                                 3 ===
                                               0;
 
-                                            /*
-                                             * Existing ad logic.
-                                             */
                                             const showAd =
                                               globalSignalIndex %
                                                 6 ===
                                               0;
 
                                             /*
-                                             * This is the LAST
-                                             * OPEN signal.
+                                             * LAST OPEN SIGNAL
                                              */
                                             const isFinalOpenSignal =
                                               openSignalCount >
@@ -1044,8 +1212,7 @@ const SignalsDashboard = () => {
                                                   signal.id
                                                 }
                                               >
-
-                                                {/* SIGNAL CARD */}
+                                                {/* SIGNAL */}
                                                 <SignalCardNew
                                                   signal={
                                                     signal as any
@@ -1062,11 +1229,10 @@ const SignalsDashboard = () => {
                                                 />
 
                                                 {/*
-                                                 * EXNESS BANNER
+                                                 * EXNESS SLIDER
                                                  *
-                                                 * It appears immediately
-                                                 * after the final OPEN
-                                                 * signal.
+                                                 * Appears directly after
+                                                 * all OPEN signals.
                                                  */}
                                                 {isFinalOpenSignal && (
                                                   <ExnessSignalBanner />
@@ -1096,7 +1262,6 @@ const SignalsDashboard = () => {
                                                       />
                                                     </div>
                                                   )}
-
                                               </React.Fragment>
                                             );
                                           }
@@ -1120,7 +1285,9 @@ const SignalsDashboard = () => {
 
                       {/* LOAD MORE */}
                       <div
-                        ref={loadMoreRef}
+                        ref={
+                          loadMoreRef
+                        }
                         className="py-8 flex justify-center"
                       >
                         {isFetchingNextPage && (
@@ -1128,7 +1295,8 @@ const SignalsDashboard = () => {
                         )}
 
                         {!hasNextPage &&
-                          signals.length > 0 && (
+                          signals.length >
+                            0 && (
                             <p className="text-muted-foreground text-xs sm:text-sm font-medium">
                               All signals loaded
                             </p>
@@ -1139,16 +1307,15 @@ const SignalsDashboard = () => {
                   )}
                 </>
               )}
-
           </div>
 
           {/* BOTTOM AD */}
-          {subscriptionStatus !== "premium" && (
+          {subscriptionStatus !==
+            "premium" && (
             <div className="mt-6">
               <AdBanner />
             </div>
           )}
-
         </div>
       </main>
 
