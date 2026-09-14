@@ -32,6 +32,18 @@ const Login = () => {
         toast.error(error.message);
       } else {
         toast.success("Logged in successfully!");
+
+        // Track login history
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const ua = navigator.userAgent;
+          await supabase.from("user_login_history").insert({
+            user_id: userData.user.id,
+            device_type: /Mobi|Android|iPhone/i.test(ua) ? "mobile" : "desktop",
+            browser: ua,
+          });
+        }
+
         navigate(returnUrl);
       }
     } catch {
