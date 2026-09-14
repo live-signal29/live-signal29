@@ -4,7 +4,7 @@
 
 /* =========================================================
    FOREX 7STARZ EXACT DESIGN SYSTEM
-   Dark Theme : Deep Pitch Obsidian + Neon Glows
+   Dark Theme : Professional Navy Blue + Neon Glows
    Light Theme: Crisp Porcelain White + Modern Emerald/Cyan
    ========================================================= */
 
@@ -51,41 +51,41 @@
     --sell: 346 84% 61%;
   }
 
-  /* ================= DARK THEME (FOREX7STARZ EXACT) ================= */
+  /* ================= DARK THEME (PROFESSIONAL NAVY) ================= */
   .dark {
-    --background: 225 40% 5%;             /* Pitch Obsidian Black #060913 */
-    --foreground: 0 0% 100%;
+    --background: 222 47% 11%;           /* Deep Navy #0F172A */
+    --foreground: 210 40% 98%;
 
-    --card: 224 35% 8%;                  /* Elevated Dark Card #0C101D */
-    --card-foreground: 0 0% 100%;
+    --card: 222 40% 16%;                 /* Elevated Navy Card #1B2436 */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 224 35% 8%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 222 40% 16%;
+    --popover-foreground: 210 40% 98%;
 
     --primary: 161 94% 40%;              /* Neon Emerald Green */
-    --primary-foreground: 225 40% 5%;
+    --primary-foreground: 222 47% 11%;
 
     --secondary: 187 92% 45%;            /* Neon Cyan */
-    --secondary-foreground: 225 40% 5%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 224 25% 14%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 222 35% 20%;                /* Navy muted surface */
+    --muted-foreground: 215 20% 70%;
 
     --accent: 45 93% 53%;                /* Forex Gold Accent */
-    --accent-foreground: 225 40% 5%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 346 84% 65%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 224 25% 16%;
-    --input: 224 25% 16%;
+    --border: 222 30% 24%;               /* Soft navy border */
+    --input: 222 30% 24%;
     --ring: 161 94% 40%;
 
     --success: 161 94% 40%;
-    --success-foreground: 225 40% 5%;
+    --success-foreground: 222 47% 11%;
     --success-deep: 161 94% 28%;
     --warning: 45 93% 53%;
-    --warning-foreground: 225 40% 5%;
+    --warning-foreground: 222 47% 11%;
     --buy: 161 94% 40%;
     --sell: 346 84% 65%;
   }
