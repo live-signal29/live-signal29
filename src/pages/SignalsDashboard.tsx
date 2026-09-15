@@ -40,7 +40,6 @@ const MARKET_IDEAS_REFRESH_MS = 30000;
 
 const CATEGORIES = [
   "COMMODITIES",
-  "FOREX",
   "CRYPTO",
   "DERIV/BINARY",
   "COPIER",
@@ -757,10 +756,6 @@ const SignalsDashboard = () => {
       label: "Gold",
     },
     {
-      key: "FOREX",
-      label: "Forex",
-    },
-    {
       key: "CRYPTO",
       label: "Crypto",
     },
@@ -770,7 +765,7 @@ const SignalsDashboard = () => {
     },
     {
       key: "COPIER",
-      label: "Copier",
+      label: "MT5&MT4 COPY",
     },
   ];
 
