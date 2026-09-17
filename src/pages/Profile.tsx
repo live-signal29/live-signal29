@@ -525,59 +525,89 @@ const Profile = () => {
           </Card>
 
           {/* Subscription Details */}
-          {profile.subscription_plan && (
-            <Card className="mb-6 rounded-3xl border-border/80 bg-card/60 backdrop-blur-md shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  Subscription Details
-                </CardTitle>
-              </CardHeader>
+          <Card className="mb-6 rounded-3xl border-border/80 bg-card/60 backdrop-blur-md shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Subscription Details
+              </CardTitle>
+            </CardHeader>
 
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between items-center py-1">
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-muted-foreground">
+                  Plan Type:
+                </span>
+
+                <Badge
+                  variant="secondary"
+                  className="capitalize rounded-xl px-3 py-0.5 bg-muted/60 text-foreground border border-border/50"
+                >
+                  {profile.subscription_plan ||
+                    (isPremium
+                      ? "Premium"
+                      : isTrial
+                      ? "Free Trial"
+                      : "Expired")}
+                </Badge>
+              </div>
+
+              {profile.subscription_start_date && (
+                <div className="flex justify-between items-center py-1 border-t border-border/40">
                   <span className="text-muted-foreground">
-                    Plan Type:
+                    Started:
                   </span>
 
-                  <Badge
-                    variant="secondary"
-                    className="capitalize rounded-xl px-3 py-0.5 bg-muted/60 text-foreground border border-border/50"
-                  >
-                    {profile.subscription_plan}
-                  </Badge>
+                  <span className="font-semibold text-foreground">
+                    {new Date(
+                      profile.subscription_start_date
+                    ).toLocaleDateString()}
+                  </span>
                 </div>
+              )}
 
-                {profile.subscription_start_date && (
+              {profile.subscription_end_date && (
+                <div className="flex justify-between items-center py-1 border-t border-border/40">
+                  <span className="text-muted-foreground">
+                    Expires:
+                  </span>
+
+                  <span className="font-semibold text-foreground">
+                    {new Date(
+                      profile.subscription_end_date
+                    ).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+
+              {!profile.subscription_end_date &&
+                profile.trial_end_date && (
                   <div className="flex justify-between items-center py-1 border-t border-border/40">
                     <span className="text-muted-foreground">
-                      Started:
+                      Trial Ends:
                     </span>
 
                     <span className="font-semibold text-foreground">
                       {new Date(
-                        profile.subscription_start_date
+                        profile.trial_end_date
                       ).toLocaleDateString()}
                     </span>
                   </div>
                 )}
 
-                {profile.subscription_end_date && (
-                  <div className="flex justify-between items-center py-1 border-t border-border/40">
-                    <span className="text-muted-foreground">
-                      Expires:
-                    </span>
+              {daysRemaining !== null && daysRemaining > 0 && (
+                <div className="flex justify-between items-center py-1 border-t border-border/40">
+                  <span className="text-muted-foreground">
+                    Time Remaining:
+                  </span>
 
-                    <span className="font-semibold text-foreground">
-                      {new Date(
-                        profile.subscription_end_date
-                      ).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  <span className="font-semibold text-foreground">
+                    {timeRemaining || `${daysRemaining} days`}
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Account Information */}
           <Card className="mb-6 rounded-3xl border-border/80 bg-card/60 backdrop-blur-md shadow-sm">
