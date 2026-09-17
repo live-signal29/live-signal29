@@ -5,7 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, ExternalLink } from "lucide-react";
 
 const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
+  "https://play.google.com/store/apps/details?id=co.median.android.odrkwln";
+
+// Keep in sync with APP_VERSION in SideDrawer.tsx
+const APP_VERSION = "1.7.9";
+const LAST_UPDATED = "Sep 5, 2026";
 
 const Settings = () => {
   const handleRateUs = () => {
@@ -71,14 +75,14 @@ const Settings = () => {
                 <span className="text-muted-foreground">
                   App Version
                 </span>
-                <span className="font-medium">2.1.0</span>
+                <span className="font-medium">{APP_VERSION}</span>
               </div>
 
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">
                   Last Updated
                 </span>
-                <span className="font-medium">Today</span>
+                <span className="font-medium">{LAST_UPDATED}</span>
               </div>
 
               <div className="flex justify-between items-center py-2">
