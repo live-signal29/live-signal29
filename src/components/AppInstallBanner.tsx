@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 
 const AppInstallBanner = () => {
   const PLAY_STORE_URL =
-    "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
+    "https://play.google.com/store/apps/dev?id=8617006322141073240";
 
   const handleDownload = () => {
     window.open(PLAY_STORE_URL, "_blank");
