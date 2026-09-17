@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import NotificationSettings from "@/components/NotificationSettings";
 import {
   Card,
   CardContent,
@@ -25,9 +26,18 @@ import {
   X,
   LogOut,
   ShieldCheck,
+  Star,
+  ExternalLink,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=co.median.android.odrkwln";
+
+// Keep in sync with APP_VERSION in SideDrawer.tsx
+const APP_VERSION = "1.7.9";
+const LAST_UPDATED = "Sep 5, 2026";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -314,6 +324,13 @@ const Profile = () => {
   };
 
   // ----------------------------------------------------
+  // RATE US
+  // ----------------------------------------------------
+  const handleRateUs = () => {
+    window.open(PLAY_STORE_URL, "_blank", "noopener,noreferrer");
+  };
+
+  // ----------------------------------------------------
   // LOADING
   // ----------------------------------------------------
   if (loading) {
@@ -472,6 +489,40 @@ const Profile = () => {
               )}
             </div>
           </div>
+
+          {/* Rate Us */}
+          <Card className="mb-6 rounded-3xl border-border/80 bg-card/60 backdrop-blur-md shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                <Star className="h-4 w-4 text-primary" />
+                Rate Us
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="font-medium text-sm">
+                    Enjoying our app?
+                  </p>
+
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Your honest feedback helps us improve the app and provide
+                    a better experience for everyone.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleRateUs}
+                  className="w-full sm:w-auto rounded-2xl"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Rate Us
+                  <ExternalLink className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Subscription Details */}
           {profile.subscription_plan && (
@@ -654,7 +705,7 @@ const Profile = () => {
 
           {/* Payment History */}
           {subscriptions.length > 0 && (
-            <Card className="rounded-3xl border-border/80 bg-card/60 backdrop-blur-md shadow-sm">
+            <Card className="mb-6 rounded-3xl border-border/80 bg-card/60 backdrop-blur-md shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-primary" />
@@ -703,6 +754,49 @@ const Profile = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Notification Settings */}
+          <div className="mb-6">
+            <NotificationSettings />
+          </div>
+
+          {/* App Information */}
+          <Card className="rounded-3xl border-border/80 bg-card/60 backdrop-blur-md shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold text-foreground">
+                App Information
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-muted-foreground">
+                  App Version
+                </span>
+                <span className="font-semibold text-foreground">
+                  {APP_VERSION}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-t border-border/40">
+                <span className="text-muted-foreground">
+                  Last Updated
+                </span>
+                <span className="font-semibold text-foreground">
+                  {LAST_UPDATED}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-t border-border/40">
+                <span className="text-muted-foreground">
+                  Platform
+                </span>
+                <span className="font-semibold text-foreground">
+                  Web App
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
 
