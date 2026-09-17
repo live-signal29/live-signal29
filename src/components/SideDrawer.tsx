@@ -442,23 +442,13 @@ export const SideDrawer = () => {
                 <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
                   <div className="ml-3 pl-3 border-l-2 border-cyan-500/20 space-y-1 py-1.5">
                     <a
-                      href="http://cryptoincome.vercel.app"
+                      href="https://play.google.com/store/apps/developer?id=Fx+Signal+Lab"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={closeDrawer}
                       className="flex items-center justify-between py-2 px-3 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-cyan-500/10 transition-colors duration-200 group"
                     >
-                      <span>Crypto Investment</span>
-                      <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100" />
-                    </a>
-                    <a
-                      href="https://one.exnessonelink.com/a/vtkbbmje"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={closeDrawer}
-                      className="flex items-center justify-between py-2 px-3 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-cyan-500/10 transition-colors duration-200 group"
-                    >
-                      <span>Open Forex Account</span>
+                      <span>All Apps</span>
                       <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100" />
                     </a>
                   </div>
