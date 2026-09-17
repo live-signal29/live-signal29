@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Bell, Settings,
+  Menu, ChevronDown, ExternalLink, LineChart, Crown, User, Bell,
   Smartphone, LogOut, Briefcase, BarChart3, Calendar as CalendarIcon,
   Calculator as CalcIcon, Gift, Bell as BellIcon, BookOpen, Sparkles,
   Trophy, GraduationCap, Newspaper, History, TrendingUp, PieChart,
@@ -290,6 +290,16 @@ export const SideDrawer = () => {
   const menuGroups = useMemo<MenuGroup[]>(
     () => [
       {
+        title: "Account",
+        icon: AccountIcon,
+        items: [
+          { label: "Account Management", path: "/account-management", icon: Briefcase, tint: "text-teal-400" },
+          { label: "My Profile", path: "/profile", icon: User, tint: "text-purple-400" },
+          { label: t("notifications"), path: "/notifications", icon: Bell, tint: "text-rose-400" },
+          { label: "Leaderboard", path: "/leaderboard", icon: Trophy, tint: "text-amber-400" },
+        ],
+      },
+      {
         title: "Live Trading",
         icon: LiveIcon,
         items: [
@@ -326,17 +336,6 @@ export const SideDrawer = () => {
           { label: t("premium"), path: "/premium", icon: Crown, tint: "text-amber-400", badge: "Pro" },
           { label: "Gift Premium", path: "/gift-premium", icon: Gift, tint: "text-rose-400" },
           { label: "Invite & Earn", path: "/referrals", icon: Gift, tint: "text-orange-400" },
-        ],
-      },
-      {
-        title: "Account",
-        icon: AccountIcon,
-        items: [
-          { label: "Account Management", path: "/account-management", icon: Briefcase, tint: "text-teal-400" },
-          { label: "My Profile", path: "/profile", icon: User, tint: "text-purple-400" },
-          { label: t("notifications"), path: "/notifications", icon: Bell, tint: "text-rose-400" },
-          { label: t("settings"), path: "/settings", icon: Settings, tint: "text-slate-400" },
-          { label: "Leaderboard", path: "/leaderboard", icon: Trophy, tint: "text-amber-400" },
         ],
       },
     ],
@@ -397,7 +396,25 @@ export const SideDrawer = () => {
             onScroll={rememberScroll}
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain scroll-smooth [-webkit-overflow-scrolling:touch] px-3 py-2 space-y-1"
           >
-            {menuGroups.map((group) => (
+            {menuGroups[0] && (
+              <CategoryGroup
+                key={menuGroups[0].title}
+                group={menuGroups[0]}
+                isOpen={openCategories[menuGroups[0].title] ?? false}
+                onToggle={() => toggleCategory(menuGroups[0].title)}
+                locationPath={location.pathname}
+                closeDrawer={closeDrawer}
+              />
+            )}
+
+            {/* Selected Language Category */}
+            <LanguageCategory
+              isOpen={openCategories["Selected Language"] ?? false}
+              onToggle={() => toggleCategory("Selected Language")}
+              closeDrawer={closeDrawer}
+            />
+
+            {menuGroups.slice(1).map((group) => (
               <CategoryGroup
                 key={group.title}
                 group={group}
@@ -407,13 +424,6 @@ export const SideDrawer = () => {
                 closeDrawer={closeDrawer}
               />
             ))}
-
-            {/* Selected Language Category */}
-            <LanguageCategory
-              isOpen={openCategories["Selected Language"] ?? false}
-              onToggle={() => toggleCategory("Selected Language")}
-              closeDrawer={closeDrawer}
-            />
 
             {/* Other Apps */}
             <div className="my-1">
