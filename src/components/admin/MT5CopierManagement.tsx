@@ -40,6 +40,7 @@ interface CopierRequest {
   note: string | null;
   status: string;
   is_public: boolean;
+  account_balance: number | null;
   profit_amount: number | null;
   loss_amount: number | null;
   risk_reward_ratio: string | null;
@@ -102,17 +103,19 @@ const MT5CopierManagement = () => {
     window.open(`https://wa.me/${cleanNumber.replace("+", "")}`, "_blank");
   };
 
-  // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on %
-  // Profit % and Loss % are now fully independent — entering one no longer resets the other.
+  // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on % of the account balance
+  // Profit % and Loss % are fully independent — entering one no longer resets the other.
   const savePerformance = (req: CopierRequest) => {
     const d = drafts[req.id] || {};
 
+    let accountBalance = d.account_balance !== undefined ? Number(d.account_balance) || 0 : (req.account_balance || 0);
     let profitPercent = d.profit_percent !== undefined ? Number(d.profit_percent) || 0 : (req.profit_percent || 0);
     let lossPercent = d.loss_percent !== undefined ? Number(d.loss_percent) || 0 : (req.loss_percent || 0);
 
-    // Dynamic auto calculations
-    let profitAmount = profitPercent > 0 ? profitPercent * 10 : 0;
-    let lossAmount = lossPercent > 0 ? lossPercent * 10 : 0;
+    // Amounts are now derived from the entered account balance:
+    // e.g. $100 balance + 10% profit = $10 profit (balance * percent / 100)
+    let profitAmount = profitPercent > 0 ? Math.round((accountBalance * profitPercent) / 100 * 100) / 100 : 0;
+    let lossAmount = lossPercent > 0 ? Math.round((accountBalance * lossPercent) / 100 * 100) / 100 : 0;
 
     let riskReward = "1:1";
     if (profitPercent > 0 && lossPercent === 0) {
@@ -125,6 +128,7 @@ const MT5CopierManagement = () => {
     updateMutation.mutate({
       id: req.id,
       updates: {
+        account_balance: accountBalance,
         profit_percent: profitPercent,
         loss_percent: lossPercent,
         profit_amount: profitAmount,
@@ -383,6 +387,18 @@ const MT5CopierManagement = () => {
 
                     {isExpanded && (
                       <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/30">
+                        <div className="col-span-2 space-y-1">
+                          <Label className="text-[11px] flex items-center gap-1">
+                            Account Balance ($)
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="e.g. 100"
+                            className="h-8 text-sm"
+                            value={getDraft(req, "account_balance") ?? ""}
+                            onChange={(e) => setDraft(req.id, "account_balance", e.target.value)}
+                          />
+                        </div>
                         <div className="space-y-1">
                           <Label className="text-[11px] flex items-center gap-1">
                             <TrendingUp className="h-3 w-3 text-emerald-500" /> Profit %
@@ -406,6 +422,17 @@ const MT5CopierManagement = () => {
                             value={getDraft(req, "loss_percent") ?? ""}
                             onChange={(e) => setDraft(req.id, "loss_percent", e.target.value)}
                           />
+                        </div>
+
+                        <div className="col-span-2 text-[11px] text-muted-foreground">
+                          {(() => {
+                            const bal = Number(getDraft(req, "account_balance")) || 0;
+                            const pp = Number(getDraft(req, "profit_percent")) || 0;
+                            const lp = Number(getDraft(req, "loss_percent")) || 0;
+                            const profitPreview = pp > 0 ? ((bal * pp) / 100).toFixed(2) : "0.00";
+                            const lossPreview = lp > 0 ? ((bal * lp) / 100).toFixed(2) : "0.00";
+                            return `Preview → Profit: $${profitPreview} | Loss: $${lossPreview} (based on $${bal || 0} balance)`;
+                          })()}
                         </div>
 
                         <div className="col-span-2">
