@@ -103,16 +103,17 @@ const MT5CopierManagement = () => {
   };
 
   // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on %
+  // Profit % and Loss % are now fully independent — entering one no longer resets the other.
   const savePerformance = (req: CopierRequest) => {
     const d = drafts[req.id] || {};
-    
+
     let profitPercent = d.profit_percent !== undefined ? Number(d.profit_percent) || 0 : (req.profit_percent || 0);
     let lossPercent = d.loss_percent !== undefined ? Number(d.loss_percent) || 0 : (req.loss_percent || 0);
 
     // Dynamic auto calculations
     let profitAmount = profitPercent > 0 ? profitPercent * 10 : 0;
     let lossAmount = lossPercent > 0 ? lossPercent * 10 : 0;
-    
+
     let riskReward = "1:1";
     if (profitPercent > 0 && lossPercent === 0) {
       riskReward = `1:${Math.round((profitPercent / 10) * 10) / 10 || 1}`;
@@ -391,11 +392,7 @@ const MT5CopierManagement = () => {
                             placeholder="e.g. 15"
                             className="h-8 text-sm"
                             value={getDraft(req, "profit_percent") ?? ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setDraft(req.id, "profit_percent", val);
-                              if (Number(val) > 0) setDraft(req.id, "loss_percent", 0);
-                            }}
+                            onChange={(e) => setDraft(req.id, "profit_percent", e.target.value)}
                           />
                         </div>
                         <div className="space-y-1">
@@ -407,14 +404,10 @@ const MT5CopierManagement = () => {
                             placeholder="e.g. 5"
                             className="h-8 text-sm"
                             value={getDraft(req, "loss_percent") ?? ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setDraft(req.id, "loss_percent", val);
-                              if (Number(val) > 0) setDraft(req.id, "profit_percent", 0);
-                            }}
+                            onChange={(e) => setDraft(req.id, "loss_percent", e.target.value)}
                           />
                         </div>
-                        
+
                         <div className="col-span-2">
                           <Button
                             size="sm"
