@@ -21,6 +21,12 @@ const safeFormatDate = (value: string | null | undefined, pattern: string) => {
   return format(d, pattern);
 };
 
+const PAGE_OPTIONS: { value: string; label: string }[] = [
+  { value: "premium", label: "Premium (Plans) page" },
+  { value: "account", label: "Account Management page" },
+  { value: "dashboard", label: "Signals Dashboard" },
+];
+
 const SpecialOfferManagement = () => {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -30,6 +36,9 @@ const SpecialOfferManagement = () => {
     description: "",
     end_date: "",
     is_active: false,
+    button_text: "",
+    button_link: "",
+    show_pages: [] as string[],
   });
 
   const { data: offers, isLoading, isError, error, refetch } = useQuery({
@@ -58,6 +67,9 @@ const SpecialOfferManagement = () => {
       description: formData.description || null,
       end_date: new Date(formData.end_date).toISOString(),
       is_active: formData.is_active,
+      button_text: formData.button_text || null,
+      button_link: formData.button_link || null,
+      show_pages: formData.show_pages,
     };
 
     try {
@@ -118,6 +130,9 @@ const SpecialOfferManagement = () => {
       description: offer.description || "",
       end_date: safeFormatDate(offer.end_date, "yyyy-MM-dd'T'HH:mm"),
       is_active: offer.is_active,
+      button_text: offer.button_text || "",
+      button_link: offer.button_link || "",
+      show_pages: offer.show_pages || [],
     });
     setShowForm(true);
   };
@@ -128,6 +143,9 @@ const SpecialOfferManagement = () => {
       description: "",
       end_date: "",
       is_active: false,
+      button_text: "",
+      button_link: "",
+      show_pages: [],
     });
     setEditingOffer(null);
     setShowForm(false);
@@ -176,6 +194,57 @@ const SpecialOfferManagement = () => {
                   required
                 />
               </div>
+              <div>
+                <Label>Button Text</Label>
+                <Input
+                  placeholder="Register Now"
+                  value={formData.button_text}
+                  onChange={(e) => setFormData({ ...formData, button_text: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Button Link</Label>
+                <Input
+                  type="url"
+                  placeholder="https://example.com"
+                  value={formData.button_link}
+                  onChange={(e) => setFormData({ ...formData, button_link: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leave both blank to hide the button on this offer. If left blank with only
+                  button text set, the button will scroll to the pricing plans instead of
+                  opening a link.
+                </p>
+              </div>
+              <div>
+                <Label>Show this offer on</Label>
+                <div className="space-y-2 mt-2">
+                  {PAGE_OPTIONS.map((opt) => (
+                    <div key={opt.value} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`page-${opt.value}`}
+                        checked={formData.show_pages.includes(opt.value)}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            show_pages: e.target.checked
+                              ? [...formData.show_pages, opt.value]
+                              : formData.show_pages.filter((p) => p !== opt.value),
+                          });
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <label htmlFor={`page-${opt.value}`} className="text-sm cursor-pointer">
+                        {opt.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leave all unchecked to show this offer everywhere the banner appears.
+                </p>
+              </div>
               <div className="flex items-center space-x-2">
                 <Switch
                   id="is_active"
@@ -217,6 +286,8 @@ const SpecialOfferManagement = () => {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead>Button</TableHead>
+                  <TableHead>Pages</TableHead>
                   <TableHead>End Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -228,6 +299,14 @@ const SpecialOfferManagement = () => {
                     <TableCell className="font-semibold">{offer.title}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {offer.description || "-"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {offer.button_text || "-"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {offer.show_pages && offer.show_pages.length > 0
+                        ? offer.show_pages.join(", ")
+                        : "Everywhere"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
