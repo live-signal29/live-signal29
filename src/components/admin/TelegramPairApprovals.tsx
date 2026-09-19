@@ -14,18 +14,12 @@ interface PairRow {
   is_approved: boolean;
 }
 
-const CATEGORY_OPTIONS = ["FOREX", "CRYPTO", "COMMODITIES", "DERIV"];
-
 const TelegramPairApprovals = () => {
   const [rows, setRows] = useState<PairRow[]>([]);
   const [dirty, setDirty] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const [newPair, setNewPair] = useState("");
-  const [newCategory, setNewCategory] = useState("FOREX");
-  const [adding, setAdding] = useState(false);
 
   const loadRows = async () => {
     setLoading(true);
@@ -97,23 +91,6 @@ const TelegramPairApprovals = () => {
     }
   };
 
-  const addNewPair = async () => {
-    const pair = newPair.trim();
-    if (!pair) return;
-    setAdding(true);
-    const { error } = await supabase
-      .from("telegram_pair_approvals")
-      .upsert({ pair, category: newCategory, is_approved: true }, { onConflict: "pair" });
-    setAdding(false);
-    if (error) {
-      toast.error("Failed to add pair: " + error.message);
-    } else {
-      toast.success(`${pair} added & approved`);
-      setNewPair("");
-      await loadRows();
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-[180px] items-center justify-center">
@@ -124,48 +101,11 @@ const TelegramPairApprovals = () => {
 
   return (
     <div className="space-y-3">
-      {/* Intro */}
-      <Card className="border-sky-200 shadow-sm">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center gap-2">
-            <Send className="h-4 w-4 text-sky-600" />
-            <h3 className="font-bold">Telegram Signal Approvals</h3>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            Sirf yahan tick kiye gaye pairs ke naye signals Telegram channel par post honge.
-            Naya pair aaye to yahan by default "not approved" list mein add ho jata hai — usko yahin se approve karo.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Add new pair */}
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={newPair}
-              onChange={(e) => setNewPair(e.target.value)}
-              placeholder="e.g. XAUUSD"
-              className="flex-1"
-            />
-            <select
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {CATEGORY_OPTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <Button onClick={addNewPair} disabled={adding || !newPair.trim()} className="sm:w-auto">
-              {adding ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-              Add &amp; Approve
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Title only */}
+      <div className="flex items-center gap-2 px-1">
+        <Send className="h-4 w-4 text-sky-600" />
+        <h3 className="font-bold">Telegram Signal Approvals</h3>
+      </div>
 
       {/* Search */}
       <div className="relative">
