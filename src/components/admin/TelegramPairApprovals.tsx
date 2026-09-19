@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-// ⚠️ Adjust this import to match your project's Supabase client path.
-// If your app was built with Lovable, this is usually the correct path already.
 import { supabase } from "@/integrations/supabase/client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
+import { Loader2, Save, Search, Send } from "lucide-react";
+import { toast } from "sonner";
 
 interface PairRow {
   pair: string;
@@ -9,26 +14,34 @@ interface PairRow {
   is_approved: boolean;
 }
 
-export default function TelegramPairApprovals() {
+const CATEGORY_OPTIONS = ["FOREX", "CRYPTO", "COMMODITIES", "DERIV"];
+
+const TelegramPairApprovals = () => {
   const [rows, setRows] = useState<PairRow[]>([]);
-  const [dirty, setDirty] = useState<Record<string, boolean>>({}); // pair -> new is_approved
+  const [dirty, setDirty] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [newPair, setNewPair] = useState("");
   const [newCategory, setNewCategory] = useState("FOREX");
-  const [message, setMessage] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
-  async function loadRows() {
+  const loadRows = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("telegram_pair_approvals")
       .select("pair, category, is_approved")
       .order("category", { ascending: true })
       .order("pair", { ascending: true });
-    if (!error && data) setRows(data as PairRow[]);
+
+    if (error) {
+      toast.error("Failed to load pairs: " + error.message);
+    } else if (data) {
+      setRows(data as PairRow[]);
+    }
     setLoading(false);
-  }
+  };
 
   useEffect(() => {
     loadRows();
@@ -36,7 +49,7 @@ export default function TelegramPairApprovals() {
 
   const grouped = useMemo(() => {
     const filtered = rows.filter((r) =>
-      r.pair.toLowerCase().includes(search.toLowerCase())
+      r.pair.toLowerCase().includes(search.trim().toLowerCase())
     );
     const map: Record<string, PairRow[]> = {};
     for (const r of filtered) {
@@ -47,175 +60,187 @@ export default function TelegramPairApprovals() {
     return map;
   }, [rows, search]);
 
-  function toggle(pair: string, current: boolean) {
-    const next = dirty[pair] !== undefined ? !dirty[pair] : !current;
-    setDirty((d) => ({ ...d, [pair]: next }));
-  }
+  const isChecked = (row: PairRow) =>
+    dirty[row.pair] !== undefined ? dirty[row.pair] : row.is_approved;
 
-  function isChecked(row: PairRow) {
-    return dirty[row.pair] !== undefined ? dirty[row.pair] : row.is_approved;
-  }
+  const toggle = (row: PairRow) => {
+    setDirty((d) => ({ ...d, [row.pair]: !isChecked(row) }));
+  };
 
-  function setAllInCategory(category: string, value: boolean) {
+  const setAllInCategory = (category: string, value: boolean) => {
     const updates: Record<string, boolean> = {};
     (grouped[category] || []).forEach((r) => (updates[r.pair] = value));
     setDirty((d) => ({ ...d, ...updates }));
-  }
+  };
 
-  async function saveChanges() {
-    const pairsToUpdate = Object.keys(dirty);
-    if (pairsToUpdate.length === 0) return;
+  const dirtyCount = Object.keys(dirty).length;
+
+  const saveChanges = async () => {
+    if (dirtyCount === 0) return;
     setSaving(true);
-    setMessage(null);
     try {
-      // One update per changed pair (small volume, simple & safe).
-      for (const pair of pairsToUpdate) {
+      const pairs = Object.keys(dirty);
+      for (const pair of pairs) {
         const { error } = await supabase
           .from("telegram_pair_approvals")
           .update({ is_approved: dirty[pair] })
           .eq("pair", pair);
         if (error) throw error;
       }
-      setMessage(`Saved ✓ ${pairsToUpdate.length} pair(s) updated.`);
+      toast.success(`Saved — ${pairs.length} pair(s) updated`);
       setDirty({});
       await loadRows();
     } catch (err: any) {
-      setMessage(`Error: ${err.message || "Save failed"}`);
+      toast.error("Save failed: " + (err?.message || "unknown error"));
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function addNewPair() {
+  const addNewPair = async () => {
     const pair = newPair.trim();
     if (!pair) return;
-    setSaving(true);
-    setMessage(null);
+    setAdding(true);
     const { error } = await supabase
       .from("telegram_pair_approvals")
       .upsert({ pair, category: newCategory, is_approved: true }, { onConflict: "pair" });
-    setSaving(false);
+    setAdding(false);
     if (error) {
-      setMessage(`Error: ${error.message}`);
+      toast.error("Failed to add pair: " + error.message);
     } else {
+      toast.success(`${pair} added & approved`);
       setNewPair("");
-      setMessage(`Added & approved "${pair}" ✓`);
       await loadRows();
     }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[180px] items-center justify-center">
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  const hasChanges = Object.keys(dirty).length > 0;
-
-  if (loading) return <div className="p-6 text-sm text-gray-500">Loading pairs…</div>;
-
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Telegram Signal Approvals</h2>
-        <p className="text-sm text-gray-500">
-          Sirf yahan tick kiye gaye pairs ke signals Telegram channel par post honge.
-          Naya pair signals table mein aaye to yahan by default "not approved" list mein add ho jata hai.
-        </p>
-      </div>
-
-      {/* Add / register a new pair manually */}
-      <div className="flex gap-2 items-center border rounded-lg p-3 bg-gray-50">
-        <input
-          className="border rounded px-2 py-1 text-sm flex-1"
-          placeholder="e.g. XAUUSD"
-          value={newPair}
-          onChange={(e) => setNewPair(e.target.value)}
-        />
-        <select
-          className="border rounded px-2 py-1 text-sm"
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-        >
-          <option value="FOREX">FOREX</option>
-          <option value="CRYPTO">CRYPTO</option>
-          <option value="COMMODITIES">COMMODITIES</option>
-          <option value="DERIV">DERIV</option>
-        </select>
-        <button
-          onClick={addNewPair}
-          disabled={saving || !newPair.trim()}
-          className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded disabled:opacity-50"
-        >
-          Add & Approve
-        </button>
-      </div>
-
-      {/* Search filter */}
-      <input
-        className="border rounded px-3 py-2 text-sm w-full"
-        placeholder="Search pair…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-
-      {/* Grouped checklist */}
-      <div className="space-y-5">
-        {Object.entries(grouped).map(([category, pairs]) => (
-          <div key={category} className="border rounded-lg">
-            <div className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded-t-lg">
-              <span className="font-medium text-sm">{category}</span>
-              <div className="flex gap-2">
-                <button
-                  className="text-xs text-blue-600 hover:underline"
-                  onClick={() => setAllInCategory(category, true)}
-                >
-                  Select all
-                </button>
-                <button
-                  className="text-xs text-gray-500 hover:underline"
-                  onClick={() => setAllInCategory(category, false)}
-                >
-                  Clear all
-                </button>
-              </div>
-            </div>
-            <div className="divide-y">
-              {pairs.map((row) => (
-                <label
-                  key={row.pair}
-                  className="flex items-center justify-between px-3 py-2 text-sm cursor-pointer hover:bg-gray-50"
-                >
-                  <span>{row.pair}</span>
-                  <input
-                    type="checkbox"
-                    checked={isChecked(row)}
-                    onChange={() => toggle(row.pair, row.is_approved)}
-                    className="h-4 w-4"
-                  />
-                </label>
-              ))}
-            </div>
+    <div className="space-y-3">
+      {/* Intro */}
+      <Card className="border-sky-200 shadow-sm">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-2">
+            <Send className="h-4 w-4 text-sky-600" />
+            <h3 className="font-bold">Telegram Signal Approvals</h3>
           </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Sirf yahan tick kiye gaye pairs ke naye signals Telegram channel par post honge.
+            Naya pair aaye to yahan by default "not approved" list mein add ho jata hai — usko yahin se approve karo.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Add new pair */}
+      <Card className="border-slate-200 shadow-sm">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={newPair}
+              onChange={(e) => setNewPair(e.target.value)}
+              placeholder="e.g. XAUUSD"
+              className="flex-1"
+            />
+            <select
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {CATEGORY_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <Button onClick={addNewPair} disabled={adding || !newPair.trim()} className="sm:w-auto">
+              {adding ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+              Add &amp; Approve
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search pair…"
+          className="pl-9"
+        />
+      </div>
+
+      {/* Grouped list */}
+      <div className="space-y-3">
+        {Object.entries(grouped).map(([category, pairs]) => (
+          <Card key={category} className="border-slate-200 shadow-sm">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between border-b bg-slate-50 px-3 py-2">
+                <span className="text-sm font-bold">{category}</span>
+                <div className="flex gap-3">
+                  <button
+                    className="text-xs font-medium text-emerald-600 hover:underline"
+                    onClick={() => setAllInCategory(category, true)}
+                  >
+                    Select all
+                  </button>
+                  <button
+                    className="text-xs font-medium text-slate-500 hover:underline"
+                    onClick={() => setAllInCategory(category, false)}
+                  >
+                    Clear all
+                  </button>
+                </div>
+              </div>
+              <div className="divide-y">
+                {pairs.map((row) => (
+                  <label
+                    key={row.pair}
+                    className="flex cursor-pointer items-center justify-between px-3 py-2.5 text-sm hover:bg-slate-50"
+                  >
+                    <span className="font-medium">{row.pair}</span>
+                    <input
+                      type="checkbox"
+                      checked={isChecked(row)}
+                      onChange={() => toggle(row)}
+                      className="h-4 w-4 accent-slate-900"
+                    />
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         ))}
+
         {Object.keys(grouped).length === 0 && (
-          <p className="text-sm text-gray-500">Koi pair nahi mila.</p>
+          <p className="py-6 text-center text-sm text-slate-500">Koi pair nahi mila.</p>
         )}
       </div>
 
       {/* Save bar */}
-      <div className="sticky bottom-0 bg-white border-t pt-3 flex items-center justify-between">
-        <span className="text-xs text-gray-500">
-          {hasChanges ? `${Object.keys(dirty).length} unsaved change(s)` : "No changes"}
-        </span>
-        <button
-          onClick={saveChanges}
-          disabled={!hasChanges || saving}
-          className="bg-green-600 text-white text-sm px-4 py-2 rounded disabled:opacity-50"
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
+      <div className="sticky bottom-16 z-10 sm:bottom-0">
+        <Card className="border-slate-200 shadow-md">
+          <CardContent className="flex items-center justify-between p-3">
+            <span className="text-xs text-slate-500">
+              {dirtyCount > 0 ? `${dirtyCount} unsaved change(s)` : "No changes"}
+            </span>
+            <Button onClick={saveChanges} disabled={dirtyCount === 0 || saving} className="gap-1.5">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save
+            </Button>
+          </CardContent>
+        </Card>
       </div>
-
-      {message && (
-        <p className={`text-sm ${message.startsWith("Error") ? "text-red-600" : "text-green-600"}`}>
-          {message}
-        </p>
-      )}
     </div>
   );
-}
+};
+
+export default TelegramPairApprovals;
