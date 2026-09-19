@@ -1166,29 +1166,38 @@ export type Database = {
       }
       special_offers: {
         Row: {
+          button_link: string | null
+          button_text: string | null
           created_at: string | null
           description: string | null
           end_date: string
           id: string
           is_active: boolean | null
+          show_pages: string[] | null
           title: string
           updated_at: string | null
         }
         Insert: {
+          button_link?: string | null
+          button_text?: string | null
           created_at?: string | null
           description?: string | null
           end_date: string
           id?: string
           is_active?: boolean | null
+          show_pages?: string[] | null
           title: string
           updated_at?: string | null
         }
         Update: {
+          button_link?: string | null
+          button_text?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string
           id?: string
           is_active?: boolean | null
+          show_pages?: string[] | null
           title?: string
           updated_at?: string | null
         }
