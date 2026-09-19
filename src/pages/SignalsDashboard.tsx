@@ -27,6 +27,7 @@ import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
 import AdSlot from "@/components/AdSlot";
 import { AD_SLOTS } from "@/config/ads";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
+import { SpecialOfferBanner } from "@/components/SpecialOfferBanner";
 import { CopierLeaderboard } from "@/components/CopierLeaderboard";
 import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
@@ -858,6 +859,8 @@ const SignalsDashboard = () => {
           />
 
           <MT5CopierBanner />
+
+          <SpecialOfferBanner page="dashboard" />
 
           <div
             key={mainCategory}
