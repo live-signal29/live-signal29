@@ -32,6 +32,7 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { MarketClosedBanner } from "@/components/MarketClosedBanner";
+import { WeekendPromoBanner } from "@/components/WeekendPromoBanner";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -856,6 +857,9 @@ const SignalsDashboard = () => {
           <MarketClosedBanner
             category={mainCategory}
           />
+
+          {/* WEEKEND PROMO BANNER(S) — broker/app referral cards, weekend-only */}
+          <WeekendPromoBanner />
 
           <MT5CopierBanner />
 
