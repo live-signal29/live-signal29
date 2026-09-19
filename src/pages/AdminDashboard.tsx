@@ -23,6 +23,7 @@ import {
   Menu,
   Plus,
   Search,
+  Send,
   ShieldCheck,
   Signal,
   Ticket,
@@ -89,6 +90,10 @@ const MT5CopierManagement = lazyWithRetry(
   () => import("@/components/admin/MT5CopierManagement")
 );
 
+const TelegramPairApprovals = lazyWithRetry(
+  () => import("@/components/admin/TelegramPairApprovals")
+);
+
 /* =========================================================
    LOADER
 ========================================================= */
@@ -121,6 +126,12 @@ const menuItems = [
     label: "News",
     icon: Bell,
     color: "text-orange-600",
+  },
+  {
+    id: "telegram",
+    label: "Telegram",
+    icon: Send,
+    color: "text-sky-600",
   },
   {
     id: "users",
@@ -732,6 +743,10 @@ const AdminDashboard = () => {
 
           {activeTab === "headlines" && (
             <HeadlinesManagement />
+          )}
+
+          {activeTab === "telegram" && (
+            <TelegramPairApprovals />
           )}
 
           {activeTab === "users" && (
