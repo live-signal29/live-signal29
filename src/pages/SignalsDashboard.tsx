@@ -860,7 +860,14 @@ const SignalsDashboard = () => {
 
           <MT5CopierBanner />
 
-          <SpecialOfferBanner page="dashboard" />
+          {/*
+           * SPECIAL OFFER BANNER
+           * Only show on the COMMODITIES (Gold) tab —
+           * hidden on Crypto, Deriv/Binary and Copier tabs.
+           */}
+          {mainCategory === "COMMODITIES" && (
+            <SpecialOfferBanner page="dashboard" />
+          )}
 
           <div
             key={mainCategory}
