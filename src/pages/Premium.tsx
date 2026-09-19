@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
+import { SpecialOfferBanner } from "@/components/SpecialOfferBanner";
 import SEO from "@/components/SEO";
 
 import {
@@ -128,11 +129,6 @@ const Premium = () => {
     };
   }, [planCarouselApi]);
 
-  const autoplayPlugin = Autoplay({
-    delay: 3000,
-    stopOnInteraction: true,
-  });
-
   /* =====================================================
      SEO
   ====================================================== */
@@ -203,33 +199,11 @@ const Premium = () => {
   ];
 
   /* =====================================================
-     SPECIAL OFFERS
-     
-     IMPORTANT:
-     Only the Special Offer banner is shown.
-     CountdownTimer has been completely removed.
+     SPECIAL OFFERS are now rendered via the shared
+     <SpecialOfferBanner /> component (see below), which does
+     its own fetching so this banner can also be dropped onto
+     other pages (Account Management, Signals Dashboard, etc.)
   ====================================================== */
-
-  const { data: specialOffers } = useQuery({
-    queryKey: ["special-offers-carousel"],
-
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("special_offers")
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", {
-          ascending: false,
-        });
-
-      if (error) {
-        console.error(error);
-        return [];
-      }
-
-      return data || [];
-    },
-  });
 
   /* =====================================================
      ACTIVE COUPONS
@@ -639,79 +613,11 @@ const Premium = () => {
 
         {/* =====================================================
             SPECIAL OFFER
-            ONLY SPECIAL OFFER BANNER
-            NO COUNTDOWN TIMER
+            Shared banner — admin controls per-offer which pages
+            (Premium / Account / Dashboard) it appears on.
         ====================================================== */}
 
-        {specialOffers &&
-          specialOffers.length > 0 && (
-            <div className="mb-8">
-
-              <Carousel
-                className="w-full max-w-5xl mx-auto"
-                plugins={[autoplayPlugin]}
-                opts={{ loop: true }}
-              >
-
-                <CarouselContent>
-
-                  {specialOffers.map(
-                    (offer, index) => (
-                      <CarouselItem
-                        key={offer.id}
-                      >
-
-                        <div
-                          className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
-                            index % 4 === 0
-                              ? "bg-gradient-to-br from-green-500 via-teal-500 to-blue-600"
-                              : index % 4 === 1
-                              ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-600"
-                              : index % 4 === 2
-                              ? "bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600"
-                              : "bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-600"
-                          }`}
-                        >
-
-                          <div className="absolute inset-0 bg-black/10" />
-
-                          <div className="text-center text-white p-6 relative z-10">
-
-                            <Badge className="mb-4 bg-white/20 backdrop-blur-sm text-white border-white/30">
-                              🎁 SPECIAL OFFER
-                            </Badge>
-
-                            <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-lg">
-                              {offer.title}
-                            </h2>
-
-                            {offer.description && (
-                              <p className="text-lg md:text-2xl font-semibold">
-                                {offer.description}
-                              </p>
-                            )}
-
-                          </div>
-
-                        </div>
-
-                      </CarouselItem>
-                    )
-                  )}
-
-                </CarouselContent>
-
-                {specialOffers.length > 1 && (
-                  <>
-                    <CarouselPrevious className="left-2" />
-                    <CarouselNext className="right-2" />
-                  </>
-                )}
-
-              </Carousel>
-
-            </div>
-          )}
+        <SpecialOfferBanner page="premium" scrollTargetId="plans-section" />
 
         {/* =====================================================
             COUPON BANNER
@@ -998,7 +904,7 @@ const Premium = () => {
             PRICING
         ====================================================== */}
 
-        <div className="max-w-7xl mx-auto">
+        <div id="plans-section" className="max-w-7xl mx-auto">
 
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 gradient-text">
             {selectedCategory} Premium Plans
