@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import Autoplay from "embla-carousel-autoplay";
+import { ArrowRight } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Carousel,
   CarouselContent,
@@ -85,7 +85,7 @@ export const SpecialOfferBanner = ({
           {offersForThisPage.map((offer: any, index: number) => (
             <CarouselItem key={offer.id}>
               <div
-                className={`relative h-48 md:h-64 rounded-xl flex items-center justify-center overflow-hidden ${
+                className={`relative min-h-[240px] md:min-h-[300px] rounded-2xl flex items-center justify-center overflow-hidden shadow-xl ${
                   index % 4 === 0
                     ? "bg-gradient-to-br from-green-500 via-teal-500 to-blue-600"
                     : index % 4 === 1
@@ -97,24 +97,23 @@ export const SpecialOfferBanner = ({
               >
                 <div className="absolute inset-0 bg-black/10" />
 
-                <div className="text-center text-white p-6 relative z-10">
-                  <Badge className="mb-4 bg-white/20 backdrop-blur-sm text-white border-white/30">
+                <div className="flex flex-col items-center text-center text-white px-6 py-8 md:py-10 relative z-10 gap-3 md:gap-4">
+                  <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
                     🎁 SPECIAL OFFER
                   </Badge>
 
-                  <h2 className="text-3xl md:text-6xl font-extrabold mb-3 drop-shadow-lg">
+                  <h2 className="text-2xl md:text-5xl font-extrabold drop-shadow-lg leading-tight">
                     {offer.title}
                   </h2>
 
                   {offer.description && (
-                    <p className="text-lg md:text-2xl font-semibold mb-4">
+                    <p className="text-base md:text-xl font-medium text-white/90 max-w-2xl">
                       {offer.description}
                     </p>
                   )}
 
                   {offer.button_text && (
-                    <Button
-                      size="lg"
+                    <button
                       onClick={() => {
                         if (offer.button_link) {
                           window.open(
@@ -128,10 +127,11 @@ export const SpecialOfferBanner = ({
                             ?.scrollIntoView({ behavior: "smooth" });
                         }
                       }}
-                      className="bg-white text-black hover:bg-white/90 font-bold shadow-lg"
+                      className="mt-1 inline-flex items-center gap-2 rounded-full bg-white text-gray-900 font-semibold text-sm md:text-base px-6 py-2.5 md:px-7 md:py-3 shadow-lg shadow-black/20 transition-transform duration-200 hover:scale-105 hover:shadow-xl active:scale-95"
                     >
                       {offer.button_text}
-                    </Button>
+                      <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
+                    </button>
                   )}
                 </div>
               </div>
