@@ -15,15 +15,15 @@
 
 declare global {
   interface Window {
-    show_REWARDED_AD_ZONE_ID?: () => Promise<void>;
+    show_283443?: () => Promise<void>;
   }
 }
 
 export const showRewardedAd = (): Promise<boolean> => {
   return new Promise((resolve) => {
-    if (typeof window.show_REWARDED_AD_ZONE_ID === "function") {
+    if (typeof window.show_283443 === "function") {
       window
-        .show_REWARDED_AD_ZONE_ID()
+        .show_283443()
         .then(() => resolve(true))
         .catch(() => resolve(false));
     } else {
