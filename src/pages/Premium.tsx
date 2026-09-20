@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import Header from "@/components/Header";
@@ -99,6 +100,30 @@ const Premium = () => {
 
   const [currentPlanIndex, setCurrentPlanIndex] =
     useState(0);
+
+  /* =====================================================
+     JUMP STRAIGHT TO PLANS
+     Callers (e.g. the Unlock popup's "Go Premium" button)
+     navigate to /premium#plans-section instead of just
+     /premium, so people land on the plan cards instead of
+     the top of the page. A short delay lets the coupon
+     banner / carousel above finish rendering first so the
+     scroll offset is correct.
+  ====================================================== */
+
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash !== "#plans-section") return;
+
+    const timer = setTimeout(() => {
+      document
+        .getElementById("plans-section")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [location.hash]);
 
   /* =====================================================
      PLAN CAROUSEL
