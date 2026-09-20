@@ -131,12 +131,12 @@ export const SignalUnlockGate = ({
       case "error":
         toast.error("Checkout nahi khul saka, premium page pe le ja rahe hain.");
         setPickerOpen(false);
-        navigate("/premium");
+        navigate("/premium#plans-section");
         break;
       case "unavailable":
       default:
         setPickerOpen(false);
-        navigate("/premium");
+        navigate("/premium#plans-section");
         break;
     }
   };
