@@ -1,44 +1,56 @@
 // ============================================================
-// REWARDED AD TRIGGER
+// REWARDED AD TRIGGER — scoped to the "Watch Ad" button only
 // ============================================================
-// IMPORTANT: Monetag's OnClick (Popunder) tag — the classic
-// tag.min.js script — does NOT expose a callable function or a
-// "did the user finish watching" signal. It's a global click
-// listener: any click anywhere on the page may (subject to
-// Monetag's own frequency capping) silently open a popunder tab
-// in the background. There is nothing to await.
+// We switched away from Monetag's OnClick/Popunder tag (which
+// attached a global click-listener to the whole page — ANY tap
+// anywhere could silently open an ad tab). That script has been
+// removed from index.html.
 //
-// So instead of waiting on a real completion callback (which
-// this ad format cannot provide), clicking "Unlock" itself is
-// already a qualifying click for Monetag — the popunder fires on
-// its own if one is due. We show a visible countdown instead of
-// a spinner, so it reads as "watch a few seconds to unlock"
-// rather than a fake ad, then unlock once it hits zero.
+// Instead we use Monetag's "Direct Link" format: a plain URL that
+// we open ourselves, exactly once, only when the user taps
+// "Watch Ad" — nowhere else in the app.
 //
-// Setup: paste Monetag's <script> snippet (the one with
-// `data-zone` / `tag.min.js`) once in index.html — do NOT put it
-// inside this file, it just needs to be loaded on the page.
-//
-// If you later get a real rewarded format from Monetag (one that
-// gives you a `show_XXXXXXX()` function returning a Promise),
-// swap the body of showRewardedAd() below to call that instead —
-// the rest of the app (SignalUnlockGate, etc.) doesn't need to
-// change, just make sure to still call onTick if you want the
-// countdown UI to keep working.
-// ============================================================
+// ⚠️ SET THIS: go to your Monetag dashboard → zone 11845159 (or a
+// new zone) → "Direct Link" tab → copy the URL it gives you and
+// paste it below. Leave it empty/placeholder and the countdown
+// will still run (no ad tab opens), so the app keeps working
+// while you're mid-setup — just no monetization until this is
+// filled in.
+const MONETAG_DIRECT_LINK_URL = "https://omg10.com/4/11847978";
 
 export const REWARDED_AD_SECONDS = 10;
 
 /**
+ * Opens the Monetag Direct Link exactly once, in a new tab, without
+ * blocking or waiting on it (Direct Link doesn't give a completion
+ * signal — same limitation as before). Safe to call even if the
+ * placeholder URL hasn't been replaced yet.
+ */
+const openDirectLinkAd = () => {
+  if (!MONETAG_DIRECT_LINK_URL || MONETAG_DIRECT_LINK_URL.includes("REPLACE_WITH_YOUR")) {
+    return;
+  }
+  try {
+    window.open(MONETAG_DIRECT_LINK_URL, "_blank", "noopener,noreferrer");
+  } catch {
+    // Popup blocked or similar — fine, the countdown/unlock still proceeds.
+  }
+};
+
+/**
  * Runs a visible countdown from REWARDED_AD_SECONDS down to 0.
- * onTick is called once per second with the seconds remaining
- * (including the initial call with the full duration), so the
- * caller can render "10", "9", "8"... in the UI.
- * Resolves true once the countdown finishes naturally.
+ * Fires the Direct Link ad once at the start (this call IS the
+ * qualifying user click/gesture Monetag needs). onTick is called
+ * once per second with the seconds remaining (including the
+ * initial call with the full duration), so the caller can render
+ * "10", "9", "8"... in the UI. Resolves true once the countdown
+ * finishes naturally.
  */
 export const showRewardedAd = (
   onTick?: (secondsRemaining: number) => void
 ): Promise<boolean> => {
+  openDirectLinkAd();
+
   return new Promise((resolve) => {
     let secondsRemaining = REWARDED_AD_SECONDS;
     onTick?.(secondsRemaining);
