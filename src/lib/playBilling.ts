@@ -1,118 +1,158 @@
 // ============================================================
-// GOOGLE PLAY BILLING (via Digital Goods API + Payment Request API)
+// MEDIAN IN-APP PURCHASES (Google Play, via Median JS Bridge)
 // ============================================================
-// Works ONLY inside the TWA app installed from Google Play —
-// never in a normal mobile/desktop browser. ALWAYS check
-// isPlayBillingAvailable() first and fall back to your existing
+// This app is wrapped with Median.co, NOT a Bubblewrap TWA — so
+// billing goes through Median's own JavaScript Bridge
+// (`window.median.iap`), not the Digital Goods API.
+//
+// This only exists inside the installed Android app. Always
+// check isMedianApp() first and fall back to your existing
 // payment page if it's false (see usePlayBilling.ts).
+//
+// Setup required in Median App Studio (see chat for full steps):
+//   1. Native Plugins tab -> enable "In-App Purchases"
+//   2. Set productsUrl to a JSON file hosted on your site, e.g.
+//      https://livesignals29.online/iap/productsGoogle.json
+//      containing: { "inappProducts": [], "subProducts": ["premium_monthly"] }
+//   3. Rebuild and re-publish the app after enabling the plugin —
+//      it will not appear in an already-installed build.
 // ============================================================
 
-const PLAY_BILLING_METHOD = "https://play.google.com/billing";
-
-export interface PlayProductDetails {
-  itemId: string;
+export interface MedianProduct {
+  productID: string;
+  type: "inapp" | "subs";
   title: string;
+  name: string;
   description: string;
-  price: { currency: string; value: string };
+  purchaseOfferDetails?: {
+    priceAmountMicros: number;
+    priceCurrencyCode: string;
+    formattedPrice: string;
+  };
+  subscriptionOfferDetails?: Array<{
+    offerId?: string;
+    offerToken: string;
+    basePlanId: string;
+    pricingPhases: Array<{
+      priceAmountMicros: number;
+      priceCurrencyCode: string;
+      formattedPrice: string;
+      billingPeriod: string;
+      billingCycleCount: number;
+      recurrenceMode: number;
+    }>;
+    offerTags: string[];
+  }>;
 }
 
-let cachedService: any = null;
+interface MedianIAPInfo {
+  inAppPurchases: {
+    platform: string;
+    libraryVersion: number;
+    products: MedianProduct[];
+  };
+}
 
-async function getDigitalGoodsService() {
-  if (cachedService) return cachedService;
+interface MedianPurchaseResult {
+  productID: string;
+  purchaseToken: string;
+  orderId: string;
+  purchaseState: number;
+  acknowledged: boolean;
+  [key: string]: unknown;
+}
 
-  if (!("getDigitalGoodsService" in window)) {
-    return null;
+declare global {
+  interface Window {
+    median?: {
+      iap?: {
+        info: () => Promise<MedianIAPInfo>;
+        purchase: (opts: {
+          productID: string;
+          offerToken?: string;
+        }) => Promise<MedianPurchaseResult>;
+        purchases: () => Promise<{
+          platform: string;
+          allPurchases: Array<{
+            orderId: string;
+            productID: string;
+            purchaseToken: string;
+            purchaseState: number;
+            autoRenewing: boolean;
+          }>;
+        }>;
+        manageSubscription: (opts: { productID: string }) => void;
+        manageAllSubscriptions: () => void;
+      };
+    };
   }
-
-  try {
-    // @ts-ignore — getDigitalGoodsService isn't in the default TS lib yet
-    cachedService = await (window as any).getDigitalGoodsService(
-      PLAY_BILLING_METHOD
-    );
-    return cachedService;
-  } catch {
-    return null;
-  }
 }
 
-export async function isPlayBillingAvailable(): Promise<boolean> {
-  const service = await getDigitalGoodsService();
-  return !!service;
+export function isMedianApp(): boolean {
+  return typeof window !== "undefined" && !!window.median?.iap;
 }
 
-export async function getProductDetails(
-  productIds: string[]
-): Promise<PlayProductDetails[]> {
-  const service = await getDigitalGoodsService();
-  if (!service) return [];
+export async function getMedianProducts(): Promise<MedianProduct[]> {
+  if (!isMedianApp()) return [];
   try {
-    return await service.getDetails(productIds);
+    const info = await window.median!.iap!.info();
+    return info.inAppPurchases?.products ?? [];
   } catch (err) {
-    console.error("Failed to fetch Play product details:", err);
+    console.error("Failed to fetch Median IAP product info:", err);
     return [];
   }
 }
 
 /**
- * Launches the native Play Store checkout sheet for a product or
- * subscription. Returns the purchase token on success, or null if
- * the user cancelled or something failed.
+ * Launches Median's native Google Play purchase flow for the
+ * "premium" subscription product, picking the offer that matches
+ * the given base plan ID (e.g. "monthly", "yearly"). Returns the
+ * purchase token on success, or null if the user cancelled or
+ * something failed.
  */
-export async function purchaseProduct(
-  productId: string
-): Promise<{ purchaseToken: string } | null> {
-  const service = await getDigitalGoodsService();
-  if (!service) return null;
+export async function purchaseMedianProduct(
+  productId: string,
+  basePlanId?: string
+): Promise<{ purchaseToken: string; orderId: string } | null> {
+  if (!isMedianApp()) return null;
 
   try {
-    const paymentMethods = [
-      {
-        supportedMethods: PLAY_BILLING_METHOD,
-        data: { sku: productId },
-      },
-    ];
+    const products = await getMedianProducts();
+    const product = products.find((p) => p.productID === productId);
 
-    // The actual price shown to the user comes from Play Console,
-    // not from this object — this is just required by the
-    // PaymentRequest API's shape.
-    const paymentDetails = {
-      total: {
-        label: "Total",
-        amount: { currency: "USD", value: "0" },
-      },
-    };
+    // Subscription ("subs") purchases require an offerToken taken
+    // from the current product info. When the product has multiple
+    // base plans (monthly/quarterly/etc.), pick the one matching
+    // basePlanId; otherwise fall back to the first available offer.
+    let offerToken: string | undefined;
 
-    // @ts-ignore — PaymentRequest is a global DOM API
-    const request = new PaymentRequest(paymentMethods, paymentDetails);
-    const response = await request.show();
+    if (product?.type === "subs" && product.subscriptionOfferDetails) {
+      const matchingOffer = basePlanId
+        ? product.subscriptionOfferDetails.find(
+            (o) => o.basePlanId === basePlanId
+          )
+        : product.subscriptionOfferDetails[0];
 
-    const purchaseToken = response.details.purchaseToken as string;
+      offerToken = matchingOffer?.offerToken;
 
-    // Required: tells the browser the "payment" step succeeded
-    await response.complete("success");
+      if (basePlanId && !offerToken) {
+        console.error(
+          `No offer found for basePlanId "${basePlanId}" on product "${productId}"`
+        );
+        return null;
+      }
+    }
 
-    return { purchaseToken };
+    const result = await window.median!.iap!.purchase({
+      productID: productId,
+      ...(offerToken ? { offerToken } : {}),
+    });
+
+    return { purchaseToken: result.purchaseToken, orderId: result.orderId };
   } catch (err) {
-    // User closed the sheet, or something genuinely failed —
-    // both look the same from here, caller treats it as "cancelled"
-    console.error("Play Billing purchase failed/cancelled:", err);
+    // User cancelled the sheet, or a genuine failure — Median
+    // throws for both, caller treats it as "cancelled"
+    console.error("Median IAP purchase failed/cancelled:", err);
     return null;
-  }
-}
-
-/**
- * For ONE-TIME (consumable) products only — call this after your
- * backend has verified the purchase, so Google knows the item can
- * be bought again later (e.g. "remove ads for 30 days" repurchase).
- * Do NOT call this for subscriptions.
- */
-export async function acknowledgeConsumable(purchaseToken: string) {
-  const service = await getDigitalGoodsService();
-  if (!service) return;
-  try {
-    await service.consume(purchaseToken);
-  } catch (err) {
-    console.error("Failed to consume purchase:", err);
   }
 }
