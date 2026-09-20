@@ -23,22 +23,14 @@ export const ThemeToggle = () => {
   return (
     <button
       onClick={toggleTheme}
-      className="relative inline-flex h-7 w-14 items-center rounded-full bg-muted hover:bg-muted/80 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/80 hover:bg-muted hover:text-foreground transition-colors"
       aria-label="Toggle theme"
     >
-      <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-background shadow-lg transition-transform duration-300 ease-in-out ${
-          theme === "dark" ? "translate-x-7" : "translate-x-1"
-        }`}
-      >
-        <span className="flex h-full w-full items-center justify-center">
-          {theme === "dark" ? (
-            <Moon className="h-3 w-3 text-primary" />
-          ) : (
-            <Sun className="h-3 w-3 text-amber-500" />
-          )}
-        </span>
-      </span>
+      {theme === "dark" ? (
+        <Moon className="h-4 w-4" />
+      ) : (
+        <Sun className="h-4 w-4 text-amber-500" />
+      )}
     </button>
   );
 };
