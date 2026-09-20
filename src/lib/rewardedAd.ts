@@ -1,28 +1,46 @@
-// ============================================================
-// REWARDED AD TRIGGER
-// ============================================================
-// Most rewarded-ad networks (Adsterra, Monetag, etc.) give you
-// a <script> snippet to paste in index.html, which exposes a
-// global function on `window`. That function returns a Promise
-// that resolves once the user has watched the FULL ad — not if
-// they skip or close it early.
-//
-// 1. Get your rewarded ad zone snippet from your network's
-//    dashboard and paste it in index.html (or load it dynamically).
-// 2. Replace `show_REWARDED_AD_ZONE_ID` below with the exact
-//    function name your network's snippet defines.
-// ============================================================
+// =================================================================
+// GOOGLE ADMOB REWARDED AD TRIGGER
+// =================================================================
 
 export const showRewardedAd = (): Promise<boolean> => {
   return new Promise((resolve) => {
-    // Agar future me Monetag function create kare
-    if (typeof (window as any).show_11845159 === "function") {
-      (window as any)
-        .show_11845159()
-        .then(() => resolve(true))
-        .catch(() => resolve(false));
+    // Check if Google Ads / GPT SDK is loaded
+    if (typeof window !== 'undefined' && (window as any).googletag) {
+      const googletag = (window as any).googletag;
+      
+      googletag.cmd.push(() => {
+        const rewardedSlot = googletag.defineOutOfPageSlot(
+          '/1895906484640218/8247385555',
+          googletag.enums.OutOfPageFormat.REWARDED
+        );
+
+        if (rewardedSlot) {
+          rewardedSlot.addService(googletag.pubads());
+          
+          googletag.pubads().addEventListener('rewardedSlotReady', (evt: any) => {
+            evt.makeRewardedVisible();
+          });
+
+          googletag.pubads().addEventListener('rewardedSlotGranted', () => {
+            // User full ad dekhega tabhi signal unlock hoga
+            resolve(true);
+          });
+
+          googletag.pubads().addEventListener('rewardedSlotClosed', () => {
+            googletag.destroySlots([rewardedSlot]);
+            resolve(false);
+          });
+
+          googletag.enableServices();
+          googletag.display(rewardedSlot);
+        } else {
+          // Fallback agar ad slot ready na ho
+          resolve(true);
+        }
+      });
     } else {
-      // Instant unlock: Popunder ad background me trigger ho jayega
+      // Temporary Fallback (Review period tak app issue-free rahegi)
+      console.log("Google SDK loading... Instant unlock applied.");
       resolve(true);
     }
   });
