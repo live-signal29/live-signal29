@@ -13,24 +13,17 @@
 //    function name your network's snippet defines.
 // ============================================================
 
-declare global {
-  interface Window {
-    show_283443?: () => Promise<void>;
-  }
-}
-
 export const showRewardedAd = (): Promise<boolean> => {
   return new Promise((resolve) => {
-    if (typeof window.show_283443 === "function") {
-      window
-        .show_283443()
+    // Agar future me Monetag function create kare
+    if (typeof (window as any).show_11845159 === "function") {
+      (window as any)
+        .show_11845159()
         .then(() => resolve(true))
         .catch(() => resolve(false));
     } else {
-      console.error(
-        "Rewarded ad SDK not loaded — check that the ad network's script tag is in index.html"
-      );
-      resolve(false);
+      // Instant unlock: Popunder ad background me trigger ho jayega
+      resolve(true);
     }
   });
 };
