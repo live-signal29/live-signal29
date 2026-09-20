@@ -1269,6 +1269,17 @@ const SignalsDashboard = () => {
                                                     isPremium={
                                                       hasAccess
                                                     }
+                                                    pair={
+                                                      signal.pair
+                                                    }
+                                                    status={
+                                                      signal.signal_status ||
+                                                      signal.status ||
+                                                      "open"
+                                                    }
+                                                    time={formatExactRealTime(
+                                                      signal.created_at
+                                                    )}
                                                   >
                                                     {
                                                       signalCard
