@@ -1,9 +1,4 @@
 {
   "inappProducts": [],
-  "subProducts": [
-    "premium_monthly",
-    "premium_quarterly",
-    "premium_halfyearly",
-    "premium_yearly"
-  ]
+  "subProducts": ["premium"]
 }
