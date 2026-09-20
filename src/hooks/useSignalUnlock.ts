@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Change this to control how many free ad-unlocks a non-premium
 // user gets per day. Once used up, only "Go Premium" works.
-const DAILY_FREE_AD_UNLOCKS = 5;
+const DAILY_FREE_AD_UNLOCKS = 10;
 
 export function useSignalUnlock(
   signalId: string,
