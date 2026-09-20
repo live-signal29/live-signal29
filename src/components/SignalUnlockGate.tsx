@@ -66,15 +66,15 @@ export const SignalUnlockGate = ({
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-border bg-card">
-      {/* Blurred, non-interactive preview of the real signal */}
-      <div className="blur-md pointer-events-none select-none opacity-60">
+    <div className="relative rounded-2xl overflow-hidden border border-border bg-card min-h-[190px] max-h-[220px]">
+      {/* Blurred, non-interactive preview of the real signal — height capped so the gate stays compact */}
+      <div className="absolute inset-0 blur-md pointer-events-none select-none opacity-60 overflow-hidden">
         {children}
       </div>
 
       {/* Lock overlay */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/75 backdrop-blur-sm px-4 py-6 text-center">
-        <Lock className="h-6 w-6 text-muted-foreground" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/80 backdrop-blur-sm px-4 py-3 text-center">
+        <Lock className="h-5 w-5 text-muted-foreground" />
         <p className="text-sm font-semibold text-foreground">
           Ye signal locked hai
         </p>
@@ -84,6 +84,7 @@ export const SignalUnlockGate = ({
             onClick={handleWatchAd}
             disabled={watchingAd || dailyUnlocksRemaining <= 0}
             variant="secondary"
+            size="sm"
             className="flex-1 gap-2"
           >
             {watchingAd ? (
@@ -96,6 +97,7 @@ export const SignalUnlockGate = ({
 
           <Button
             onClick={() => navigate("/premium")}
+            size="sm"
             className="flex-1 gap-2"
           >
             <Crown className="h-4 w-4" />
