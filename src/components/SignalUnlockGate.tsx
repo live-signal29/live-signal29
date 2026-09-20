@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSignalUnlock } from "@/hooks/useSignalUnlock";
 import { showRewardedAd } from "@/lib/rewardedAd";
+import { usePlayBilling } from "@/hooks/usePlayBilling";
 
 interface SignalUnlockGateProps {
   signalId: string;
@@ -39,6 +40,7 @@ export const SignalUnlockGate = ({
 }: SignalUnlockGateProps) => {
   const { isUnlocked, loading, recordUnlock, dailyUnlocksRemaining } =
     useSignalUnlock(signalId, isPremium);
+  const { buyPremium, purchasing } = usePlayBilling();
 
   const [watchingAd, setWatchingAd] = useState(false);
   // true right after the user closes/skips an ad without finishing it
@@ -53,6 +55,30 @@ export const SignalUnlockGate = ({
   if (!loading && isUnlocked) {
     return <>{children}</>;
   }
+
+  const handleGoPremium = async () => {
+    // Inside the Play Store TWA: opens Google's native checkout,
+    // verifies the purchase on the backend, grants premium.
+    // In a normal browser (or if anything fails): falls back to
+    // the existing /premium page — nothing breaks either way.
+    const result = await buyPremium();
+
+    switch (result) {
+      case "success":
+        toast.success("Premium activated! Ab sab signals bina ad ke dekho.");
+        break;
+      case "cancelled":
+        // user closed the Google checkout sheet — no message needed
+        break;
+      case "error":
+        toast.error("Purchase verify nahi ho saka, dobara try karo.");
+        break;
+      case "unavailable":
+      default:
+        navigate("/premium");
+        break;
+    }
+  };
 
   const handleWatchAd = async () => {
     if (dailyUnlocksRemaining <= 0) {
@@ -136,11 +162,16 @@ export const SignalUnlockGate = ({
               Dobara Try Karo
             </Button>
             <Button
-              onClick={() => navigate("/premium")}
+              onClick={handleGoPremium}
+              disabled={purchasing}
               size="sm"
-              className="flex-1 h-9 rounded-lg text-xs gap-1 bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 h-9 rounded-lg text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
             >
-              <Crown className="h-3.5 w-3.5" />
+              {purchasing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Crown className="h-3.5 w-3.5" />
+              )}
               Remove Ads
             </Button>
           </div>
