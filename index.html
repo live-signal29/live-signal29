@@ -21,8 +21,17 @@
 <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
 
 
-  <script>(function(s){s.dataset.zone='11845159',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
-    
+    <!--
+      NOTE: The old Monetag "OnClick / Popunder" script (tag.min.js,
+      zone 11845159) used to sit here. That format attaches a global
+      click-listener to the whole page — ANY tap anywhere (category
+      tabs, signal cards, etc.) could silently open a popunder tab.
+      It's been removed on purpose. Ad-watching is now scoped to the
+      "Watch Ad" button only, via src/lib/rewardedAd.ts, using
+      Monetag's "Direct Link" format instead — see that file for the
+      URL to configure.
+    -->
+
     <!-- Canonical URL -->
     <link rel="canonical" href="https://livesignals29.online/" />
     
