@@ -1,43 +1,56 @@
 import React, { useState } from "react";
-import { Lock, PlayCircle, Crown, Loader2 } from "lucide-react";
+import { Lock, PlayCircle, Crown, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useSignalUnlock } from "@/hooks/useSignalUnlock";
 import { showRewardedAd } from "@/lib/rewardedAd";
 
 interface SignalUnlockGateProps {
   signalId: string;
   isPremium: boolean;
+  /** Display name of the pair, e.g. "XAUUSD (Gold)" */
+  pair: string;
+  /** Status text as shown on the real card, e.g. "OPEN" / "CLOSED" / "RUNNING" */
+  status: string;
+  /** Already-formatted time string, e.g. "01:15 AM" */
+  time?: string;
   children: React.ReactNode;
 }
 
 // Wrap any signal card with this component:
-//   <SignalUnlockGate signalId={signal.id} isPremium={hasAccess}>
+//   <SignalUnlockGate
+//     signalId={signal.id}
+//     isPremium={hasAccess}
+//     pair={signal.pair}
+//     status={signal.signal_status || signal.status || "open"}
+//     time={formatExactRealTime(signal.created_at)}
+//   >
 //     <SignalCardNew signal={signal} ... />
 //   </SignalUnlockGate>
 export const SignalUnlockGate = ({
   signalId,
   isPremium,
+  pair,
+  status,
+  time,
   children,
 }: SignalUnlockGateProps) => {
   const { isUnlocked, loading, recordUnlock, dailyUnlocksRemaining } =
     useSignalUnlock(signalId, isPremium);
 
   const [watchingAd, setWatchingAd] = useState(false);
+  // true right after the user closes/skips an ad without finishing it
+  const [adWasSkipped, setAdWasSkipped] = useState(false);
   const navigate = useNavigate();
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-10 rounded-2xl border border-border bg-card">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const statusLower = String(status || "").toLowerCase();
+  const isOpenStatus = ["open", "running", "active"].includes(statusLower);
 
   // Premium users, or a signal already unlocked earlier,
-  // just render normally with no gate at all.
-  if (isUnlocked) {
+  // just render the real card with no gate at all.
+  if (!loading && isUnlocked) {
     return <>{children}</>;
   }
 
@@ -49,6 +62,7 @@ export const SignalUnlockGate = ({
       return;
     }
 
+    setAdWasSkipped(false);
     setWatchingAd(true);
     const watched = await showRewardedAd();
     setWatchingAd(false);
@@ -61,59 +75,100 @@ export const SignalUnlockGate = ({
         toast.error("Kuch gadbad ho gayi, dobara try karo.");
       }
     } else {
-      toast.error("Ad complete nahi hua, dobara try karo.");
+      // Ad was closed/skipped before finishing — nudge toward Premium
+      // instead of just erroring out, like a rewarded-ad game would.
+      setAdWasSkipped(true);
     }
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-border bg-card min-h-[210px] max-h-[240px] shadow-sm">
-      {/* Blurred, non-interactive preview of the real signal — height capped so the gate stays compact */}
-      <div className="absolute inset-0 blur-md pointer-events-none select-none opacity-60 overflow-hidden">
-        {children}
+    <div className="rounded-2xl overflow-hidden border border-border bg-card">
+      {/* ALWAYS VISIBLE — compact header, mirrors the real card's top row */}
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border/70">
+        <span className="text-sm font-bold text-foreground truncate">
+          {pair}
+        </span>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={cn(
+              "text-[10px] font-bold px-2 py-0.5 rounded-full",
+              isOpenStatus
+                ? "bg-emerald-500/10 text-emerald-600"
+                : "bg-rose-500/10 text-rose-500"
+            )}
+          >
+            {isOpenStatus ? "OPEN" : "CLOSED"}
+          </span>
+
+          {time && (
+            <span className="text-[11px] text-muted-foreground">
+              {time}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Lock overlay */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/85 backdrop-blur-md px-5 py-4 text-center">
-        {/* Icon badge */}
-        <div className="flex items-center justify-center h-11 w-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
-          <Lock className="h-5 w-5 text-primary" />
+      {/* LOCKED BODY */}
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         </div>
+      ) : adWasSkipped ? (
+        // Ad was closed early — nudge toward Premium instead of retry-only
+        <div className="flex flex-col items-center gap-2 px-4 py-5 text-center">
+          <XCircle className="h-5 w-5 text-rose-500" />
+          <p className="text-xs font-semibold text-foreground">
+            Ad skip ho gaya
+          </p>
+          <p className="text-[11px] text-muted-foreground max-w-[220px]">
+            Poora ad dekhe bina signal unlock nahi hota. Chaaho to Premium
+            lekar sab signals bina ad ke dekho.
+          </p>
 
-        <div className="space-y-0.5">
-          <p className="text-sm font-bold text-foreground tracking-tight">
-            Ye signal locked hai
-          </p>
-          <p className="text-[11px] text-muted-foreground">
-            Ad dekho ya Premium lo, turant unlock karo
-          </p>
+          <div className="flex gap-2 w-full max-w-[220px] mt-1">
+            <Button
+              onClick={handleWatchAd}
+              variant="outline"
+              size="sm"
+              className="flex-1 h-9 rounded-lg text-xs"
+            >
+              Dobara Try Karo
+            </Button>
+            <Button
+              onClick={() => navigate("/premium")}
+              size="sm"
+              className="flex-1 h-9 rounded-lg text-xs gap-1 bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Crown className="h-3.5 w-3.5" />
+              Remove Ads
+            </Button>
+          </div>
         </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Lock className="h-4 w-4" />
+            <span className="text-xs font-medium">
+              Details locked
+            </span>
+          </div>
 
-        <div className="flex flex-col gap-2 w-full max-w-[260px] mt-1">
           <Button
             onClick={handleWatchAd}
             disabled={watchingAd || dailyUnlocksRemaining <= 0}
-            className="w-full h-11 rounded-xl gap-2 font-semibold text-sm bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white shadow-md shadow-teal-500/20 border-0 disabled:opacity-50"
+            size="sm"
+            className="h-9 rounded-lg px-3 gap-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-700 disabled:opacity-50"
           >
             {watchingAd ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <PlayCircle className="h-4 w-4" />
+              <PlayCircle className="h-3.5 w-3.5" />
             )}
-            <span>Ad Dekho</span>
-            <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">
-              {dailyUnlocksRemaining} left
-            </span>
-          </Button>
-
-          <Button
-            onClick={() => navigate("/premium")}
-            className="w-full h-11 rounded-xl gap-2 font-semibold text-sm bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md shadow-emerald-500/20 border-0"
-          >
-            <Crown className="h-4 w-4" />
-            Go Premium
+            Unlock ({dailyUnlocksRemaining})
           </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 };
