@@ -1212,6 +1212,37 @@ const SignalsDashboard = () => {
                                               globalSignalIndex ===
                                                 openSignalCount;
 
+                                            /*
+                                             * Only OPEN/RUNNING/ACTIVE
+                                             * signals get gated behind
+                                             * an ad or premium. Closed
+                                             * (already hit TP/SL, or
+                                             * finished) signals are
+                                             * always shown freely —
+                                             * they're just history.
+                                             */
+                                            const isSignalOpen =
+                                              isOpenSignal(
+                                                signal
+                                              );
+
+                                            const signalCard = (
+                                              <SignalCardNew
+                                                signal={
+                                                  signal as any
+                                                }
+                                                hasAccess={
+                                                  hasAccess
+                                                }
+                                                subscriptionStatus={
+                                                  subscriptionStatus
+                                                }
+                                                livePrice={
+                                                  currentLivePrice
+                                                }
+                                              />
+                                            );
+
                                             return (
                                               <React.Fragment
                                                 key={
@@ -1220,37 +1251,32 @@ const SignalsDashboard = () => {
                                               >
                                                 {/*
                                                  * SIGNAL
-                                                 * Wrapped in the unlock
-                                                 * gate: premium users
-                                                 * (hasAccess) see it
-                                                 * instantly, everyone
-                                                 * else must watch a
-                                                 * rewarded ad or go
-                                                 * premium to unlock it.
+                                                 * Only OPEN signals go
+                                                 * through the unlock
+                                                 * gate (watch ad / go
+                                                 * premium). Premium
+                                                 * users (hasAccess)
+                                                 * always see it
+                                                 * instantly. Closed
+                                                 * signals skip the
+                                                 * gate entirely.
                                                  */}
-                                                <SignalUnlockGate
-                                                  signalId={
-                                                    signal.id
-                                                  }
-                                                  isPremium={
-                                                    hasAccess
-                                                  }
-                                                >
-                                                  <SignalCardNew
-                                                    signal={
-                                                      signal as any
+                                                {isSignalOpen ? (
+                                                  <SignalUnlockGate
+                                                    signalId={
+                                                      signal.id
                                                     }
-                                                    hasAccess={
+                                                    isPremium={
                                                       hasAccess
                                                     }
-                                                    subscriptionStatus={
-                                                      subscriptionStatus
+                                                  >
+                                                    {
+                                                      signalCard
                                                     }
-                                                    livePrice={
-                                                      currentLivePrice
-                                                    }
-                                                  />
-                                                </SignalUnlockGate>
+                                                  </SignalUnlockGate>
+                                                ) : (
+                                                  signalCard
+                                                )}
 
                                                 {/*
                                                  * EXNESS SLIDER
