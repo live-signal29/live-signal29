@@ -33,6 +33,7 @@ import { ExnessPopup } from "@/components/ExnessPopup";
 import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { MarketClosedBanner } from "@/components/MarketClosedBanner";
+import { SignalUnlockGate } from "@/components/SignalUnlockGate";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -1217,21 +1218,39 @@ const SignalsDashboard = () => {
                                                   signal.id
                                                 }
                                               >
-                                                {/* SIGNAL */}
-                                                <SignalCardNew
-                                                  signal={
-                                                    signal as any
+                                                {/*
+                                                 * SIGNAL
+                                                 * Wrapped in the unlock
+                                                 * gate: premium users
+                                                 * (hasAccess) see it
+                                                 * instantly, everyone
+                                                 * else must watch a
+                                                 * rewarded ad or go
+                                                 * premium to unlock it.
+                                                 */}
+                                                <SignalUnlockGate
+                                                  signalId={
+                                                    signal.id
                                                   }
-                                                  hasAccess={
+                                                  isPremium={
                                                     hasAccess
                                                   }
-                                                  subscriptionStatus={
-                                                    subscriptionStatus
-                                                  }
-                                                  livePrice={
-                                                    currentLivePrice
-                                                  }
-                                                />
+                                                >
+                                                  <SignalCardNew
+                                                    signal={
+                                                      signal as any
+                                                    }
+                                                    hasAccess={
+                                                      hasAccess
+                                                    }
+                                                    subscriptionStatus={
+                                                      subscriptionStatus
+                                                    }
+                                                    livePrice={
+                                                      currentLivePrice
+                                                    }
+                                                  />
+                                                </SignalUnlockGate>
 
                                                 {/*
                                                  * EXNESS SLIDER
