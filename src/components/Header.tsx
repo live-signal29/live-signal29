@@ -227,9 +227,9 @@ const Header = () => {
               onClick={handleGetApp}
               aria-label="Get App"
               className="
-                h-8
+                h-7
                 pl-1.5
-                pr-2.5
+                pr-2
                 mx-0.5
                 rounded-full
                 flex
@@ -239,8 +239,8 @@ const Header = () => {
                 bg-white
                 hover:bg-white/95
                 text-slate-900
-                text-[10px]
-                sm:text-[11px]
+                text-[9.5px]
+                sm:text-[10.5px]
                 font-bold
                 ring-1
                 ring-black/10
@@ -251,7 +251,7 @@ const Header = () => {
                 whitespace-nowrap
               "
             >
-              <PlayStoreBadgeIcon className="h-3 w-3 shrink-0" />
+              <PlayStoreBadgeIcon className="h-2.5 w-2.5 shrink-0" />
               <span>Get App</span>
             </button>
 
