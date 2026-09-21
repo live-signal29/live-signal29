@@ -244,10 +244,10 @@ export const NotificationBell = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className="relative !h-8 !w-8"
             aria-label="Notifications"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-4 w-4" />
 
             {unreadCount > 0 && (
               <Badge
