@@ -57,28 +57,26 @@ export const CopierLeaderboard = () => {
   return (
     <>
       {/* HERO SECTION */}
-      <div className="mb-5 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 sm:p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-            <Rocket className="h-4.5 w-4.5" />
+      <div className="mb-3 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Rocket className="h-4 w-4" />
           </div>
           <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
             100% Automated
           </Badge>
         </div>
 
-        <h2 className="text-lg sm:text-xl font-extrabold text-foreground leading-snug">
-          Trade Without Watching the Screen — Every Signal, Instantly on Your Account
+        <h2 className="text-base sm:text-lg font-extrabold text-foreground leading-snug line-clamp-1">
+          Trade Without Watching the Screen
         </h2>
 
-        <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+        <p className="mt-1 text-xs sm:text-sm text-muted-foreground leading-snug line-clamp-2">
           Connect your MT5 or MT4 account once, and every verified signal from
-          our team is copied instantly to your trading account. No manual
-          entry, no missed opportunities, no emotional decisions — just
-          consistent, disciplined execution.
+          our team is copied instantly to your trading account.
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium text-muted-foreground">
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-medium text-muted-foreground">
           <span className="flex items-center gap-1">
             <Zap className="h-3.5 w-3.5 text-primary" /> Zero Delay Execution
           </span>
@@ -93,8 +91,8 @@ export const CopierLeaderboard = () => {
         <Button
           type="button"
           onClick={() => setConnectOpen(true)}
-          className="mt-4 w-full sm:w-auto font-bold"
-          size="lg"
+          className="mt-3 w-full sm:w-auto font-bold"
+          size="default"
         >
           Start Copy Trading Now <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
