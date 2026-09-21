@@ -12,6 +12,7 @@ import { Loader2, TrendingUp, TrendingDown, Gauge, User, ChevronRight, Rocket, S
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { MT5CopierConnectDialog } from "@/components/MT5CopierConnectDialog";
+import { isOwnCopierRequestId } from "@/lib/myCopierRequests";
 
 // The generated Supabase types haven't been regenerated to include this
 // view yet, so we cast the client to `any` for this call.
@@ -37,6 +38,12 @@ const fmtMoney = (v: number | null) => (v === null || v === undefined ? "—" : 
  * name + performance numbers are shown — never login, password, broker or
  * contact details, which stay admin-only. Nobody (including the account's
  * own owner) can edit anything here; all edits happen from the admin panel.
+ *
+ * Pending and Connected accounts are visible to everyone. A Rejected account
+ * is only visible to the person who submitted that request — everyone else's
+ * rejected requests are hidden from them, so nobody sees "who got rejected"
+ * except the rejected person themselves (identified via the id remembered
+ * locally at submission time — see src/lib/myCopierRequests.ts).
  */
 export const CopierLeaderboard = () => {
   const [selected, setSelected] = useState<PublicCopierStat | null>(null);
@@ -53,6 +60,12 @@ export const CopierLeaderboard = () => {
       return data as PublicCopierStat[];
     },
   });
+
+  // Hide other people's rejected requests — only the submitter should see
+  // their own "Rejected" card. Pending/Connected stay visible to everyone.
+  const visibleStats = stats?.filter(
+    (s) => s.status !== "rejected" || isOwnCopierRequestId(s.id)
+  );
 
   return (
     <>
@@ -102,7 +115,7 @@ export const CopierLeaderboard = () => {
         <div className="flex justify-center items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : !stats || stats.length === 0 ? (
+      ) : !visibleStats || visibleStats.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-muted-foreground text-lg">No copier accounts published yet</p>
           <p className="text-muted-foreground text-sm mt-1">
@@ -111,7 +124,7 @@ export const CopierLeaderboard = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {stats.map((s) => {
+          {visibleStats.map((s) => {
               const rejectedMessage = `Hello, my name is ${s.name || "Copier User"}. I submitted an MT5 Copier connection request which was rejected. Could you please let me know the reason? Thank you.`;
               const telegramUrl = `https://t.me/forexqueeni?text=${encodeURIComponent(rejectedMessage)}`;
 
