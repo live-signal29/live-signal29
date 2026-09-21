@@ -96,11 +96,21 @@ const MT5CopierManagement = () => {
   const setDraft = (id: string, field: keyof CopierRequest, value: any) =>
     setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
 
-  // Helper for opening WhatsApp chat
-  const openWhatsApp = (phone: string | null) => {
-    if (!phone) return;
-    const cleanNumber = phone.replace(/[^\d+]/g, "");
-    window.open(`https://wa.me/${cleanNumber.replace("+", "")}`, "_blank");
+  // Helper for opening WhatsApp chat — pre-fills the rejection message
+  // automatically when the request's status is "rejected", so the admin
+  // doesn't have to type it out manually every time.
+  const openWhatsApp = (req: CopierRequest) => {
+    if (!req.contact_number) return;
+    const cleanNumber = req.contact_number.replace(/[^\d+]/g, "").replace("+", "");
+
+    let url = `https://wa.me/${cleanNumber}`;
+
+    if (req.status === "rejected") {
+      const rejectionMessage = `Hi ${req.name || "there"},\n\nWe've reviewed your MT5 Copier connection request, and unfortunately it has been rejected at this time, as the submitted details didn't meet our requirements.\n\nFeel free to resubmit your request with correct details, and we'll be happy to review it again. Let us know if you have any questions.\n\nThank you — Live Signals Pro Team`;
+      url += `?text=${encodeURIComponent(rejectionMessage)}`;
+    }
+
+    window.open(url, "_blank");
   };
 
   // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on % of the account balance
@@ -302,7 +312,7 @@ const MT5CopierManagement = () => {
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => openWhatsApp(req.contact_number)}
+                                onClick={() => openWhatsApp(req)}
                                 className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
                               >
                                 <Phone className="h-4 w-4" />
@@ -354,7 +364,7 @@ const MT5CopierManagement = () => {
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => openWhatsApp(req.contact_number)}
+                              onClick={() => openWhatsApp(req)}
                               className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1.5 ml-auto"
                             >
                               <MessageSquare className="h-3.5 w-3.5 fill-current" />
