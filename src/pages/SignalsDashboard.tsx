@@ -1254,12 +1254,17 @@ const SignalsDashboard = () => {
                                                  * Only OPEN signals go
                                                  * through the unlock
                                                  * gate (watch ad / go
-                                                 * premium). Premium
-                                                 * users (hasAccess)
-                                                 * always see it
-                                                 * instantly. Closed
-                                                 * signals skip the
-                                                 * gate entirely.
+                                                 * premium). Only TRUE
+                                                 * paid Premium
+                                                 * subscribers skip
+                                                 * the gate — trial
+                                                 * users still see it,
+                                                 * matching the same
+                                                 * subscriptionStatus
+                                                 * !== "premium" check
+                                                 * used for ads below.
+                                                 * Closed signals skip
+                                                 * the gate entirely.
                                                  */}
                                                 {isSignalOpen ? (
                                                   <SignalUnlockGate
@@ -1267,7 +1272,8 @@ const SignalsDashboard = () => {
                                                       signal.id
                                                     }
                                                     isPremium={
-                                                      hasAccess
+                                                      subscriptionStatus ===
+                                                      "premium"
                                                     }
                                                     pair={
                                                       signal.pair
