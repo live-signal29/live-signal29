@@ -353,9 +353,9 @@ export const SideDrawer = () => {
       <SheetTrigger asChild>
         <button
           aria-label="Open menu"
-          className="p-2 rounded-xl hover:bg-accent/80 transition-colors duration-200 active:scale-95"
+          className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-accent/80 transition-colors duration-200 active:scale-95"
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-4 w-4" />
         </button>
       </SheetTrigger>
       <SheetContent
