@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, TrendingUp, TrendingDown, Gauge, User, ChevronRight, Rocket, ShieldCheck, Zap, Clock } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Gauge, User, ChevronRight, Rocket, ShieldCheck, Zap, Clock, Send } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { MT5CopierConnectDialog } from "@/components/MT5CopierConnectDialog";
@@ -112,12 +112,22 @@ export const CopierLeaderboard = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {stats.map((s) => {
-            return (
-              <button
+              const rejectedMessage = `Hello, my name is ${s.name || "Copier User"}. I submitted an MT5 Copier connection request which was rejected. Could you please let me know the reason? Thank you.`;
+              const telegramUrl = `https://t.me/forexqueeni?text=${encodeURIComponent(rejectedMessage)}`;
+
+              return (
+              <div
                 key={s.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelected(s)}
-                className="text-left rounded-2xl border border-border/60 bg-card p-4 shadow-sm card-3d-hover"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelected(s);
+                  }
+                }}
+                className="text-left rounded-2xl border border-border/60 bg-card p-4 shadow-sm card-3d-hover cursor-pointer"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -167,8 +177,21 @@ export const CopierLeaderboard = () => {
                     <div className="text-sm font-bold truncate px-1">{s.risk_reward_ratio || "—"}</div>
                   </div>
                 </div>
-              </button>
-            );
+
+                {s.status === "rejected" && (
+                  <a
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/15 text-rose-600 dark:text-rose-400 text-xs font-semibold py-2 transition-colors"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Ask Reason (Telegram)
+                  </a>
+                )}
+              </div>
+              );
           })}
         </div>
       )}
