@@ -292,7 +292,7 @@ export const SignalUnlockGate = ({
                 {/* Watch ad option */}
                 <button
                   onClick={handleWatchAd}
-                  className="group flex items-center gap-3 rounded-2xl border border-teal-200 bg-teal-50/60 px-4 py-3 text-left transition hover:border-teal-400 hover:bg-teal-50"
+                  className="group flex items-center gap-3 rounded-2xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-left transition hover:border-teal-500/50 hover:bg-teal-500/15"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white shadow-sm">
                     <PlayCircle className="h-5 w-5" />
@@ -312,7 +312,7 @@ export const SignalUnlockGate = ({
                 <button
                   onClick={handleGoPremium}
                   disabled={purchasing}
-                  className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 px-4 py-3 text-left transition hover:border-amber-400 disabled:opacity-60"
+                  className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-left transition hover:border-amber-500/60 hover:bg-amber-500/15 disabled:opacity-60"
                 >
                   <span className="absolute right-3 top-2 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
                     Best value
