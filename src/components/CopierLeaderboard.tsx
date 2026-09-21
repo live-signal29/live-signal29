@@ -130,11 +130,17 @@ export const CopierLeaderboard = () => {
                         variant="secondary"
                         className={
                           s.status === "connected"
-                            ? "bg-emerald-500/10 text-emerald-500 text-[10px] h-4 px-1.5"
-                            : "text-[10px] h-4 px-1.5"
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] h-4 px-1.5"
+                            : s.status === "rejected"
+                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[10px] h-4 px-1.5"
+                            : "bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] h-4 px-1.5"
                         }
                       >
-                        {s.status === "connected" ? "Connected" : s.status}
+                        {s.status === "connected"
+                          ? "Connected"
+                          : s.status === "rejected"
+                          ? "Rejected"
+                          : "Pending"}
                       </Badge>
                     </div>
                   </div>
