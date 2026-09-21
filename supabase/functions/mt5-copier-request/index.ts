@@ -263,6 +263,7 @@ serve(async (req) => {
         success: true,
         message: "Request submitted successfully",
         telegram_notified: notifyResult.sent,
+        id: inserted.id,
       }),
       {
         status: 200,
