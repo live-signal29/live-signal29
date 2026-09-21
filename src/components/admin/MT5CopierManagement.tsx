@@ -57,6 +57,7 @@ const MT5CopierManagement = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<CopierRequest>>>({});
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "connected" | "rejected">("all");
 
   const togglePasswordVisibility = (id: string) =>
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -185,6 +186,25 @@ const MT5CopierManagement = () => {
     );
   }
 
+  const counts = {
+    all: requests?.length || 0,
+    pending: requests?.filter((r) => r.status === "pending").length || 0,
+    connected: requests?.filter((r) => r.status === "connected").length || 0,
+    rejected: requests?.filter((r) => r.status === "rejected").length || 0,
+  };
+
+  const filteredRequests =
+    statusFilter === "all"
+      ? requests
+      : requests?.filter((r) => r.status === statusFilter);
+
+  const filterTabs: { key: typeof statusFilter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "pending", label: "Pending" },
+    { key: "connected", label: "Connected" },
+    { key: "rejected", label: "Rejected" },
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -198,13 +218,31 @@ const MT5CopierManagement = () => {
         <p className="text-xs text-muted-foreground">
           Enter Profit % or Loss % below and save — amounts & R:R ratio auto-calculate. Click WhatsApp to instantly message users.
         </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                statusFilter === tab.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70"
+              }`}
+            >
+              {tab.label} ({counts[tab.key]})
+            </button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
-        {!requests || requests.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No MT5 copier requests yet</p>
+        {!filteredRequests || filteredRequests.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            {statusFilter === "all" ? "No MT5 copier requests yet" : `No ${statusFilter} requests`}
+          </p>
         ) : (
           <div className="space-y-4">
-            {requests.map((req) => {
+            {filteredRequests.map((req) => {
               const isExpanded = expandedId === req.id;
               return (
                 <Card key={req.id} className="border-border/50">
