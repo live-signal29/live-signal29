@@ -40,7 +40,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const PLAY_STORE_URL =
-    "https://play.google.com/store/apps/details?id=co.median.android.odrkwln";
+    "https://play.google.com/store/apps/dev?id=8617006322141073240";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -204,34 +204,33 @@ const Header = () => {
             </span>
           </Link>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Right Actions — every icon here is a uniform 32px (h-8 w-8)
+              button at its own source component, so they line up cleanly
+              with the Get App pill instead of some rendering bigger
+              (SideDrawer's menu button and NotificationBell used to be
+              40px by default, which made the row look uneven). */}
+          <div className="flex items-center gap-1 shrink-0">
 
             {/* Desktop Search */}
             <div className="hidden sm:flex items-center">
               <GlobalSearch />
             </div>
 
-            {/* Theme toggle — small icon, visible on every screen size */}
-            <div className="icon-3d h-8 w-8 sm:h-9 sm:w-9">
-              <ThemeToggle />
-            </div>
+            {/* Theme toggle */}
+            <ThemeToggle />
 
             {/* Menu */}
-            <div className="icon-3d h-8 w-8 sm:h-9 sm:w-9">
-              <SideDrawer />
-            </div>
+            <SideDrawer />
 
             {/* Get App — Play Store badge, compact & professional */}
             <button
               onClick={handleGetApp}
               aria-label="Get App"
               className="
-                h-7
-                sm:h-8
+                h-8
                 pl-1.5
-                pr-2
-                sm:pr-2.5
+                pr-2.5
+                mx-0.5
                 rounded-full
                 flex
                 items-center
@@ -257,9 +256,7 @@ const Header = () => {
             </button>
 
             {/* Notification */}
-            <div className="icon-3d h-8 w-8 sm:h-9 sm:w-9">
-              <NotificationBell />
-            </div>
+            <NotificationBell />
 
           </div>
         </div>
