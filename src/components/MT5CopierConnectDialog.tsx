@@ -11,6 +11,7 @@ import {
   Server,
   Lock,
   StickyNote,
+  Wifi,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,8 +277,12 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
             </Button>
             <p className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground px-1">
               <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              This step links your Telegram to your request — required so we can confirm
-              it reached you and notify you the moment it's approved.
+              Required to confirm your request and send you status updates.
+            </p>
+            <p className="flex items-start gap-1.5 text-[11px] leading-snug text-amber-600 dark:text-amber-500 px-1">
+              <Wifi className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              If Telegram doesn't open or shows an error, turn on a VPN and try again —
+              Telegram is restricted in some countries without one.
             </p>
           </div>
         </DialogContent>
@@ -337,12 +342,12 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
               <IconInput
                 icon={Phone}
                 id="contact_number"
-                placeholder="+923001234567"
+                placeholder="+14155551234"
                 value={form.contact_number}
                 onChange={handlePhoneChange}
               />
               <span className="text-[11px] text-muted-foreground block">
-                With country code, e.g. +923001234567
+                With country code, e.g. +1, +44, +91
               </span>
             </div>
           </FormSection>
