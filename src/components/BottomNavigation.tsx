@@ -9,7 +9,10 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  // IMPORTANT:
+  // Signals explicitly removes ?tab=copier
   { icon: TrendingUp, label: "Signals", path: "/" },
+
   { icon: Link2, label: "MT5 Copy", path: "/?tab=copier" },
   { icon: ClipboardList, label: "Management", path: "/account-management" },
   { icon: Wallet, label: "Premium", path: "/premium" },
@@ -35,6 +38,9 @@ export const BottomNavigation = () => {
 
   if (shouldHide) return null;
 
+  const searchParams = new URLSearchParams(location.search);
+  const onCopierTab = searchParams.get("tab") === "copier";
+
   return (
     <nav
       className={cn(
@@ -54,22 +60,27 @@ export const BottomNavigation = () => {
           >
             <div className="flex h-[52px] items-center justify-around px-1">
               {navItems.map((item) => {
-                const onCopierTab =
-                  new URLSearchParams(location.search).get("tab") === "copier";
+                const isSignals = item.label === "Signals";
+                const isCopier = item.label === "MT5 Copy";
 
-                const isActive =
-                  item.label === "MT5 Copy"
-                    ? location.pathname === "/" && onCopierTab
-                    : item.label === "Signals"
-                    ? (location.pathname === "/" && !onCopierTab) ||
-                      location.pathname === "/signals" ||
-                      location.pathname.includes("signals")
-                    : location.pathname === item.path;
+                const isActive = isSignals
+                  ? location.pathname === "/" && !onCopierTab
+                  : isCopier
+                  ? location.pathname === "/" && onCopierTab
+                  : location.pathname === item.path;
+
+                // IMPORTANT:
+                // Signals must ALWAYS go to the main dashboard
+                // without the copier query parameter.
+                const targetPath = isSignals
+                  ? "/"
+                  : item.path;
 
                 return (
                   <Link
-                    key={item.path}
-                    to={item.path}
+                    key={item.label}
+                    to={targetPath}
+                    replace={isSignals}
                     className={cn(
                       "relative flex min-w-0 flex-1 flex-col",
                       "items-center justify-center",
