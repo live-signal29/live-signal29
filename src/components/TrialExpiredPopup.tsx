@@ -19,7 +19,7 @@ const TrialExpiredPopup = ({ open, onClose }: TrialExpiredPopupProps) => {
 
   const handleOk = () => {
     onClose();
-    navigate("/premium");
+    navigate("/premium#plans-section");
   };
 
   return (
