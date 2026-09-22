@@ -34,6 +34,7 @@ import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { MarketClosedBanner } from "@/components/MarketClosedBanner";
 import { SignalUnlockGate } from "@/components/SignalUnlockGate";
+import { useSearchParams } from "react-router-dom";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -264,7 +265,12 @@ const SignalsDashboard = () => {
     trialExpired,
   } = useSubscriptionAccess();
 
-  const [mainCategory, setMainCategory] = useState("COMMODITIES");
+  const [searchParams] = useSearchParams();
+  // Lets the bottom nav's "MT5 Copy" link (/?tab=copier) open straight
+  // into the Copier tab instead of always defaulting to Gold.
+  const [mainCategory, setMainCategory] = useState(
+    searchParams.get("tab") === "copier" ? "COPIER" : "COMMODITIES"
+  );
   const [subCategory, setSubCategory] = useState<string>("all");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedChartIndex, setSelectedChartIndex] = useState(0);
@@ -859,7 +865,7 @@ const SignalsDashboard = () => {
             category={mainCategory}
           />
 
-          <MT5CopierBanner />
+          
 
           {/*
            * SPECIAL OFFER BANNER
