@@ -28,7 +28,7 @@ import {
   UserCheck,
   Wallet,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { MT5CopierConnectDialog } from "@/components/MT5CopierConnectDialog";
 import { isOwnCopierRequestId } from "@/lib/myCopierRequests";
@@ -45,11 +45,30 @@ interface PublicCopierStat {
   loss_percent: number | null;
   status: string;
   created_at: string;
-  broker?: string | null;
+  updated_at?: string;
+  broker_name?: string | null;
+  broker_server?: string | null;
+  last_synced_at?: string | null;
 }
 
 const fmtPercent = (v: number | null) => (v === null || v === undefined ? "—" : `${v}%`);
 const fmtMoney = (v: number | null) => (v === null || v === undefined ? "—" : `$${v}`);
+
+// Builds the "MT5 • Broker — Server" label from whatever broker fields the
+// account actually has, instead of a single hardcoded broker for everyone.
+const brokerLabel = (s: PublicCopierStat) => {
+  if (!s.broker_name) return "MT5 Account";
+  return s.broker_server ? `MT5 • ${s.broker_name} — ${s.broker_server}` : `MT5 • ${s.broker_name}`;
+};
+
+// Real relative time since the account's performance was last updated by
+// admin — last_synced_at is never populated (the auto-sync cron was
+// removed), so basing this on it would show "Not synced yet" for everyone.
+const lastSyncLabel = (s: PublicCopierStat) => {
+  const ts = s.last_synced_at || s.updated_at || s.created_at;
+  if (!ts) return "Not synced yet";
+  return `Updated ${formatDistanceToNow(new Date(ts), { addSuffix: true })}`;
+};
 
 const HOW_IT_WORKS = [
   { step: "01", icon: Link2, title: "Connect", desc: "Connect your MT5/MT4 account" },
@@ -79,7 +98,7 @@ export const CopierLeaderboard = () => {
   );
 
   return (
-    <div className="pb-24">
+    <div className="pb-20">
       {/* HERO SECTION */}
       <div className="relative mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-4 shadow-lg">
         <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
@@ -179,7 +198,7 @@ export const CopierLeaderboard = () => {
       </div>
 
       {/* HOW IT WORKS */}
-      <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-emerald-500/10 to-card p-4 sm:p-5 shadow-sm">
+      <div className="mb-3 rounded-2xl border border-border/50 bg-card p-4 sm:p-5">
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="font-bold text-sm sm:text-base text-foreground">
@@ -191,7 +210,7 @@ export const CopierLeaderboard = () => {
           </div>
           <Badge
             variant="secondary"
-            className="shrink-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold gap-1"
+            className="shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold gap-1"
           >
             <ShieldCheck className="h-3 w-3" /> 100% Safe & Secure
           </Badge>
@@ -202,7 +221,7 @@ export const CopierLeaderboard = () => {
             <Fragment key={step}>
               <div className="flex-1 min-w-0 flex flex-col items-center text-center">
                 <div className="relative">
-                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-emerald-600 text-white">
                     <Icon className="h-4 w-4" />
                   </div>
                   <span className="absolute -top-1 -left-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-900 px-1 text-[8px] font-bold text-white">
@@ -224,18 +243,6 @@ export const CopierLeaderboard = () => {
         </div>
       </div>
 
-      {/* SECTION DIVIDER & LEADERBOARD HEADER */}
-      <div className="relative my-5">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-xs font-extrabold tracking-wider uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-            <BarChart3 className="h-3.5 w-3.5" /> Live Leaderboard & Performance
-          </span>
-        </div>
-      </div>
-
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -253,7 +260,7 @@ export const CopierLeaderboard = () => {
             const rejectedMessage = `Hello, my name is ${s.name || "Copier User"}. I submitted an MT5 Copier connection request which was rejected. Could you please let me know the reason? Thank you.`;
             const telegramUrl = `https://t.me/forexqueeni?text=${encodeURIComponent(rejectedMessage)}`;
 
-            // CONNECTED CARD
+            // CONNECTED CARD (Matched with Image style: Last sync & Broker info)
             if (s.status === "connected") {
               return (
                 <div
@@ -282,13 +289,15 @@ export const CopierLeaderboard = () => {
                         </span>
                       </div>
                     </div>
-                    
-                    <div className="text-right shrink-0">
+
+                    {/* Right side info matching screenshot style */}
+                    <div className="text-right shrink-0 min-w-0">
                       <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
-                        <Clock className="h-3 w-3" /> Last sync: 2 min ago
+                        <Clock className="h-3 w-3 shrink-0" /> {lastSyncLabel(s)}
                       </div>
-                      <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-foreground mt-0.5">
-                        <Database className="h-3 w-3 text-emerald-500" /> {s.broker || "MT5 • Account"}
+                      <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-foreground mt-0.5 truncate">
+                        <Database className="h-3 w-3 text-emerald-500 shrink-0" />
+                        <span className="truncate">{brokerLabel(s)}</span>
                       </div>
                     </div>
                   </div>
@@ -313,10 +322,6 @@ export const CopierLeaderboard = () => {
                       <span className="text-sm font-bold mt-0.5 truncate">{s.risk_reward_ratio || "—"}</span>
                     </div>
                   </div>
-
-                  <p className="mt-2 text-[10px] text-muted-foreground text-center">
-                    Connected since {format(new Date(s.created_at), "PP")}
-                  </p>
                 </div>
               );
             }
@@ -348,7 +353,7 @@ export const CopierLeaderboard = () => {
                         PENDING
                       </span>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                        Broker: {s.broker || "Not specified"} • Waiting for verification.
+                        Your account is waiting for admin verification.
                       </p>
                     </div>
                   </div>
@@ -395,7 +400,7 @@ export const CopierLeaderboard = () => {
                         REJECTED
                       </span>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                        Broker: {s.broker || "Not specified"} • Request rejected.
+                        Your account request was rejected.
                       </p>
                     </div>
                   </div>
@@ -432,11 +437,6 @@ export const CopierLeaderboard = () => {
               </DialogHeader>
 
               <div className="space-y-3">
-                <div className="rounded-lg bg-muted/40 p-2.5 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-medium">Broker</span>
-                  <span className="font-bold text-foreground">{selected.broker || "MT5 Account"}</span>
-                </div>
-
                 {selected.status === "pending" ? (
                   <div className="rounded-lg bg-amber-500/10 p-3 text-center">
                     <span className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
@@ -493,7 +493,7 @@ export const CopierLeaderboard = () => {
         }
       />
 
-      {/* BOTTOM NAVIGATION BAR */}
+      {/* BOTTOM NAVIGATION BAR (Fixed like App design) */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border/40 px-4 py-2 flex items-center justify-between max-w-md mx-auto sm:max-w-xl">
         <button className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 gap-0.5">
           <LineChart className="h-5 w-5" />
