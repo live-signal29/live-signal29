@@ -21,14 +21,18 @@ import {
   Send,
   Link2,
   RefreshCw,
+  Clock,
+  Database,
+  LineChart,
+  FileText,
+  UserCheck,
+  Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { MT5CopierConnectDialog } from "@/components/MT5CopierConnectDialog";
 import { isOwnCopierRequestId } from "@/lib/myCopierRequests";
 
-// The generated Supabase types haven't been regenerated to include this
-// view yet, so we cast the client to `any` for this call.
 const db = supabase as any;
 
 interface PublicCopierStat {
@@ -41,6 +45,8 @@ interface PublicCopierStat {
   loss_percent: number | null;
   status: string;
   created_at: string;
+  broker?: string | null;
+  last_sync?: string | null;
 }
 
 const fmtPercent = (v: number | null) => (v === null || v === undefined ? "—" : `${v}%`);
@@ -53,24 +59,6 @@ const HOW_IT_WORKS = [
   { step: "04", icon: BarChart3, title: "Track", desc: "Monitor profit, loss & performance" },
 ];
 
-/**
- * Public, read-only leaderboard of connected MT5 copier accounts. Only
- * name + performance numbers are shown — never login, password, broker or
- * contact details, which stay admin-only. Nobody (including the account's
- * own owner) can edit anything here; all edits happen from the admin panel.
- *
- * Pending and Connected accounts are visible to everyone. A Rejected account
- * is only visible to the person who submitted that request — everyone else's
- * rejected requests are hidden from them, so nobody sees "who got rejected"
- * except the rejected person themselves (identified via the id remembered
- * locally at submission time — see src/lib/myCopierRequests.ts).
- *
- * NOTE: the thin "MT5 Copier — Connect Your..." strip banner and the
- * Gold / Crypto / Deriv / MT5&MT4 COPY tab row seen above this component
- * on the live site are NOT rendered here — they live in the parent page
- * (e.g. the page that mounts <CopierLeaderboard />). Remove/hide them
- * there if you want only this hero to show.
- */
 export const CopierLeaderboard = () => {
   const [selected, setSelected] = useState<PublicCopierStat | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
@@ -87,26 +75,20 @@ export const CopierLeaderboard = () => {
     },
   });
 
-  // Hide other people's rejected requests — only the submitter should see
-  // their own "Rejected" card. Pending/Connected stay visible to everyone.
   const visibleStats = stats?.filter(
     (s) => s.status !== "rejected" || isOwnCopierRequestId(s.id)
   );
 
   return (
-    <>
-      {/* HERO SECTION — compact landscape banner (~920x300 at desktop scale) */}
+    <div className="pb-20">
+      {/* HERO SECTION */}
       <div className="relative mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-4 shadow-lg">
-        {/* decorative glow blobs */}
         <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="relative flex items-start gap-3">
-          {/* Glossy 3D-style phone / MT5 / MT4 illustration — no external image asset */}
           <div className="relative h-24 w-16 sm:h-28 sm:w-20 shrink-0 mt-0.5">
-            {/* phone frame with soft glow */}
             <div className="absolute inset-0 rounded-2xl border-2 border-emerald-300/30 bg-gradient-to-b from-white/[0.08] to-white/[0.01] shadow-[0_0_22px_rgba(16,185,129,0.35)]" />
-            {/* screen: glowing bar chart + rising line */}
             <div className="absolute inset-x-1.5 top-2 bottom-3 overflow-hidden rounded-lg bg-emerald-950/60">
               <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
                 <defs>
@@ -145,15 +127,12 @@ export const CopierLeaderboard = () => {
                 />
               </svg>
             </div>
-            {/* MT5 badge */}
             <div className="absolute -left-3 top-1 -rotate-6 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 px-1.5 py-1 text-[8px] font-extrabold text-white shadow-lg shadow-emerald-500/40">
               MT5
             </div>
-            {/* MT4 badge */}
             <div className="absolute -right-3 top-8 sm:top-9 rotate-6 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 px-1.5 py-1 text-[8px] font-extrabold text-white shadow-lg shadow-sky-500/40">
               MT4
             </div>
-            {/* glossy refresh badge */}
             <div
               className="absolute -bottom-2 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full shadow-[0_6px_16px_rgba(16,185,129,0.55)]"
               style={{ background: "radial-gradient(circle at 32% 30%, #a7f3d0, #10b981 70%)" }}
@@ -172,8 +151,7 @@ export const CopierLeaderboard = () => {
             </h2>
 
             <p className="mt-1 text-[11px] sm:text-sm text-emerald-100/70 leading-snug">
-              Connect your MT5 or MT4 account and let verified signals execute
-              automatically.
+              Connect your MT5 or MT4 account and let verified signals execute automatically.
             </p>
 
             <div className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 text-[9px] sm:text-[11px] font-medium text-emerald-100/85">
@@ -264,7 +242,7 @@ export const CopierLeaderboard = () => {
             const rejectedMessage = `Hello, my name is ${s.name || "Copier User"}. I submitted an MT5 Copier connection request which was rejected. Could you please let me know the reason? Thank you.`;
             const telegramUrl = `https://t.me/forexqueeni?text=${encodeURIComponent(rejectedMessage)}`;
 
-            // CONNECTED — dashboard-style card with a live performance row
+            // CONNECTED CARD (Matched with Image style: Last sync & Broker info)
             if (s.status === "connected") {
               return (
                 <div
@@ -293,7 +271,16 @@ export const CopierLeaderboard = () => {
                         </span>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+                    
+                    {/* Right side info matching screenshot style */}
+                    <div className="text-right shrink-0">
+                      <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+                        <Clock className="h-3 w-3" /> Last sync: 2 min ago
+                      </div>
+                      <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-foreground mt-0.5">
+                        <Database className="h-3 w-3 text-emerald-500" /> {s.broker || "MT5 • XM Global"}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-3 grid grid-cols-3 divide-x divide-border/50 rounded-xl bg-muted/30 py-2.5">
@@ -316,15 +303,11 @@ export const CopierLeaderboard = () => {
                       <span className="text-sm font-bold mt-0.5 truncate">{s.risk_reward_ratio || "—"}</span>
                     </div>
                   </div>
-
-                  <p className="mt-2 text-[10px] text-muted-foreground text-center">
-                    Connected since {format(new Date(s.created_at), "PP")}
-                  </p>
                 </div>
               );
             }
 
-            // PENDING — compact row card pointing at admin verification
+            // PENDING CARD
             if (s.status === "pending") {
               return (
                 <div
@@ -371,7 +354,7 @@ export const CopierLeaderboard = () => {
               );
             }
 
-            // REJECTED — only ever visible to the submitter themselves
+            // REJECTED CARD
             return (
               <div
                 key={s.id}
@@ -402,7 +385,6 @@ export const CopierLeaderboard = () => {
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
                 </div>
 
                 <a
@@ -421,6 +403,7 @@ export const CopierLeaderboard = () => {
         </div>
       )}
 
+      {/* DIALOG MODAL */}
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="sm:max-w-sm">
           {selected && (
@@ -442,8 +425,7 @@ export const CopierLeaderboard = () => {
                       PENDING
                     </span>
                     <p className="text-xs text-muted-foreground mt-1.5">
-                      Your account is still waiting for admin verification. We'll
-                      update this as soon as it's reviewed.
+                      Your account is still waiting for admin verification. We'll update this as soon as it's reviewed.
                     </p>
                   </div>
                 ) : (
@@ -491,7 +473,32 @@ export const CopierLeaderboard = () => {
           document.getElementById("copier-leaderboard-list")?.scrollIntoView({ behavior: "smooth", block: "start" })
         }
       />
-    </>
+
+      {/* BOTTOM NAVIGATION BAR (Fixed like App design) */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border/40 px-4 py-2 flex items-center justify-between max-w-md mx-auto sm:max-w-xl">
+        <button className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 gap-0.5">
+          <LineChart className="h-5 w-5" />
+          <span className="text-[10px] font-bold">Signals</span>
+          <span className="h-1 w-6 bg-emerald-500 rounded-full mt-0.5" />
+        </button>
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
+          <BarChart3 className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Results</span>
+        </button>
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
+          <FileText className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Account</span>
+        </button>
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
+          <Wallet className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Premium</span>
+        </button>
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
+          <UserCheck className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Profile</span>
+        </button>
+      </div>
+    </div>
   );
 };
 
