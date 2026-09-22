@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   TrendingUp,
   Link2,
@@ -9,11 +9,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  // IMPORTANT:
-  // Signals explicitly removes ?tab=copier
-  { icon: TrendingUp, label: "Signals", path: "/" },
-
-  { icon: Link2, label: "MT5 Copy", path: "/?tab=copier" },
+  { icon: TrendingUp, label: "Signals" },
+  { icon: Link2, label: "MT5 Copy" },
   { icon: ClipboardList, label: "Management", path: "/account-management" },
   { icon: Wallet, label: "Premium", path: "/premium" },
   { icon: User, label: "Profile", path: "/profile" },
@@ -29,6 +26,7 @@ const hiddenRoutes = [
 
 export const BottomNavigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const shouldHide = hiddenRoutes.some(
     (route) =>
@@ -40,6 +38,20 @@ export const BottomNavigation = () => {
 
   const searchParams = new URLSearchParams(location.search);
   const onCopierTab = searchParams.get("tab") === "copier";
+
+  const handleNavigation = (label: string) => {
+    if (label === "Signals") {
+      // Completely remove the copier tab and reset the main dashboard.
+      // This guarantees the Signals page does not remain on MT5 Copy.
+      window.location.href = "/";
+      return;
+    }
+
+    if (label === "MT5 Copy") {
+      navigate("/?tab=copier");
+      return;
+    }
+  };
 
   return (
     <nav
@@ -54,7 +66,7 @@ export const BottomNavigation = () => {
             className={cn(
               "rounded-[17px]",
               "border border-border/60",
-              "bg-background/88 backdrop-blur-2xl",
+              "bg-background/95 backdrop-blur-2xl",
               "shadow-[0_-5px_22px_-12px_hsl(var(--glow-primary)/0.55)]"
             )}
           >
@@ -69,18 +81,65 @@ export const BottomNavigation = () => {
                   ? location.pathname === "/" && onCopierTab
                   : location.pathname === item.path;
 
-                // IMPORTANT:
-                // Signals must ALWAYS go to the main dashboard
-                // without the copier query parameter.
-                const targetPath = isSignals
-                  ? "/"
-                  : item.path;
+                if (isSignals || isCopier) {
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => handleNavigation(item.label)}
+                      className={cn(
+                        "relative flex min-w-0 flex-1 flex-col",
+                        "items-center justify-center",
+                        "gap-[3px] px-1 py-0.5",
+                        "transition-transform duration-200",
+                        "active:scale-90"
+                      )}
+                    >
+                      {/* Icon */}
+                      <span
+                        className={cn(
+                          "icon-3d h-7 w-7",
+                          "transition-all duration-200",
+                          isActive &&
+                            "icon-3d-active animate-glow-breathe"
+                        )}
+                      >
+                        <item.icon
+                          className={cn(
+                            "relative z-[1] h-[15px] w-[15px]",
+                            isActive
+                              ? "text-primary-foreground stroke-[2.3]"
+                              : "text-foreground/70 dark:text-foreground/75 stroke-[1.9]"
+                          )}
+                        />
+                      </span>
+
+                      {/* Label */}
+                      <span
+                        className={cn(
+                          "text-[8px] leading-none tracking-tight",
+                          "whitespace-nowrap",
+                          isActive
+                            ? "font-bold text-primary"
+                            : "font-medium text-foreground/75 dark:text-foreground/70"
+                        )}
+                      >
+                        {item.label}
+                      </span>
+
+                      {/* Active indicator */}
+                      {isActive && (
+                        <span className="absolute -bottom-[1px] h-[2px] w-4 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--glow-primary)/0.8)]" />
+                      )}
+                    </button>
+                  );
+                }
 
                 return (
-                  <Link
+                  <button
                     key={item.label}
-                    to={targetPath}
-                    replace={isSignals}
+                    type="button"
+                    onClick={() => navigate(item.path!)}
                     className={cn(
                       "relative flex min-w-0 flex-1 flex-col",
                       "items-center justify-center",
@@ -103,7 +162,7 @@ export const BottomNavigation = () => {
                           "relative z-[1] h-[15px] w-[15px]",
                           isActive
                             ? "text-primary-foreground stroke-[2.3]"
-                            : "text-muted-foreground stroke-[1.9]"
+                            : "text-foreground/70 dark:text-foreground/75 stroke-[1.9]"
                         )}
                       />
                     </span>
@@ -115,7 +174,7 @@ export const BottomNavigation = () => {
                         "whitespace-nowrap",
                         isActive
                           ? "font-bold text-primary"
-                          : "font-medium text-muted-foreground"
+                          : "font-medium text-foreground/75 dark:text-foreground/70"
                       )}
                     >
                       {item.label}
@@ -125,7 +184,7 @@ export const BottomNavigation = () => {
                     {isActive && (
                       <span className="absolute -bottom-[1px] h-[2px] w-4 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--glow-primary)/0.8)]" />
                     )}
-                  </Link>
+                  </button>
                 );
               })}
             </div>
