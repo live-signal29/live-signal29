@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   TrendingUp,
-  BarChart3,
+  Link2,
   User,
   Wallet,
   ClipboardList,
@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: TrendingUp, label: "Signals", path: "/" },
-  { icon: BarChart3, label: "Results", path: "/results" },
-  { icon: ClipboardList, label: "Account", path: "/account-management" },
+  { icon: Link2, label: "MT5 Copy", path: "/?tab=copier" },
+  { icon: ClipboardList, label: "Management", path: "/account-management" },
   { icon: Wallet, label: "Premium", path: "/premium" },
   { icon: User, label: "Profile", path: "/profile" },
 ];
@@ -54,11 +54,17 @@ export const BottomNavigation = () => {
           >
             <div className="flex h-[52px] items-center justify-around px-1">
               {navItems.map((item) => {
+                const onCopierTab =
+                  new URLSearchParams(location.search).get("tab") === "copier";
+
                 const isActive =
-                  location.pathname === item.path ||
-                  (item.path === "/" &&
-                    (location.pathname === "/signals" ||
-                      location.pathname.includes("signals")));
+                  item.label === "MT5 Copy"
+                    ? location.pathname === "/" && onCopierTab
+                    : item.label === "Signals"
+                    ? (location.pathname === "/" && !onCopierTab) ||
+                      location.pathname === "/signals" ||
+                      location.pathname.includes("signals")
+                    : location.pathname === item.path;
 
                 return (
                   <Link
