@@ -95,61 +95,96 @@ export const CopierLeaderboard = () => {
 
   return (
     <>
-      {/* HERO SECTION — full-size, matches reference 1:1 */}
-      <div className="relative mb-4 overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-6 shadow-lg">
+      {/* HERO SECTION — compact landscape banner (~920x300 at desktop scale) */}
+      <div className="relative mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-4 shadow-lg">
         {/* decorative glow blobs */}
-        <div className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-12 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
 
-        <div className="relative flex items-start gap-5">
-          {/* CSS-built phone / MT5 / MT4 illustration — no external image asset */}
-          <div className="relative h-40 w-28 sm:h-48 sm:w-32 shrink-0 mt-1">
-            <div className="absolute inset-0 rounded-3xl border-2 border-emerald-300/25 bg-white/[0.03] shadow-inner" />
-            <div className="absolute inset-x-3 top-4 bottom-8 overflow-hidden rounded-lg bg-emerald-950/50">
-              <div className="flex h-full items-end gap-1 p-2">
-                {[35, 55, 30, 75, 50, 65, 40].map((h, i) => (
-                  <div
+        <div className="relative flex items-start gap-3">
+          {/* Glossy 3D-style phone / MT5 / MT4 illustration — no external image asset */}
+          <div className="relative h-24 w-16 sm:h-28 sm:w-20 shrink-0 mt-0.5">
+            {/* phone frame with soft glow */}
+            <div className="absolute inset-0 rounded-2xl border-2 border-emerald-300/30 bg-gradient-to-b from-white/[0.08] to-white/[0.01] shadow-[0_0_22px_rgba(16,185,129,0.35)]" />
+            {/* screen: glowing bar chart + rising line */}
+            <div className="absolute inset-x-1.5 top-2 bottom-3 overflow-hidden rounded-lg bg-emerald-950/60">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
+                <defs>
+                  <linearGradient id="barGrad" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#059669" />
+                    <stop offset="100%" stopColor="#6ee7b7" />
+                  </linearGradient>
+                  <filter id="chartGlow" x="-60%" y="-60%" width="220%" height="220%">
+                    <feGaussianBlur stdDeviation="2.4" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                {[35, 55, 30, 75, 50, 80, 60].map((h, i) => (
+                  <rect
                     key={i}
-                    style={{ height: `${h}%` }}
-                    className="w-2 rounded-sm bg-emerald-400/80"
+                    x={i * 13 + 4}
+                    y={100 - h}
+                    width="7"
+                    height={h}
+                    rx="1.5"
+                    fill="url(#barGrad)"
+                    opacity="0.85"
                   />
                 ))}
-              </div>
+                <polyline
+                  points="4,85 20,65 36,72 52,40 68,48 88,15"
+                  fill="none"
+                  stroke="#34d399"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  filter="url(#chartGlow)"
+                />
+              </svg>
             </div>
-            <div className="absolute -left-4 top-2 -rotate-6 rounded-md bg-emerald-500 px-2 py-1 text-xs font-extrabold text-white shadow-lg">
+            {/* MT5 badge */}
+            <div className="absolute -left-3 top-1 -rotate-6 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 px-1.5 py-1 text-[8px] font-extrabold text-white shadow-lg shadow-emerald-500/40">
               MT5
             </div>
-            <div className="absolute -right-4 top-14 rotate-6 rounded-md bg-sky-500 px-2 py-1 text-xs font-extrabold text-white shadow-lg">
+            {/* MT4 badge */}
+            <div className="absolute -right-3 top-8 sm:top-9 rotate-6 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 px-1.5 py-1 text-[8px] font-extrabold text-white shadow-lg shadow-sky-500/40">
               MT4
             </div>
-            <div className="absolute -bottom-3 left-1/2 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-emerald-400 text-emerald-950 shadow-lg">
-              <RefreshCw className="h-5 w-5" />
+            {/* glossy refresh badge */}
+            <div
+              className="absolute -bottom-2 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full shadow-[0_6px_16px_rgba(16,185,129,0.55)]"
+              style={{ background: "radial-gradient(circle at 32% 30%, #a7f3d0, #10b981 70%)" }}
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-white drop-shadow-sm" />
             </div>
           </div>
 
-          <div className="min-w-0 flex-1 pt-1">
-            <Badge className="bg-emerald-400/15 text-emerald-300 text-xs font-bold hover:bg-emerald-400/15 px-3 py-1">
+          <div className="min-w-0 flex-1">
+            <Badge className="bg-emerald-400/15 text-emerald-300 text-[9px] font-bold hover:bg-emerald-400/15">
               MT5 & MT4 COPY
             </Badge>
 
-            <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+            <h2 className="mt-1.5 text-base sm:text-xl font-extrabold text-white leading-tight whitespace-nowrap">
               Automate Your <span className="text-emerald-400">Signals</span>
             </h2>
 
-            <p className="mt-2 text-sm sm:text-base text-emerald-100/70 leading-snug">
+            <p className="mt-1 text-[11px] sm:text-sm text-emerald-100/70 leading-snug">
               Connect your MT5 or MT4 account and let verified signals execute
               automatically.
             </p>
 
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs sm:text-sm font-medium text-emerald-100/85">
-              <span className="flex items-center gap-1.5">
-                <Zap className="h-4 w-4" /> Auto Copy
+            <div className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 text-[9px] sm:text-[11px] font-medium text-emerald-100/85">
+              <span className="flex items-center gap-1">
+                <Zap className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Auto Copy
               </span>
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4" /> Secure
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Secure
               </span>
-              <span className="flex items-center gap-1.5">
-                <BarChart3 className="h-4 w-4" /> Performance
+              <span className="flex items-center gap-1">
+                <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Performance
               </span>
             </div>
           </div>
@@ -158,11 +193,11 @@ export const CopierLeaderboard = () => {
         <Button
           type="button"
           onClick={() => setConnectOpen(true)}
-          className="relative mt-5 w-full h-12 sm:h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm sm:text-base shadow-md shadow-emerald-500/20"
+          className="relative mt-3 w-full h-10 sm:h-11 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/20"
         >
-          <Link2 className="h-4 w-4 mr-2" />
+          <Link2 className="h-3.5 w-3.5 mr-1.5" />
           Connect MT5 / MT4
-          <ChevronRight className="h-4 w-4 ml-2" />
+          <ChevronRight className="h-3.5 w-3.5 ml-1.5" />
         </Button>
       </div>
 
