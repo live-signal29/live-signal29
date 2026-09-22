@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
@@ -98,6 +98,17 @@ const AccountManagement = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [activeSlide, setActiveSlide] = useState(0);
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (sliderRef.current) {
+      const scrollLeft = sliderRef.current.scrollLeft;
+      const cardWidth = sliderRef.current.offsetWidth * 0.75;
+      const index = Math.round(scrollLeft / cardWidth);
+      setActiveSlide(Math.min(index, plans.length - 1));
+    }
+  };
 
   const { data: performanceData } = useQuery({
     queryKey: ['account-performance'],
@@ -206,16 +217,21 @@ const AccountManagement = () => {
           </Card>
         </div>
 
-        {/* Investment Tiers - Auto Slideable / Horizontal Scroll on Mobile */}
-        <section className="space-y-4">
+        {/* Investment Tiers - Taller & Slideable with Pagination Dots */}
+        <section className="space-y-3">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-1">
             <div>
               <h2 className="text-xl font-bold tracking-tight">Investment Tiers</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Swipe or scroll to explore investment packages</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Swipe horizontally to explore packages</p>
             </div>
           </div>
 
-          <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-3 pt-1 no-scrollbar md:grid md:grid-cols-2 lg:grid-cols-4">
+          {/* Slider Container */}
+          <div 
+            ref={sliderRef}
+            onScroll={handleScroll}
+            className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-2 pt-1 px-1 no-scrollbar md:grid md:grid-cols-2 lg:grid-cols-4"
+          >
             {plans.map((plan, index) => {
               const Icon = plan.icon;
               return (
@@ -226,35 +242,35 @@ const AccountManagement = () => {
                     document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
                   }}
                   className={cn(
-                    "relative min-w-[260px] sm:min-w-[280px] md:min-w-0 snap-center rounded-2xl p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between shadow-sm",
-                    "bg-white dark:bg-slate-900/75 border backdrop-blur-md",
-                    "hover:border-emerald-500/50 hover:shadow-md hover:-translate-y-1",
+                    "relative min-w-[285px] sm:min-w-[300px] md:min-w-0 min-h-[385px] snap-center rounded-2xl p-5 cursor-pointer transition-all duration-300 flex flex-col justify-between shadow-md",
+                    "bg-white dark:bg-slate-900/80 border backdrop-blur-md",
+                    "hover:border-emerald-500/50 hover:shadow-lg hover:-translate-y-1",
                     plan.popular 
-                      ? "border-emerald-500/60 ring-1 ring-emerald-500/30 shadow-emerald-500/5" 
+                      ? "border-emerald-500/60 ring-2 ring-emerald-500/25 shadow-emerald-500/10" 
                       : "border-slate-200 dark:border-slate-800/80"
                   )}
                 >
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-[10px] px-2.5 py-0.5 shadow-sm">
+                      <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-[10px] px-3 py-0.5 shadow-sm">
                         Most Popular
                       </Badge>
                     </div>
                   )}
 
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={cn("p-2 rounded-xl bg-gradient-to-br", plan.color)}>
-                        <Icon className="h-4 w-4" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={cn("p-2.5 rounded-xl bg-gradient-to-br", plan.color)}>
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{plan.title}</span>
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{plan.title}</span>
                     </div>
 
-                    <div className="mb-3">
-                      <div className="text-2xl font-black tracking-tight">{plan.amount}</div>
+                    <div className="mb-4">
+                      <div className="text-3xl font-black tracking-tight">{plan.amount}</div>
                     </div>
 
-                    <div className="space-y-1.5 py-2.5 border-y border-slate-100 dark:border-slate-800/80 mb-3 text-xs">
+                    <div className="space-y-2.5 py-3 border-y border-slate-100 dark:border-slate-800/80 mb-4 text-xs">
                       <div className="flex justify-between">
                         <span className="text-slate-500 dark:text-slate-400">Profit Split</span>
                         <span className="font-bold text-emerald-600 dark:text-emerald-400">{plan.profitSharing}</span>
@@ -265,26 +281,39 @@ const AccountManagement = () => {
                       </div>
                     </div>
 
-                    <ul className="space-y-1.5 mb-4">
+                    <ul className="space-y-2 mb-4">
                       {plan.features.map((feat, i) => (
                         <li key={i} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                           <span>{feat}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  {/* Highly Attractive Button */}
+                  {/* Attractive Button */}
                   <Button 
                     size="sm" 
-                    className="w-full text-xs font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/30"
+                    className="w-full text-xs font-bold py-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/30"
                   >
                     Select Plan
                   </Button>
                 </div>
               );
             })}
+          </div>
+
+          {/* Swipe Indicator Dots (Mobile Only) */}
+          <div className="flex justify-center items-center gap-1.5 pt-1 md:hidden">
+            {plans.map((_, idx) => (
+              <span
+                key={idx}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  activeSlide === idx ? "w-6 bg-emerald-500" : "w-1.5 bg-slate-300 dark:bg-slate-700"
+                )}
+              />
+            ))}
           </div>
         </section>
 
