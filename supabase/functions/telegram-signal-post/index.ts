@@ -338,7 +338,7 @@ function formatSignalMessage(signal: Signal): string {
   if (signal.tp3) message += `🎯 TP3: ${escapeHtml(signal.tp3)}\n`;
   if (signal.tp4) message += `🎯 TP4: ${escapeHtml(signal.tp4)}\n`;
 
-  message += `❌ SL: ${escapeHtml(signal.sl)}\n`;
+  message += `✖️ SL: ${escapeHtml(signal.sl)}\n`;
   message += `━━━━━━━━━━━━━━━\n`;
 
   if (signal.signal_type) {
@@ -379,8 +379,8 @@ const UPDATE_META: Record<
   },
 
   sl_hit: {
-    headline: "SL Hit ❌ - Staying patient for a better entry.",
-    banner: "🛑",
+    headline: "SL Hit ✖️ - Staying patient for a better entry.",
+    banner: "🙏",
   },
 
   expired: {
@@ -447,7 +447,7 @@ function formatIdeaMessage(idea: Idea): string {
   if (idea.entry) message += `💰 <b>Entry:</b> <code>${escapeHtml(idea.entry)}</code>\n`;
   if (idea.tp1 || idea.tp) message += `🎯 <b>TP:</b> <code>${escapeHtml(idea.tp1 || idea.tp)}</code>\n`;
   if (idea.tp2) message += `🎯 <b>TP2:</b> <code>${escapeHtml(idea.tp2)}</code>\n`;
-  if (idea.sl) message += `🛑 <b>SL:</b> <code>${escapeHtml(idea.sl)}</code>\n`;
+  if (idea.sl) message += `✖️ <b>SL:</b> <code>${escapeHtml(idea.sl)}</code>\n`;
   if (idea.risk_level) message += `⚠️ <b>Risk:</b> ${escapeHtml(idea.risk_level)}\n`;
   if (idea.title) message += `\n<b>${escapeHtml(idea.title)}</b>\n`;
   if (idea.description) message += `\n${escapeHtml(idea.description)}\n`;
@@ -487,7 +487,7 @@ function formatSessionMessage(
     if (stats && (stats.tpHits || stats.slHits)) {
       message += `📊 <b>This Week's Performance</b>\n`;
       message += `✅ Targets hit: <b>${stats.tpHits ?? 0}</b>\n`;
-      if (stats.slHits !== undefined) message += `🛑 SL hit: <b>${stats.slHits}</b>\n`;
+      if (stats.slHits !== undefined) message += `✖️ SL hit: <b>${stats.slHits}</b>\n`;
       if (stats.winRate !== undefined) message += `🏆 Win rate: <b>${stats.winRate}%</b>\n`;
       if (stats.bestPair) message += `⭐ Top performer: <b>${escapeHtml(stats.bestPair)}</b>\n`;
       message += `\n`;
