@@ -155,67 +155,67 @@ const AccountManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 selection:bg-emerald-500/20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 selection:bg-emerald-500/20 pb-16">
       <Header />
       
-      <main className="container mx-auto px-4 py-6 space-y-12">
+      <main className="container mx-auto px-4 py-4 space-y-8">
         <MT5CopierBanner />
         <SpecialOfferBanner page="account" />
 
         {/* Hero Section */}
-        <section className="text-center space-y-4 py-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wide uppercase">
+        <section className="text-center space-y-3 py-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wide uppercase">
             <Zap className="h-3.5 w-3.5 animate-pulse" />
             Institutional Grade PAMM / Copier Service
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+          <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">
             Professional <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">Account Management</span>
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base max-w-xl mx-auto">
+          <p className="text-slate-600 dark:text-slate-400 text-xs md:text-sm max-w-lg mx-auto">
             Hands-free verified trading managed by elite professionals with strict risk parameters.
           </p>
         </section>
 
         {/* Strategy & Quick Trust Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md md:col-span-2 p-6 flex flex-col justify-between shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <BarChart3 className="h-6 w-6" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md md:col-span-2 p-4 flex flex-col justify-between shadow-sm">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <BarChart3 className="h-5 w-5" />
               </div>
-              <h3 className="font-bold text-lg">Hybrid AI + Manual Edge</h3>
+              <h3 className="font-bold text-base">Hybrid AI + Manual Edge</h3>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               Our core strategy blends lightning-fast AI pattern detection with institutional price-action analysis to secure high-probability setups with optimized drawdowns.
             </p>
           </Card>
 
-          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md p-6 flex flex-col justify-center space-y-3 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md p-4 flex flex-col justify-center space-y-2 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500 dark:text-slate-400">Win Rate</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">98%</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 text-base">98%</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500 dark:text-slate-400">Active Investors</span>
-              <span className="font-bold text-primary text-lg">500+</span>
+              <span className="font-bold text-primary text-base">500+</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500 dark:text-slate-400">Total Managed</span>
-              <span className="font-bold text-amber-500 text-lg">$2M+</span>
+              <span className="font-bold text-amber-500 text-base">$2M+</span>
             </div>
           </Card>
         </div>
 
-        {/* Investment Tiers */}
-        <section className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
+        {/* Investment Tiers - Auto Slideable / Horizontal Scroll on Mobile */}
+        <section className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-1">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Investment Tiers</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Pick a tier that matches your capital allocation goals</p>
+              <h2 className="text-xl font-bold tracking-tight">Investment Tiers</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Swipe or scroll to explore investment packages</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-3 pt-1 no-scrollbar md:grid md:grid-cols-2 lg:grid-cols-4">
             {plans.map((plan, index) => {
               const Icon = plan.icon;
               return (
@@ -226,8 +226,8 @@ const AccountManagement = () => {
                     document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
                   }}
                   className={cn(
-                    "relative rounded-2xl p-5 cursor-pointer transition-all duration-300 flex flex-col justify-between shadow-sm",
-                    "bg-white dark:bg-slate-900/70 border backdrop-blur-md",
+                    "relative min-w-[260px] sm:min-w-[280px] md:min-w-0 snap-center rounded-2xl p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between shadow-sm",
+                    "bg-white dark:bg-slate-900/75 border backdrop-blur-md",
                     "hover:border-emerald-500/50 hover:shadow-md hover:-translate-y-1",
                     plan.popular 
                       ? "border-emerald-500/60 ring-1 ring-emerald-500/30 shadow-emerald-500/5" 
@@ -243,18 +243,18 @@ const AccountManagement = () => {
                   )}
 
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={cn("p-2.5 rounded-xl bg-gradient-to-br", plan.color)}>
-                        <Icon className="h-5 w-5" />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={cn("p-2 rounded-xl bg-gradient-to-br", plan.color)}>
+                        <Icon className="h-4 w-4" />
                       </div>
                       <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{plan.title}</span>
                     </div>
 
-                    <div className="mb-4">
-                      <div className="text-3xl font-black tracking-tight">{plan.amount}</div>
+                    <div className="mb-3">
+                      <div className="text-2xl font-black tracking-tight">{plan.amount}</div>
                     </div>
 
-                    <div className="space-y-2 py-3 border-y border-slate-100 dark:border-slate-800/80 mb-4 text-xs">
+                    <div className="space-y-1.5 py-2.5 border-y border-slate-100 dark:border-slate-800/80 mb-3 text-xs">
                       <div className="flex justify-between">
                         <span className="text-slate-500 dark:text-slate-400">Profit Split</span>
                         <span className="font-bold text-emerald-600 dark:text-emerald-400">{plan.profitSharing}</span>
@@ -265,7 +265,7 @@ const AccountManagement = () => {
                       </div>
                     </div>
 
-                    <ul className="space-y-2 mb-6">
+                    <ul className="space-y-1.5 mb-4">
                       {plan.features.map((feat, i) => (
                         <li key={i} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -275,7 +275,11 @@ const AccountManagement = () => {
                     </ul>
                   </div>
 
-                  <Button size="sm" variant={plan.popular ? "default" : "outline"} className="w-full text-xs font-semibold">
+                  {/* Highly Attractive Button */}
+                  <Button 
+                    size="sm" 
+                    className="w-full text-xs font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/30"
+                  >
                     Select Plan
                   </Button>
                 </div>
@@ -285,20 +289,20 @@ const AccountManagement = () => {
         </section>
 
         {/* Seamless Onboarding */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-center">Seamless Onboarding</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold tracking-tight text-center">Seamless Onboarding</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {steps.map((step, idx) => {
               const StepIcon = step.icon;
               return (
-                <div key={idx} className="flex items-start gap-3.5 p-4 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
+                <div key={idx} className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
                   <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-                    <StepIcon className="h-5 w-5" />
+                    <StepIcon className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-primary mb-0.5">Step 0{idx + 1}</div>
-                    <div className="font-bold text-sm">{step.title}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{step.desc}</div>
+                    <div className="text-[10px] font-semibold text-primary mb-0.5">Step 0{idx + 1}</div>
+                    <div className="font-bold text-xs">{step.title}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">{step.desc}</div>
                   </div>
                 </div>
               );
@@ -307,22 +311,22 @@ const AccountManagement = () => {
         </section>
 
         {/* Application Form */}
-        <section id="apply-form" className="max-w-xl mx-auto pt-4 scroll-mt-20">
+        <section id="apply-form" className="max-w-xl mx-auto pt-2 scroll-mt-20">
           <Card className="border-slate-200 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-xl font-bold">Secure Your Allocation</CardTitle>
+            <CardHeader className="text-center pb-1">
+              <CardTitle className="text-lg font-bold">Secure Your Allocation</CardTitle>
               <p className="text-xs text-slate-500 dark:text-slate-400">Submit your trading account details for connection review</p>
             </CardHeader>
-            <CardContent className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-3.5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <CardContent className="p-5">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="space-y-1">
                     <Label className="text-xs">Full Name</Label>
                     <Input
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                     />
                     {errors.name && <p className="text-[10px] text-destructive">{errors.name}</p>}
                   </div>
@@ -333,7 +337,7 @@ const AccountManagement = () => {
                       placeholder="+92300..."
                       value={formData.whatsapp}
                       onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                      className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                     />
                     {errors.whatsapp && <p className="text-[10px] text-destructive">{errors.whatsapp}</p>}
                   </div>
@@ -346,19 +350,19 @@ const AccountManagement = () => {
                     placeholder="john@example.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                    className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                   />
                   {errors.email && <p className="text-[10px] text-destructive">{errors.email}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="space-y-1">
                     <Label className="text-xs">Preferred Broker</Label>
                     <Input
                       placeholder="Exness / XM / IC Markets"
                       value={formData.preferred_broker}
                       onChange={(e) => setFormData({ ...formData, preferred_broker: e.target.value })}
-                      className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                     />
                     {errors.preferred_broker && <p className="text-[10px] text-destructive">{errors.preferred_broker}</p>}
                   </div>
@@ -366,7 +370,7 @@ const AccountManagement = () => {
                   <div className="space-y-1">
                     <Label className="text-xs">Platform Type</Label>
                     <Select value={formData.platform_type} onValueChange={(v) => setFormData({ ...formData, platform_type: v })}>
-                      <SelectTrigger className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50">
+                      <SelectTrigger className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
@@ -384,19 +388,19 @@ const AccountManagement = () => {
                     placeholder="e.g., Exness-Real11"
                     value={formData.broker_server}
                     onChange={(e) => setFormData({ ...formData, broker_server: e.target.value })}
-                    className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                    className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                   />
                   {errors.broker_server && <p className="text-[10px] text-destructive">{errors.broker_server}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="space-y-1">
                     <Label className="text-xs">Trading Login (ID)</Label>
                     <Input
                       placeholder="8373738"
                       value={formData.trading_login}
                       onChange={(e) => setFormData({ ...formData, trading_login: e.target.value.replace(/\D/g, '') })}
-                      className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                     />
                     {errors.trading_login && <p className="text-[10px] text-destructive">{errors.trading_login}</p>}
                   </div>
@@ -408,7 +412,7 @@ const AccountManagement = () => {
                       placeholder="Investor/Master Password"
                       value={formData.trading_password}
                       onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
-                      className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                     />
                     {errors.trading_password && <p className="text-[10px] text-destructive">{errors.trading_password}</p>}
                   </div>
@@ -417,7 +421,7 @@ const AccountManagement = () => {
                 <div className="space-y-1">
                   <Label className="text-xs">Selected Account Tier Size</Label>
                   <Select value={formData.account_size} onValueChange={(v) => setFormData({ ...formData, account_size: v })}>
-                    <SelectTrigger className="h-9 text-xs bg-slate-50/50 dark:bg-slate-950/50">
+                    <SelectTrigger className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50">
                       <SelectValue placeholder="Select Account Size" />
                     </SelectTrigger>
                     <SelectContent>
@@ -430,7 +434,7 @@ const AccountManagement = () => {
                   {errors.account_size && <p className="text-[10px] text-destructive">{errors.account_size}</p>}
                 </div>
 
-                <Button type="submit" className="w-full mt-2 h-10 text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20" disabled={isSubmitting}>
+                <Button type="submit" className="w-full mt-2 h-9 text-xs font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-lg shadow-emerald-500/25" disabled={isSubmitting}>
                   {isSubmitting ? "Submitting Application..." : (
                     <>
                       <Send className="h-3.5 w-3.5 mr-2" />
@@ -444,33 +448,33 @@ const AccountManagement = () => {
         </section>
 
         {/* Trust Badges */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 py-4">
-          <div className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
-            <Shield className="h-5 w-5 text-emerald-500 shrink-0" />
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-2.5 py-2">
+          <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
+            <Shield className="h-4 w-4 text-emerald-500 shrink-0" />
             <div>
               <div className="font-semibold text-xs">Secure Capital</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Protected Strategy</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Protected Strategy</div>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
-            <Clock className="h-5 w-5 text-emerald-500 shrink-0" />
+          <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
+            <Clock className="h-4 w-4 text-emerald-500 shrink-0" />
             <div>
               <div className="font-semibold text-xs">24/7 Monitoring</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Active Risk Control</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Active Risk Control</div>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
-            <MessageCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+          <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
+            <MessageCircle className="h-4 w-4 text-emerald-500 shrink-0" />
             <div>
               <div className="font-semibold text-xs">WhatsApp Alerts</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Real-time Trade Logs</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Real-time Trade Logs</div>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
-            <FileText className="h-5 w-5 text-emerald-500 shrink-0" />
+          <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
+            <FileText className="h-4 w-4 text-emerald-500 shrink-0" />
             <div>
               <div className="font-semibold text-xs">Full Transparency</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Verified Statements</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Verified Statements</div>
             </div>
           </div>
         </section>
