@@ -32,6 +32,14 @@ import {
 
 const db = supabase as any;
 
+// Display-only cleanup for text that may have been stored with an old UTF-8/Latin-1 encoding mismatch.
+const cleanDisplayText = (value: string | null | undefined) =>
+  String(value ?? "")
+    .replaceAll("â€”", "-")
+    .replaceAll("â€“", "-")
+    .replaceAll("â€¢", "*")
+    .replaceAll("Ã—", "x");
+
 interface CopierRequest {
   id: string;
   name: string | null;
@@ -152,17 +160,17 @@ const MT5CopierManagement = () => {
   const setDraft = (id: string, field: keyof CopierRequest, value: any) =>
     setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
 
-  // Short but polished, status-specific auto messages â€” used to pre-fill the
+  // Short but polished, status-specific auto messages - used to pre-fill the
   // editable composer for both WhatsApp and Telegram.
   const getStatusMessage = (req: CopierRequest) => {
     const name = req.name || "there";
     switch (req.status) {
       case "pending":
-        return `Hi ${name}! ðŸ‘‹\nThanks for submitting your MT5 Copier request â€” our team is reviewing it right now.\nWe'll get back to you shortly with an update.`;
+        return `Hi ${name}! 👋\nThanks for submitting your MT5 Copier request - our team is reviewing it right now.\nWe'll get back to you shortly with an update.`;
       case "connected":
-        return `Hi ${name}! ðŸŽ‰\nGreat news â€” your MT5 Copier account is now successfully connected and live.\nWishing you profitable trades ahead!`;
+        return `Hi ${name}! 🎉\nGreat news - your MT5 Copier account is now successfully connected and live.\nWishing you profitable trades ahead!`;
       case "rejected":
-        return `Hi ${name},\nThanks for your request â€” unfortunately it couldn't be approved this time.\nThis is usually because of one of the following: a wrong account password, a demo account, a cent account, or a contest account (none of these are allowed for the copier).\nPlease resubmit with a valid live account and correct details â€” we'll be happy to review it again.`;
+        return `Hi ${name},\nThanks for your request - unfortunately it couldn't be approved this time.\nThis is usually because of one of the following: a wrong account password, a demo account, a cent account, or a contest account (none of these are allowed for the copier).\nPlease resubmit with a valid live account and correct details - we'll be happy to review it again.`;
       default:
         return `Hi ${name},\nReaching out regarding your MT5 Copier request.\nLet us know if you have any questions!`;
     }
@@ -198,7 +206,7 @@ const MT5CopierManagement = () => {
   };
 
   // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on % of the account balance
-  // Profit % and Loss % are fully independent â€” entering one no longer resets the other.
+  // Profit % and Loss % are fully independent - entering one no longer resets the other.
   const savePerformance = (req: CopierRequest) => {
     const d = drafts[req.id] || {};
 
@@ -300,7 +308,7 @@ const MT5CopierManagement = () => {
           )}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Enter Profit % or Loss % below and save â€” amounts & R:R ratio auto-calculate. Click WhatsApp to instantly message users.
+          Enter Profit % or Loss % below and save - amounts & R:R ratio auto-calculate. Click WhatsApp to instantly message users.
         </p>
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <Button
@@ -510,7 +518,7 @@ const MT5CopierManagement = () => {
                           )}
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Server className="h-4 w-4 text-primary" />
-                            <span className="font-mono text-xs">{req.broker_name} â€” {req.broker_server}</span>
+                            <span className="font-mono text-xs">{cleanDisplayText(req.broker_name)} - {cleanDisplayText(req.broker_server)}</span>
                           </div>
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Key className="h-4 w-4 text-emerald-500" />
@@ -551,7 +559,7 @@ const MT5CopierManagement = () => {
                               ) : (
                                 <Send className="h-3 w-3" />
                               )}
-                              Message preview â€” edit before sending
+                              Message preview - edit before sending
                             </Label>
                             <Textarea
                               className="text-sm min-h-[90px]"
@@ -589,7 +597,7 @@ const MT5CopierManagement = () => {
                             <Lock className="h-4 w-4 text-amber-500 shrink-0" />
                             <span className="font-mono text-xs text-muted-foreground break-all">
                               Pass: <span className="font-bold text-foreground">
-                                {visiblePasswords[req.id] ? req.mt5_password : "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"}
+                                {visiblePasswords[req.id] ? req.mt5_password : "********"}
                               </span>
                             </span>
                             <button
@@ -616,7 +624,7 @@ const MT5CopierManagement = () => {
                     )}
 
                     {req.note && (
-                      <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-2">{req.note}</p>
+                      <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-2">{cleanDisplayText(req.note)}</p>
                     )}
 
                     <p className="text-xs text-muted-foreground">
