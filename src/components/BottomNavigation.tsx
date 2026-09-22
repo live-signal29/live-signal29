@@ -114,15 +114,15 @@ export const BottomNavigation = () => {
                         "flex items-center justify-center",
                         "transition-all duration-200",
                         isActive &&
-                          "icon-3d-active animate-glow-breathe"
+                          "icon-3d-active animate-glow-breathe bg-emerald-500/15 dark:bg-emerald-500/20 rounded-xl"
                       )}
                     >
                       <item.icon
                         className={cn(
                           "relative z-[1] h-[17px] w-[17px]",
                           isActive
-                            ? "text-primary-foreground stroke-[2.4]"
-                            : "text-foreground/65 dark:text-foreground/70 stroke-[1.9]"
+                            ? "text-emerald-600 dark:text-emerald-400 stroke-[2.4]"
+                            : "text-slate-500 dark:text-slate-400 stroke-[1.9]"
                         )}
                       />
                     </span>
@@ -134,8 +134,8 @@ export const BottomNavigation = () => {
                         "whitespace-nowrap",
                         "transition-colors duration-200",
                         isActive
-                          ? "font-bold text-primary"
-                          : "font-medium text-foreground/65 dark:text-foreground/70"
+                          ? "font-bold text-emerald-600 dark:text-emerald-400"
+                          : "font-medium text-slate-500 dark:text-slate-400"
                       )}
                     >
                       {item.label}
@@ -147,7 +147,7 @@ export const BottomNavigation = () => {
                         className={cn(
                           "absolute -bottom-[1px]",
                           "h-[2.5px] w-5 rounded-full",
-                          "bg-primary",
+                          "bg-emerald-500",
                           "shadow-[0_0_8px_hsl(var(--glow-primary)/0.8)]"
                         )}
                       />
