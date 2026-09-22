@@ -16,7 +16,7 @@ const Footer = () => {
                 Live Signals
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
-                PRO
+                
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
