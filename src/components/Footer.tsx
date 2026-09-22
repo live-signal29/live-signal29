@@ -13,7 +13,7 @@ const Footer = () => {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            Copyright © 2025 VIP Gold Signals
+            Copyright © 2026 Live Signals
           </p>
         </div>
       </div>
