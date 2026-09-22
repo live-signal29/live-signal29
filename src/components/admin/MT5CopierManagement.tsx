@@ -268,10 +268,10 @@ const MT5CopierManagement = () => {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor={`public-${req.id}`} className="text-xs text-muted-foreground">
-                            Show on public Copier List
+                          <Label htmlFor={`public-${req.id}`} className="text-[11px] sm:text-xs text-muted-foreground">
+                            Public list
                           </Label>
                           <Switch
                             id={`public-${req.id}`}
@@ -285,7 +285,7 @@ const MT5CopierManagement = () => {
                           value={req.status}
                           onValueChange={(value) => updateMutation.mutate({ id: req.id, updates: { status: value } })}
                         >
-                          <SelectTrigger className="w-[130px] h-8 text-xs">
+                          <SelectTrigger className="w-[110px] sm:w-[130px] h-8 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -358,7 +358,7 @@ const MT5CopierManagement = () => {
                       <>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                           {req.contact_number && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <button
                                 type="button"
                                 onClick={() => openWhatsApp(req)}
@@ -367,6 +367,16 @@ const MT5CopierManagement = () => {
                                 <Phone className="h-4 w-4" />
                                 <span>{req.contact_number}</span>
                               </button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openWhatsApp(req)}
+                                className="h-6 px-2 text-[11px] border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1"
+                              >
+                                <MessageSquare className="h-3 w-3 fill-current" />
+                                WhatsApp
+                              </Button>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -378,24 +388,36 @@ const MT5CopierManagement = () => {
                             <span className="font-mono text-xs">Login: <span className="font-bold text-foreground">{req.mt5_login}</span></span>
                           </div>
                           {req.telegram_username && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Send className="h-4 w-4 text-sky-500" />
-                              <span className="font-mono text-xs">
-                                @{req.telegram_username}{" "}
-                                {req.telegram_chat_id ? (
-                                  <span className="text-emerald-500 font-semibold">(auto-updates linked)</span>
-                                ) : (
-                                  <span className="text-amber-500 font-semibold">(not linked yet)</span>
-                                )}
+                            <div className="flex flex-col gap-0.5 text-muted-foreground">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Send className="h-4 w-4 text-sky-500" />
+                                <span className="font-mono text-xs">@{req.telegram_username}</span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openTelegram(req)}
+                                  className="h-6 px-2 text-[11px] border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 gap-1"
+                                >
+                                  <Send className="h-3 w-3" />
+                                  Telegram
+                                </Button>
+                              </div>
+                              <span
+                                className={`text-[11px] font-semibold pl-6 ${
+                                  req.telegram_chat_id ? "text-emerald-500" : "text-amber-500"
+                                }`}
+                              >
+                                {req.telegram_chat_id ? "(auto-updates linked)" : "(not linked yet)"}
                               </span>
                             </div>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-3 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Lock className="h-4 w-4 text-amber-500" />
-                            <span className="font-mono text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Lock className="h-4 w-4 text-amber-500 shrink-0" />
+                            <span className="font-mono text-xs text-muted-foreground break-all">
                               Pass: <span className="font-bold text-foreground">
                                 {visiblePasswords[req.id] ? req.mt5_password : "••••••••"}
                               </span>
@@ -418,34 +440,6 @@ const MT5CopierManagement = () => {
                             >
                               Edit
                             </button>
-                          </div>
-
-                          {/* Account Management jaisa WhatsApp Direct Action Button */}
-                          <div className="flex items-center gap-2 ml-auto">
-                            {req.contact_number && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openWhatsApp(req)}
-                                className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
-                              >
-                                <MessageSquare className="h-3.5 w-3.5 fill-current" />
-                                WhatsApp
-                              </Button>
-                            )}
-                            {req.telegram_username && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openTelegram(req)}
-                                className="h-7 text-xs border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 gap-1.5"
-                              >
-                                <Send className="h-3.5 w-3.5" />
-                                Telegram
-                              </Button>
-                            )}
                           </div>
                         </div>
                       </>
@@ -472,7 +466,7 @@ const MT5CopierManagement = () => {
                     </div>
 
                     {isExpanded && (
-                      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/30">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/30">
                         <div className="col-span-2 space-y-1">
                           <Label className="text-[11px] flex items-center gap-1">
                             Account Balance ($)
