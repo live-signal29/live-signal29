@@ -28,6 +28,7 @@ import {
   MessageSquare,
   Send,
   Trash2,
+  Wallet,
 } from "lucide-react";
 
 const db = supabase as any;
@@ -664,88 +665,109 @@ const MT5CopierManagement = () => {
                       </Button>
                     </div>
 
-                    {isExpanded && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/30">
-                        <div className="col-span-2 space-y-1">
-                          <Label className="text-[11px] flex items-center gap-1">
-                            Account Balance ($)
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="e.g. 100"
-                            className="h-8 text-sm"
-                            value={getDraft(req, "account_balance") ?? ""}
-                            onChange={(e) => setDraft(req.id, "account_balance", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1 min-w-0">
-                          <Label className="text-[11px] flex items-center gap-1 whitespace-nowrap">
-                            <TrendingUp className="h-3 w-3 text-emerald-500 shrink-0" /> Profit %
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="e.g. 15"
-                            className="h-8 w-full min-w-0 text-sm"
-                            value={getDraft(req, "profit_percent") ?? ""}
-                            onChange={(e) => setDraft(req.id, "profit_percent", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1 min-w-0">
-                          <Label className="text-[11px] flex items-center gap-1 whitespace-nowrap">
-                            <TrendingDown className="h-3 w-3 text-destructive shrink-0" /> Loss %
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="e.g. 5"
-                            className="h-8 w-full min-w-0 text-sm"
-                            value={getDraft(req, "loss_percent") ?? ""}
-                            onChange={(e) => setDraft(req.id, "loss_percent", e.target.value)}
-                          />
-                        </div>
+                    {isExpanded && (() => {
+                      const bal = Number(getDraft(req, "account_balance")) || 0;
+                      const pp = Math.max(0, Number(getDraft(req, "profit_percent")) || 0);
+                      const lp = Math.max(0, Number(getDraft(req, "loss_percent")) || 0);
+                      const profitPreview = Math.round((Math.max(0, bal) * pp) / 100 * 100) / 100;
+                      const lossPreview = Math.round((Math.max(0, bal) * lp) / 100 * 100) / 100;
+                      const rr = pp > 0 && lp > 0 ? `1:${(pp / lp).toFixed(2).replace(/\.00$/, "")}` : "N/A";
 
-                        {(() => {
-                          const bal = Number(getDraft(req, "account_balance")) || 0;
-                          const pp = Math.max(0, Number(getDraft(req, "profit_percent")) || 0);
-                          const lp = Math.max(0, Number(getDraft(req, "loss_percent")) || 0);
-                          const profitPreview = Math.round((Math.max(0, bal) * pp) / 100 * 100) / 100;
-                          const lossPreview = Math.round((Math.max(0, bal) * lp) / 100 * 100) / 100;
-                          const rr = pp > 0 && lp > 0 ? `1:${(pp / lp).toFixed(2).replace(/\.00$/, "")}` : "N/A";
-                          return (
-                            <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5">
-                                <div className="text-[10px] font-semibold text-emerald-600">PROFIT</div>
-                                <div className="text-base font-bold">${profitPreview.toFixed(2)}</div>
-                                <div className="text-[10px] text-muted-foreground">{pp}% of ${bal.toFixed(2)}</div>
-                              </div>
-                              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-2.5">
-                                <div className="text-[10px] font-semibold text-destructive">LOSS</div>
-                                <div className="text-base font-bold">${lossPreview.toFixed(2)}</div>
-                                <div className="text-[10px] text-muted-foreground">{lp}% of ${bal.toFixed(2)}</div>
-                              </div>
-                              <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-                                <div className="text-[10px] font-semibold text-primary">RISK : REWARD</div>
-                                <div className="text-base font-bold">{rr}</div>
-                                <div className="text-[10px] text-muted-foreground">Risk first, reward second</div>
-                              </div>
+                      return (
+                        <div className="mt-1 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-sm space-y-4">
+                          {/* Account Balance */}
+                          <div className="space-y-1.5">
+                            <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                              <Wallet className="h-3.5 w-3.5" />
+                              Account Balance ($)
+                            </Label>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              placeholder="e.g. 100"
+                              className="h-10 text-base font-semibold"
+                              value={getDraft(req, "account_balance") ?? ""}
+                              onChange={(e) => setDraft(req.id, "account_balance", e.target.value)}
+                            />
+                          </div>
+
+                          {/* Profit % / Loss % */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                                Profit %
+                              </Label>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                placeholder="e.g. 15"
+                                className="h-10 text-base"
+                                value={getDraft(req, "profit_percent") ?? ""}
+                                onChange={(e) => setDraft(req.id, "profit_percent", e.target.value)}
+                              />
                             </div>
-                          );
-                        })()}
+                            <div className="space-y-1.5">
+                              <Label className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+                                <TrendingDown className="h-3.5 w-3.5 shrink-0" />
+                                Loss %
+                              </Label>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                placeholder="e.g. 5"
+                                className="h-10 text-base"
+                                value={getDraft(req, "loss_percent") ?? ""}
+                                onChange={(e) => setDraft(req.id, "loss_percent", e.target.value)}
+                              />
+                            </div>
+                          </div>
 
-                        <div className="col-span-2">
+                          {/* Summary cards */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3.5">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                                Profit
+                              </p>
+                              <p className="text-xl font-bold mt-1 tabular-nums">${profitPreview.toFixed(2)}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {pp}% of ${bal.toFixed(2)}
+                              </p>
+                            </div>
+
+                            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3.5">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-destructive">
+                                Loss
+                              </p>
+                              <p className="text-xl font-bold mt-1 tabular-nums">${lossPreview.toFixed(2)}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {lp}% of ${bal.toFixed(2)}
+                              </p>
+                            </div>
+
+                            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3.5">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary flex items-center gap-1">
+                                <Gauge className="h-3 w-3" />
+                                Risk : Reward
+                              </p>
+                              <p className="text-xl font-bold mt-1 tabular-nums">{rr}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">Risk first, reward second</p>
+                            </div>
+                          </div>
+
                           <Button
-                            size="sm"
-                            className="h-8 text-xs w-full sm:w-auto"
+                            className="w-full h-11 text-sm font-semibold"
                             onClick={() => savePerformance(req)}
                             disabled={updateMutation.isPending}
                           >
                             {updateMutation.isPending ? (
-                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : null}
                             Save & Sync Performance
                           </Button>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               );
