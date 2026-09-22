@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -179,22 +179,29 @@ export const CopierLeaderboard = () => {
           </Badge>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {HOW_IT_WORKS.map(({ step, icon: Icon, title, desc }) => (
-            <div key={step} className="relative rounded-xl bg-muted/30 p-3">
-              <div className="flex items-center gap-1.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-                  <Icon className="h-3.5 w-3.5" />
+        <div className="mt-4 flex items-start gap-1 sm:gap-2">
+          {HOW_IT_WORKS.map(({ step, icon: Icon, title, desc }, idx) => (
+            <Fragment key={step}>
+              <div className="flex-1 min-w-0 flex flex-col items-center text-center">
+                <div className="relative">
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-emerald-500 text-white">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <span className="absolute -top-1 -left-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-800 px-1 text-[8px] font-bold text-white">
+                    {step}
+                  </span>
                 </div>
-                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
-                  {step}
-                </span>
+                <div className="mt-1.5 text-[11px] sm:text-xs font-bold text-foreground leading-tight">
+                  {title}
+                </div>
+                <div className="text-[9px] sm:text-[10px] text-muted-foreground leading-snug mt-0.5 px-0.5">
+                  {desc}
+                </div>
               </div>
-              <div className="mt-2 text-xs font-bold text-foreground">{title}</div>
-              <div className="text-[10px] text-muted-foreground leading-snug mt-0.5">
-                {desc}
-              </div>
-            </div>
+              {idx < HOW_IT_WORKS.length - 1 && (
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-2.5 sm:mt-3" />
+              )}
+            </Fragment>
           ))}
         </div>
       </div>
