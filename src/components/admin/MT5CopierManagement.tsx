@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -61,6 +62,8 @@ const MT5CopierManagement = () => {
   const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<CopierRequest>>>({});
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "connected" | "rejected">("all");
+  const [messagingReq, setMessagingReq] = useState<{ id: string; channel: "whatsapp" | "telegram" } | null>(null);
+  const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
 
   const togglePasswordVisibility = (id: string) =>
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -100,29 +103,49 @@ const MT5CopierManagement = () => {
   const setDraft = (id: string, field: keyof CopierRequest, value: any) =>
     setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
 
-  // Helper for opening WhatsApp chat — pre-fills the rejection message
-  // automatically when the request's status is "rejected", so the admin
-  // doesn't have to type it out manually every time.
-  const openWhatsApp = (req: CopierRequest) => {
-    if (!req.contact_number) return;
-    const cleanNumber = req.contact_number.replace(/[^\d+]/g, "").replace("+", "");
-
-    let url = `https://wa.me/${cleanNumber}`;
-
-    if (req.status === "rejected") {
-      const rejectionMessage = `Hi ${req.name || "there"},\n\nWe've reviewed your MT5 Copier connection request, and unfortunately it has been rejected at this time, as the submitted details didn't meet our requirements.\n\nFeel free to resubmit your request with correct details, and we'll be happy to review it again. Let us know if you have any questions.\n\nThank you — Live Signals Pro Team`;
-      url += `?text=${encodeURIComponent(rejectionMessage)}`;
+  // Short but polished, status-specific auto messages — used to pre-fill the
+  // editable composer for both WhatsApp and Telegram.
+  const getStatusMessage = (req: CopierRequest) => {
+    const name = req.name || "there";
+    switch (req.status) {
+      case "pending":
+        return `Hi ${name}! 👋\nThanks for submitting your MT5 Copier request — our team is reviewing it right now.\nWe'll get back to you shortly with an update.`;
+      case "connected":
+        return `Hi ${name}! 🎉\nGreat news — your MT5 Copier account is now successfully connected and live.\nWishing you profitable trades ahead!`;
+      case "rejected":
+        return `Hi ${name},\nThanks for your request — unfortunately it couldn't be approved this time.\nThis is usually because of one of the following: a wrong account password, a demo account, a cent account, or a contest account (none of these are allowed for the copier).\nPlease resubmit with a valid live account and correct details — we'll be happy to review it again.`;
+      default:
+        return `Hi ${name},\nReaching out regarding your MT5 Copier request.\nLet us know if you have any questions!`;
     }
-
-    window.open(url, "_blank");
   };
 
-  // Helper for opening a direct Telegram chat with the requester — mirrors
-  // openWhatsApp above so admins have the same one-tap contact option on
-  // whichever channel the user actually provided.
-  const openTelegram = (req: CopierRequest) => {
-    if (!req.telegram_username) return;
-    window.open(`https://t.me/${req.telegram_username}`, "_blank");
+  // Opens the editable message composer instead of sending straight away, so
+  // the admin can tweak the auto-generated text before it goes out.
+  const openMessageComposer = (req: CopierRequest, channel: "whatsapp" | "telegram") => {
+    setMessageDrafts((prev) => ({
+      ...prev,
+      [req.id]: prev[req.id] ?? getStatusMessage(req),
+    }));
+    setMessagingReq({ id: req.id, channel });
+  };
+
+  // Helper for opening WhatsApp with the composed message.
+  const openWhatsApp = (req: CopierRequest) => openMessageComposer(req, "whatsapp");
+
+  // Helper for opening Telegram with the composed message.
+  const openTelegram = (req: CopierRequest) => openMessageComposer(req, "telegram");
+
+  // Actually sends the composed (possibly edited) message via the chosen channel.
+  const sendComposedMessage = (req: CopierRequest) => {
+    if (!messagingReq) return;
+    const message = messageDrafts[req.id] ?? getStatusMessage(req);
+    if (messagingReq.channel === "whatsapp" && req.contact_number) {
+      const cleanNumber = req.contact_number.replace(/[^\d+]/g, "").replace("+", "");
+      window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`, "_blank");
+    } else if (messagingReq.channel === "telegram" && req.telegram_username) {
+      window.open(`https://t.me/${req.telegram_username}?text=${encodeURIComponent(message)}`, "_blank");
+    }
+    setMessagingReq(null);
   };
 
   // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on % of the account balance
@@ -413,6 +436,47 @@ const MT5CopierManagement = () => {
                             </div>
                           )}
                         </div>
+
+                        {messagingReq?.id === req.id && (
+                          <div className="p-3 rounded-lg bg-muted/30 border border-border/30 space-y-2">
+                            <Label className="text-[11px] flex items-center gap-1 text-muted-foreground">
+                              {messagingReq.channel === "whatsapp" ? (
+                                <MessageSquare className="h-3 w-3" />
+                              ) : (
+                                <Send className="h-3 w-3" />
+                              )}
+                              Message preview — edit before sending
+                            </Label>
+                            <Textarea
+                              className="text-sm min-h-[90px]"
+                              value={messageDrafts[req.id] ?? ""}
+                              onChange={(e) =>
+                                setMessageDrafts((prev) => ({ ...prev, [req.id]: e.target.value }))
+                              }
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className={`h-8 text-xs ${
+                                  messagingReq.channel === "whatsapp"
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : "bg-sky-600 hover:bg-sky-700"
+                                }`}
+                                onClick={() => sendComposedMessage(req)}
+                              >
+                                Send via {messagingReq.channel === "whatsapp" ? "WhatsApp" : "Telegram"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 text-xs"
+                                onClick={() => setMessagingReq(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex flex-wrap items-center gap-3 text-sm">
                           <div className="flex items-center gap-2 flex-wrap">
