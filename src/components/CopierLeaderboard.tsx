@@ -123,7 +123,7 @@ export const CopierLeaderboard = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div id="copier-leaderboard-list" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {visibleStats.map((s) => {
               const rejectedMessage = `Hello, my name is ${s.name || "Copier User"}. I submitted an MT5 Copier connection request which was rejected. Could you please let me know the reason? Thank you.`;
               const telegramUrl = `https://t.me/forexqueeni?text=${encodeURIComponent(rejectedMessage)}`;
@@ -256,7 +256,13 @@ export const CopierLeaderboard = () => {
         </DialogContent>
       </Dialog>
 
-      <MT5CopierConnectDialog open={connectOpen} onOpenChange={setConnectOpen} />
+      <MT5CopierConnectDialog
+        open={connectOpen}
+        onOpenChange={setConnectOpen}
+        onConfirmed={() =>
+          document.getElementById("copier-leaderboard-list")?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      />
     </>
   );
 };
