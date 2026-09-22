@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
+  Send,
 } from "lucide-react";
 
 const db = supabase as any;
@@ -33,6 +34,8 @@ interface CopierRequest {
   id: string;
   name: string | null;
   contact_number: string | null;
+  telegram_username: string | null;
+  telegram_chat_id: number | null;
   mt5_login: string;
   broker_name: string;
   broker_server: string;
@@ -366,6 +369,19 @@ const MT5CopierManagement = () => {
                             <Key className="h-4 w-4 text-emerald-500" />
                             <span className="font-mono text-xs">Login: <span className="font-bold text-foreground">{req.mt5_login}</span></span>
                           </div>
+                          {req.telegram_username && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Send className="h-4 w-4 text-sky-500" />
+                              <span className="font-mono text-xs">
+                                @{req.telegram_username}{" "}
+                                {req.telegram_chat_id ? (
+                                  <span className="text-emerald-500 font-semibold">(auto-updates linked)</span>
+                                ) : (
+                                  <span className="text-amber-500 font-semibold">(not linked yet)</span>
+                                )}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-3 text-sm">
