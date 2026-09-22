@@ -47,6 +47,7 @@ import HeadlineTicker from "@/components/HeadlineTicker";
 import { ChartReactions } from "@/components/ChartReactions";
 import { MarketClosedBanner } from "@/components/MarketClosedBanner";
 import { SignalUnlockGate } from "@/components/SignalUnlockGate";
+import { MT5CopierBanner } from "@/components/MT5CopierBanner";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -1076,6 +1077,15 @@ const SignalsDashboard = () => {
           <MarketClosedBanner
             category={mainCategory}
           />
+
+          {/* ==================================================
+              MT5 / MT4 COPIER BANNER
+              Show on all categories EXCEPT COPIER
+              ================================================== */}
+
+          {mainCategory !== "COPIER" && (
+            <MT5CopierBanner />
+          )}
 
           {/* ==================================================
               GOLD SPECIAL OFFER
