@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { Loader2, ShieldCheck, Send, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  ShieldCheck,
+  Send,
+  Clock3,
+  User,
+  Phone,
+  Hash,
+  Building2,
+  Server,
+  Lock,
+  StickyNote,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +23,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { rememberOwnCopierRequestId } from "@/lib/myCopierRequests";
@@ -37,8 +50,7 @@ const EMPTY_FORM: FormState = {
   note: "",
 };
 
-const fieldLabelClass = "text-xs font-medium";
-const fieldInputClass = "h-9 text-sm";
+const fieldLabelClass = "text-[13px] font-medium text-foreground/90";
 
 const CopierLogo = () => (
   <svg viewBox="0 0 40 40" className="h-full w-full" aria-hidden="true">
@@ -56,6 +68,40 @@ const CopierLogo = () => (
     />
     <path d="M26 7 L31 7 L31 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
+);
+
+// Text input with a leading icon — keeps every field visually anchored and
+// gives the form a consistent, "designed" rhythm instead of bare boxes.
+interface IconInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  icon: React.ElementType;
+}
+const IconInput = ({ icon: Icon, className, ...props }: IconInputProps) => (
+  <div className="relative">
+    <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <Input
+      {...props}
+      className={cn("h-11 pl-9 text-[15px] sm:text-sm", className)}
+    />
+  </div>
+);
+
+// Groups related fields under a small heading with a rule beneath it —
+// the section break itself communicates "these fields belong together"
+// without adding another card/border layer per field.
+const FormSection = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className="space-y-3">
+    <div className="flex items-center gap-2">
+      <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
+      <div className="h-px flex-1 bg-border" />
+    </div>
+    {children}
+  </div>
 );
 
 interface MT5CopierConnectDialogProps {
@@ -123,7 +169,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
 
     if (
       !form.name.trim() ||
-      !form.contact_number.trim() ||
+      !form.telegram_username.trim() ||
       !form.mt5_login.trim() ||
       !form.broker_name.trim() ||
       !form.broker_server.trim() ||
@@ -133,12 +179,29 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
       return;
     }
 
-    const phoneCheck = validateWhatsAppNumber(form.contact_number);
-    if (!phoneCheck.valid) {
-      toast.error("Invalid WhatsApp Number", {
-        description: phoneCheck.message,
+    const rawUsername = form.telegram_username.trim();
+    if (!rawUsername.startsWith("@")) {
+      toast.error("Invalid Telegram Username", {
+        description: "Telegram username must start with '@' (e.g., @aliraza).",
       });
       return;
+    }
+    const cleanUsername = rawUsername.replace(/^@/, "");
+    if (cleanUsername.length < 5 || cleanUsername.length > 32 || !/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+      toast.error("Invalid Telegram Username", {
+        description: "Telegram username must be 5-32 characters after the @ (letters, numbers, underscores only).",
+      });
+      return;
+    }
+
+    if (form.contact_number.trim()) {
+      const phoneCheck = validateWhatsAppNumber(form.contact_number);
+      if (!phoneCheck.valid) {
+        toast.error("Invalid WhatsApp Number", {
+          description: phoneCheck.message,
+        });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -155,7 +218,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
       rememberOwnCopierRequestId(data?.id);
 
       toast.success("Request submitted!", {
-        description: "Our team will contact you on WhatsApp shortly.",
+        description: "Start our Telegram bot to confirm your request.",
       });
       setForm(EMPTY_FORM);
 
@@ -184,35 +247,37 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
   if (telegramLink) {
     return (
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="sm:max-w-md p-4 sm:p-6">
-          <DialogHeader className="space-y-1 pb-1">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-              <DialogTitle className="text-base">Request Submitted!</DialogTitle>
+        <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-5 sm:p-6">
+          <DialogHeader className="items-center space-y-3 pb-1 text-center sm:text-center">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-500 ring-4 ring-amber-500/5">
+              <Clock3 className="h-7 w-7" />
             </div>
-            <DialogDescription className="text-xs">
-              One last step — link your Telegram so we can message you the moment your
-              status changes (Pending / Connected / Rejected), automatically.
-            </DialogDescription>
+            <div className="space-y-1.5">
+              <DialogTitle className="text-base">Request Received — Not Confirmed Yet</DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed">
+                Your details have been sent to our team, but your copier connection is
+                still <span className="font-semibold text-foreground">pending</span>.
+                To confirm your request and get notified the moment your status changes,
+                start our Telegram bot below.
+              </DialogDescription>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <Button asChild className="w-full gap-2 bg-[#26A5E4] hover:bg-[#26A5E4]/90 text-white">
+          <div className="space-y-3 pt-1">
+            <Button
+              asChild
+              className="h-12 w-full gap-2 rounded-xl bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90"
+            >
               <a href={telegramLink} target="_blank" rel="noopener noreferrer">
                 <Send className="h-4 w-4" />
-                Get Automatic Updates on Telegram
+                Start Bot to Confirm Request
               </a>
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => handleDialogOpenChange(false)}
-            >
-              Skip for now
-            </Button>
+            <p className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground px-1">
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              This step links your Telegram to your request — required so we can confirm
+              it reached you and notify you the moment it's approved.
+            </p>
           </div>
         </DialogContent>
       </Dialog>
@@ -221,138 +286,155 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader className="space-y-1 pb-1">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary p-1.5">
-              <CopierLogo />
+      <DialogContent className="flex w-[92vw] max-w-sm sm:max-w-md flex-col gap-0 rounded-2xl p-0 max-h-[88vh] overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col">
+          <DialogHeader className="space-y-1 border-b bg-muted/30 px-5 py-4 text-left shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary p-1.5">
+                <CopierLogo />
+              </div>
+              <DialogTitle className="text-base">Connect to MT5 Copier</DialogTitle>
             </div>
-            <DialogTitle className="text-base">Connect to MT5 Copier</DialogTitle>
-          </div>
-          <DialogDescription className="text-xs">
-            Share your MT5 details and correct WhatsApp number to link your account.
-          </DialogDescription>
-        </DialogHeader>
+            <DialogDescription className="text-xs">
+              Share your MT5 details and Telegram username to link your account.
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="name" className={fieldLabelClass}>Your Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Ali Raza"
-                value={form.name}
-                onChange={update("name")}
-                className={fieldInputClass}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="contact_number" className={fieldLabelClass}>
-                WhatsApp Number <span className="text-red-500">*</span>
+          <div className="flex-1 min-h-0 space-y-5 overflow-y-auto px-5 py-4">
+            <FormSection title="Your Details">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="name" className={fieldLabelClass}>Your Name</Label>
+                  <IconInput
+                    icon={User}
+                    id="name"
+                    placeholder="e.g., Ali Raza"
+                    value={form.name}
+                    onChange={update("name")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="contact_number" className={fieldLabelClass}>
+                    WhatsApp Number <span className="text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <IconInput
+                    icon={Phone}
+                    id="contact_number"
+                    placeholder="+923001234567"
+                    value={form.contact_number}
+                    onChange={handlePhoneChange}
+                  />
+                  <span className="text-[11px] text-muted-foreground block">
+                    With country code, e.g. +923001234567
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="telegram_username" className={fieldLabelClass}>
+                  Telegram Username <span className="text-red-500">*</span>
+                </Label>
+                <IconInput
+                  icon={Send}
+                  id="telegram_username"
+                  placeholder="@aliraza"
+                  value={form.telegram_username}
+                  onChange={update("telegram_username")}
+                />
+                <p className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                  <Send className="h-3 w-3 shrink-0 mt-0.5" />
+                  Required, with @ — this is how we confirm your request and send
+                  automatic status updates on Telegram.
+                </p>
+              </div>
+            </FormSection>
+
+            <FormSection title="MT5 Account">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="mt5_login" className={fieldLabelClass}>MT5 Login</Label>
+                  <IconInput
+                    icon={Hash}
+                    id="mt5_login"
+                    placeholder="e.g., 8373738"
+                    value={form.mt5_login}
+                    onChange={update("mt5_login")}
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="broker_name" className={fieldLabelClass}>Broker Name</Label>
+                  <IconInput
+                    icon={Building2}
+                    id="broker_name"
+                    placeholder="e.g., Exness"
+                    value={form.broker_name}
+                    onChange={update("broker_name")}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="broker_server" className={fieldLabelClass}>Broker Server</Label>
+                <IconInput
+                  icon={Server}
+                  id="broker_server"
+                  placeholder="e.g., Exness-MT5Real3"
+                  value={form.broker_server}
+                  onChange={update("broker_server")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="mt5_password" className={fieldLabelClass}>Trading Password</Label>
+                <IconInput
+                  icon={Lock}
+                  id="mt5_password"
+                  type="password"
+                  placeholder="Enter your MT5 trading password"
+                  value={form.mt5_password}
+                  onChange={update("mt5_password")}
+                />
+                <p className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                  <ShieldCheck className="h-3 w-3 shrink-0 mt-0.5" />
+                  Used only to connect your account to the copier — kept private and secure.
+                </p>
+              </div>
+            </FormSection>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="note" className={fieldLabelClass}>
+                Note <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input
-                id="contact_number"
-                placeholder="Enter WhatsApp Number"
-                value={form.contact_number}
-                onChange={handlePhoneChange}
-                className={fieldInputClass}
-              />
-              <span className="text-[10px] text-muted-foreground block font-medium">
-                + with country code (e.g. +923001234567)
-              </span>
+              <div className="relative">
+                <StickyNote className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Textarea
+                  id="note"
+                  placeholder="Any special instructions..."
+                  value={form.note}
+                  onChange={update("note")}
+                  rows={2}
+                  className="pl-9 text-[15px] sm:text-sm"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="telegram_username" className={fieldLabelClass}>
-              Telegram Username (optional)
-            </Label>
-            <Input
-              id="telegram_username"
-              placeholder="e.g., @aliraza"
-              value={form.telegram_username}
-              onChange={update("telegram_username")}
-              className={fieldInputClass}
-            />
-            <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
-              <Send className="h-3 w-3 shrink-0 mt-0.5" />
-              After submitting, you'll get a link to open our bot — do that to receive
-              automatic status updates on Telegram.
-            </p>
+          <div className="border-t bg-background px-5 py-4 shrink-0">
+            <Button
+              type="submit"
+              className="h-12 w-full rounded-xl text-[15px]"
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...
+                </>
+              ) : (
+                "Submit Request"
+              )}
+            </Button>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="mt5_login" className={fieldLabelClass}>MT5 Login</Label>
-              <Input
-                id="mt5_login"
-                placeholder="e.g., 8373738"
-                value={form.mt5_login}
-                onChange={update("mt5_login")}
-                inputMode="numeric"
-                className={fieldInputClass}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="broker_name" className={fieldLabelClass}>Broker Name</Label>
-              <Input
-                id="broker_name"
-                placeholder="e.g., Exness"
-                value={form.broker_name}
-                onChange={update("broker_name")}
-                className={fieldInputClass}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="broker_server" className={fieldLabelClass}>Broker Server</Label>
-            <Input
-              id="broker_server"
-              placeholder="e.g., Exness-MT5Real3"
-              value={form.broker_server}
-              onChange={update("broker_server")}
-              className={fieldInputClass}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="mt5_password" className={fieldLabelClass}>Trading Password</Label>
-            <Input
-              id="mt5_password"
-              type="password"
-              placeholder="Enter your MT5 trading password"
-              value={form.mt5_password}
-              onChange={update("mt5_password")}
-              className={fieldInputClass}
-            />
-            <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
-              <ShieldCheck className="h-3 w-3 shrink-0 mt-0.5" />
-              Used only to connect your account to the copier — kept private and secure.
-            </p>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="note" className={fieldLabelClass}>Note / Additional Details (optional)</Label>
-            <Textarea
-              id="note"
-              placeholder="Any special instructions..."
-              value={form.note}
-              onChange={update("note")}
-              rows={2}
-              className="text-sm"
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...
-              </>
-            ) : (
-              "Submit Request"
-            )}
-          </Button>
         </form>
       </DialogContent>
     </Dialog>
