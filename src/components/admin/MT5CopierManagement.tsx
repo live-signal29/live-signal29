@@ -678,26 +678,26 @@ const MT5CopierManagement = () => {
                             onChange={(e) => setDraft(req.id, "account_balance", e.target.value)}
                           />
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3 text-emerald-500" /> Profit %
+                        <div className="space-y-1 min-w-0">
+                          <Label className="text-[11px] flex items-center gap-1 whitespace-nowrap">
+                            <TrendingUp className="h-3 w-3 text-emerald-500 shrink-0" /> Profit %
                           </Label>
                           <Input
                             type="number"
                             placeholder="e.g. 15"
-                            className="h-8 text-sm"
+                            className="h-8 w-full min-w-0 text-sm"
                             value={getDraft(req, "profit_percent") ?? ""}
                             onChange={(e) => setDraft(req.id, "profit_percent", e.target.value)}
                           />
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px] flex items-center gap-1">
-                            <TrendingDown className="h-3 w-3 text-destructive" /> Loss %
+                        <div className="space-y-1 min-w-0">
+                          <Label className="text-[11px] flex items-center gap-1 whitespace-nowrap">
+                            <TrendingDown className="h-3 w-3 text-destructive shrink-0" /> Loss %
                           </Label>
                           <Input
                             type="number"
                             placeholder="e.g. 5"
-                            className="h-8 text-sm"
+                            className="h-8 w-full min-w-0 text-sm"
                             value={getDraft(req, "loss_percent") ?? ""}
                             onChange={(e) => setDraft(req.id, "loss_percent", e.target.value)}
                           />
