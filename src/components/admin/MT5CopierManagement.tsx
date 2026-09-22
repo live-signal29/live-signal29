@@ -117,6 +117,14 @@ const MT5CopierManagement = () => {
     window.open(url, "_blank");
   };
 
+  // Helper for opening a direct Telegram chat with the requester — mirrors
+  // openWhatsApp above so admins have the same one-tap contact option on
+  // whichever channel the user actually provided.
+  const openTelegram = (req: CopierRequest) => {
+    if (!req.telegram_username) return;
+    window.open(`https://t.me/${req.telegram_username}`, "_blank");
+  };
+
   // Smart Performance Save: Auto fixes Profit ($), Loss ($) & Risk:Reward based on % of the account balance
   // Profit % and Loss % are fully independent — entering one no longer resets the other.
   const savePerformance = (req: CopierRequest) => {
@@ -413,18 +421,32 @@ const MT5CopierManagement = () => {
                           </div>
 
                           {/* Account Management jaisa WhatsApp Direct Action Button */}
-                          {req.contact_number && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openWhatsApp(req)}
-                              className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1.5 ml-auto"
-                            >
-                              <MessageSquare className="h-3.5 w-3.5 fill-current" />
-                              WhatsApp
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2 ml-auto">
+                            {req.contact_number && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openWhatsApp(req)}
+                                className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5 fill-current" />
+                                WhatsApp
+                              </Button>
+                            )}
+                            {req.telegram_username && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openTelegram(req)}
+                                className="h-7 text-xs border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 gap-1.5"
+                              >
+                                <Send className="h-3.5 w-3.5" />
+                                Telegram
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </>
                     )}
