@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, Send, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { rememberOwnCopierRequestId } from "@/lib/myCopierRequests";
 interface FormState {
   name: string;
   contact_number: string;
+  telegram_username: string;
   mt5_login: string;
   broker_name: string;
   broker_server: string;
@@ -28,6 +29,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   name: "",
   contact_number: "",
+  telegram_username: "",
   mt5_login: "",
   broker_name: "",
   broker_server: "",
@@ -64,6 +66,9 @@ interface MT5CopierConnectDialogProps {
 export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectDialogProps) => {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  // Set right after a successful submit, so we can show a "link your
+  // Telegram" call-to-action instead of just closing the dialog.
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
@@ -153,7 +158,15 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
         description: "Our team will contact you on WhatsApp shortly.",
       });
       setForm(EMPTY_FORM);
-      onOpenChange(false);
+
+      if (data?.telegram_link) {
+        // Show the "link Telegram" step instead of closing right away —
+        // this is what makes automatic status updates possible, since a
+        // username alone isn't enough for the bot to message someone.
+        setTelegramLink(data.telegram_link);
+      } else {
+        onOpenChange(false);
+      }
     } catch (err) {
       toast.error("Could not submit request", {
         description: err instanceof Error ? err.message : "Please try again",
@@ -163,8 +176,51 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
     }
   };
 
+  const handleDialogOpenChange = (isOpen: boolean) => {
+    if (!isOpen) setTelegramLink(null);
+    onOpenChange(isOpen);
+  };
+
+  if (telegramLink) {
+    return (
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="sm:max-w-md p-4 sm:p-6">
+          <DialogHeader className="space-y-1 pb-1">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <DialogTitle className="text-base">Request Submitted!</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs">
+              One last step — link your Telegram so we can message you the moment your
+              status changes (Pending / Connected / Rejected), automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Button asChild className="w-full gap-2 bg-[#26A5E4] hover:bg-[#26A5E4]/90 text-white">
+              <a href={telegramLink} target="_blank" rel="noopener noreferrer">
+                <Send className="h-4 w-4" />
+                Get Automatic Updates on Telegram
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => handleDialogOpenChange(false)}
+            >
+              Skip for now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="space-y-1 pb-1">
           <div className="flex items-center gap-2">
@@ -205,6 +261,24 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange }: MT5CopierConnectD
                 + with country code (e.g. +923001234567)
               </span>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="telegram_username" className={fieldLabelClass}>
+              Telegram Username (optional)
+            </Label>
+            <Input
+              id="telegram_username"
+              placeholder="e.g., @aliraza"
+              value={form.telegram_username}
+              onChange={update("telegram_username")}
+              className={fieldInputClass}
+            />
+            <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
+              <Send className="h-3 w-3 shrink-0 mt-0.5" />
+              After submitting, you'll get a link to open our bot — do that to receive
+              automatic status updates on Telegram.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
