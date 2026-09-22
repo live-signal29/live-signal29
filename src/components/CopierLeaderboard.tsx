@@ -178,7 +178,7 @@ export const CopierLeaderboard = () => {
         </Button>
       </div>
 
-      {/* HOW IT WORKS (Halka sa Green Gradient Background) */}
+      {/* HOW IT WORKS */}
       <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-emerald-500/10 to-card p-4 sm:p-5 shadow-sm">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -224,7 +224,7 @@ export const CopierLeaderboard = () => {
         </div>
       </div>
 
-      {/* SECTION DIVIDER LINE & PROFESSIONAL LEADERBOARD HEADER */}
+      {/* SECTION DIVIDER & LEADERBOARD HEADER */}
       <div className="relative my-5">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border/60" />
@@ -288,7 +288,7 @@ export const CopierLeaderboard = () => {
                         <Clock className="h-3 w-3" /> Last sync: 2 min ago
                       </div>
                       <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-foreground mt-0.5">
-                        <Database className="h-3 w-3 text-emerald-500" /> {s.broker || "MT5 • XM Global"}
+                        <Database className="h-3 w-3 text-emerald-500" /> {s.broker || "MT5 • Account"}
                       </div>
                     </div>
                   </div>
@@ -348,7 +348,7 @@ export const CopierLeaderboard = () => {
                         PENDING
                       </span>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                        Your account is waiting for admin verification.
+                        Broker: {s.broker || "Not specified"} • Waiting for verification.
                       </p>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export const CopierLeaderboard = () => {
                         REJECTED
                       </span>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                        Your account request was rejected.
+                        Broker: {s.broker || "Not specified"} • Request rejected.
                       </p>
                     </div>
                   </div>
@@ -432,6 +432,11 @@ export const CopierLeaderboard = () => {
               </DialogHeader>
 
               <div className="space-y-3">
+                <div className="rounded-lg bg-muted/40 p-2.5 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground font-medium">Broker</span>
+                  <span className="font-bold text-foreground">{selected.broker || "MT5 Account"}</span>
+                </div>
+
                 {selected.status === "pending" ? (
                   <div className="rounded-lg bg-amber-500/10 p-3 text-center">
                     <span className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
