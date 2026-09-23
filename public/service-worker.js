@@ -198,9 +198,24 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification event
 self.addEventListener('push', (event) => {
+  let title = 'TREND IS FRIEND';
+  let body = 'New trading signal available!';
+  let icon = '/icon-192.png';
+
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      title = data.title || data.headings?.en || title;
+      body = data.alert || data.contents?.en || body;
+      icon = data.icon || icon;
+    } catch (e) {
+      body = event.data.text();
+    }
+  }
+
   const options = {
-    body: event.data ? event.data.text() : 'New trading signal available!',
-    icon: '/icon-192.png',
+    body,
+    icon,
     badge: '/icon-192.png',
     vibrate: [100, 50, 100],
     data: {
@@ -210,7 +225,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('TREND IS FRIEND', options)
+    self.registration.showNotification(title, options)
   );
 });
 
