@@ -63,6 +63,37 @@ jobs:
           sed -i "s/compileSdkVersion = [0-9]*/compileSdkVersion = 36/" android/variables.gradle
           sed -i "s/targetSdkVersion = [0-9]*/targetSdkVersion = 36/" android/variables.gradle
 
+      - name: Add notification permission (Android 13+)
+        run: |
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' android/app/src/main/AndroidManifest.xml
+          MAINACT=android/app/src/main/java/co/median/android/krkqyaz/MainActivity.java
+          cat > "$MAINACT" << 'EOF'
+          package co.median.android.krkqyaz;
+
+          import android.Manifest;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.content.pm.PackageManager;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
+
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                              != PackageManager.PERMISSION_GRANTED) {
+                          ActivityCompat.requestPermissions(this,
+                                  new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+                      }
+                  }
+              }
+          }
+          EOF
+
       - name: Set app version
         run: |
           sed -i "s/versionName \".*\"/versionName \"9.8.9.9.5\"/" android/app/build.gradle
@@ -117,5 +148,3 @@ jobs:
         with:
           name: app-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
- 
-
