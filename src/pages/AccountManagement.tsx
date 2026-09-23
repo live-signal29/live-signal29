@@ -34,7 +34,11 @@ import { z } from "zod";
 
 const applicationSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
-  whatsapp: z.string().regex(/^\+\d{1,4}\d{6,14}$/, "Enter valid WhatsApp with country code (e.g., +92300...)"),
+  whatsapp: z.string().regex(/^\+\d{1,4}\d{6,14}$/, "Enter a valid WhatsApp number with your own country code (e.g., +447911..., +1415..., +9198..., +92300...)"),
+  telegram_username: z.string()
+    .transform((v) => v.replace(/^@/, "").trim())
+    .refine((v) => v.length >= 5 && v.length <= 32, "Telegram username must be 5-32 characters")
+    .refine((v) => /^[a-zA-Z0-9_]+$/.test(v), "Telegram username can only contain letters, numbers and underscores"),
   email: z.string().email("Enter valid email address"),
   preferred_broker: z.string().min(2, "Enter your preferred broker"),
   platform_type: z.string().min(1, "Select platform type"),
@@ -92,7 +96,7 @@ const steps = [
 
 const AccountManagement = () => {
   const [formData, setFormData] = useState({
-    name: "", whatsapp: "", email: "", preferred_broker: "",
+    name: "", whatsapp: "", telegram_username: "", email: "", preferred_broker: "",
     platform_type: "", broker_server: "", trading_login: "",
     trading_password: "", account_size: ""
   });
@@ -146,7 +150,7 @@ const AccountManagement = () => {
       });
       
       setFormData({
-        name: "", whatsapp: "", email: "", preferred_broker: "",
+        name: "", whatsapp: "", telegram_username: "", email: "", preferred_broker: "",
         platform_type: "", broker_server: "", trading_login: "",
         trading_password: "", account_size: ""
       });
@@ -361,15 +365,30 @@ const AccountManagement = () => {
                   </div>
                   
                   <div className="space-y-1">
-                    <Label className="text-xs">WhatsApp Number</Label>
+                    <Label className="text-xs">WhatsApp Number <span className="text-red-500">*</span></Label>
                     <Input
-                      placeholder="+92300..."
+                      placeholder="e.g., +447911123456"
                       value={formData.whatsapp}
                       onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                       className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
                     />
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Use your own country code — e.g. +44 (UK), +1 (US/Canada), +91 (India),
+                      +92 (Pakistan). Don't just enter +92 if that isn't your country.
+                    </p>
                     {errors.whatsapp && <p className="text-[10px] text-destructive">{errors.whatsapp}</p>}
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Telegram Username <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="e.g., @aliraza"
+                    value={formData.telegram_username}
+                    onChange={(e) => setFormData({ ...formData, telegram_username: e.target.value })}
+                    className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
+                  />
+                  {errors.telegram_username && <p className="text-[10px] text-destructive">{errors.telegram_username}</p>}
                 </div>
 
                 <div className="space-y-1">
