@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle, Server, Key, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle, Send, Server, Key, Lock, Eye, EyeOff } from "lucide-react";
 
 const AccountApplications = () => {
   const queryClient = useQueryClient();
@@ -108,6 +108,19 @@ const AccountApplications = () => {
                           <Phone className="h-4 w-4" />
                           <span>{app.whatsapp}</span>
                         </div>
+                        {app.telegram_username && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Send className="h-4 w-4" />
+                            <a
+                              href={`https://t.me/${app.telegram_username}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary"
+                            >
+                              @{app.telegram_username}
+                            </a>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Building2 className="h-4 w-4" />
                           {app.preferred_broker} {app.platform_type && `(${app.platform_type})`}
