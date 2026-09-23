@@ -155,7 +155,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
     if (!cleanPhone.startsWith("+")) {
       return {
         valid: false,
-        message: "WhatsApp number must start with '+' and country code (e.g., +92 or +91).",
+        message: "WhatsApp number must start with '+' and your country code (e.g., +44, +1, +91, +92).",
       };
     }
 
@@ -204,6 +204,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
     if (
       !form.name.trim() ||
       !form.telegram_username.trim() ||
+      !form.contact_number.trim() ||
       !form.mt5_login.trim() ||
       !form.broker_name.trim() ||
       !form.broker_server.trim() ||
@@ -221,14 +222,12 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
       return;
     }
 
-    if (form.contact_number.trim()) {
-      const phoneCheck = validateWhatsAppNumber(form.contact_number);
-      if (!phoneCheck.valid) {
-        toast.error("Invalid WhatsApp Number", {
-          description: phoneCheck.message,
-        });
-        return;
-      }
+    const phoneCheck = validateWhatsAppNumber(form.contact_number);
+    if (!phoneCheck.valid) {
+      toast.error("Invalid WhatsApp Number", {
+        description: phoneCheck.message,
+      });
+      return;
     }
 
     setSubmitting(true);
@@ -386,17 +385,19 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
 
           <div className="space-y-1">
             <Label htmlFor="contact_number" className={fieldLabelClass}>
-              WhatsApp Number (optional)
+              WhatsApp Number <span className="text-red-500">*</span>
             </Label>
             <Input
               id="contact_number"
-              placeholder="Enter WhatsApp Number"
+              placeholder="e.g., +447911123456"
               value={form.contact_number}
               onChange={handlePhoneChange}
               className={fieldInputClass}
             />
             <span className="text-[10px] text-muted-foreground block font-medium">
-              + with country code (e.g. +923001234567)
+              Start with + and your own country code — e.g. +44 (UK), +1 (US/Canada),
+              +91 (India), +92 (Pakistan). Not everyone is in Pakistan, so don't just use +92 —
+              enter the code and number that are actually yours.
             </span>
           </div>
 
