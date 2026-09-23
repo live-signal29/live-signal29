@@ -15,6 +15,7 @@ const TELEGRAM_ADMIN_CHAT_ID = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID");
 interface ApplicationBody {
   name?: string;
   whatsapp?: string;
+  telegram_username?: string;
   email?: string;
   preferred_broker?: string;
   platform_type?: string;
@@ -69,6 +70,7 @@ serve(async (req) => {
     message += `━━━━━━━━━━━━━━━\n\n`;
     message += `🙋 Name: <b>${escapeHtml(app.name)}</b>\n`;
     message += `📞 WhatsApp: <code>${escapeHtml(app.whatsapp)}</code>\n`;
+    message += `✈️ Telegram: <code>@${escapeHtml(app.telegram_username)}</code>\n`;
     message += `✉️ Email: <code>${escapeHtml(app.email)}</code>\n`;
     message += `💵 Account Size: <b>${escapeHtml(app.account_size)}</b>\n\n`;
     message += `🏦 Broker: <b>${escapeHtml(app.preferred_broker)}</b>\n`;
