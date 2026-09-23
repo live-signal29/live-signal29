@@ -52,6 +52,16 @@ jobs:
           }
           EOF
 
+      - name: Install Android SDK 36
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set target/compile SDK to 36
+        run: |
+          sed -i "s/compileSdkVersion = [0-9]*/compileSdkVersion = 36/" android/variables.gradle
+          sed -i "s/targetSdkVersion = [0-9]*/targetSdkVersion = 36/" android/variables.gradle
+
       - name: Set app version
         run: |
           sed -i "s/versionName \".*\"/versionName \"9.8.9.9.5\"/" android/app/build.gradle
