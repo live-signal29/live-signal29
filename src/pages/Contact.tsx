@@ -65,7 +65,7 @@ const Contact = () => {
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 text-muted-foreground mb-4">
                   <Mail className="h-5 w-5" />
-                  <span>mybusiness309@gmail.com</span>
+                  <span>mybusiness903@gmail.com</span>
                 </div>
               </div>
 
@@ -79,7 +79,7 @@ const Contact = () => {
                   <MessageCircle className="h-6 w-6 text-primary" />
                   <div className="text-left">
                     <div className="font-semibold">Telegram</div>
-                    <div className="text-sm text-muted-foreground">@gx_support9</div>
+                    <div className="text-sm text-muted-foreground">@forexqueeni</div>
                   </div>
                 </a>
 
