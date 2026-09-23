@@ -3,18 +3,22 @@ name: Build Android App
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Setup Node
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -22,105 +26,119 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Install web dependencies
-        run: npm install
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build web app
         run: npm run build
 
       - name: Install Capacitor
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/assets --save-dev
 
       - name: Add Android platform
         run: npx cap add android
 
-      - name: Generate app icon & splash
-        run: |
-          npm install @capacitor/assets --save-dev
-          npx capacitor-assets generate --android
+      - name: Generate Android assets
+        run: npx capacitor-assets generate --android
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Fix Kotlin duplicate class conflict
-        run: |
-          cat >> android/app/build.gradle << 'EOF'
-
-          configurations.all {
-              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
-              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
-          }
-          EOF
+      # ---------------------------------------------------------
+      # Android SDK 36
+      # ---------------------------------------------------------
 
       - name: Install Android SDK 36
         run: |
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/tools/bin:$PATH"
-          yes | sdkmanager --licenses > /dev/null || true
+          yes | sdkmanager --licenses || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set target/compile SDK to 36
+      - name: Set Android SDK 36
         run: |
-          sed -i "s/compileSdkVersion = [0-9]*/compileSdkVersion = 36/" android/variables.gradle
-          sed -i "s/targetSdkVersion = [0-9]*/targetSdkVersion = 36/" android/variables.gradle
+          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/' android/variables.gradle
+          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 36/' android/variables.gradle
 
-      - name: Add OneSignal native SDK dependency
+      # ---------------------------------------------------------
+      # OneSignal
+      # ---------------------------------------------------------
+
+      - name: Install OneSignal SDK
         run: |
-          cat >> android/app/build.gradle << 'EOF'
+          cat >> android/app/build.gradle <<'EOF'
 
           dependencies {
               implementation("com.onesignal:OneSignal:[5.6.1, 5.6.99]")
           }
           EOF
 
-      - name: Add notification permission + OneSignal native init
+      - name: Configure OneSignal
         run: |
-          sed -i '/<application/i\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' android/app/src/main/AndroidManifest.xml
-          sed -i 's/<application/<application android:name=".OneSignalApp"/' android/app/src/main/AndroidManifest.xml
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
 
-          APPDIR=android/app/src/main/java/co/median/android/krkqyaz
+          # Add notification permission only if not already present
+          if ! grep -q "android.permission.POST_NOTIFICATIONS" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' "$MANIFEST"
+          fi
+
+          # Add OneSignal Application class
+          sed -i 's/<application/<application android:name=".OneSignalApp"/' "$MANIFEST"
+
+          APPDIR="android/app/src/main/java/co/median/android/krkqyaz"
           mkdir -p "$APPDIR"
 
-          cat > "$APPDIR/OneSignalApp.kt" << 'EOF'
+          cat > "$APPDIR/OneSignalApp.kt" <<'EOF'
           package co.median.android.krkqyaz
 
           import android.app.Application
           import com.onesignal.OneSignal
           import com.onesignal.debug.LogLevel
-          import kotlinx.coroutines.CoroutineScope
-          import kotlinx.coroutines.Dispatchers
-          import kotlinx.coroutines.launch
 
           class OneSignalApp : Application() {
+
               override fun onCreate() {
                   super.onCreate()
-                  OneSignal.Debug.logLevel = LogLevel.VERBOSE
-                  OneSignal.initWithContext(this, "ecd43f8e-031e-41f0-a082-9af60943a575")
-                  CoroutineScope(Dispatchers.IO).launch {
-                      OneSignal.Notifications.requestPermission(true)
-                  }
+
+                  OneSignal.Debug.logLevel = LogLevel.NONE
+
+                  OneSignal.initWithContext(
+                      this,
+                      "ecd43f8e-031e-41f0-a082-9af60943a575"
+                  )
               }
           }
           EOF
 
-          cat > "android/app/src/main/java/co/median/android/krkqyaz/MainActivity.java" << 'EOF'
+          cat > "$APPDIR/MainActivity.java" <<'EOF'
           package co.median.android.krkqyaz;
 
           import com.getcapacitor.BridgeActivity;
 
-          public class MainActivity extends BridgeActivity {}
+          public class MainActivity extends BridgeActivity {
+          }
           EOF
+
+      # ---------------------------------------------------------
+      # App version
+      # ---------------------------------------------------------
 
       - name: Set app version
         run: |
-          sed -i "s/versionName \".*\"/versionName \"9.8.9.9.5\"/" android/app/build.gradle
+          sed -i 's/versionName "[^"]*"/versionName "9.8.9.9.5"/' android/app/build.gradle
           sed -i "s/versionCode [0-9]*/versionCode $((90000 + ${{ github.run_number }}))/" android/app/build.gradle
 
-      - name: Decode signing keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-key.jks
+      # ---------------------------------------------------------
+      # Signing
+      # ---------------------------------------------------------
 
-      - name: Add signing config
+      - name: Decode signing keystore
         run: |
-          cat >> android/app/build.gradle << 'EOF'
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-key.jks
+
+      - name: Configure release signing
+        run: |
+          cat >> android/app/build.gradle <<'EOF'
 
           android {
               signingConfigs {
@@ -131,33 +149,57 @@ jobs:
                       keyPassword System.getenv("KEY_PASSWORD")
                   }
               }
+
               buildTypes {
                   release {
                       signingConfig signingConfigs.release
+                      minifyEnabled false
+                      shrinkResources false
                   }
               }
           }
           EOF
 
-      - name: Build Release AAB (for Play Store)
-        run: cd android && ./gradlew bundleRelease
+      # ---------------------------------------------------------
+      # Build AAB
+      # ---------------------------------------------------------
+
+      - name: Build Release AAB
+        run: |
+          cd android
+          ./gradlew clean
+          ./gradlew bundleRelease
         env:
           KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
 
+      # ---------------------------------------------------------
+      # Build APK
+      # ---------------------------------------------------------
+
       - name: Build Release APK
-        run: cd android && ./gradlew assembleRelease
+        run: |
+          cd android
+          ./gradlew assembleRelease
         env:
           KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+
+      # ---------------------------------------------------------
+      # Upload AAB
+      # ---------------------------------------------------------
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
+
+      # ---------------------------------------------------------
+      # Upload APK
+      # ---------------------------------------------------------
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
