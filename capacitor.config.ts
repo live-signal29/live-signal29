@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'co.median.android.krkqyaz',
-  appName: 'live-signal29',
+  appName: 'Live Signals Buy/Sell',
   webDir: 'dist',
   bundledWebRuntime: false,
 };
