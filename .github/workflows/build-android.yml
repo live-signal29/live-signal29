@@ -63,35 +63,51 @@ jobs:
           sed -i "s/compileSdkVersion = [0-9]*/compileSdkVersion = 36/" android/variables.gradle
           sed -i "s/targetSdkVersion = [0-9]*/targetSdkVersion = 36/" android/variables.gradle
 
-      - name: Add notification permission (Android 13+)
+      - name: Add OneSignal native SDK dependency
+        run: |
+          cat >> android/app/build.gradle << 'EOF'
+
+          dependencies {
+              implementation("com.onesignal:OneSignal:[5.6.1, 5.6.99]")
+          }
+          EOF
+
+      - name: Add notification permission + OneSignal native init
         run: |
           sed -i '/<application/i\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' android/app/src/main/AndroidManifest.xml
-          MAINACT=android/app/src/main/java/co/median/android/krkqyaz/MainActivity.java
-          cat > "$MAINACT" << 'EOF'
-          package co.median.android.krkqyaz;
+          sed -i 's/<application/<application android:name=".OneSignalApp"/' android/app/src/main/AndroidManifest.xml
 
-          import android.Manifest;
-          import android.os.Build;
-          import android.os.Bundle;
-          import android.content.pm.PackageManager;
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.content.ContextCompat;
+          APPDIR=android/app/src/main/java/co/median/android/krkqyaz
+          mkdir -p "$APPDIR"
 
-          import com.getcapacitor.BridgeActivity;
+          cat > "$APPDIR/OneSignalApp.kt" << 'EOF'
+          package co.median.android.krkqyaz
 
-          public class MainActivity extends BridgeActivity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                              != PackageManager.PERMISSION_GRANTED) {
-                          ActivityCompat.requestPermissions(this,
-                                  new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
-                      }
+          import android.app.Application
+          import com.onesignal.OneSignal
+          import com.onesignal.debug.LogLevel
+          import kotlinx.coroutines.CoroutineScope
+          import kotlinx.coroutines.Dispatchers
+          import kotlinx.coroutines.launch
+
+          class OneSignalApp : Application() {
+              override fun onCreate() {
+                  super.onCreate()
+                  OneSignal.Debug.logLevel = LogLevel.VERBOSE
+                  OneSignal.initWithContext(this, "ecd43f8e-031e-41f0-a082-9af60943a575")
+                  CoroutineScope(Dispatchers.IO).launch {
+                      OneSignal.Notifications.requestPermission(true)
                   }
               }
           }
+          EOF
+
+          cat > "android/app/src/main/java/co/median/android/krkqyaz/MainActivity.java" << 'EOF'
+          package co.median.android.krkqyaz;
+
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {}
           EOF
 
       - name: Set app version
