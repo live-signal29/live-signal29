@@ -55,7 +55,7 @@ jobs:
       - name: Set app version
         run: |
           sed -i "s/versionName \".*\"/versionName \"9.8.9.9.5\"/" android/app/build.gradle
-          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode $((90000 + ${{ github.run_number }}))/" android/app/build.gradle
 
       - name: Decode signing keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-key.jks
