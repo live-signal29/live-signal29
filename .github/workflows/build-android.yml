@@ -509,7 +509,7 @@ jobs:
                                       BillingFlowParams.SubscriptionUpdateParams.newBuilder()
                                               .setOldPurchaseToken(existing.getPurchaseToken())
                                               .setSubscriptionReplacementMode(
-                                                      BillingFlowParams.ReplacementMode.WITHOUT_PRORATION)
+                                                      BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITHOUT_PRORATION)
                                               .build());
                           }
 
