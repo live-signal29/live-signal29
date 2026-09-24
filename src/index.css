@@ -309,3 +309,11 @@ body {
 .skiptranslate iframe {
   display: none !important;
 }
+
+
+/* App loader (matches the static boot splash in index.html) */
+@keyframes app-loader-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.app-loader-bar { animation: app-loader-slide 1.2s ease-in-out infinite; }

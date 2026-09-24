@@ -9,6 +9,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
+import AppLoader from "@/components/AppLoader";
+import { NetworkQualityToast } from "@/components/NetworkQualityToast";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
 
@@ -57,15 +59,7 @@ const Portfolio = lazyWithRetry(() => import("./pages/Portfolio"));
 const Backtesting = lazyWithRetry(() => import("./pages/Backtesting"));
 const CompoundCalculator = lazyWithRetry(() => import("./pages/CompoundCalculator"));
 
-const LoadingSpinner = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
-    <div className="relative">
-      <div className="w-12 h-12 border-4 border-primary/20 rounded-full"></div>
-      <div className="absolute top-0 left-0 w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-    </div>
-    <p className="text-sm text-muted-foreground animate-pulse">Loading Live Data...</p>
-  </div>
-);
+const LoadingSpinner = AppLoader;
 
 const NavigationWrapper = () => {
   const location = useLocation();
@@ -139,6 +133,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner position="top-center" richColors closeButton />
+        <NetworkQualityToast />
         <OfflineIndicator />
         <BrowserRouter>
           <div className="has-bottom-nav">
