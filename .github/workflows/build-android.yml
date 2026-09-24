@@ -436,8 +436,16 @@ jobs:
 
               /**
                * Opens Google's purchase sheet for one base plan.
-               * accountId (the Supabase user id) is stored on the purchase as the
-               * "obfuscated account id" so the server can prove who bought it.
+               *
+               * IMPORTANT: if this Google Play account already owns the premium
+               * subscription, this is a PLAN CHANGE, not a brand-new purchase.
+               * Google requires the existing purchase token in
+               * SubscriptionUpdateParams. Without it, switching from an existing
+               * monthly/quarterly/etc. plan can fail with "Couldn't complete the
+               * purchase" / ITEM_ALREADY_OWNED.
+               *
+               * accountId (the Supabase user id) is stored as the obfuscated account
+               * id so the server can prove who bought it.
                */
               @JavascriptInterface
               public void purchase(final String id, final String productId, final String basePlanId, final String accountId) {
@@ -461,22 +469,61 @@ jobs:
                           return;
                       }
 
-                      BillingFlowParams.ProductDetailsParams pdp = BillingFlowParams.ProductDetailsParams.newBuilder()
-                              .setProductDetails(details)
-                              .setOfferToken(chosen.getOfferToken())
+                      // First check whether this Play account already owns premium.
+                      // If it does, pass the existing token to Google as a subscription
+                      // replacement so plan changes work correctly.
+                      QueryPurchasesParams purchaseParams = QueryPurchasesParams.newBuilder()
+                              .setProductType(BillingClient.ProductType.SUBS)
                               .build();
-                      BillingFlowParams.Builder builder = BillingFlowParams.newBuilder()
-                              .setProductDetailsParamsList(Collections.singletonList(pdp));
-                      if (accountId != null && !accountId.isEmpty()) {
-                          builder.setObfuscatedAccountId(accountId);
-                      }
 
-                      purchaseCallbackId = id;
-                      BillingResult launch = client.launchBillingFlow(activity, builder.build());
-                      if (launch.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                          purchaseCallbackId = null;
-                          fail(id, "error", launch.getDebugMessage());
-                      }
+                      client.queryPurchasesAsync(purchaseParams, (purchaseResult, existingPurchases) -> {
+                          if (purchaseResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                              fail(id, "error", "Could not check existing Google Play subscription: "
+                                      + purchaseResult.getDebugMessage());
+                              return;
+                          }
+
+                          Purchase existing = null;
+                          if (existingPurchases != null) {
+                              for (Purchase p : existingPurchases) {
+                                  if (p.getProducts().contains(productId)
+                                          && p.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                      existing = p;
+                                      break;
+                                  }
+                              }
+                          }
+
+                          BillingFlowParams.ProductDetailsParams pdp = BillingFlowParams.ProductDetailsParams.newBuilder()
+                                  .setProductDetails(details)
+                                  .setOfferToken(chosen.getOfferToken())
+                                  .build();
+
+                          BillingFlowParams.Builder builder = BillingFlowParams.newBuilder()
+                                  .setProductDetailsParamsList(Collections.singletonList(pdp));
+
+                          if (existing != null) {
+                              // Existing premium subscription -> change its base plan.
+                              // PBL 8.0 uses SubscriptionUpdateParams with old purchase token.
+                              builder.setSubscriptionUpdateParams(
+                                      BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                                              .setOldPurchaseToken(existing.getPurchaseToken())
+                                              .setSubscriptionReplacementMode(
+                                                      BillingFlowParams.ReplacementMode.WITHOUT_PRORATION)
+                                              .build());
+                          }
+
+                          if (accountId != null && !accountId.isEmpty()) {
+                              builder.setObfuscatedAccountId(accountId);
+                          }
+
+                          purchaseCallbackId = id;
+                          BillingResult launch = client.launchBillingFlow(activity, builder.build());
+                          if (launch.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                              purchaseCallbackId = null;
+                              fail(id, "error", launch.getDebugMessage());
+                          }
+                      });
                   }), message -> fail(id, "error", message)));
               }
 
