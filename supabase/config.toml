@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.market-session-announcer]
 verify_jwt = false
+
+[functions.verify-play-purchase]
+verify_jwt = true
