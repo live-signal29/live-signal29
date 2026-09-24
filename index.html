@@ -16,16 +16,7 @@
 <meta name="google-adsense-account" content="ca-pub-1895906484640218">
     
 
-     <!-- OneSignal Web Push Notifications -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "ecd43f8e-031e-41f0-a082-9af60943a575",
-        });
-      });
-    </script>
+    <!-- OneSignal is initialised once, in src/hooks/useOneSignal.ts (a second init here made the first one fail) -->
 
     <!-- Google Ads & GPT Script -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-1895906484640218" crossorigin="anonymous"></script>
