@@ -1,14 +1,21 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isMedianApp, purchaseMedianProduct } from "@/lib/playBilling";
+import {
+  PREMIUM_PRODUCT_ID,
+  getExistingPlayPurchases,
+  getPlayOffers,
+  isPlayBillingAvailable,
+  openPlaySubscriptionSettings,
+  purchasePlayPlan,
+  type PlayPlanOffer,
+} from "@/lib/playBilling";
+import { notifySubscriptionUpdated } from "@/lib/subscriptionEvents";
 
-// One Play Console subscription product, with a base plan per
-// duration (set up as base plans under this same product — see
-// chat for exact Play Console steps). Must match exactly.
-export const PREMIUM_PRODUCT_ID = "premium";
+export { PREMIUM_PRODUCT_ID };
 
-// Base plan IDs — must exactly match what you create in Play
-// Console under the "premium" subscription.
+// Base plan IDs — must exactly match the base plans created under the
+// "premium" subscription in Play Console (and the values the admin panel
+// stores in profiles.subscription_plan).
 export const PREMIUM_BASE_PLANS = {
   monthly: "monthly",
   quarterly: "quarterly",
@@ -20,68 +27,78 @@ export type PremiumPlanId = keyof typeof PREMIUM_BASE_PLANS;
 
 export type BuyPremiumResult =
   | "success"
+  | "pending"
   | "unavailable"
   | "cancelled"
   | "error";
 
+/**
+ * Asks the backend to check a purchase token with Google and grant
+ * premium. Returns true only when the subscription is active.
+ */
+export async function verifyPlayPurchase(
+  purchaseToken: string
+): Promise<"active" | "pending" | "failed"> {
+  const { data, error } = await supabase.functions.invoke(
+    "verify-play-purchase",
+    { body: { purchaseToken, productId: PREMIUM_PRODUCT_ID } }
+  );
+
+  if (error) {
+    console.error("verify-play-purchase failed:", error);
+    return "failed";
+  }
+  if (data?.success) return "active";
+  if (data?.pending) return "pending";
+  console.error("Purchase not active:", data);
+  return "failed";
+}
+
 export function usePlayBilling() {
+  const available = isPlayBillingAvailable();
   const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  // Localized prices straight from Google Play, keyed by base plan id.
+  const [offers, setOffers] = useState<Record<string, PlayPlanOffer>>({});
+
+  useEffect(() => {
+    if (!available) return;
+    let cancelled = false;
+    getPlayOffers().then((o) => {
+      if (!cancelled) setOffers(o);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [available]);
 
   /**
-   * Runs the full flow for whichever plan the user picked: checks
-   * we're inside the Median app, opens Median's native Google Play
-   * purchase sheet for that base plan's offer, then asks the
-   * backend to verify the purchase with Google before granting
-   * premium.
-   *
-   * Returns "unavailable" when not running inside the Median app
-   * (e.g. a normal mobile browser) — the caller should fall back
-   * to the existing /premium page.
+   * Full flow for one plan: Google's purchase sheet -> backend verifies the
+   * token with Google -> premium granted -> every screen refreshes.
    */
   const buyPremium = useCallback(
-    async (plan: PremiumPlanId = "monthly"): Promise<BuyPremiumResult> => {
-      if (!isMedianApp()) return "unavailable";
-
-      const basePlanId = PREMIUM_BASE_PLANS[plan];
+    async (plan: PremiumPlanId): Promise<BuyPremiumResult> => {
+      if (!isPlayBillingAvailable()) return "unavailable";
 
       setPurchasing(true);
       try {
-        const result = await purchaseMedianProduct(
-          PREMIUM_PRODUCT_ID,
-          basePlanId
-        );
-        if (!result) {
-          return "cancelled";
-        }
-
         const {
           data: { user },
         } = await supabase.auth.getUser();
-
         if (!user) return "error";
 
-        // Same verify-play-purchase Edge Function regardless of
-        // plan — the productId is always "premium"; Google's
-        // verification response identifies which base plan/offer
-        // was actually purchased.
-        const { data, error } = await supabase.functions.invoke(
-          "verify-play-purchase",
-          {
-            body: {
-              userId: user.id,
-              productId: PREMIUM_PRODUCT_ID,
-              purchaseToken: result.purchaseToken,
-              purchaseType: "subs",
-            },
-          }
-        );
+        const outcome = await purchasePlayPlan(PREMIUM_BASE_PLANS[plan], user.id);
 
-        if (error || !data?.success) {
-          console.error("Purchase verification failed:", error || data);
-          return "error";
+        if (outcome.status === "cancelled") return "cancelled";
+        if (outcome.status === "pending") return "pending";
+        if (outcome.status === "error") return "error";
+
+        const verified = await verifyPlayPurchase(outcome.purchaseToken);
+        if (verified === "active") {
+          notifySubscriptionUpdated();
+          return "success";
         }
-
-        return "success";
+        return verified === "pending" ? "pending" : "error";
       } catch (err) {
         console.error("buyPremium failed:", err);
         return "error";
@@ -92,5 +109,34 @@ export function usePlayBilling() {
     []
   );
 
-  return { buyPremium, purchasing };
+  /**
+   * Re-checks whatever Google says this Play account already owns
+   * (new phone, reinstall, renewal). Returns true if premium is active.
+   */
+  const restorePurchases = useCallback(async (): Promise<boolean> => {
+    if (!isPlayBillingAvailable()) return false;
+    setRestoring(true);
+    try {
+      const owned = await getExistingPlayPurchases();
+      let active = false;
+      for (const p of owned) {
+        if (p.productId !== PREMIUM_PRODUCT_ID || p.purchaseState !== 1) continue;
+        if ((await verifyPlayPurchase(p.purchaseToken)) === "active") active = true;
+      }
+      if (active) notifySubscriptionUpdated();
+      return active;
+    } finally {
+      setRestoring(false);
+    }
+  }, []);
+
+  return {
+    available,
+    offers,
+    purchasing,
+    restoring,
+    buyPremium,
+    restorePurchases,
+    manageSubscription: openPlaySubscriptionSettings,
+  };
 }

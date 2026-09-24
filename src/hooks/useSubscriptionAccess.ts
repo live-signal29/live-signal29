@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUBSCRIPTION_UPDATED_EVENT } from "@/lib/subscriptionEvents";
 
 // Retry helper for VPN/proxy compatibility
 const fetchWithRetry = async <T>(
@@ -33,6 +34,17 @@ export const useSubscriptionAccess = () => {
       checkAccess();
     }, 100);
     return () => clearTimeout(timeout);
+  }, []);
+
+  // A purchase / restore (Google Play or otherwise) fires this event —
+  // re-read the profile so locked signals open up immediately.
+  useEffect(() => {
+    const onUpdated = () => {
+      retryCountRef.current = 0;
+      checkAccess();
+    };
+    window.addEventListener(SUBSCRIPTION_UPDATED_EVENT, onUpdated);
+    return () => window.removeEventListener(SUBSCRIPTION_UPDATED_EVENT, onUpdated);
   }, []);
 
   const checkAccess = async () => {
@@ -128,6 +140,10 @@ export const useSubscriptionAccess = () => {
   };
 
   return { 
+    // true only for an ACTIVE paid plan (status "premium" AND end date in
+    // the future). Unlike `subscriptionStatus === "premium"` this turns
+    // false once the plan has expired.
+    isPremium: hasAccess,
     hasAccess, 
     loading, 
     subscriptionStatus, 
