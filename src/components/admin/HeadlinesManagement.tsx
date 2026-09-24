@@ -44,7 +44,7 @@ const HeadlinesManagement = () => {
   const addMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (data.is_active) {
-        await supabase.from("headlines").update({ is_active: false }).neq("id", "");
+        await supabase.from("headlines").update({ is_active: false }).eq("is_active", true);
       }
       const { error } = await supabase.from("headlines").insert({
         text: data.text,
