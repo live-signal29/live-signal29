@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSignalUnlock } from "@/hooks/useSignalUnlock";
 import { showRewardedAd, REWARDED_AD_SECONDS } from "@/lib/rewardedAd";
-import { usePlayBilling } from "@/hooks/usePlayBilling";
 import { playUnlockSound } from "@/lib/sound";
 
 interface SignalUnlockGateProps {
@@ -94,7 +93,6 @@ export const SignalUnlockGate = ({
 }: SignalUnlockGateProps) => {
   const { isUnlocked, loading, recordUnlock, dailyUnlocksRemaining } =
     useSignalUnlock(signalId, isPremium);
-  const { buyPremium, purchasing } = usePlayBilling();
 
   // Popup state
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -123,36 +121,14 @@ export const SignalUnlockGate = ({
     );
   }
 
-  // Goes to Google Play checkout when running inside the Median
-  // app with billing configured. Any other outcome (not inside
-  // the app, checkout unavailable, or verification failed) falls
-  // back to the /premium page — this is a web build today, so
-  // that fallback is the normal path.
-  const handleGoPremium = async () => {
-    const result = await buyPremium();
-
-    switch (result) {
-      case "success":
-        playUnlockSound();
-        toast.success("Premium activated! Ab sab signals bina ad ke dekho.");
-        setPickerOpen(false);
-        setRevealing(true);
-        break;
-      case "cancelled":
-        // user closed the Google checkout sheet — no message needed,
-        // keep the popup open so they can pick again
-        break;
-      case "error":
-        toast.error("Checkout nahi khul saka, premium page pe le ja rahe hain.");
-        setPickerOpen(false);
-        navigate("/premium#plans-section");
-        break;
-      case "unavailable":
-      default:
-        setPickerOpen(false);
-        navigate("/premium#plans-section");
-        break;
-    }
+  // "Go Premium" always opens the plans page: the user sees every plan
+  // and its price first (Google Play in the Android app, crypto on the
+  // website) instead of being dropped straight into a purchase sheet for
+  // a plan they never picked. The plans page unlocks everything and
+  // refreshes the whole dashboard once the purchase succeeds.
+  const handleGoPremium = () => {
+    setPickerOpen(false);
+    navigate("/premium#plans-section");
   };
 
   const openPicker = () => {
@@ -247,15 +223,10 @@ export const SignalUnlockGate = ({
             {dailyUnlocksRemaining <= 0 ? (
               <Button
                 onClick={handleGoPremium}
-                disabled={purchasing}
                 size="sm"
-                className="h-9 rounded-full px-4 gap-1.5 text-xs font-semibold bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-sm disabled:opacity-50"
+                className="h-9 rounded-full px-4 gap-1.5 text-xs font-semibold bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-sm"
               >
-                {purchasing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Crown className="h-3.5 w-3.5" />
-                )}
+                <Crown className="h-3.5 w-3.5" />
                 Go Premium
               </Button>
             ) : (
@@ -344,18 +315,13 @@ export const SignalUnlockGate = ({
                 {/* Premium option */}
                 <button
                   onClick={handleGoPremium}
-                  disabled={purchasing}
-                  className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-left transition hover:border-amber-500/60 hover:bg-amber-500/15 disabled:opacity-60"
+                  className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-left transition hover:border-amber-500/60 hover:bg-amber-500/15"
                 >
                   <span className="absolute right-3 top-2 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
                     Best value
                   </span>
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-yellow-500 text-white shadow-sm">
-                    {purchasing ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Crown className="h-5 w-5" />
-                    )}
+                    <Crown className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">

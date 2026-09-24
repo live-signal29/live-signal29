@@ -26,7 +26,7 @@ const TrialExpiredLockScreen = () => {
           
           <div className="space-y-3">
             <Button 
-              onClick={() => navigate("/premium")}
+              onClick={() => navigate("/premium#plans-section")}
               className="w-full bg-warning hover:bg-warning/90 text-black font-semibold text-lg py-6"
               size="lg"
             >

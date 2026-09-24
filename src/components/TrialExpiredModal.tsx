@@ -83,7 +83,7 @@ export const TrialExpiredModal = ({ open, onOpenChange }: TrialExpiredModalProps
             <Button
               onClick={() => {
                 onOpenChange(false);
-                navigate("/premium");
+                navigate("/premium#plans-section");
               }}
               className="h-12 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90"
             >

@@ -79,7 +79,7 @@ export const FreeTrialModal = ({ open, onOpenChange }: FreeTrialModalProps) => {
 
             <Button
               onClick={() => {
-                navigate("/premium");
+                navigate("/premium#plans-section");
                 onOpenChange(false);
               }}
               className="w-full h-12 text-lg font-semibold"

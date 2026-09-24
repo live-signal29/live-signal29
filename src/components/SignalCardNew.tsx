@@ -1437,7 +1437,7 @@ const SignalCardNew = ({
           aria-label="Premium Signal - Tap to Unlock"  
           onClick={() =>  
             navigate(  
-              "/premium"  
+              "/premium#plans-section"  
             )  
           }  
           onKeyDown={(e) => {  
@@ -1448,7 +1448,7 @@ const SignalCardNew = ({
               e.preventDefault();  
   
               navigate(  
-                "/premium"  
+                "/premium#plans-section"  
               );  
             }  
           }}  
