@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import OneSignal from 'react-onesignal';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const ONESIGNAL_APP_ID =
   import.meta.env.VITE_ONESIGNAL_APP_ID || 'ecd43f8e-031e-41f0-a082-9af60943a575';
@@ -39,6 +40,24 @@ export const initOneSignalOnce = (): Promise<boolean> => {
   return initPromise;
 };
 
+// Android app: if notifications are blocked, show a tappable prompt (a tap is required to open the dialog / settings)
+let askedNativePermission = false;
+const askNativePermission = (bridge: any) => {
+  if (askedNativePermission || typeof bridge.hasPermission !== 'function') return;
+  setTimeout(() => {
+    try {
+      if (bridge.hasPermission()) return;
+      askedNativePermission = true;
+      toast('Turn on notifications', {
+        id: 'enable-push',
+        description: 'Get instant signal, TP and SL alerts.',
+        duration: 15000,
+        action: { label: 'Enable', onClick: () => bridge.requestPermission?.() },
+      });
+    } catch { /* ignore */ }
+  }, 2500);
+};
+
 // Link this device to the logged-in user (external_id = supabase user id),
 // so the backend can target admins / a specific user.
 let lastLinkedId: string | null | undefined;
@@ -54,8 +73,12 @@ const linkUser = async (userId: string | null, attempt = 0) => {
         if (attempt < 6) setTimeout(() => linkUser(userId, attempt + 1), 1500);
         return;
       }
-      if (userId) bridge.login(userId);
-      else bridge.logout();
+      if (userId) {
+        bridge.login(userId);
+        askNativePermission(bridge);
+      } else {
+        bridge.logout();
+      }
       return;
     }
     if (!(await initOneSignalOnce())) return;
