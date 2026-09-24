@@ -1,62 +1,122 @@
 import { useEffect, useState } from 'react';
 import OneSignal from 'react-onesignal';
+import { supabase } from '@/integrations/supabase/client';
+
+const ONESIGNAL_APP_ID =
+  import.meta.env.VITE_ONESIGNAL_APP_ID || 'ecd43f8e-031e-41f0-a082-9af60943a575';
+
+// Inside the Android APK the *native* OneSignal SDK handles push (see
+// .github/workflows/build-android.yml). WebViews can't do web push, so the web
+// SDK must not run there. The APK exposes window.NativePush for user linking.
+export const isNativeApp = () =>
+  typeof window !== 'undefined' &&
+  (!!(window as any).NativePush || !!(window as any).Capacitor?.isNativePlatform?.());
+
+let initPromise: Promise<boolean> | null = null;
+
+// OneSignal.init() must run exactly once. A second call throws
+// "SDK already initialized" and aborts everything after it (that's what broke push before).
+export const initOneSignalOnce = (): Promise<boolean> => {
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    if (isNativeApp()) return false;
+    try {
+      await OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        allowLocalhostAsSecureOrigin: true,
+        // Own scope so it doesn't fight with /service-worker.js (PWA cache worker)
+        serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
+        serviceWorkerParam: { scope: '/push/onesignal/' },
+      });
+      console.log('OneSignal initialized');
+      return true;
+    } catch (error) {
+      console.error('OneSignal initialization error:', error);
+      initPromise = null; // allow a retry
+      return false;
+    }
+  })();
+  return initPromise;
+};
+
+// Link this device to the logged-in user (external_id = supabase user id),
+// so the backend can target admins / a specific user.
+let lastLinkedId: string | null | undefined;
+const linkUser = async (userId: string | null, attempt = 0) => {
+  if (lastLinkedId === userId) return;
+  lastLinkedId = userId;
+  try {
+    if (isNativeApp()) {
+      const bridge = (window as any).NativePush;
+      if (!bridge) {
+        // JS bridge is attached right after the WebView is created — retry shortly
+        lastLinkedId = undefined;
+        if (attempt < 6) setTimeout(() => linkUser(userId, attempt + 1), 1500);
+        return;
+      }
+      if (userId) bridge.login(userId);
+      else bridge.logout();
+      return;
+    }
+    if (!(await initOneSignalOnce())) return;
+    if (userId) await OneSignal.login(userId);
+    else await OneSignal.logout();
+  } catch (error) {
+    console.error('OneSignal user link error:', error);
+  }
+};
 
 export const useOneSignal = () => {
   const [initialized, setInitialized] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
 
+  // Init + permission prompt (asked on the first tap — browsers block prompts without a gesture)
   useEffect(() => {
-    const initOneSignal = async () => {
-      try {
-        // Replace 'YOUR_ONESIGNAL_APP_ID' with your actual OneSignal App ID
-        const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID || 'YOUR_ONESIGNAL_APP_ID';
-        
-        await OneSignal.init({
-          appId: ONESIGNAL_APP_ID,
-          allowLocalhostAsSecureOrigin: true,
-          serviceWorkerParam: {
-            scope: '/push/onesignal/'
-          },
-          serviceWorkerPath: 'OneSignalSDKWorker.js'
-        });
+    let cancelled = false;
+    let removeGesture: (() => void) | undefined;
 
-        // Show native permission prompt
-        const permission = await OneSignal.Notifications.requestPermission();
-        setPermissionGranted(permission);
-        
-        setInitialized(true);
+    (async () => {
+      const ok = await initOneSignalOnce();
+      if (!ok || cancelled) return;
+      setInitialized(true);
 
-        // Log for debugging
-        console.log('OneSignal initialized successfully');
-      } catch (error) {
-        console.error('OneSignal initialization error:', error);
+      const notif: any = OneSignal.Notifications;
+      setPermissionGranted(!!notif.permission);
+      notif.addEventListener?.('permissionChange', (granted: boolean) => setPermissionGranted(!!granted));
+
+      if (notif.permission) {
+        try { await (OneSignal.User as any).PushSubscription.optIn(); } catch { /* already opted in */ }
+        return;
       }
-    };
+      if (notif.permissionNative === 'denied') return;
 
-    initOneSignal();
+      const ask = async () => {
+        removeGesture?.();
+        try {
+          const granted = await OneSignal.Notifications.requestPermission();
+          setPermissionGranted(!!granted);
+        } catch (e) {
+          console.error('Push permission error:', e);
+        }
+      };
+      window.addEventListener('pointerdown', ask, { once: true });
+      removeGesture = () => window.removeEventListener('pointerdown', ask);
+    })();
+
+    return () => {
+      cancelled = true;
+      removeGesture?.();
+    };
   }, []);
 
-  const sendNotification = async (title: string, message: string, data?: any) => {
-    if (!initialized || !permissionGranted) {
-      console.warn('OneSignal not initialized or permission not granted');
-      return;
-    }
+  // Keep OneSignal external_id in sync with the Supabase session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => linkUser(data.session?.user?.id ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      linkUser(session?.user?.id ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
-    try {
-      // Tag user for segmentation if needed
-      await OneSignal.User.addTag('active_user', 'true');
-      
-      // You can send notifications from your backend using OneSignal REST API
-      // This is just for local testing
-      console.log('Notification triggered:', { title, message, data });
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
-  };
-
-  return {
-    initialized,
-    permissionGranted,
-    sendNotification
-  };
+  return { initialized, permissionGranted };
 };
