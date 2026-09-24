@@ -317,3 +317,13 @@ body {
   100% { transform: translateX(300%); }
 }
 .app-loader-bar { animation: app-loader-slide 1.2s ease-in-out infinite; }
+
+/* Headline ticker (HeadlineTicker.tsx) */
+@keyframes headline-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.headline-marquee { animation: headline-marquee 20s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .headline-marquee { animation: none; }
+}
