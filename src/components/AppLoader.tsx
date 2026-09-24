@@ -15,7 +15,7 @@ const AppLoader = ({ label = 'Loading live data' }: { label?: string }) => {
       role="status"
       aria-live="polite"
     >
-      <img src="/icon-192.png" alt="" width={64} height={64} className="rounded-2xl shadow-lg" />
+      <img src="/loader-logo.png" alt="Live Signals" width={88} height={88} className="rounded-full bg-white shadow-lg" />
       <div className="h-[3px] w-36 overflow-hidden rounded-full bg-sky-500/20">
         <div className="app-loader-bar h-full w-1/2 rounded-full bg-sky-500" />
       </div>
