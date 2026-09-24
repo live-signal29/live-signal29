@@ -122,7 +122,7 @@
     <style>
       /* Boot splash: visible instantly, before any JS bundle is downloaded. React replaces it on mount. */
       #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-      #boot-splash img{width:64px;height:64px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+      #boot-splash img{width:88px;height:88px;border-radius:50%;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.15)}
       #boot-splash .bs-bar{width:144px;height:3px;border-radius:3px;overflow:hidden;background:rgba(14,165,233,.18)}
       #boot-splash .bs-bar span{display:block;width:50%;height:100%;border-radius:3px;background:#0EA5E9;animation:bs-slide 1.2s ease-in-out infinite}
       #boot-splash .bs-status{font-size:12px;letter-spacing:.2px;color:#64748b;padding:4px 12px;border-radius:999px;transition:all .25s}
@@ -136,7 +136,7 @@
     </style>
     <div id="root">
       <div id="boot-splash" role="status" aria-live="polite">
-        <img src="/icon-192.png" alt="" width="64" height="64" />
+        <img src="/loader-logo.png" alt="Live Signals" width="88" height="88" />
         <div class="bs-bar"><span></span></div>
         <div class="bs-status" id="bs-status">Loading…</div>
       </div>
