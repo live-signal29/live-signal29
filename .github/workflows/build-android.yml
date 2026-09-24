@@ -469,6 +469,10 @@ jobs:
                           return;
                       }
 
+                      // The purchase query below is asynchronous, so the selected offer
+                      // must be captured in a final/effectively-final local variable.
+                      final ProductDetails.SubscriptionOfferDetails selectedOffer = chosen;
+
                       // First check whether this Play account already owns premium.
                       // If it does, pass the existing token to Google as a subscription
                       // replacement so plan changes work correctly.
@@ -478,7 +482,8 @@ jobs:
 
                       client.queryPurchasesAsync(purchaseParams, (purchaseResult, existingPurchases) -> {
                           if (purchaseResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                              fail(id, "error", "Could not check existing Google Play subscription: "
+                              fail(id, "error", "Google Play subscription check failed [code="
+                                      + purchaseResult.getResponseCode() + "]: "
                                       + purchaseResult.getDebugMessage());
                               return;
                           }
@@ -496,7 +501,7 @@ jobs:
 
                           BillingFlowParams.ProductDetailsParams pdp = BillingFlowParams.ProductDetailsParams.newBuilder()
                                   .setProductDetails(details)
-                                  .setOfferToken(chosen.getOfferToken())
+                                  .setOfferToken(selectedOffer.getOfferToken())
                                   .build();
 
                           BillingFlowParams.Builder builder = BillingFlowParams.newBuilder()
@@ -521,7 +526,9 @@ jobs:
                           BillingResult launch = client.launchBillingFlow(activity, builder.build());
                           if (launch.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                               purchaseCallbackId = null;
-                              fail(id, "error", launch.getDebugMessage());
+                              fail(id, "error", "Google Play launch failed [code="
+                                          + launch.getResponseCode() + "]: "
+                                          + launch.getDebugMessage());
                           }
                       });
                   }), message -> fail(id, "error", message)));
@@ -581,7 +588,8 @@ jobs:
                       return;
                   }
                   if (code != BillingClient.BillingResponseCode.OK || purchases == null) {
-                      fail(id, "error", result.getDebugMessage());
+                      fail(id, "error", "Google Play purchase failed [code="
+                              + code + "]: " + result.getDebugMessage());
                       return;
                   }
 
