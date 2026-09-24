@@ -65,8 +65,7 @@ jobs:
 
       - name: Add OneSignal native SDK dependency
         run: |
-          sed -i '/^dependencies {/a\    implementation("com.onesignal:OneSignal:[5.6.1, 5.6.99]")' android/app/build.gradle
-          sed -i '/^dependencies {/a\    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")' android/app/build.gradle
+          sed -i '/^dependencies {/a\    implementation("com.onesignal:OneSignal:[5.6.1, 5.9.99]")' android/app/build.gradle
 
       - name: Add notification permission + OneSignal native init
         run: |
@@ -76,34 +75,52 @@ jobs:
           APPDIR=android/app/src/main/java/co/median/android/krkqyaz
           mkdir -p "$APPDIR"
 
-          cat > "$APPDIR/OneSignalApp.kt" << 'EOF'
-          package co.median.android.krkqyaz
+          cat > "$APPDIR/OneSignalApp.java" << 'EOF'
+          package co.median.android.krkqyaz;
 
-          import android.app.Application
-          import com.onesignal.OneSignal
-          import com.onesignal.debug.LogLevel
-          import kotlinx.coroutines.CoroutineScope
-          import kotlinx.coroutines.Dispatchers
-          import kotlinx.coroutines.launch
+          import android.app.Application;
+          import com.onesignal.OneSignal;
 
-          class OneSignalApp : Application() {
-              override fun onCreate() {
-                  super.onCreate()
-                  OneSignal.Debug.logLevel = LogLevel.VERBOSE
-                  OneSignal.initWithContext(this, "ecd43f8e-031e-41f0-a082-9af60943a575")
-                  CoroutineScope(Dispatchers.IO).launch {
-                      OneSignal.Notifications.requestPermission(true)
+          public class OneSignalApp extends Application {
+              @Override
+              public void onCreate() {
+                  super.onCreate();
+                  try {
+                      OneSignal.initWithContext(this, "ecd43f8e-031e-41f0-a082-9af60943a575");
+                  } catch (Throwable t) {
+                      // Never let a push-SDK issue crash the whole app
+                      t.printStackTrace();
                   }
               }
           }
           EOF
 
-          cat > "android/app/src/main/java/co/median/android/krkqyaz/MainActivity.java" << 'EOF'
+          MAINACT=android/app/src/main/java/co/median/android/krkqyaz/MainActivity.java
+          cat > "$MAINACT" << 'EOF'
           package co.median.android.krkqyaz;
+
+          import android.Manifest;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.content.pm.PackageManager;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
 
           import com.getcapacitor.BridgeActivity;
 
-          public class MainActivity extends BridgeActivity {}
+          public class MainActivity extends BridgeActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                              != PackageManager.PERMISSION_GRANTED) {
+                          ActivityCompat.requestPermissions(this,
+                                  new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+                      }
+                  }
+              }
+          }
           EOF
 
       - name: Set app version
