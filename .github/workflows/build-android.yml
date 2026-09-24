@@ -66,6 +66,7 @@ jobs:
       - name: Add OneSignal native SDK dependency
         run: |
           sed -i '/^dependencies {/a\    implementation("com.onesignal:OneSignal:[5.6.1, 5.6.99]")' android/app/build.gradle
+          sed -i '/^dependencies {/a\    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")' android/app/build.gradle
 
       - name: Add notification permission + OneSignal native init
         run: |
