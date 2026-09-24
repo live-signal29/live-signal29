@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import Header from "@/components/Header";
@@ -47,6 +47,8 @@ import {
   CheckCircle2,
   Loader2,
   ShieldCheck,
+  RefreshCw,
+  Settings2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +56,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { usePlayBilling, type PremiumPlanId } from "@/hooks/usePlayBilling";
+import { playUnlockSound } from "@/lib/sound";
 
 import {
   Dialog,
@@ -112,6 +116,26 @@ const Premium = () => {
   ====================================================== */
 
   const location = useLocation();
+  const navigate = useNavigate();
+
+  /* =====================================================
+     GOOGLE PLAY BILLING
+     Inside the Android app (Play Store build) plans are bought
+     through Google Play — Play policy does not allow selling
+     digital subscriptions with crypto inside the app. In a normal
+     browser `playAvailable` is false and the crypto checkout below
+     is used exactly as before.
+  ====================================================== */
+
+  const {
+    available: playAvailable,
+    offers: playOffers,
+    purchasing,
+    restoring,
+    buyPremium,
+    restorePurchases,
+    manageSubscription,
+  } = usePlayBilling();
 
   useEffect(() => {
     if (location.hash !== "#plans-section") return;
@@ -273,6 +297,7 @@ const Premium = () => {
   const plans = [
     {
       name: "Monthly",
+      planId: "monthly" as PremiumPlanId,
       duration: "month",
       pricePerMonth: 30,
       totalPrice: 30,
@@ -282,6 +307,7 @@ const Premium = () => {
     },
     {
       name: "Quarterly",
+      planId: "quarterly" as PremiumPlanId,
       duration: "3 months",
       pricePerMonth: 25,
       totalPrice: 90,
@@ -291,6 +317,7 @@ const Premium = () => {
     },
     {
       name: "Half-Yearly",
+      planId: "halfyearly" as PremiumPlanId,
       duration: "6 months",
       pricePerMonth: 20,
       totalPrice: 180,
@@ -300,6 +327,7 @@ const Premium = () => {
     },
     {
       name: "Yearly",
+      planId: "yearly" as PremiumPlanId,
       duration: "12 months",
       pricePerMonth: 15,
       totalPrice: 360,
@@ -310,7 +338,9 @@ const Premium = () => {
   ];
 
   const features = [
-    `All ${selectedCategory.toLowerCase()} signals`,
+    playAvailable
+      ? "All premium signals"
+      : `All ${selectedCategory.toLowerCase()} signals`,
     "Daily 2-5 signals",
     "Instant notifications",
     "Ad-free signals",
@@ -475,6 +505,35 @@ const Premium = () => {
       return;
     }
 
+    /* ---- Google Play (Android app) ---- */
+    if (playAvailable) {
+      if (purchasing) return;
+
+      const result = await buyPremium(plan.planId);
+
+      switch (result) {
+        case "success":
+          playUnlockSound();
+          toast.success("Premium activated! 🎉 All signals are unlocked.");
+          navigate("/");
+          break;
+        case "pending":
+          toast.info(
+            "Your payment is pending. Premium will unlock automatically once Google confirms it."
+          );
+          break;
+        case "cancelled":
+          // user closed the Google sheet — nothing to say
+          break;
+        default:
+          toast.error(
+            "Couldn't complete the purchase. If you were charged, tap “Restore purchase” below."
+          );
+      }
+      return;
+    }
+
+    /* ---- Website: crypto checkout ---- */
     const finalPrice =
       calculateFinalPrice(
         plan.payOnly,
@@ -648,7 +707,8 @@ const Premium = () => {
             COUPON BANNER
         ====================================================== */}
 
-        {activeCoupons &&
+        {!playAvailable &&
+          activeCoupons &&
           activeCoupons.length > 0 && (
 
             <div className="max-w-5xl mx-auto mb-8">
@@ -770,6 +830,7 @@ const Premium = () => {
             COUPON INPUT
         ====================================================== */}
 
+        {!playAvailable && (
         <div className="max-w-4xl mx-auto mb-8">
 
           <Card className="border-primary/30 bg-primary/5">
@@ -869,11 +930,15 @@ const Premium = () => {
           </Card>
 
         </div>
+        )}
 
         {/* =====================================================
             CATEGORY
+            (hidden in the app: one Google Play subscription
+            unlocks every category)
         ====================================================== */}
 
+        {!playAvailable && (
         <div className="max-w-4xl mx-auto mb-8">
 
           <Card>
@@ -924,6 +989,7 @@ const Premium = () => {
           </Card>
 
         </div>
+        )}
 
         {/* =====================================================
             PRICING
@@ -932,7 +998,9 @@ const Premium = () => {
         <div id="plans-section" className="max-w-7xl mx-auto">
 
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 gradient-text">
-            {selectedCategory} Premium Plans
+            {playAvailable
+              ? "Premium Plans"
+              : `${selectedCategory} Premium Plans`}
           </h2>
 
           <Carousel
@@ -961,6 +1029,11 @@ const Premium = () => {
                   const savings =
                     originalPrice -
                     finalPrice;
+
+                  // Localized price straight from Google Play
+                  const playPrice = playAvailable
+                    ? playOffers[plan.planId]?.formattedPrice
+                    : undefined;
 
                   const isPlanApplicable =
                     !appliedCoupon ||
@@ -1029,11 +1102,15 @@ const Premium = () => {
                           <div className="space-y-2">
 
                             <p className="text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                              ${plan.pricePerMonth}
+                              {playAvailable
+                                ? playPrice ?? `$${plan.payOnly}`
+                                : `$${plan.pricePerMonth}`}
                             </p>
 
                             <p className="text-sm text-muted-foreground">
-                              /month • {plan.duration}
+                              {playAvailable
+                                ? `per ${plan.duration} • auto-renews`
+                                : `/month • ${plan.duration}`}
                             </p>
 
                           </div>
@@ -1044,19 +1121,23 @@ const Premium = () => {
 
                           <div className="space-y-2.5 p-4 rounded-xl bg-muted/30 border">
 
-                            <div className="flex justify-between items-center text-sm">
+                            {!playAvailable && (
+                              <>
+                                <div className="flex justify-between items-center text-sm">
 
-                              <span className="text-muted-foreground">
-                                Original
-                              </span>
+                                  <span className="text-muted-foreground">
+                                    Original
+                                  </span>
 
-                              <span className="line-through text-muted-foreground">
-                                ${plan.totalPrice}
-                              </span>
+                                  <span className="line-through text-muted-foreground">
+                                    ${plan.totalPrice}
+                                  </span>
 
-                            </div>
+                                </div>
 
-                            <div className="h-px bg-border" />
+                                <div className="h-px bg-border" />
+                              </>
+                            )}
 
                             {appliedCoupon &&
                             isPlanApplicable ? (
@@ -1100,10 +1181,9 @@ const Premium = () => {
                                 </span>
 
                                 <span className="text-2xl font-black text-primary">
-                                  $
-                                  {
-                                    originalPrice
-                                  }
+                                  {playAvailable
+                                    ? playPrice ?? `$${originalPrice}`
+                                    : `$${originalPrice}`}
                                 </span>
 
                               </div>
@@ -1159,6 +1239,7 @@ const Premium = () => {
                           </div>
 
                           <Button
+                            disabled={purchasing}
                             className="w-full h-12 font-bold text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md"
                             onClick={(event) => {
                               event.stopPropagation();
@@ -1168,7 +1249,13 @@ const Premium = () => {
                               );
                             }}
                           >
-                            SELECT PLAN
+                            {purchasing ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : playAvailable ? (
+                              "SUBSCRIBE"
+                            ) : (
+                              "SELECT PLAN"
+                            )}
                           </Button>
 
                         </CardContent>
@@ -1222,6 +1309,63 @@ const Premium = () => {
           </p>
 
         </div>
+
+        {/* =====================================================
+            GOOGLE PLAY: renewal terms + restore / manage
+            (Play requires the price, period and how to cancel
+            to be clear before purchase)
+        ====================================================== */}
+
+        {playAvailable && (
+          <div className="max-w-3xl mx-auto mt-6 space-y-3">
+
+            <p className="text-xs text-center text-muted-foreground leading-relaxed">
+              Subscriptions renew automatically at the price shown until
+              cancelled. Payment is charged to your Google Play account.
+              Cancel any time in Google Play → Payments &amp; subscriptions
+              → Subscriptions. Cancelling stops the next renewal; you keep
+              access until the end of the period you paid for.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={restoring || purchasing}
+                onClick={async () => {
+                  const ok = await restorePurchases();
+                  if (ok) {
+                    toast.success("Premium restored!");
+                    navigate("/");
+                  } else {
+                    toast.info(
+                      "No active subscription found on this Google account."
+                    );
+                  }
+                }}
+              >
+                {restoring ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Restore purchase
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => manageSubscription()}
+              >
+                <Settings2 className="h-4 w-4 mr-2" />
+                Manage subscription
+              </Button>
+
+            </div>
+
+          </div>
+        )}
 
         {/* =====================================================
             AFFILIATE

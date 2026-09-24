@@ -282,6 +282,7 @@ const formatExactRealTime = (
 const SignalsDashboard = () => {
   const {
     hasAccess,
+    isPremium,
     subscriptionStatus,
     trialExpired,
   } = useSubscriptionAccess();
@@ -1562,8 +1563,7 @@ const SignalsDashboard = () => {
                                                       signal.id
                                                     }
                                                     isPremium={
-                                                      subscriptionStatus ===
-                                                      "premium"
+                                                      isPremium
                                                     }
                                                     pair={
                                                       signal.pair
@@ -1596,8 +1596,7 @@ const SignalsDashboard = () => {
                                                 )}
 
                                                 {showAd &&
-                                                  subscriptionStatus !==
-                                                    "premium" && (
+                                                  !isPremium && (
                                                     <div className="md:col-span-2 my-1">
                                                       <AdSlot
                                                         slot={
@@ -1686,8 +1685,7 @@ const SignalsDashboard = () => {
               BOTTOM AD
               ================================================== */}
 
-          {subscriptionStatus !==
-            "premium" && (
+          {!isPremium && (
             <div className="mt-6">
               <AdBanner />
             </div>
