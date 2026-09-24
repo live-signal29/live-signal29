@@ -56,7 +56,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { usePlayBilling, type PremiumPlanId } from "@/hooks/usePlayBilling";
+import { usePlayBilling, PREMIUM_BASE_PLANS, type PremiumPlanId } from "@/hooks/usePlayBilling";
 import { playUnlockSound } from "@/lib/sound";
 
 import {
@@ -1031,8 +1031,10 @@ const Premium = () => {
                     finalPrice;
 
                   // Localized price straight from Google Play
+                  // (playOffers is keyed by Play Console's basePlanId, e.g.
+                  // "half-yearly" — not by our internal planId "halfyearly")
                   const playPrice = playAvailable
-                    ? playOffers[plan.planId]?.formattedPrice
+                    ? playOffers[PREMIUM_BASE_PLANS[plan.planId]]?.formattedPrice
                     : undefined;
 
                   const isPlanApplicable =
