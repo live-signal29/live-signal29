@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=co.median.android.odrkwln";
+  "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
 
 // Keep in sync with APP_VERSION in SideDrawer.tsx
 const APP_VERSION = "1.7.9";
