@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
-  Check,
+  CheckCheck,
   X,
   Gift,
   BarChart3,
   Info,
+  ArrowUpRight,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -16,8 +16,6 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -31,9 +29,9 @@ export const NotificationBell = () => {
     handleNotificationClick,
   } = useNotifications();
 
+  const [open, setOpen] = useState(false);
   const [popupNotification, setPopupNotification] =
     useState<(typeof notifications)[number] | null>(null);
-
   const [popupVisible, setPopupVisible] = useState(false);
 
   const shownPopupIds = useRef<Set<string>>(new Set());
@@ -45,33 +43,26 @@ export const NotificationBell = () => {
       case "coupon":
         return {
           icon: Gift,
-          emoji: "🎉",
-          className: "text-amber-400",
-          bg: "bg-amber-500/15",
+          className: "text-amber-500",
+          bg: "bg-amber-500/10",
         };
-
       case "signal":
         return {
           icon: BarChart3,
-          emoji: "📊",
-          className: "text-emerald-400",
-          bg: "bg-emerald-500/15",
+          className: "text-emerald-600 dark:text-emerald-400",
+          bg: "bg-emerald-500/10",
         };
-
       case "system":
         return {
           icon: Bell,
-          emoji: "🔔",
-          className: "text-blue-400",
-          bg: "bg-blue-500/15",
+          className: "text-blue-500",
+          bg: "bg-blue-500/10",
         };
-
       default:
         return {
           icon: Info,
-          emoji: "ℹ️",
-          className: "text-sky-400",
-          bg: "bg-sky-500/15",
+          className: "text-sky-500",
+          bg: "bg-sky-500/10",
         };
     }
   };
@@ -97,47 +88,31 @@ export const NotificationBell = () => {
 
     shownPopupIds.current.add(newNotification.id);
 
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
 
     setPopupNotification(newNotification);
+    const rafId = requestAnimationFrame(() => setPopupVisible(true));
 
-    const rafId = requestAnimationFrame(() => {
-      setPopupVisible(true);
-    });
-
-    // ⬇️ TIME REDUCED: 5s → 3s
     hideTimerRef.current = setTimeout(() => {
       setPopupVisible(false);
-      setTimeout(() => {
-        setPopupNotification(null);
-      }, 300);
+      setTimeout(() => setPopupNotification(null), 250);
     }, 3000);
 
     return () => {
       cancelAnimationFrame(rafId);
-      if (hideTimerRef.current) {
-        clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = null;
-      }
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, [notifications, isLoading]);
 
   useEffect(() => {
     return () => {
-      if (hideTimerRef.current) {
-        clearTimeout(hideTimerRef.current);
-      }
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, []);
 
   const closePopup = () => {
     setPopupVisible(false);
-    window.setTimeout(() => {
-      setPopupNotification(null);
-    }, 300);
+    window.setTimeout(() => setPopupNotification(null), 250);
   };
 
   const handlePopupClick = () => {
@@ -150,64 +125,63 @@ export const NotificationBell = () => {
   const popupIconData = popupNotification
     ? getNotificationIcon(popupNotification.type)
     : null;
-
   const PopupIcon = popupIconData?.icon;
+
+  const handlePopoverChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+
+    // Opening the inbox means the user has seen the notifications.
+    if (nextOpen && unreadCount > 0) {
+      void markAllAsRead();
+    }
+  };
 
   return (
     <>
-      {/* FLOATING AUTO NOTIFICATION - Smaller + Below Menu Bar */}
+      {/* Small, unobtrusive live notification toast */}
       {popupNotification && popupIconData && (
         <div
           className={cn(
-            "fixed top-14 left-3 z-[9999] w-[75%] max-w-[220px]", // ⬅️ Smaller + below menu
+            "fixed left-3 top-14 z-[9999] w-[min(330px,calc(100vw-24px))]",
             "transition-all duration-300 ease-out",
             popupVisible
-              ? "translate-x-0 opacity-100 scale-100"
-              : "-translate-x-4 opacity-0 scale-95 pointer-events-none"
+              ? "translate-x-0 scale-100 opacity-100"
+              : "-translate-x-4 scale-95 opacity-0 pointer-events-none"
           )}
         >
           <div
-            className={cn(
-              "relative overflow-hidden rounded-lg border border-slate-700/80", // ⬅️ rounded-lg
-              "bg-slate-900/95 text-slate-100 backdrop-blur-md shadow-xl", // ⬅️ shadow-xl
-              "cursor-pointer transition-all hover:border-slate-600"
-            )}
             onClick={handlePopupClick}
+            className="relative cursor-pointer overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur-xl"
           >
-            <div className="flex items-center gap-1.5 p-2"> {/* ⬅️ Smaller padding */}
+            <div className="flex items-center gap-3 p-3">
               <div
                 className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-md", // ⬅️ Smaller
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
                   popupIconData.bg
                 )}
               >
-                {PopupIcon ? (
-                  <PopupIcon
-                    className={cn("h-2.5 w-2.5", popupIconData.className)} // ⬅️ Smaller
-                  />
-                ) : (
-                  <span className="text-[9px]">{popupIconData.emoji}</span>
+                {PopupIcon && (
+                  <PopupIcon className={cn("h-4 w-4", popupIconData.className)} />
                 )}
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-[8px] font-bold uppercase tracking-wide text-emerald-400">
-                    New
+                <div className="mb-0.5 flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    New notification
                   </span>
-                  <span className="text-[8px] text-slate-400 shrink-0">
+                  <span className="text-[10px] text-slate-500">
                     {formatDistanceToNow(
                       new Date(popupNotification.created_at),
-                      { addSuffix: false }
+                      { addSuffix: true }
                     )}
                   </span>
                 </div>
-
-                <p className="text-[10px] font-semibold text-slate-100 truncate leading-snug"> {/* ⬅️ Smaller */}
-                  {popupNotification.title}{" "}
-                  <span className="font-normal text-slate-400">
-                    — {popupNotification.message}
-                  </span>
+                <p className="truncate text-xs font-semibold">
+                  {popupNotification.title}
+                </p>
+                <p className="truncate text-[11px] text-slate-400">
+                  {popupNotification.message}
                 </p>
               </div>
 
@@ -218,19 +192,18 @@ export const NotificationBell = () => {
                   event.stopPropagation();
                   closePopup();
                 }}
-                className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
               >
-                <X className="h-2.5 w-2.5" /> {/* ⬅️ Smaller */}
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="h-[1.5px] w-full bg-slate-800"> {/* ⬅️ Thinner */}
+            <div className="h-0.5 w-full bg-white/10">
               <div
                 className={cn(
                   "h-full bg-emerald-500",
-                  popupVisible
-                    ? "animate-[notification-progress_3s_linear_forwards]" // ⬅️ 3s
-                    : "w-0"
+                  popupVisible &&
+                    "animate-[notification-progress_3s_linear_forwards]"
                 )}
               />
             </div>
@@ -238,27 +211,20 @@ export const NotificationBell = () => {
         </div>
       )}
 
-      {/* HEADER BELL */}
-      <Popover>
+      <Popover open={open} onOpenChange={handlePopoverChange}>
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="relative !h-8 !w-8"
+            className="relative !h-8 !w-8 rounded-full hover:bg-muted"
             aria-label="Notifications"
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-[18px] w-[18px]" />
 
             {unreadCount > 0 && (
               <Badge
                 variant="destructive"
-                className={cn(
-                  "absolute -top-1 -right-1",
-                  "h-5 min-w-5 px-1",
-                  "flex items-center justify-center",
-                  "text-[10px]",
-                  "animate-pulse"
-                )}
+                className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full px-1 text-[9px] font-bold shadow-sm"
               >
                 {unreadCount > 9 ? "9+" : unreadCount}
               </Badge>
@@ -267,49 +233,62 @@ export const NotificationBell = () => {
         </PopoverTrigger>
 
         <PopoverContent
-          className="w-[min(380px,calc(100vw-24px))] p-0"
           align="end"
-          sideOffset={8}
+          sideOffset={10}
+          className="w-[min(410px,calc(100vw-20px))] overflow-hidden rounded-2xl border border-border/70 bg-background/95 p-0 shadow-2xl backdrop-blur-xl"
         >
-          <div className="flex items-center justify-between border-b p-4">
-            <div>
-              <h3 className="font-semibold">Notifications</h3>
-              {unreadCount > 0 && (
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {unreadCount} unread
+          {/* Professional compact header */}
+          <div className="flex items-center justify-between border-b border-border/60 bg-muted/25 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+                <Bell className="h-[18px] w-[18px] text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold tracking-tight">
+                    Notifications
+                  </h3>
+                  {unreadCount > 0 && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Your latest account & signal updates
                 </p>
-              )}
+              </div>
             </div>
 
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={markAllAsRead}
-                className="h-8 text-xs"
-              >
-                <Check className="mr-1 h-3 w-3" />
-                Mark all read
-              </Button>
-            )}
+            {/* Close button: user no longer needs to click the bell again */}
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Close notifications"
+              onClick={() => setOpen(false)}
+              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
-          <ScrollArea className="h-[400px]">
+          <ScrollArea className="h-[min(430px,65vh)]">
             {isLoading ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">
+              <div className="p-8 text-center text-sm text-muted-foreground">
                 Loading notifications...
               </div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <div className="p-10 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
                   <Bell className="h-6 w-6 text-muted-foreground/50" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  No notifications yet
+                <p className="text-sm font-semibold">All caught up</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  No notifications yet.
                 </p>
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="p-2">
                 {notifications.map((notification) => {
                   const iconData = getNotificationIcon(notification.type);
                   const Icon = iconData.icon;
@@ -320,40 +299,40 @@ export const NotificationBell = () => {
                       type="button"
                       onClick={() => handleNotificationClick(notification)}
                       className={cn(
-                        "w-full text-left p-4 transition-colors hover:bg-muted/50",
-                        !notification.read && "bg-primary/5"
+                        "group mb-1 flex w-full gap-3 rounded-xl p-3 text-left transition-all",
+                        "hover:bg-muted/70 active:scale-[0.99]",
+                        !notification.read && "bg-primary/[0.045]"
                       )}
                     >
-                      <div className="flex gap-3">
-                        <div
-                          className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-                            iconData.bg
+                      <div
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                          iconData.bg
+                        )}
+                      >
+                        <Icon className={cn("h-4 w-4", iconData.className)} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="line-clamp-1 text-xs font-bold">
+                            {notification.title}
+                          </p>
+                          {!notification.read && (
+                            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                           )}
-                        >
-                          <Icon className={cn("h-4 w-4", iconData.className)} />
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex items-start justify-between gap-2">
-                            <p className="text-sm font-semibold">
-                              {notification.title}
-                            </p>
-                            {!notification.read && (
-                              <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                            )}
-                          </div>
+                        <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+                          {notification.message}
+                        </p>
 
-                          <p className="line-clamp-2 text-sm text-muted-foreground">
-                            {notification.message}
-                          </p>
-
-                          <p className="mt-2 text-xs text-muted-foreground/70">
-                            {formatDistanceToNow(
-                              new Date(notification.created_at),
-                              { addSuffix: true }
-                            )}
-                          </p>
+                        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground/60">
+                          {formatDistanceToNow(
+                            new Date(notification.created_at),
+                            { addSuffix: true }
+                          )}
+                          <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-60" />
                         </div>
                       </div>
                     </button>
@@ -364,14 +343,21 @@ export const NotificationBell = () => {
           </ScrollArea>
 
           {notifications.length > 0 && (
-            <>
-              <Separator />
-              <div className="p-2 text-center">
-                <p className="text-xs text-muted-foreground">
-                  Showing last 50 notifications
-                </p>
-              </div>
-            </>
+            <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-4 py-2.5">
+              <p className="text-[10px] text-muted-foreground">
+                Showing latest 50 notifications
+              </p>
+              {unreadCount > 0 ? (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-primary">
+                  <CheckCheck className="h-3.5 w-3.5" />
+                  Seen automatically
+                </span>
+              ) : (
+                <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                  All read
+                </span>
+              )}
+            </div>
           )}
         </PopoverContent>
       </Popover>
@@ -385,3 +371,5 @@ export const NotificationBell = () => {
     </>
   );
 };
+
+export default NotificationBell;
