@@ -21,6 +21,8 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import AppLoader from "@/components/AppLoader";
+import PlayBillingSync from "@/components/PlayBillingSync";
+import NativeAppBehavior from "@/components/NativeAppBehavior";
 import { NetworkQualityToast } from "@/components/NetworkQualityToast";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -417,8 +419,12 @@ const App = () => (
 
         <NetworkQualityToast />
         <OfflineIndicator />
+        <PlayBillingSync />
 
         <BrowserRouter>
+          {/* Android app: BACK button + in-app links */}
+          <NativeAppBehavior />
+
           {/* Global pull-to-refresh */}
           <PullToRefresh />
 
