@@ -119,7 +119,60 @@
       })();
     </script>
     
-    <div id="root"></div>
+    <style>
+      /* Boot splash: visible instantly, before any JS bundle is downloaded. React replaces it on mount. */
+      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+      #boot-splash img{width:64px;height:64px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+      #boot-splash .bs-bar{width:144px;height:3px;border-radius:3px;overflow:hidden;background:rgba(14,165,233,.18)}
+      #boot-splash .bs-bar span{display:block;width:50%;height:100%;border-radius:3px;background:#0EA5E9;animation:bs-slide 1.2s ease-in-out infinite}
+      #boot-splash .bs-status{font-size:12px;letter-spacing:.2px;color:#64748b;padding:4px 12px;border-radius:999px;transition:all .25s}
+      #boot-splash .bs-status.warn{color:#b45309;background:rgba(245,158,11,.14)}
+      #boot-splash .bs-status.bad{color:#b91c1c;background:rgba(239,68,68,.12)}
+      #boot-splash button{margin-top:-6px;font-size:12px;padding:6px 16px;border-radius:999px;border:1px solid #0EA5E9;background:transparent;color:#0EA5E9}
+      .dark #boot-splash .bs-status{color:#94a3b8}
+      .dark #boot-splash .bs-status.warn{color:#fbbf24}
+      .dark #boot-splash .bs-status.bad{color:#f87171}
+      @keyframes bs-slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+    </style>
+    <div id="root">
+      <div id="boot-splash" role="status" aria-live="polite">
+        <img src="/icon-192.png" alt="" width="64" height="64" />
+        <div class="bs-bar"><span></span></div>
+        <div class="bs-status" id="bs-status">Loading…</div>
+      </div>
+    </div>
+    <script>
+      // Tells the user what is going on while the bundle downloads (React toasts don't exist yet at this point)
+      (function () {
+        var st = document.getElementById('bs-status');
+        if (!st) return;
+        var start = Date.now(), retryBtn = null;
+        function set(msg, cls) { st.textContent = msg; st.className = 'bs-status ' + (cls || ''); }
+        function slowNet() {
+          var c = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+          return !!c && (c.effectiveType === 'slow-2g' || c.effectiveType === '2g' || (c.downlink > 0 && c.downlink < 0.7));
+        }
+        function tick() {
+          if (!document.getElementById('boot-splash')) { clearInterval(timer); return; }
+          var sec = (Date.now() - start) / 1000;
+          if (!navigator.onLine) { set('No internet connection', 'bad'); return; }
+          if (sec > 15) {
+            set('Still loading — network is very slow', 'bad');
+            if (!retryBtn) {
+              retryBtn = document.createElement('button');
+              retryBtn.textContent = 'Retry';
+              retryBtn.onclick = function () { location.reload(); };
+              st.parentNode.appendChild(retryBtn);
+            }
+          } else if (sec > 4 || slowNet()) set('Slow network — loading may take longer', 'warn');
+          else set('Loading…');
+        }
+        var timer = setInterval(tick, 1000);
+        window.addEventListener('online', tick);
+        window.addEventListener('offline', tick);
+        tick();
+      })();
+    </script>
     <!-- Hidden mount point for Google Website Translator (drives 20+ language switching from the menu; our own UI hides its default toolbar via CSS) -->
     <div id="google_translate_element" style="display:none"></div>
     
