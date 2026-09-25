@@ -56,7 +56,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { usePlayBilling, type PremiumPlanId } from "@/hooks/usePlayBilling";
+import {
+  usePlayBilling,
+  type PremiumPlanId,
+} from "@/hooks/usePlayBilling";
 import { playUnlockSound } from "@/lib/sound";
 
 import {
@@ -105,26 +108,11 @@ const Premium = () => {
   const [currentPlanIndex, setCurrentPlanIndex] =
     useState(0);
 
-  /* =====================================================
-     JUMP STRAIGHT TO PLANS
-     Callers (e.g. the Unlock popup's "Go Premium" button)
-     navigate to /premium#plans-section instead of just
-     /premium, so people land on the plan cards instead of
-     the top of the page. A short delay lets the coupon
-     banner / carousel above finish rendering first so the
-     scroll offset is correct.
-  ====================================================== */
-
   const location = useLocation();
   const navigate = useNavigate();
 
   /* =====================================================
      GOOGLE PLAY BILLING
-     Inside the Android app (Play Store build) plans are bought
-     through Google Play — Play policy does not allow selling
-     digital subscriptions with crypto inside the app. In a normal
-     browser `playAvailable` is false and the crypto checkout below
-     is used exactly as before.
   ====================================================== */
 
   const {
@@ -143,7 +131,10 @@ const Premium = () => {
     const timer = setTimeout(() => {
       document
         .getElementById("plans-section")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
     }, 350);
 
     return () => clearTimeout(timer);
@@ -248,13 +239,6 @@ const Premium = () => {
   ];
 
   /* =====================================================
-     SPECIAL OFFERS are now rendered via the shared
-     <SpecialOfferBanner /> component (see below), which does
-     its own fetching so this banner can also be dropped onto
-     other pages (Account Management, Signals Dashboard, etc.)
-  ====================================================== */
-
-  /* =====================================================
      ACTIVE COUPONS
   ====================================================== */
 
@@ -292,6 +276,7 @@ const Premium = () => {
 
   /* =====================================================
      PLANS
+     USD PRICES
   ====================================================== */
 
   const plans = [
@@ -505,29 +490,36 @@ const Premium = () => {
       return;
     }
 
-    /* ---- Google Play (Android app) ---- */
+    /* ---- Google Play ---- */
+
     if (playAvailable) {
       if (purchasing) return;
 
-      const result = await buyPremium(plan.planId);
+      const result = await buyPremium(
+        plan.planId
+      );
 
       switch (result.status) {
         case "success":
           playUnlockSound();
-          toast.success("Premium activated! 🎉 All signals are unlocked.");
+
+          toast.success(
+            "Premium activated! 🎉 All signals are unlocked."
+          );
+
           navigate("/");
           break;
+
         case "pending":
           toast.info(
             "Your payment is pending. Premium will unlock automatically once Google confirms it."
           );
           break;
+
         case "cancelled":
-          // user closed the Google sheet — nothing to say
           break;
+
         default:
-          // TEMPORARY: showing the exact reason (instead of a generic
-          // message) so we can see why Google is rejecting the purchase.
           toast.error(
             result.message
               ? `Purchase failed: ${result.message}`
@@ -535,10 +527,12 @@ const Premium = () => {
             { duration: 10000 }
           );
       }
+
       return;
     }
 
     /* ---- Website: crypto checkout ---- */
+
     const finalPrice =
       calculateFinalPrice(
         plan.payOnly,
@@ -682,9 +676,7 @@ const Premium = () => {
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* =====================================================
-          SEO
-      ====================================================== */}
+      {/* SEO */}
 
       <SEO
         title="Premium Trading Signals Plans - TREND IS FRIEND"
@@ -700,13 +692,10 @@ const Premium = () => {
 
         <MT5CopierBanner />
 
-        {/* =====================================================
-            SPECIAL OFFER
-            Shared banner — admin controls per-offer which pages
-            (Premium / Account / Dashboard) it appears on.
-        ====================================================== */}
-
-        <SpecialOfferBanner page="premium" scrollTargetId="plans-section" />
+        <SpecialOfferBanner
+          page="premium"
+          scrollTargetId="plans-section"
+        />
 
         {/* =====================================================
             COUPON BANNER
@@ -836,171 +825,171 @@ const Premium = () => {
         ====================================================== */}
 
         {!playAvailable && (
-        <div className="max-w-4xl mx-auto mb-8">
+          <div className="max-w-4xl mx-auto mb-8">
 
-          <Card className="border-primary/30 bg-primary/5">
+            <Card className="border-primary/30 bg-primary/5">
 
-            <CardContent className="pt-6">
+              <CardContent className="pt-6">
 
-              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
 
-                <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2">
 
-                  <Label
-                    htmlFor="coupon"
-                    className="flex items-center gap-2 text-base"
-                  >
-                    <Tag className="h-5 w-5 text-primary" />
+                    <Label
+                      htmlFor="coupon"
+                      className="flex items-center gap-2 text-base"
+                    >
+                      <Tag className="h-5 w-5 text-primary" />
+                      Have a coupon code?
+                    </Label>
 
-                    Have a coupon code?
-                  </Label>
+                    <Input
+                      id="coupon"
+                      placeholder="Enter your coupon code"
+                      value={couponCode}
+                      onChange={(e) =>
+                        setCouponCode(
+                          e.target.value.toUpperCase()
+                        )
+                      }
+                      className="border-primary/30 text-lg"
+                      disabled={
+                        validatingCoupon
+                      }
+                    />
 
-                  <Input
-                    id="coupon"
-                    placeholder="Enter your coupon code"
-                    value={couponCode}
-                    onChange={(e) =>
-                      setCouponCode(
-                        e.target.value.toUpperCase()
-                      )
+                  </div>
+
+                  <Button
+                    onClick={() =>
+                      applyCoupon()
                     }
-                    className="border-primary/30 text-lg"
                     disabled={
                       validatingCoupon
                     }
-                  />
+                    className="sm:mt-8 bg-primary hover:bg-primary/90 font-semibold"
+                  >
+                    {validatingCoupon
+                      ? "Validating..."
+                      : "Apply Coupon"}
+                  </Button>
 
                 </div>
 
-                <Button
-                  onClick={() =>
-                    applyCoupon()
-                  }
-                  disabled={
-                    validatingCoupon
-                  }
-                  className="sm:mt-8 bg-primary hover:bg-primary/90 font-semibold"
-                >
-                  {validatingCoupon
-                    ? "Validating..."
-                    : "Apply Coupon"}
-                </Button>
+                {appliedCoupon && (
 
-              </div>
+                  <Alert className="mt-4 border-emerald-500 bg-emerald-500/10">
 
-              {appliedCoupon && (
+                    <Check className="h-4 w-4 text-emerald-500" />
 
-                <Alert className="mt-4 border-emerald-500 bg-emerald-500/10">
+                    <AlertDescription className="flex items-center justify-between">
 
-                  <Check className="h-4 w-4 text-emerald-500" />
+                      <span className="text-emerald-500 font-semibold">
 
-                  <AlertDescription className="flex items-center justify-between">
+                        ✓ Coupon "
+                        {appliedCoupon.code}"
+                        applied!
 
-                    <span className="text-emerald-500 font-semibold">
+                        {appliedCoupon.discount_type ===
+                        "percentage"
+                          ? ` ${appliedCoupon.discount_value}% `
+                          : ` $${appliedCoupon.discount_value} `}
 
-                      ✓ Coupon "
-                      {appliedCoupon.code}"
-                      applied!
+                        discount
 
-                      {appliedCoupon.discount_type ===
-                      "percentage"
-                        ? ` ${appliedCoupon.discount_value}% `
-                        : ` $${appliedCoupon.discount_value} `}
+                      </span>
 
-                      discount
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAppliedCoupon(
+                            null
+                          );
+                          setCouponCode("");
+                        }}
+                        className="h-7 text-xs text-emerald-500"
+                      >
+                        Remove
+                      </Button>
 
-                    </span>
+                    </AlertDescription>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setAppliedCoupon(
-                          null
-                        );
-                        setCouponCode("");
-                      }}
-                      className="h-7 text-xs text-emerald-500"
-                    >
-                      Remove
-                    </Button>
+                  </Alert>
+                )}
 
-                  </AlertDescription>
+              </CardContent>
 
-                </Alert>
-              )}
+            </Card>
 
-            </CardContent>
-
-          </Card>
-
-        </div>
+          </div>
         )}
 
         {/* =====================================================
             CATEGORY
-            (hidden in the app: one Google Play subscription
-            unlocks every category)
         ====================================================== */}
 
         {!playAvailable && (
-        <div className="max-w-4xl mx-auto mb-8">
+          <div className="max-w-4xl mx-auto mb-8">
 
-          <Card>
+            <Card>
 
-            <CardHeader>
+              <CardHeader>
 
-              <CardTitle className="text-xl">
-                Choose Your Trading Category
-              </CardTitle>
+                <CardTitle className="text-xl">
+                  Choose Your Trading Category
+                </CardTitle>
 
-            </CardHeader>
+              </CardHeader>
 
-            <CardContent>
+              <CardContent>
 
-              <Select
-                value={selectedCategory}
-                onValueChange={
-                  setSelectedCategory
-                }
-              >
+                <Select
+                  value={selectedCategory}
+                  onValueChange={
+                    setSelectedCategory
+                  }
+                >
 
-                <SelectTrigger className="w-full h-12 text-lg">
-                  <SelectValue />
-                </SelectTrigger>
+                  <SelectTrigger className="w-full h-12 text-lg">
+                    <SelectValue />
+                  </SelectTrigger>
 
-                <SelectContent>
+                  <SelectContent>
 
-                  {categories.map(
-                    (category) => (
+                    {categories.map(
+                      (category) => (
 
-                      <SelectItem
-                        key={category}
-                        value={category}
-                        className="text-lg"
-                      >
-                        {category}
-                      </SelectItem>
+                        <SelectItem
+                          key={category}
+                          value={category}
+                          className="text-lg"
+                        >
+                          {category}
+                        </SelectItem>
 
-                    )
-                  )}
+                      )
+                    )}
 
-                </SelectContent>
+                  </SelectContent>
 
-              </Select>
+                </Select>
 
-            </CardContent>
+              </CardContent>
 
-          </Card>
+            </Card>
 
-        </div>
+          </div>
         )}
 
         {/* =====================================================
             PRICING
         ====================================================== */}
 
-        <div id="plans-section" className="max-w-7xl mx-auto">
+        <div
+          id="plans-section"
+          className="max-w-7xl mx-auto"
+        >
 
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 gradient-text">
             {playAvailable
@@ -1034,11 +1023,6 @@ const Premium = () => {
                   const savings =
                     originalPrice -
                     finalPrice;
-
-                  // Localized price straight from Google Play
-                  const playPrice = playAvailable
-                    ? playOffers[plan.planId]?.formattedPrice
-                    : undefined;
 
                   const isPlanApplicable =
                     !appliedCoupon ||
@@ -1076,6 +1060,8 @@ const Premium = () => {
                         }
                       >
 
+                        {/* Popular */}
+
                         {plan.popular && (
 
                           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
@@ -1086,6 +1072,8 @@ const Premium = () => {
 
                           </div>
                         )}
+
+                        {/* Discount */}
 
                         {plan.discount && (
 
@@ -1106,16 +1094,16 @@ const Premium = () => {
 
                           <div className="space-y-2">
 
+                            {/* ================================
+                                FIXED USD CARD PRICE
+                                ================================ */}
+
                             <p className="text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                              {playAvailable
-                                ? playPrice ?? `$${plan.payOnly}`
-                                : `$${plan.pricePerMonth}`}
+                              ${plan.payOnly.toFixed(2)}
                             </p>
 
                             <p className="text-sm text-muted-foreground">
-                              {playAvailable
-                                ? `per ${plan.duration} • auto-renews`
-                                : `/month • ${plan.duration}`}
+                              per {plan.duration} • auto-renews
                             </p>
 
                           </div>
@@ -1135,7 +1123,9 @@ const Premium = () => {
                                   </span>
 
                                   <span className="line-through text-muted-foreground">
-                                    ${plan.totalPrice}
+                                    ${plan.totalPrice.toFixed(
+                                      2
+                                    )}
                                   </span>
 
                                 </div>
@@ -1158,7 +1148,7 @@ const Premium = () => {
                                   <span className="text-2xl font-black text-emerald-500">
                                     $
                                     {finalPrice.toFixed(
-                                      0
+                                      2
                                     )}
                                   </span>
 
@@ -1169,7 +1159,7 @@ const Premium = () => {
                                   <p className="text-emerald-500 text-center font-bold text-sm">
                                     💰 Save $
                                     {savings.toFixed(
-                                      0
+                                      2
                                     )}
                                   </p>
 
@@ -1185,10 +1175,12 @@ const Premium = () => {
                                   Pay
                                 </span>
 
+                                {/* FIXED USD PAY PRICE */}
+
                                 <span className="text-2xl font-black text-primary">
-                                  {playAvailable
-                                    ? playPrice ?? `$${originalPrice}`
-                                    : `$${originalPrice}`}
+                                  ${originalPrice.toFixed(
+                                    2
+                                  )}
                                 </span>
 
                               </div>
@@ -1211,6 +1203,8 @@ const Premium = () => {
                               )}
 
                           </div>
+
+                          {/* Features */}
 
                           <div className="space-y-2">
 
@@ -1243,6 +1237,8 @@ const Premium = () => {
 
                           </div>
 
+                          {/* Subscribe */}
+
                           <Button
                             disabled={purchasing}
                             className="w-full h-12 font-bold text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md"
@@ -1254,13 +1250,13 @@ const Premium = () => {
                               );
                             }}
                           >
+
                             {purchasing ? (
                               <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : playAvailable ? (
-                              "SUBSCRIBE"
                             ) : (
-                              "SELECT PLAN"
+                              "SUBSCRIBE"
                             )}
+
                           </Button>
 
                         </CardContent>
@@ -1316,20 +1312,21 @@ const Premium = () => {
         </div>
 
         {/* =====================================================
-            GOOGLE PLAY: renewal terms + restore / manage
-            (Play requires the price, period and how to cancel
-            to be clear before purchase)
+            GOOGLE PLAY
         ====================================================== */}
 
         {playAvailable && (
           <div className="max-w-3xl mx-auto mt-6 space-y-3">
 
             <p className="text-xs text-center text-muted-foreground leading-relaxed">
-              Subscriptions renew automatically at the price shown until
-              cancelled. Payment is charged to your Google Play account.
-              Cancel any time in Google Play → Payments &amp; subscriptions
-              → Subscriptions. Cancelling stops the next renewal; you keep
-              access until the end of the period you paid for.
+              Subscriptions renew automatically at the
+              price shown until cancelled. Payment is
+              charged to your Google Play account.
+              Cancel any time in Google Play →
+              Payments &amp; subscriptions →
+              Subscriptions. Cancelling stops the next
+              renewal; you keep access until the end of
+              the period you paid for.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -1337,34 +1334,51 @@ const Premium = () => {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={restoring || purchasing}
+                disabled={
+                  restoring || purchasing
+                }
                 onClick={async () => {
-                  const ok = await restorePurchases();
+
+                  const ok =
+                    await restorePurchases();
+
                   if (ok) {
-                    toast.success("Premium restored!");
+                    toast.success(
+                      "Premium restored!"
+                    );
+
                     navigate("/");
                   } else {
                     toast.info(
                       "No active subscription found on this Google account."
                     );
                   }
+
                 }}
               >
+
                 {restoring ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <RefreshCw className="h-4 w-4 mr-2" />
                 )}
+
                 Restore purchase
+
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => manageSubscription()}
+                onClick={() =>
+                  manageSubscription()
+                }
               >
+
                 <Settings2 className="h-4 w-4 mr-2" />
+
                 Manage subscription
+
               </Button>
 
             </div>
