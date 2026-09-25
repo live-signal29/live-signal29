@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import {
   PREMIUM_PRODUCT_ID,
+  LIFETIME_PRODUCT_ID,
   getExistingPlayPurchases,
   getPlayOffers,
   isPlayBillingAvailable,
   openPlaySubscriptionSettings,
   purchasePlayPlan,
+  purchaseLifetimePlan,
   type PlayPlanOffer,
 } from "@/lib/playBilling";
 import { notifySubscriptionUpdated } from "@/lib/subscriptionEvents";
 
-export { PREMIUM_PRODUCT_ID };
+export { PREMIUM_PRODUCT_ID, LIFETIME_PRODUCT_ID };
 
 // Base plan IDs — must exactly match the base plans created under the
 // "premium" subscription in Play Console (and the values the admin panel
@@ -44,16 +47,30 @@ export interface BuyPremiumOutcome {
  * premium. Returns true only when the subscription is active.
  */
 export async function verifyPlayPurchase(
-  purchaseToken: string
+  purchaseToken: string,
+  productId: string = PREMIUM_PRODUCT_ID
 ): Promise<{ state: "active" | "pending" | "failed"; message?: string }> {
   const { data, error } = await supabase.functions.invoke(
     "verify-play-purchase",
-    { body: { purchaseToken, productId: PREMIUM_PRODUCT_ID } }
+    { body: { purchaseToken, productId } }
   );
 
   if (error) {
-    console.error("verify-play-purchase failed:", error);
-    return { state: "failed", message: String((error as Error)?.message ?? error) };
+    // supabase-js's error.message is always the generic "Edge Function
+    // returned a non-2xx status code" — the real reason is in the JSON
+    // body the function sent back, reachable via error.context (the raw
+    // Response). Read that first so the toast shows something useful.
+    let message = String((error as Error)?.message ?? error);
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const body = await error.context.json();
+        message = body?.details ?? body?.error ?? message;
+      } catch (parseErr) {
+        console.error("Could not parse verify-play-purchase error body:", parseErr);
+      }
+    }
+    console.error("verify-play-purchase failed:", message);
+    return { state: "failed", message };
   }
   if (data?.success) return { state: "active" };
   if (data?.pending) return { state: "pending", message: data?.error };
@@ -122,8 +139,48 @@ export function usePlayBilling() {
   );
 
   /**
+   * Full flow for the one-time Lifetime product: Google's purchase sheet ->
+   * backend verifies the token with Google -> premium granted forever.
+   */
+  const buyLifetimePremium = useCallback(async (): Promise<BuyPremiumOutcome> => {
+    if (!isPlayBillingAvailable()) return { status: "unavailable" };
+
+    setPurchasing(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return { status: "error", message: "Not logged in" };
+
+      const outcome = await purchaseLifetimePlan(user.id);
+
+      if (outcome.status === "cancelled") return { status: "cancelled" };
+      if (outcome.status === "pending") return { status: "pending" };
+      if (outcome.status === "error") {
+        return { status: "error", message: outcome.message };
+      }
+
+      const verified = await verifyPlayPurchase(outcome.purchaseToken, LIFETIME_PRODUCT_ID);
+      if (verified.state === "active") {
+        notifySubscriptionUpdated();
+        return { status: "success" };
+      }
+      return {
+        status: verified.state === "pending" ? "pending" : "error",
+        message: verified.message,
+      };
+    } catch (err) {
+      console.error("buyLifetimePremium failed:", err);
+      return { status: "error", message: String((err as Error)?.message ?? err) };
+    } finally {
+      setPurchasing(false);
+    }
+  }, []);
+
+  /**
    * Re-checks whatever Google says this Play account already owns
    * (new phone, reinstall, renewal). Returns true if premium is active.
+   * Covers both the renewing subscription and the one-time Lifetime product.
    */
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     if (!isPlayBillingAvailable()) return false;
@@ -132,8 +189,12 @@ export function usePlayBilling() {
       const owned = await getExistingPlayPurchases();
       let active = false;
       for (const p of owned) {
-        if (p.productId !== PREMIUM_PRODUCT_ID || p.purchaseState !== 1) continue;
-        if ((await verifyPlayPurchase(p.purchaseToken)).state === "active") active = true;
+        const isKnownProduct =
+          p.productId === PREMIUM_PRODUCT_ID || p.productId === LIFETIME_PRODUCT_ID;
+        if (!isKnownProduct || p.purchaseState !== 1) continue;
+        if ((await verifyPlayPurchase(p.purchaseToken, p.productId)).state === "active") {
+          active = true;
+        }
       }
       if (active) notifySubscriptionUpdated();
       return active;
@@ -148,6 +209,7 @@ export function usePlayBilling() {
     purchasing,
     restoring,
     buyPremium,
+    buyLifetimePremium,
     restorePurchases,
     manageSubscription: openPlaySubscriptionSettings,
   };
