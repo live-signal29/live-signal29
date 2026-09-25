@@ -121,6 +121,7 @@ const Premium = () => {
     purchasing,
     restoring,
     buyPremium,
+    buyLifetimePremium,
     restorePurchases,
     manageSubscription,
   } = usePlayBilling();
@@ -279,6 +280,10 @@ const Premium = () => {
      USD PRICES
   ====================================================== */
 
+  const baseFeature = playAvailable
+    ? "All premium signals"
+    : `All ${selectedCategory.toLowerCase()} signals`;
+
   const plans = [
     {
       name: "Monthly",
@@ -289,6 +294,12 @@ const Premium = () => {
       payOnly: 30,
       discount: null,
       popular: false,
+      features: [
+        baseFeature,
+        "Daily 2-5 trade signals",
+        "Instant push notifications",
+        "Cancel anytime, no lock-in",
+      ],
     },
     {
       name: "Quarterly",
@@ -299,6 +310,12 @@ const Premium = () => {
       payOnly: 75,
       discount: "17% Off",
       popular: true,
+      features: [
+        baseFeature,
+        "Save 17% vs paying monthly",
+        "Priority signal delivery",
+        "3 months of consistent setups",
+      ],
     },
     {
       name: "Half-Yearly",
@@ -309,6 +326,12 @@ const Premium = () => {
       payOnly: 120,
       discount: "33% Off",
       popular: false,
+      features: [
+        baseFeature,
+        "Save 33% vs paying monthly",
+        "Priority customer support",
+        "6 months, fewer renewals to manage",
+      ],
     },
     {
       name: "Yearly",
@@ -319,17 +342,30 @@ const Premium = () => {
       payOnly: 180,
       discount: "50% Off",
       popular: false,
+      features: [
+        baseFeature,
+        "Best value — save 50% vs monthly",
+        "VIP priority support",
+        "A full year, zero renewal hassle",
+      ],
     },
-  ];
-
-  const features = [
-    playAvailable
-      ? "All premium signals"
-      : `All ${selectedCategory.toLowerCase()} signals`,
-    "Daily 2-5 signals",
-    "Instant notifications",
-    "Ad-free signals",
-    "Customer support",
+    {
+      name: "Lifetime",
+      planId: "lifetime" as const,
+      duration: "lifetime",
+      isOneTime: true,
+      pricePerMonth: null,
+      totalPrice: 250,
+      payOnly: 250,
+      discount: "Best Value",
+      popular: false,
+      features: [
+        baseFeature,
+        "Pay once, own it forever",
+        "VIP priority support",
+        "Every future update included, free",
+      ],
+    },
   ];
 
   /* =====================================================
@@ -495,9 +531,9 @@ const Premium = () => {
     if (playAvailable) {
       if (purchasing) return;
 
-      const result = await buyPremium(
-        plan.planId
-      );
+      const result = plan.isOneTime
+        ? await buyLifetimePremium()
+        : await buyPremium(plan.planId);
 
       switch (result.status) {
         case "success":
@@ -1103,7 +1139,9 @@ const Premium = () => {
                             </p>
 
                             <p className="text-sm text-muted-foreground">
-                              per {plan.duration} • auto-renews
+                              {(plan as { isOneTime?: boolean }).isOneTime
+                                ? "one-time payment • no renewals"
+                                : `per ${plan.duration} • auto-renews`}
                             </p>
 
                           </div>
@@ -1208,7 +1246,7 @@ const Premium = () => {
 
                           <div className="space-y-2">
 
-                            {features
+                            {plan.features
                               .slice(0, 4)
                               .map(
                                 (
@@ -1253,6 +1291,8 @@ const Premium = () => {
 
                             {purchasing ? (
                               <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : plan.isOneTime ? (
+                              "GET LIFETIME ACCESS"
                             ) : (
                               "SUBSCRIBE"
                             )}

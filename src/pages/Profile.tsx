@@ -387,6 +387,9 @@ const Profile = () => {
   const isTrial =
     profile.subscription_status === "free_trial";
 
+  const isLifetime =
+    profile.subscription_plan === "premium-lifetime";
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
       <Header />
@@ -435,7 +438,9 @@ const Profile = () => {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-bold text-xl tracking-tight">
-                      {isPremium
+                      {isLifetime
+                        ? "Lifetime Member"
+                        : isPremium
                         ? "Premium Member"
                         : isTrial
                         ? "Free Trial"
@@ -444,12 +449,16 @@ const Profile = () => {
 
                     {isPremium && (
                       <Badge className="bg-emerald-500 text-black font-bold border-none text-[10px] px-2">
-                        PREMIUM
+                        {isLifetime ? "LIFETIME" : "PREMIUM"}
                       </Badge>
                     )}
                   </div>
 
-                  {daysRemaining !== null &&
+                  {isLifetime ? (
+                    <p className="text-sm font-semibold text-emerald-500">
+                      Lifetime access — never expires
+                    </p>
+                  ) : daysRemaining !== null &&
                   daysRemaining > 0 ? (
                     <p
                       className={`text-sm font-semibold ${
