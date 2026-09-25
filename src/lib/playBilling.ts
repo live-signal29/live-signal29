@@ -18,6 +18,10 @@
 
 export const PREMIUM_PRODUCT_ID = "premium";
 
+// One-time (non-renewing) product for the Lifetime plan — a separate Play
+// Console "one-time product", not a base plan of the subscription above.
+export const LIFETIME_PRODUCT_ID = "premium_lifetime";
+
 export interface PlayPlanOffer {
   basePlanId: string;
   formattedPrice: string; // localized, e.g. "$75.00" / "₹6,200"
@@ -47,6 +51,12 @@ interface NativeBillingBridge {
     callbackId: string,
     productId: string,
     basePlanId: string,
+    accountId: string
+  ) => void;
+  // One-time (non-subscription) product purchase — used for Lifetime.
+  purchaseInApp: (
+    callbackId: string,
+    productId: string,
     accountId: string
   ) => void;
   getPurchases: (callbackId: string) => void;
@@ -278,6 +288,50 @@ export async function purchasePlayPlan(
   }
 
   return { status: "error", message: "Google Play billing is not available" };
+}
+
+/**
+ * Opens Google's purchase sheet for the one-time Lifetime product.
+ * Only supported through the native bridge (the "median" fallback doesn't
+ * carry a one-time-purchase call, so it reports unavailable there).
+ */
+export async function purchaseLifetimePlan(
+  accountId: string
+): Promise<PurchaseOutcome> {
+  const provider = getBillingProvider();
+
+  try {
+    if (provider === "native") {
+      const res = await callNative<{
+        ok: boolean;
+        code?: "cancelled" | "pending" | "error";
+        message?: string;
+        purchases?: Array<{ purchaseToken: string; orderId?: string }>;
+      }>(
+        (id) => window.NativeBilling!.purchaseInApp(id, LIFETIME_PRODUCT_ID, accountId),
+        10 * 60_000
+      );
+
+      if (res.ok && res.purchases?.[0]) {
+        return {
+          status: "purchased",
+          purchaseToken: res.purchases[0].purchaseToken,
+          orderId: res.purchases[0].orderId,
+        };
+      }
+      if (res.code === "cancelled") return { status: "cancelled" };
+      if (res.code === "pending") return { status: "pending" };
+      return { status: "error", message: res.message };
+    }
+  } catch (err) {
+    console.error("Lifetime purchase failed:", err);
+    return { status: "error", message: String((err as Error)?.message ?? err) };
+  }
+
+  return {
+    status: "error",
+    message: "Lifetime purchases need the latest app version from Google Play",
+  };
 }
 
 // ---------- existing purchases (restore / renewals) ----------
