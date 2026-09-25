@@ -26,7 +26,6 @@ import NativeAppBehavior from "@/components/NativeAppBehavior";
 import { NetworkQualityToast } from "@/components/NetworkQualityToast";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
-import { RefreshCw } from "lucide-react";
 
 // Lazy load all pages for better performance
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
@@ -79,7 +78,17 @@ const LoadingSpinner = AppLoader;
    GLOBAL PULL-TO-REFRESH
    ========================================================= */
 
+// Pull-to-refresh only makes sense on screens showing live/refreshable
+// data. Everywhere else (forms, dialogs, settings, checkout, etc.) it was
+// firing a full page reload and wiping out whatever the user had typed.
+const PULL_TO_REFRESH_PATHS = ["/", "/signals", "/profile"];
+
 const PullToRefresh = () => {
+  const location = useLocation();
+  const enabled = PULL_TO_REFRESH_PATHS.includes(
+    location.pathname.toLowerCase()
+  );
+
   const startYRef = useRef(0);
   const pullingRef = useRef(false);
   const refreshingRef = useRef(false);
@@ -89,6 +98,14 @@ const PullToRefresh = () => {
   const REFRESH_THRESHOLD = 75;
 
   useEffect(() => {
+    // Disabled on this route — don't attach any listeners at all, and
+    // make sure nothing is left mid-pull from just before navigating away.
+    if (!enabled) {
+      pullingRef.current = false;
+      setPullDistance(0);
+      return;
+    }
+
     const isExcludedTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) return false;
 
@@ -108,6 +125,14 @@ const PullToRefresh = () => {
           "input, textarea, select, button, [contenteditable='true']"
         )
       ) {
+        return true;
+      }
+
+      // Don't interfere with any open dialog/sheet/alert (Radix gives all
+      // of these role="dialog") — a modal sitting on top of an allowed
+      // route (e.g. the MT5 Copier form on the Signals dashboard) should
+      // never trigger a full-page reload and lose what's typed inside it.
+      if (target.closest('[role="dialog"]')) {
         return true;
       }
 
@@ -211,7 +236,7 @@ const PullToRefresh = () => {
       window.removeEventListener("touchend", handleTouchEnd);
       window.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [pullDistance]);
+  }, [pullDistance, enabled]);
 
   const progress = Math.min(
     pullDistance / REFRESH_THRESHOLD,
@@ -232,56 +257,23 @@ const PullToRefresh = () => {
         `}
         style={{
           transform: `translateX(-50%) translateY(${Math.min(
-            pullDistance - 55,
-            55
+            pullDistance - 20,
+            60
           )}px)`,
         }}
       >
         <div
-          className="
-            flex h-11 w-11 items-center justify-center
-            rounded-full
-            border border-border/70
-            bg-background/95
-            shadow-lg
-            backdrop-blur-xl
-          "
-        >
-          <div
-            className="relative flex h-7 w-7 items-center justify-center"
-            style={{
-              transform: `rotate(${progress * 300}deg)`,
-            }}
-          >
-            <div
-              className="
-                absolute inset-0
-                rounded-full
-                border-[2.5px]
-                border-muted
-              "
-            />
-
-            <div
-              className="
-                absolute inset-0
-                rounded-full
-                border-[2.5px]
-                border-primary
-                border-b-transparent
-                border-l-transparent
-              "
-            />
-
-            <RefreshCw
-              className={`
-                h-3.5 w-3.5
-                text-primary
-                ${refreshingRef.current ? "animate-spin" : ""}
-              `}
-            />
-          </div>
-        </div>
+          className={`
+            h-8 w-8 rounded-full
+            border-[3px] border-muted border-t-primary
+            ${refreshingRef.current ? "animate-spin" : ""}
+          `}
+          style={
+            refreshingRef.current
+              ? undefined
+              : { transform: `rotate(${progress * 360}deg)` }
+          }
+        />
       </div>
 
       <style>{`
