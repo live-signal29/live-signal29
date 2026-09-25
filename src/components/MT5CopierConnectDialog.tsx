@@ -37,6 +37,40 @@ const EMPTY_FORM: FormState = {
   note: "",
 };
 
+// Draft is kept so an accidental page refresh doesn't wipe out everything the
+// user already typed. Stored in sessionStorage (cleared when the tab closes),
+// and the trading password is deliberately never persisted — that field
+// always comes back empty after a refresh, for security.
+const DRAFT_KEY = "mt5_copier_connect_draft";
+
+const loadDraft = (): FormState => {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return EMPTY_FORM;
+    const parsed = JSON.parse(raw);
+    return { ...EMPTY_FORM, ...parsed, mt5_password: "" };
+  } catch {
+    return EMPTY_FORM;
+  }
+};
+
+const saveDraft = (data: FormState) => {
+  try {
+    const { mt5_password, ...rest } = data;
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(rest));
+  } catch {
+    // ignore (e.g. storage disabled/full) — not critical
+  }
+};
+
+const clearDraft = () => {
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+};
+
 const fieldLabelClass = "text-xs font-medium";
 // text-base (16px) on mobile, text-sm on larger screens — under 16px, iOS/Android
 // browsers auto-zoom and scroll the page into view on focus, which is what was
@@ -70,8 +104,14 @@ interface MT5CopierConnectDialogProps {
 }
 
 export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5CopierConnectDialogProps) => {
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<FormState>(loadDraft);
   const [submitting, setSubmitting] = useState(false);
+
+  // Keep the draft in sync as the user types, so a refresh mid-fill doesn't
+  // lose anything (password excluded — see saveDraft).
+  useEffect(() => {
+    saveDraft(form);
+  }, [form]);
 
   // Set right after a successful submit. The request is saved at this
   // point, but NOT yet confirmed — confirmation only happens once the user
@@ -243,6 +283,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
 
       rememberOwnCopierRequestId(data?.id);
       setForm(EMPTY_FORM);
+      clearDraft();
 
       if (data?.telegram_link) {
         // Don't close yet — the request isn't confirmed until they start the bot.
