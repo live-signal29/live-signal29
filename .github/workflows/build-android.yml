@@ -362,10 +362,10 @@ jobs:
                   });
               }
 
-              private void queryProduct(String productId, final ProductCallback cb) {
+              private void queryProduct(String productId, String productType, final ProductCallback cb) {
                   QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
                           .setProductId(productId)
-                          .setProductType(BillingClient.ProductType.SUBS)
+                          .setProductType(productType)
                           .build();
                   QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
                           .setProductList(Collections.singletonList(product))
@@ -400,7 +400,7 @@ jobs:
               /** Prices for every base plan of a subscription product. */
               @JavascriptInterface
               public void getOffers(final String id, final String productId) {
-                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, (details, error) -> {
+                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, BillingClient.ProductType.SUBS, (details, error) -> {
                       if (details == null) {
                           fail(id, "error", error);
                           return;
@@ -441,7 +441,7 @@ jobs:
                */
               @JavascriptInterface
               public void purchase(final String id, final String productId, final String basePlanId, final String accountId) {
-                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, (details, error) -> {
+                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, BillingClient.ProductType.SUBS, (details, error) -> {
                       if (details == null) {
                           fail(id, "error", error);
                           return;
@@ -480,28 +480,73 @@ jobs:
                   }), message -> fail(id, "error", message)));
               }
 
-              /** Subscriptions this Google account currently owns (restore / renewals). */
+              /**
+               * Opens Google's purchase sheet for a one-time (non-subscription)
+               * product — used for the Lifetime plan. No base plan / offer token:
+               * one-time products are priced directly.
+               */
+              @JavascriptInterface
+              public void purchaseInApp(final String id, final String productId, final String accountId) {
+                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, BillingClient.ProductType.INAPP, (details, error) -> {
+                      if (details == null) {
+                          fail(id, "error", error);
+                          return;
+                      }
+
+                      BillingFlowParams.ProductDetailsParams pdp = BillingFlowParams.ProductDetailsParams.newBuilder()
+                              .setProductDetails(details)
+                              .build();
+                      BillingFlowParams.Builder builder = BillingFlowParams.newBuilder()
+                              .setProductDetailsParamsList(Collections.singletonList(pdp));
+                      if (accountId != null && !accountId.isEmpty()) {
+                          builder.setObfuscatedAccountId(accountId);
+                      }
+
+                      purchaseCallbackId = id;
+                      BillingResult launch = client.launchBillingFlow(activity, builder.build());
+                      if (launch.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                          purchaseCallbackId = null;
+                          fail(id, "error", launch.getDebugMessage());
+                      }
+                  }), message -> fail(id, "error", message)));
+              }
+
+              /**
+               * Everything this Google account currently owns — subscriptions AND
+               * one-time (lifetime) purchases — merged into one list so restore /
+               * app-start sync catches both.
+               */
               @JavascriptInterface
               public void getPurchases(final String id) {
                   activity.runOnUiThread(() -> withClient(() -> {
-                      QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
+                      QueryPurchasesParams subsParams = QueryPurchasesParams.newBuilder()
                               .setProductType(BillingClient.ProductType.SUBS)
                               .build();
-                      client.queryPurchasesAsync(params, (result, purchases) -> {
-                          if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                              fail(id, "error", result.getDebugMessage());
+                      client.queryPurchasesAsync(subsParams, (subsResult, subsPurchases) -> {
+                          if (subsResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                              fail(id, "error", subsResult.getDebugMessage());
                               return;
                           }
-                          try {
-                              JSONArray arr = new JSONArray();
-                              for (Purchase p : purchases) arr.put(purchaseToJson(p));
-                              JSONObject out = new JSONObject();
-                              out.put("ok", true);
-                              out.put("purchases", arr);
-                              respond(id, out);
-                          } catch (Exception e) {
-                              fail(id, "error", String.valueOf(e.getMessage()));
-                          }
+                          QueryPurchasesParams inappParams = QueryPurchasesParams.newBuilder()
+                                  .setProductType(BillingClient.ProductType.INAPP)
+                                  .build();
+                          client.queryPurchasesAsync(inappParams, (inappResult, inappPurchases) -> {
+                              if (inappResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                                  fail(id, "error", inappResult.getDebugMessage());
+                                  return;
+                              }
+                              try {
+                                  JSONArray arr = new JSONArray();
+                                  for (Purchase p : subsPurchases) arr.put(purchaseToJson(p));
+                                  for (Purchase p : inappPurchases) arr.put(purchaseToJson(p));
+                                  JSONObject out = new JSONObject();
+                                  out.put("ok", true);
+                                  out.put("purchases", arr);
+                                  respond(id, out);
+                              } catch (Exception e) {
+                                  fail(id, "error", String.valueOf(e.getMessage()));
+                              }
+                          });
                       });
                   }, message -> fail(id, "error", message)));
               }
