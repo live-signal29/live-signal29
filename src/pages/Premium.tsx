@@ -56,7 +56,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { usePlayBilling, PREMIUM_BASE_PLANS, type PremiumPlanId } from "@/hooks/usePlayBilling";
+import { usePlayBilling, type PremiumPlanId } from "@/hooks/usePlayBilling";
 import { playUnlockSound } from "@/lib/sound";
 
 import {
@@ -511,7 +511,7 @@ const Premium = () => {
 
       const result = await buyPremium(plan.planId);
 
-      switch (result) {
+      switch (result.status) {
         case "success":
           playUnlockSound();
           toast.success("Premium activated! 🎉 All signals are unlocked.");
@@ -526,8 +526,13 @@ const Premium = () => {
           // user closed the Google sheet — nothing to say
           break;
         default:
+          // TEMPORARY: showing the exact reason (instead of a generic
+          // message) so we can see why Google is rejecting the purchase.
           toast.error(
-            "Couldn't complete the purchase. If you were charged, tap “Restore purchase” below."
+            result.message
+              ? `Purchase failed: ${result.message}`
+              : "Couldn't complete the purchase. If you were charged, tap “Restore purchase” below.",
+            { duration: 10000 }
           );
       }
       return;
@@ -1031,10 +1036,8 @@ const Premium = () => {
                     finalPrice;
 
                   // Localized price straight from Google Play
-                  // (playOffers is keyed by Play Console's basePlanId, e.g.
-                  // "half-yearly" — not by our internal planId "halfyearly")
                   const playPrice = playAvailable
-                    ? playOffers[PREMIUM_BASE_PLANS[plan.planId]]?.formattedPrice
+                    ? playOffers[plan.planId]?.formattedPrice
                     : undefined;
 
                   const isPlanApplicable =
