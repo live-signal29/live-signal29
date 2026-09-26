@@ -298,10 +298,12 @@ const AccountApplications = () => {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          <a href={`mailto:${app.email}`} className="hover:text-primary">{app.email}</a>
-                        </div>
+                        {app.email && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Mail className="h-4 w-4" />
+                            <a href={`mailto:${app.email}`} className="hover:text-primary">{app.email}</a>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Phone className="h-4 w-4" />
                           <span>{app.whatsapp}</span>
