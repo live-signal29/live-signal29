@@ -107,252 +107,89 @@ export const CopierLeaderboard = () => {
   return (
     <div className="pb-24">
       {/* =========================================================
-          HERO BANNER
-          Responsive 900 x 600 style / 3:2 composition
+          REDESIGNED PROFESSIONAL HERO BANNER (Compact & Sleek)
       ========================================================= */}
-      <div className="relative mb-4 overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[#033f31] shadow-[0_18px_45px_rgba(0,90,65,0.18)]">
-        {/* Background glow */}
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/20 blur-[70px]" />
-        <div className="pointer-events-none absolute -bottom-28 -left-24 h-72 w-72 rounded-full bg-cyan-400/10 blur-[70px]" />
+      <div className="relative mb-4 overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-[#022f27] via-[#033f31] to-[#011c17] p-4 shadow-xl sm:p-5">
+        {/* Background Glow Effects */}
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-400/15 blur-[50px]" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-cyan-400/10 blur-[50px]" />
 
-        {/* Grid background */}
+        {/* Subtle Grid Overlay */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
+          className="pointer-events-none absolute inset-0 opacity-[0.08]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(110,231,183,0.55) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.55) 1px, transparent 1px)",
-            backgroundSize: "42px 42px",
+              "linear-gradient(rgba(110,231,183,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.5) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
           }}
         />
 
-        {/* Decorative curved lines */}
-        <div className="pointer-events-none absolute right-[-8%] top-[38%] h-32 w-[65%] rotate-[-13deg] rounded-full border-t border-emerald-300/10" />
-        <div className="pointer-events-none absolute left-[28%] bottom-[-25%] h-40 w-[70%] rotate-[-14deg] rounded-full border-t border-emerald-300/10" />
-
-        <div className="relative p-4 sm:p-6">
-          {/* TOP ROW */}
+        <div className="relative">
+          {/* Top Badge & Status */}
           <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]" />
-
-              <span className="text-[10px] sm:text-xs font-extrabold tracking-wide text-emerald-100">
-                MT5 & MT4 COPY
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-extrabold tracking-wider text-emerald-300">
+                PRO COPY TRADING
               </span>
             </div>
 
-            <div className="flex items-center gap-1 rounded-full border border-emerald-300/20 bg-white/[0.04] px-2.5 py-1.5">
-              <span className="text-[10px] sm:text-xs font-bold text-emerald-100">
-                MT5
-              </span>
-
-              <span className="text-[10px] text-emerald-200/40">/</span>
-
-              <span className="text-[10px] sm:text-xs font-bold text-sky-200">
-                MT4
-              </span>
+            <div className="flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 border border-emerald-500/20">
+              <span className="text-[10px] font-bold text-emerald-300">MT5</span>
+              <span className="text-[10px] text-emerald-500/50">/</span>
+              <span className="text-[10px] font-bold text-sky-300">MT4</span>
             </div>
           </div>
 
-          {/* MAIN CONTENT */}
-          <div className="mt-5 grid grid-cols-[38%_62%] items-center gap-2 sm:gap-4">
-            {/* GRAPHIC */}
-            <div className="relative flex min-h-[145px] items-center justify-center sm:min-h-[190px]">
-              {/* Chart card */}
-              <div className="relative h-[145px] w-[125px] sm:h-[185px] sm:w-[165px] rounded-[30px] border border-emerald-300/20 bg-[#022f27]/80 shadow-[inset_0_0_30px_rgba(16,185,129,0.08)]">
-                {/* inner chart */}
-                <div className="absolute inset-[18px] overflow-hidden rounded-[20px] border border-emerald-300/10 bg-[#032c25]">
-                  <svg
-                    viewBox="0 0 160 180"
-                    className="h-full w-full"
-                    preserveAspectRatio="none"
-                  >
-                    <defs>
-                      <linearGradient
-                        id="heroChartGradient"
-                        x1="0"
-                        y1="1"
-                        x2="0"
-                        y2="0"
-                      >
-                        <stop offset="0%" stopColor="#059669" />
-                        <stop offset="100%" stopColor="#6ee7b7" />
-                      </linearGradient>
-
-                      <filter
-                        id="heroGlow"
-                        x="-50%"
-                        y="-50%"
-                        width="200%"
-                        height="200%"
-                      >
-                        <feGaussianBlur
-                          stdDeviation="2.5"
-                          result="blur"
-                        />
-                        <feMerge>
-                          <feMergeNode in="blur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
-
-                    {[70, 92, 58, 115, 82, 132, 100].map((h, i) => (
-                      <rect
-                        key={i}
-                        x={8 + i * 21}
-                        y={180 - h}
-                        width="11"
-                        height={h}
-                        rx="2"
-                        fill="url(#heroChartGradient)"
-                        opacity="0.58"
-                      />
-                    ))}
-
-                    <polyline
-                      points="5,145 28,112 48,126 69,78 91,96 111,58 134,68 153,20"
-                      fill="none"
-                      stroke="#6ee7b7"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      filter="url(#heroGlow)"
-                    />
-
-                    <circle
-                      cx="153"
-                      cy="20"
-                      r="5"
-                      fill="#d1fae5"
-                      filter="url(#heroGlow)"
-                    />
-                  </svg>
-                </div>
-
-                {/* MT5 badge */}
-                <div className="absolute -left-5 top-7 rotate-[-7deg] rounded-full border border-emerald-200/30 bg-gradient-to-r from-emerald-400 to-teal-400 px-3 py-1.5 shadow-[0_8px_20px_rgba(16,185,129,0.35)]">
-                  <span className="text-[10px] sm:text-xs font-extrabold text-white">
-                    MT5
-                  </span>
-                </div>
-
-                {/* MT4 badge */}
-                <div className="absolute -right-5 top-[45%] rotate-[7deg] rounded-full border border-sky-200/30 bg-gradient-to-r from-blue-500 to-cyan-400 px-3 py-1.5 shadow-[0_8px_20px_rgba(59,130,246,0.3)]">
-                  <span className="text-[10px] sm:text-xs font-extrabold text-white">
-                    MT4
-                  </span>
-                </div>
-
-                {/* Refresh */}
-                <div className="absolute -bottom-5 left-1/2 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full border border-emerald-200/40 bg-gradient-to-br from-emerald-300 to-emerald-500 shadow-[0_8px_25px_rgba(16,185,129,0.45)] sm:h-14 sm:w-14">
-                  <RefreshCw className="h-5 w-5 text-white sm:h-6 sm:w-6" />
-                </div>
-              </div>
-            </div>
-
-            {/* TEXT */}
-            <div className="min-w-0">
-              <div className="mb-2 flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full border border-emerald-300/50 bg-emerald-400/10">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-                </div>
-
-                <span className="text-[9px] sm:text-xs font-extrabold tracking-wide text-emerald-200/80">
-                  AUTOMATED COPY TRADING
-                </span>
-              </div>
-
-              <h1 className="text-[27px] font-black leading-[0.98] tracking-[-0.8px] text-white sm:text-[42px] sm:tracking-[-1.2px]">
-                Automate Your
-                <span className="block text-emerald-400">
-                  Trading Signal
-                </span>
+          {/* Center Title & Short Info */}
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">
+                Automate Your <span className="text-emerald-400">Trading</span>
               </h1>
-
-              <p className="mt-2 max-w-[330px] text-[10px] leading-relaxed text-emerald-100/65 sm:text-sm">
-                Connect your real MT5 or MT4 account and let verified signals
-                execute automatically.
+              <p className="mt-1 text-[11px] leading-relaxed text-emerald-100/70 sm:text-xs">
+                Connect your real MT5/MT4 account securely and execute verified signals instantly.
               </p>
             </div>
-          </div>
 
-          {/* FEATURES */}
-          <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-2xl border border-emerald-300/15 bg-black/10">
-            <div className="flex items-center justify-center gap-1.5 border-r border-emerald-300/15 px-1 py-3">
-              <Zap className="h-4 w-4 shrink-0 text-emerald-300" />
-              <span className="text-[9px] font-bold text-emerald-100/75 sm:text-xs">
-                Auto Copy
-              </span>
-            </div>
-
-            <div className="flex items-center justify-center gap-1.5 border-r border-emerald-300/15 px-1 py-3">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-300" />
-              <span className="text-[9px] font-bold text-emerald-100/75 sm:text-xs">
-                Secure
-              </span>
-            </div>
-
-            <div className="flex items-center justify-center gap-1.5 px-1 py-3">
-              <BarChart3 className="h-4 w-4 shrink-0 text-emerald-300" />
-              <span className="text-[9px] font-bold text-emerald-100/75 sm:text-xs">
-                Performance
-              </span>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/20 shadow-inner text-emerald-300">
+              <Zap className="h-6 w-6" />
             </div>
           </div>
 
-          {/* ACCOUNT INFO */}
-          <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-2xl border border-emerald-300/15 bg-black/10">
-            <div className="flex items-center justify-center gap-2 border-r border-emerald-300/15 px-2 py-3">
-              <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-300" />
-
-              <div className="min-w-0">
-                <div className="text-[9px] font-extrabold text-white sm:text-xs">
-                  REAL ACCOUNT
-                </div>
-
-                <div className="text-[8px] text-emerald-100/50 sm:text-[10px]">
-                  MT5 / MT4 ONLY
-                </div>
-              </div>
+          {/* Mini Features Badges Row */}
+          <div className="mt-3.5 grid grid-cols-3 gap-2">
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/20 py-2 px-1 text-center">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span className="text-[10px] font-semibold text-emerald-100 truncate">100% Secure</span>
             </div>
-
-            <div className="flex items-center justify-center gap-2 px-2 py-3">
-              <DollarSign className="h-5 w-5 shrink-0 text-emerald-300" />
-
-              <div className="min-w-0">
-                <div className="text-[9px] font-extrabold text-white sm:text-xs">
-                  $100 MINIMUM
-                </div>
-
-                <div className="text-[8px] text-emerald-100/50 sm:text-[10px]">
-                  UNLIMITED MAXIMUM
-                </div>
-              </div>
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/20 py-2 px-1 text-center">
+              <DollarSign className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span className="text-[10px] font-semibold text-emerald-100 truncate">$100 Min</span>
+            </div>
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/20 py-2 px-1 text-center">
+              <BarChart3 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span className="text-[10px] font-semibold text-emerald-100 truncate">Auto Copy</span>
             </div>
           </div>
 
-          {/* CONNECT BUTTON */}
+          {/* Connect Action Button */}
           <Button
             type="button"
             onClick={() => setConnectOpen(true)}
-            className="mt-4 h-12 w-full rounded-full border border-emerald-200/20 bg-gradient-to-r from-emerald-400 via-emerald-400 to-teal-400 text-sm font-black text-white shadow-[0_10px_25px_rgba(16,185,129,0.28)] hover:from-emerald-300 hover:via-emerald-300 hover:to-teal-300 sm:h-14 sm:text-base"
+            className="mt-3.5 h-11 w-full rounded-xl border border-emerald-300/30 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 text-xs font-black text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-300 sm:h-12 sm:text-sm"
           >
-            <Link2 className="mr-2 h-5 w-5" />
-
-            <span>Connect MT5 / MT4</span>
-
-            <ChevronRight className="ml-2 h-5 w-5" />
+            <Link2 className="mr-2 h-4 w-4" />
+            <span>Connect MT5 / MT4 Account</span>
+            <ChevronRight className="ml-1.5 h-4 w-4" />
           </Button>
 
-          {/* SECURITY NOTE */}
-          <div className="mt-2 flex items-center justify-center gap-2 text-[8px] text-emerald-100/35 sm:text-[10px]">
+          {/* Footer Subtext */}
+          <div className="mt-2 flex items-center justify-center gap-1.5 text-[9px] text-emerald-200/50 sm:text-[10px]">
             <LockKeyhole className="h-3 w-3" />
-
-            <span>Secure connection</span>
-
+            <span>Encrypted & secure connection</span>
             <span>•</span>
-
-            <span>Takes less than 2 minutes</span>
+            <span>Takes under 2 mins</span>
           </div>
         </div>
       </div>
