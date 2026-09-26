@@ -106,213 +106,204 @@ export const CopierLeaderboard = () => {
 
   return (
     <div className="pb-24">
-
       {/* =========================================================
-          COMPACT HERO — 920 x 350 STYLE / HORIZONTAL
+          COMPACT HERO — 900 × 600 / 3:2 RATIO
       ========================================================= */}
       <div
         className="
-          relative mb-3 overflow-hidden rounded-[22px]
+          relative mb-4 w-full overflow-hidden
+          rounded-[28px]
           border border-emerald-400/20
-          bg-gradient-to-br from-[#003d2f] via-[#005341] to-[#00261f]
-          shadow-[0_12px_35px_rgba(0,80,60,0.20)]
-          aspect-[920/350]
-          w-full
+          bg-gradient-to-br from-[#003d2d] via-[#005c43] to-[#002c25]
+          shadow-[0_12px_40px_rgba(0,100,70,0.20)]
+          aspect-[3/2]
         "
       >
         {/* Background glow */}
-        <div className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-emerald-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 -bottom-20 h-52 w-52 rounded-full bg-emerald-300/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-emerald-400/20 blur-3xl" />
+
+        <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-emerald-300/10 blur-3xl" />
 
         {/* Grid background */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.10]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(110,231,183,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.5) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
+              "linear-gradient(rgba(110,231,183,0.55) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.55) 1px, transparent 1px)",
+            backgroundSize: "34px 34px",
           }}
         />
 
-        {/* Decorative chart line */}
+        {/* Decorative curved line */}
         <svg
-          className="pointer-events-none absolute bottom-10 left-[35%] h-28 w-[62%] opacity-[0.10]"
-          viewBox="0 0 600 160"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-20"
+          viewBox="0 0 900 600"
           preserveAspectRatio="none"
         >
           <path
-            d="M0 145 C70 125 90 145 150 105 C210 65 230 125 300 95 C370 65 395 105 450 55 C500 10 550 35 600 0"
+            d="M-30 490 C170 420 270 500 430 390 C590 280 650 390 940 190"
             fill="none"
             stroke="#6ee7b7"
-            strokeWidth="4"
+            strokeWidth="3"
+          />
+
+          <path
+            d="M-20 530 C180 450 310 530 470 420 C640 300 700 410 940 230"
+            fill="none"
+            stroke="#34d399"
+            strokeWidth="1.5"
           />
         </svg>
 
-        <div className="relative h-full w-full p-3 sm:p-4">
-
-          {/* TOP BADGES */}
+        <div className="relative flex h-full flex-col p-4 sm:p-6">
+          {/* TOP ROW */}
           <div className="flex items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]" />
 
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1.5 text-[9px] sm:text-[11px] font-bold text-emerald-100 backdrop-blur-sm">
-              <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.8)]" />
-              MT5 & MT4 COPY
+              <span className="text-[10px] sm:text-xs font-extrabold tracking-wide text-emerald-100">
+                MT5 & MT4 COPY
+              </span>
             </div>
 
             <div className="flex items-center gap-1.5">
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[9px] sm:text-[11px] font-bold text-emerald-100">
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1.5 text-[10px] sm:text-xs font-bold text-emerald-100">
                 MT5
               </span>
 
-              <span className="text-[10px] text-emerald-100/50">
-                /
-              </span>
+              <span className="text-emerald-200/60 text-xs">/</span>
 
-              <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1.5 text-[9px] sm:text-[11px] font-bold text-sky-200">
+              <span className="rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1.5 text-[10px] sm:text-xs font-bold text-sky-200">
                 MT4
               </span>
             </div>
           </div>
 
-          {/* MAIN CONTENT */}
-          <div className="mt-2 grid grid-cols-[34%_66%] items-center">
+          {/* MAIN HERO CONTENT */}
+          <div className="flex min-h-0 flex-1 items-center gap-3 sm:gap-7">
+            {/* GRAPHIC */}
+            <div className="relative h-[42%] w-[36%] max-w-[230px] shrink-0 sm:h-[65%] sm:w-[34%]">
+              {/* Chart card */}
+              <div className="absolute inset-[8%] rounded-[24px] border border-emerald-300/25 bg-black/15 shadow-inner">
+                <svg
+                  viewBox="0 0 200 180"
+                  className="absolute inset-3 h-[calc(100%-24px)] w-[calc(100%-24px)]"
+                  preserveAspectRatio="none"
+                >
+                  <defs>
+                    <linearGradient
+                      id="heroBarGradient"
+                      x1="0"
+                      y1="1"
+                      x2="0"
+                      y2="0"
+                    >
+                      <stop offset="0%" stopColor="#059669" />
+                      <stop offset="100%" stopColor="#6ee7b7" />
+                    </linearGradient>
 
-            {/* CHART */}
-            <div className="relative flex items-center justify-center">
+                    <filter
+                      id="heroGlow"
+                      x="-50%"
+                      y="-50%"
+                      width="200%"
+                      height="200%"
+                    >
+                      <feGaussianBlur
+                        stdDeviation="2.5"
+                        result="blur"
+                      />
+
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+
+                  {[55, 78, 48, 95, 68, 105, 82, 118].map((h, i) => (
+                    <rect
+                      key={i}
+                      x={10 + i * 23}
+                      y={155 - h}
+                      width="12"
+                      height={h}
+                      rx="3"
+                      fill="url(#heroBarGradient)"
+                      opacity="0.55"
+                    />
+                  ))}
+
+                  <polyline
+                    points="8,140 35,108 58,122 82,82 105,96 130,54 155,68 190,15"
+                    fill="none"
+                    stroke="#6ee7b7"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    filter="url(#heroGlow)"
+                  />
+
+                  <circle
+                    cx="190"
+                    cy="15"
+                    r="5"
+                    fill="#d1fae5"
+                  />
+                </svg>
+              </div>
+
+              {/* MT5 badge */}
+              <div className="absolute left-0 top-[20%] -rotate-6 rounded-full border border-emerald-200/40 bg-gradient-to-br from-emerald-300 to-emerald-500 px-3 py-1.5 text-[9px] sm:text-xs font-extrabold text-white shadow-lg shadow-emerald-500/30">
+                MT5
+              </div>
+
+              {/* MT4 badge */}
+              <div className="absolute right-0 top-[47%] rotate-6 rounded-full border border-blue-200/30 bg-gradient-to-br from-sky-400 to-blue-600 px-3 py-1.5 text-[9px] sm:text-xs font-extrabold text-white shadow-lg shadow-blue-500/30">
+                MT4
+              </div>
+
+              {/* Refresh circle */}
               <div
                 className="
-                  relative h-[92px] w-[78px]
-                  sm:h-[118px] sm:w-[98px]
-                  rounded-[22px]
-                  border border-emerald-300/25
-                  bg-emerald-950/45
-                  shadow-[0_0_25px_rgba(16,185,129,0.18)]
+                  absolute bottom-[2%] left-1/2
+                  flex h-11 w-11 sm:h-14 sm:w-14
+                  -translate-x-1/2
+                  items-center justify-center
+                  rounded-full
+                  border border-emerald-200/40
+                  shadow-[0_0_25px_rgba(52,211,153,0.45)]
                 "
+                style={{
+                  background:
+                    "radial-gradient(circle at 35% 30%, #6ee7b7, #10b981 65%, #059669)",
+                }}
               >
-                <div
-                  className="absolute inset-2 rounded-[15px] overflow-hidden"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(rgba(110,231,183,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.10) 1px, transparent 1px)",
-                    backgroundSize: "18px 18px",
-                  }}
-                >
-                  <svg
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    className="h-full w-full"
-                  >
-                    <defs>
-                      <linearGradient
-                        id="heroBarGradient"
-                        x1="0"
-                        y1="1"
-                        x2="0"
-                        y2="0"
-                      >
-                        <stop offset="0%" stopColor="#059669" />
-                        <stop offset="100%" stopColor="#6ee7b7" />
-                      </linearGradient>
-
-                      <filter
-                        id="heroChartGlow"
-                        x="-60%"
-                        y="-60%"
-                        width="220%"
-                        height="220%"
-                      >
-                        <feGaussianBlur
-                          stdDeviation="2"
-                          result="blur"
-                        />
-
-                        <feMerge>
-                          <feMergeNode in="blur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
-
-                    {[30, 45, 35, 62, 50, 75, 60].map((h, i) => (
-                      <rect
-                        key={i}
-                        x={i * 13 + 4}
-                        y={100 - h}
-                        width="7"
-                        height={h}
-                        rx="1.5"
-                        fill="url(#heroBarGradient)"
-                        opacity="0.75"
-                      />
-                    ))}
-
-                    <polyline
-                      points="4,82 20,65 35,73 50,48 64,57 82,22 92,12"
-                      fill="none"
-                      stroke="#6ee7b7"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      filter="url(#heroChartGlow)"
-                    />
-
-                    <circle
-                      cx="92"
-                      cy="12"
-                      r="3"
-                      fill="#d1fae5"
-                    />
-                  </svg>
-                </div>
-
-                {/* MT5 badge */}
-                <div className="absolute -left-4 top-4 rotate-[-5deg] rounded-full bg-gradient-to-br from-emerald-300 to-emerald-500 px-3 py-1.5 text-[9px] sm:text-[11px] font-extrabold text-white shadow-lg shadow-emerald-500/30">
-                  MT5
-                </div>
-
-                {/* MT4 badge */}
-                <div className="absolute -right-4 top-12 rotate-[5deg] rounded-full bg-gradient-to-br from-sky-400 to-blue-600 px-3 py-1.5 text-[9px] sm:text-[11px] font-extrabold text-white shadow-lg shadow-blue-500/30">
-                  MT4
-                </div>
-
-                {/* Sync button */}
-                <div
-                  className="
-                    absolute -bottom-4 left-1/2
-                    flex h-10 w-10 -translate-x-1/2
-                    items-center justify-center
-                    rounded-full
-                    border border-white/20
-                    shadow-[0_6px_20px_rgba(16,185,129,0.45)]
-                  "
-                  style={{
-                    background:
-                      "radial-gradient(circle at 32% 28%, #a7f3d0, #10b981 70%)",
-                  }}
-                >
-                  <RefreshCw className="h-5 w-5 text-white" />
-                </div>
+                <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
 
             {/* TEXT */}
-            <div className="min-w-0 pr-1">
-
-              <div className="flex items-center gap-1.5 text-[8px] sm:text-[10px] font-bold tracking-wide text-emerald-200/80">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300/50">
+            <div className="min-w-0 flex-1">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300/60 text-emerald-200">
                   <ShieldCheck className="h-3 w-3" />
-                </span>
+                </div>
 
-                AUTOMATED COPY TRADING
+                <span className="text-[8px] sm:text-[11px] font-extrabold uppercase tracking-wide text-emerald-200/80">
+                  Automated Copy Trading
+                </span>
               </div>
 
-              <h2 className="mt-1 text-[22px] leading-[0.98] sm:text-[30px] lg:text-[34px] font-extrabold tracking-tight text-white">
-                Automate Your{" "}
-                <span className="block text-emerald-400">
+              <h2 className="text-[25px] leading-[0.98] font-black tracking-tight text-white sm:text-4xl md:text-5xl">
+                Automate Your
+                <br />
+                <span className="text-emerald-400">
                   Trading Signal
                 </span>
               </h2>
 
-              <p className="mt-1.5 max-w-[360px] text-[9px] leading-snug sm:text-[12px] text-emerald-100/70">
+              <p className="mt-2 max-w-[480px] text-[10px] leading-relaxed text-emerald-50/70 sm:text-sm md:text-base">
                 Connect your real MT5 or MT4 account and let verified signals
                 execute automatically.
               </p>
@@ -320,68 +311,54 @@ export const CopierLeaderboard = () => {
           </div>
 
           {/* FEATURES */}
-          <div
-            className="
-              mt-1.5 grid grid-cols-3
-              overflow-hidden rounded-2xl
-              border border-emerald-300/15
-              bg-emerald-950/20
-            "
-          >
-            <div className="flex items-center justify-center gap-1.5 border-r border-emerald-300/15 py-2 sm:py-2.5">
+          <div className="grid grid-cols-3 divide-x divide-emerald-200/15 overflow-hidden rounded-2xl border border-emerald-200/15 bg-black/10">
+            <div className="flex items-center justify-center gap-1.5 py-2 sm:py-2.5">
               <Zap className="h-4 w-4 text-emerald-300" />
-              <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-100/75">
+              <span className="text-[9px] sm:text-xs font-bold text-emerald-50/80">
                 Auto Copy
               </span>
             </div>
 
-            <div className="flex items-center justify-center gap-1.5 border-r border-emerald-300/15 py-2 sm:py-2.5">
+            <div className="flex items-center justify-center gap-1.5 py-2 sm:py-2.5">
               <ShieldCheck className="h-4 w-4 text-emerald-300" />
-              <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-100/75">
+              <span className="text-[9px] sm:text-xs font-bold text-emerald-50/80">
                 Secure
               </span>
             </div>
 
             <div className="flex items-center justify-center gap-1.5 py-2 sm:py-2.5">
               <BarChart3 className="h-4 w-4 text-emerald-300" />
-              <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-100/75">
+              <span className="text-[9px] sm:text-xs font-bold text-emerald-50/80">
                 Performance
               </span>
             </div>
           </div>
 
           {/* ACCOUNT INFO */}
-          <div
-            className="
-              mt-1.5 grid grid-cols-2
-              overflow-hidden rounded-2xl
-              border border-emerald-300/15
-              bg-emerald-950/20
-            "
-          >
-            <div className="flex items-center justify-center gap-2 border-r border-emerald-300/15 py-1.5 sm:py-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+          <div className="mt-2 grid grid-cols-2 divide-x divide-emerald-200/15 overflow-hidden rounded-2xl border border-emerald-200/15 bg-black/10">
+            <div className="flex items-center justify-center gap-2 py-2 sm:py-2.5">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-300" />
 
-              <div>
-                <div className="text-[9px] sm:text-[11px] font-extrabold text-white">
+              <div className="min-w-0">
+                <div className="text-[9px] sm:text-xs font-extrabold text-white">
                   REAL ACCOUNT
                 </div>
 
-                <div className="text-[7px] sm:text-[9px] text-emerald-100/50">
+                <div className="text-[7px] sm:text-[9px] text-emerald-100/55">
                   MT5 / MT4 ONLY
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 py-1.5 sm:py-2">
-              <DollarSign className="h-4 w-4 text-emerald-300" />
+            <div className="flex items-center justify-center gap-2 py-2 sm:py-2.5">
+              <DollarSign className="h-5 w-5 shrink-0 text-emerald-300" />
 
-              <div>
-                <div className="text-[9px] sm:text-[11px] font-extrabold text-white">
+              <div className="min-w-0">
+                <div className="text-[9px] sm:text-xs font-extrabold text-white">
                   $100 MINIMUM
                 </div>
 
-                <div className="text-[7px] sm:text-[9px] text-emerald-100/50">
+                <div className="text-[7px] sm:text-[9px] text-emerald-100/55">
                   UNLIMITED MAXIMUM
                 </div>
               </div>
@@ -393,16 +370,14 @@ export const CopierLeaderboard = () => {
             type="button"
             onClick={() => setConnectOpen(true)}
             className="
-              relative mt-1.5
-              h-10 sm:h-11
+              mt-2 h-10 sm:h-12
               w-full rounded-full
-              bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400
-              hover:from-emerald-300 hover:via-emerald-400 hover:to-teal-300
-              text-white
-              font-extrabold
-              text-[12px] sm:text-[15px]
-              shadow-[0_6px_22px_rgba(16,185,129,0.25)]
-              border border-emerald-200/20
+              border border-emerald-200/30
+              bg-gradient-to-r from-emerald-400 via-emerald-400 to-teal-400
+              text-xs sm:text-base
+              font-extrabold text-white
+              shadow-[0_6px_22px_rgba(16,185,129,0.30)]
+              hover:from-emerald-300 hover:via-emerald-300 hover:to-teal-300
             "
           >
             <Link2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
@@ -412,12 +387,14 @@ export const CopierLeaderboard = () => {
             <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
 
-          {/* BOTTOM MICRO TEXT */}
-          <div className="mt-1 flex items-center justify-center gap-2 text-[7px] sm:text-[9px] text-emerald-100/30">
+          {/* FOOTER */}
+          <div className="mt-1.5 flex items-center justify-center gap-2 text-[7px] sm:text-[9px] text-emerald-100/35">
             <LockKeyhole className="h-3 w-3" />
-            Secure connection
+            <span>Secure connection</span>
+
             <span>•</span>
-            Takes less than 2 minutes
+
+            <span>Takes less than 2 minutes</span>
           </div>
         </div>
       </div>
@@ -426,13 +403,11 @@ export const CopierLeaderboard = () => {
           IMPORTANT REQUIREMENTS
       ========================================================= */}
       <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-emerald-500/10 to-card p-4 sm:p-5 shadow-sm">
-
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                <ShieldCheck className="h-4.5 w-4.5" />
+                <ShieldCheck className="h-4 w-4" />
               </div>
 
               <div>
@@ -444,7 +419,6 @@ export const CopierLeaderboard = () => {
                   Please read before connecting your account
                 </p>
               </div>
-
             </div>
           </div>
 
@@ -457,7 +431,6 @@ export const CopierLeaderboard = () => {
         </div>
 
         <div className="mt-4 space-y-2.5">
-
           {/* BALANCE */}
           <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/60 p-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -617,7 +590,9 @@ export const CopierLeaderboard = () => {
         </div>
       </div>
 
-      {/* SECTION DIVIDER */}
+      {/* =========================================================
+          LEADERBOARD HEADER
+      ========================================================= */}
       <div className="relative my-5">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border/60" />
@@ -631,7 +606,6 @@ export const CopierLeaderboard = () => {
         </div>
       </div>
 
-      {/* LOADING */}
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -679,7 +653,7 @@ export const CopierLeaderboard = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                        <User className="h-4.5 w-4.5" />
+                        <User className="h-4 w-4" />
                       </div>
 
                       <div className="min-w-0">
@@ -770,7 +744,7 @@ export const CopierLeaderboard = () => {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                      <User className="h-4.5 w-4.5" />
+                      <User className="h-4 w-4" />
                     </div>
 
                     <div className="min-w-0">
@@ -824,7 +798,7 @@ export const CopierLeaderboard = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400">
-                      <User className="h-4.5 w-4.5" />
+                      <User className="h-4 w-4" />
                     </div>
 
                     <div className="min-w-0">
@@ -861,7 +835,7 @@ export const CopierLeaderboard = () => {
       )}
 
       {/* =========================================================
-          DIALOG MODAL
+          DETAILS DIALOG
       ========================================================= */}
       <Dialog
         open={!!selected}
@@ -883,7 +857,6 @@ export const CopierLeaderboard = () => {
               </DialogHeader>
 
               <div className="space-y-3">
-
                 <div className="rounded-lg bg-muted/40 p-2.5 flex items-center justify-between text-xs">
                   <span className="text-muted-foreground font-medium">
                     Broker
@@ -909,7 +882,6 @@ export const CopierLeaderboard = () => {
                 ) : (
                   <>
                     <div className="grid grid-cols-2 gap-2">
-
                       <div className="rounded-lg bg-muted/40 p-3">
                         <div className="flex items-center gap-1 text-emerald-500 text-xs font-semibold">
                           <TrendingUp className="h-3.5 w-3.5" />
@@ -939,7 +911,6 @@ export const CopierLeaderboard = () => {
                           {fmtMoney(selected.loss_amount)}
                         </div>
                       </div>
-
                     </div>
 
                     <div className="rounded-lg bg-muted/40 p-3">
@@ -986,34 +957,42 @@ export const CopierLeaderboard = () => {
       {/* =========================================================
           BOTTOM NAVIGATION
       ========================================================= */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border/40 px-4 py-2 flex items-center justify-between max-w-md mx-auto sm:max-w-xl">
-
-        <button className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 gap-0.5">
+      <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-w-md items-center justify-between border-t border-border/40 bg-background/95 px-4 py-2 backdrop-blur sm:max-w-xl">
+        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
           <LineChart className="h-5 w-5" />
-          <span className="text-[10px] font-bold">Signals</span>
-          <span className="h-1 w-6 bg-emerald-500 rounded-full mt-0.5" />
+          <span className="text-[10px] font-medium">
+            Signals
+          </span>
         </button>
 
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-          <BarChart3 className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Results</span>
+        <button className="flex flex-col items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+          <Link2 className="h-5 w-5" />
+          <span className="text-[10px] font-bold">
+            MT5 Copy
+          </span>
+          <span className="h-1 w-6 rounded-full bg-emerald-500" />
         </button>
 
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
+        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
           <FileText className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Account</span>
+          <span className="text-[10px] font-medium">
+            Management
+          </span>
         </button>
 
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
+        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
           <Wallet className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Premium</span>
+          <span className="text-[10px] font-medium">
+            Premium
+          </span>
         </button>
 
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
+        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
           <UserCheck className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Profile</span>
+          <span className="text-[10px] font-medium">
+            Profile
+          </span>
         </button>
-
       </div>
     </div>
   );
