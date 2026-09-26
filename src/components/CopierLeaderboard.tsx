@@ -59,7 +59,6 @@ const fmtPercent = (v: number | null) =>
 
 const brokerPlain = (s: PublicCopierStat) => {
   if (!s.broker_name) return "Not specified";
-
   return s.broker_server
     ? `${s.broker_name} — ${s.broker_server}`
     : s.broker_name;
@@ -70,7 +69,6 @@ const brokerLabel = (s: PublicCopierStat) =>
 
 const lastSyncLabel = (s: PublicCopierStat) => {
   const ts = s.last_synced_at || s.updated_at || s.created_at;
-
   if (!ts) return "Not synced yet";
 
   return `Updated ${formatDistanceToNow(new Date(ts), {
@@ -91,7 +89,6 @@ export const CopierLeaderboard = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-
       return data as PublicCopierStat[];
     },
   });
@@ -104,7 +101,7 @@ export const CopierLeaderboard = () => {
     <div className="pb-24 px-3 sm:px-4 pt-4 max-w-[950px] mx-auto">
 
       {/* =========================================================
-          HERO BANNER
+          EXACT HERO BANNER
           ========================================================= */}
       <div
         className="relative mb-6 overflow-hidden rounded-[24px] bg-gradient-to-br from-[#061c12] via-[#02130a] to-[#010a05] px-6 py-5 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_35px_rgba(0,255,136,0.12)] border border-[#00ff88]/25 text-white flex flex-col justify-between"
@@ -115,34 +112,35 @@ export const CopierLeaderboard = () => {
           margin: "0 auto",
         }}
       >
-        {/* Top Badge */}
+
+        {/* Top Row */}
         <div>
+
+          {/* Top Badge */}
           <div className="inline-flex items-center gap-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] px-3 py-1 rounded-full font-bold text-xs mb-3">
-            <span>⚡</span>
-            MT5 & MT4 COPY
+            <span>⚡</span> MT5 & MT4 COPY
           </div>
 
           {/* Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
 
-            {/* Left Text */}
+            {/* Left Text Section */}
             <div className="lg:col-span-7 flex flex-col justify-center">
 
               <h1 className="text-2xl sm:text-3xl lg:text-[36px] font-black leading-[1.1] tracking-tight mb-2">
-                Automate Your
-                <br />
+                Automate Your <br />
                 <span className="text-[#00ff88]">
                   Trading Signals
                 </span>
               </h1>
 
               <p className="text-[#b0c4b8] text-xs sm:text-sm leading-relaxed mb-3 max-w-md">
-                Connect your real MT5 or MT4 account and let verified signals
-                execute automatically.
+                Connect your real MT5 or MT4 account and let verified signals execute automatically.
               </p>
 
-              {/* Features */}
+              {/* Features Sub-row */}
               <div className="flex items-center gap-3 text-xs font-semibold text-white/90">
+
                 <div className="flex items-center gap-1">
                   <span className="text-[#00ff88]">⚡</span>
                   Auto Copy
@@ -161,11 +159,13 @@ export const CopierLeaderboard = () => {
                   <span className="text-[#00ff88]">📊</span>
                   Performance
                 </div>
+
               </div>
             </div>
 
-            {/* Right Phone Graphic */}
+            {/* Right Phone Mockup */}
             <div className="lg:col-span-5 flex justify-center items-center">
+
               <div className="relative w-[150px] h-[170px] flex justify-center items-center">
 
                 {/* MT5 Badge */}
@@ -188,74 +188,79 @@ export const CopierLeaderboard = () => {
                   <div className="w-7 h-7 rounded-full bg-[#00ff88]/20 border border-[#00ff88]/50 flex items-center justify-center text-[#00ff88] mb-2">
                     <RefreshCw className="h-3 w-3 animate-spin" />
                   </div>
+
                 </div>
 
                 {/* Ground Glow */}
                 <div className="absolute bottom-0 w-[100px] h-[20px] bg-[radial-gradient(ellipse_at_center,rgba(0,255,136,0.7)_0%,rgba(0,0,0,0)_70%)] rounded-full z-10" />
+
               </div>
             </div>
+
           </div>
         </div>
 
         {/* =====================================================
-            REQUIREMENTS STRIP + CONNECT BUTTON
+            ONLY ADDED SECTION:
+            THIN REQUIREMENTS STRIP ABOVE CONNECT BUTTON
             ===================================================== */}
         <div className="mt-3 pt-3 border-t border-[#00ff88]/15">
 
-          {/* Thin Requirements Banner */}
-          <div className="mb-3 rounded-[18px] border border-[#00ff88]/50 bg-[#06261a] px-4 sm:px-6 py-3.5 sm:py-4 shadow-[0_0_20px_rgba(0,255,136,0.08)]">
+          <div className="mb-3 w-full rounded-[18px] border border-[#00ff88]/45 bg-[#06261a]/90 px-3 sm:px-5 py-3 shadow-[0_0_18px_rgba(0,255,136,0.07)] overflow-hidden">
 
-            <div className="flex items-center justify-between gap-4">
+            <div className="grid grid-cols-2 items-center w-full">
 
-              {/* LEFT - REAL ACCOUNT */}
-              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              {/* REAL ACCOUNT */}
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2 sm:pr-4">
 
-                <div className="shrink-0 flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center">
+                <div className="shrink-0 flex items-center justify-center">
                   <ShieldCheck
-                    className="h-8 w-8 sm:h-10 sm:w-10 text-[#00ff88]"
+                    className="h-8 w-8 sm:h-9 sm:w-9 text-[#00ff88]"
                     strokeWidth={2}
                   />
                 </div>
 
                 <div className="min-w-0">
-                  <div className="text-sm sm:text-base md:text-lg font-black text-white leading-tight">
+                  <div className="text-[11px] sm:text-sm md:text-base font-black text-white leading-tight">
                     REAL ACCOUNT
                   </div>
 
-                  <div className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#9db8ad] mt-0.5">
+                  <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-[#9db8ad] mt-0.5 leading-tight">
                     (MT5 / MT4 ONLY)
                   </div>
                 </div>
+
               </div>
 
-              {/* DIVIDER */}
-              <div className="h-10 sm:h-12 w-px shrink-0 bg-[#00ff88]/35" />
+              {/* VERTICAL DIVIDER */}
+              <div className="flex items-center min-w-0 pl-2 sm:pl-4 border-l border-[#00ff88]/35">
 
-              {/* RIGHT - BALANCE */}
-              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
 
-                <div className="shrink-0 flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center">
-                  <Database
-                    className="h-8 w-8 sm:h-10 sm:w-10 text-[#00ff88]"
-                    strokeWidth={2}
-                  />
-                </div>
-
-                <div className="min-w-0">
-                  <div className="text-sm sm:text-base md:text-lg font-black text-white leading-tight whitespace-nowrap">
-                    $100 MINIMUM
+                  <div className="shrink-0 flex items-center justify-center">
+                    <Database
+                      className="h-8 w-8 sm:h-9 sm:w-9 text-[#00ff88]"
+                      strokeWidth={2}
+                    />
                   </div>
 
-                  <div className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#9db8ad] mt-0.5 whitespace-nowrap">
-                    UNLIMITED MAXIMUM
+                  <div className="min-w-0">
+                    <div className="text-[11px] sm:text-sm md:text-base font-black text-white leading-tight whitespace-nowrap">
+                      $100 MINIMUM
+                    </div>
+
+                    <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-[#9db8ad] mt-0.5 leading-tight whitespace-nowrap">
+                      UNLIMITED MAXIMUM
+                    </div>
                   </div>
+
                 </div>
               </div>
 
             </div>
           </div>
 
-          {/* CONNECT BUTTON */}
+          {/* ORIGINAL CONNECT BUTTON */}
           <Button
             type="button"
             onClick={() => setConnectOpen(true)}
@@ -270,6 +275,7 @@ export const CopierLeaderboard = () => {
           </Button>
 
         </div>
+
       </div>
 
       {/* =========================================================
@@ -306,6 +312,7 @@ export const CopierLeaderboard = () => {
           >
             Required
           </Badge>
+
         </div>
 
         <div className="mt-4 space-y-2.5">
@@ -365,7 +372,7 @@ export const CopierLeaderboard = () => {
             </div>
           </div>
 
-          {/* Telegram Updates */}
+          {/* Automatic Profit Updates */}
           <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/60 p-3">
 
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
@@ -403,8 +410,7 @@ export const CopierLeaderboard = () => {
               </div>
 
               <p className="mt-0.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
-                After submitting your copy trading request, a verification popup
-                will appear. You{" "}
+                After submitting your copy trading request, a verification popup will appear. You{" "}
                 <span className="font-semibold text-foreground">
                   must start the Telegram bot
                 </span>{" "}
@@ -469,7 +475,7 @@ export const CopierLeaderboard = () => {
       </div>
 
       {/* =========================================================
-          LEADERBOARD DIVIDER
+          LEADERBOARD DIVIDER & LIST
           ========================================================= */}
       <div className="relative my-5">
 
@@ -487,13 +493,13 @@ export const CopierLeaderboard = () => {
         </div>
       </div>
 
-      {/* =========================================================
-          LOADING / EMPTY / LEADERBOARD
-          ========================================================= */}
+      {/* Loading */}
       {isLoading ? (
+
         <div className="flex justify-center items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+
       ) : !visibleStats || visibleStats.length === 0 ? (
 
         <div className="text-center py-20">
@@ -579,6 +585,7 @@ export const CopierLeaderboard = () => {
                       </div>
 
                     </div>
+
                   </div>
 
                   <div className="mt-3 grid grid-cols-3 divide-x divide-border/50 rounded-xl bg-muted/30 py-2.5">
@@ -623,6 +630,7 @@ export const CopierLeaderboard = () => {
                     </div>
 
                   </div>
+
                 </div>
               );
             }
@@ -666,6 +674,7 @@ export const CopierLeaderboard = () => {
                       </p>
 
                     </div>
+
                   </div>
 
                   <Button
@@ -726,7 +735,9 @@ export const CopierLeaderboard = () => {
                       </p>
 
                     </div>
+
                   </div>
+
                 </div>
 
                 <a
@@ -748,7 +759,7 @@ export const CopierLeaderboard = () => {
       )}
 
       {/* =========================================================
-          DETAILS DIALOG
+          DIALOG
           ========================================================= */}
       <Dialog
         open={!!selected}
@@ -845,7 +856,7 @@ export const CopierLeaderboard = () => {
       </Dialog>
 
       {/* =========================================================
-          MT5 CONNECT DIALOG
+          CONNECT DIALOG
           ========================================================= */}
       <MT5CopierConnectDialog
         open={connectOpen}
@@ -866,55 +877,39 @@ export const CopierLeaderboard = () => {
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border/40 px-4 py-2 flex items-center justify-between max-w-md mx-auto sm:max-w-xl">
 
         <button className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 gap-0.5">
-
           <LineChart className="h-5 w-5" />
-
           <span className="text-[10px] font-bold">
             Signals
           </span>
-
           <span className="h-1 w-6 bg-emerald-500 rounded-full mt-0.5" />
-
         </button>
 
         <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-
           <BarChart3 className="h-5 w-5" />
-
           <span className="text-[10px] font-medium">
             Results
           </span>
-
         </button>
 
         <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-
           <FileText className="h-5 w-5" />
-
           <span className="text-[10px] font-medium">
             Account
           </span>
-
         </button>
 
         <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-
           <Wallet className="h-5 w-5" />
-
           <span className="text-[10px] font-medium">
             Premium
           </span>
-
         </button>
 
         <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-
           <UserCheck className="h-5 w-5" />
-
           <span className="text-[10px] font-medium">
             Profile
           </span>
-
         </button>
 
       </div>
