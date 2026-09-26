@@ -1,17 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle, Send, Server, Key, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Phone, Building2, Wallet, Clock, CheckCircle, XCircle, Loader2, MessageCircle, Send, Server, Key, Lock, Eye, EyeOff, Search } from "lucide-react";
 
-const AccountApplications = () => {
+const AccountApplications = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const queryClient = useQueryClient();
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (initialSearch) setSearchTerm(initialSearch);
+  }, [initialSearch]);
 
   const togglePasswordVisibility = (id: string) => {
     setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
@@ -62,6 +68,14 @@ const AccountApplications = () => {
     }
   };
 
+  const filteredApplications = (applications || []).filter((app: any) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return [app.name, app.email, app.whatsapp, app.telegram_username]
+      .filter(Boolean)
+      .some((f: string) => f.toLowerCase().includes(q));
+  });
+
   if (isLoading) {
     return (
       <Card>
@@ -82,13 +96,24 @@ const AccountApplications = () => {
             <Badge variant="secondary" className="ml-2">{applications.length}</Badge>
           )}
         </CardTitle>
+        <div className="relative mt-3">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name, email, telegram..."
+            className="pl-8 max-w-sm"
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {!applications || applications.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">No applications yet</p>
+        ) : filteredApplications.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No matches for "{searchTerm}"</p>
         ) : (
           <div className="space-y-4">
-            {applications.map((app) => (
+            {filteredApplications.map((app) => (
               <Card key={app.id} className="border-border/50">
                 <CardContent className="p-4">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

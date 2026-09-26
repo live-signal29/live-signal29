@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -36,7 +37,8 @@ interface Subscription {
   created_at: string;
 }
 
-const UserManagement = () => {
+const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
+  const [searchTerm, setSearchTerm] = useState("");
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,10 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (initialSearch) setSearchTerm(initialSearch);
+  }, [initialSearch]);
 
   const fetchUsers = async () => {
     try {
@@ -275,6 +281,12 @@ const UserManagement = () => {
     }
   };
 
+  const filteredUsers = users.filter((u) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q);
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -359,6 +371,15 @@ const UserManagement = () => {
               </Dialog>
             )}
           </div>
+          <div className="relative mt-3">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by email or name..."
+              className="pl-8 max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -382,7 +403,7 @@ const UserManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const userSubs = getUserSubscriptions(user.id);
                   return (
                     <TableRow key={user.id}>

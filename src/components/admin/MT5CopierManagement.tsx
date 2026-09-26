@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   Phone,
+  Search,
   Server,
   Key,
   Lock,
@@ -65,16 +66,21 @@ interface CopierRequest {
   sync_error: string | null;
 }
 
-const MT5CopierManagement = () => {
+const MT5CopierManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const queryClient = useQueryClient();
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<CopierRequest>>>({});
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "connected" | "rejected">("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [messagingReq, setMessagingReq] = useState<{ id: string; channel: "whatsapp" | "telegram" } | null>(null);
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (initialSearch) setSearchTerm(initialSearch);
+  }, [initialSearch]);
 
   const togglePasswordVisibility = (id: string) =>
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -286,10 +292,13 @@ const MT5CopierManagement = () => {
     rejected: requests?.filter((r) => r.status === "rejected").length || 0,
   };
 
-  const filteredRequests =
-    statusFilter === "all"
-      ? requests
-      : requests?.filter((r) => r.status === statusFilter);
+  const filteredRequests = (
+    statusFilter === "all" ? requests : requests?.filter((r) => r.status === statusFilter)
+  )?.filter((r) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return [r.name, r.contact_number].filter(Boolean).some((f: string) => f.toLowerCase().includes(q));
+  });
 
   const filterTabs: { key: typeof statusFilter; label: string }[] = [
     { key: "all", label: "All" },
@@ -354,9 +363,17 @@ const MT5CopierManagement = () => {
               : "Select All"}
           </Button>
         </div>
+        <div className="relative pt-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name or contact..."
+            className="pl-8 max-w-sm h-8 text-xs"
+          />
+        </div>
         <div className="flex flex-wrap gap-2 pt-1">
-          {filterTabs.map((tab) => (
-            <button
+          {filterTabs.map((tab) => (            <button
               key={tab.key}
               type="button"
               onClick={() => setStatusFilter(tab.key)}
