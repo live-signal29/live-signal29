@@ -53,3 +53,15 @@ verify_jwt = false
 
 [functions.verify-play-purchase]
 verify_jwt = true
+
+[functions.payment-share-send-request]
+verify_jwt = false
+
+[functions.payment-share-verify]
+verify_jwt = false
+
+[functions.telegram-bot-webhook]
+verify_jwt = false
+
+[functions.payment-share-reminders]
+verify_jwt = false
