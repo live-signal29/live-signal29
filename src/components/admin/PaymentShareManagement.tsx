@@ -15,6 +15,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -29,6 +30,11 @@ import {
   Search,
   ChevronsUpDown,
   Check,
+  ChevronDown,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 
 const db = supabase as any;
@@ -39,13 +45,56 @@ const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "";
 
 type SourceType = "copier" | "account_management";
 
+interface PaymentAddress {
+  id: string;
+  label: string;
+  address: string;
+}
+
 interface ClientOption {
   source_type: SourceType;
   source_id: string;
   name: string;
   contact: string | null;
   telegram_username: string | null;
+  telegram_chat_id: number | null;
 }
+
+// A small collapsible wrapper so every section on this page can be
+// hidden/shown by the admin without losing its state.
+const SectionCard = ({
+  title,
+  icon,
+  defaultOpen = true,
+  children,
+}: {
+  title: React.ReactNode;
+  icon?: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer select-none flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {icon}
+              {title}
+            </CardTitle>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
+            />
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">{children}</CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+};
 
 interface PaymentShare {
   id: string;
@@ -83,7 +132,8 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
   const [selectedKey, setSelectedKey] = useState<string>("");
   const [profitInput, setProfitInput] = useState<string>("");
   const [shareInput, setShareInput] = useState<string>("");
-  const [paymentAddress, setPaymentAddress] = useState<string>("");
+  const [addresses, setAddresses] = useState<PaymentAddress[]>([]);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [adminContactLink, setAdminContactLink] = useState<string>("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
   const [listSearch, setListSearch] = useState("");
@@ -104,24 +154,52 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
 
   useEffect(() => {
     if (settings) {
-      setPaymentAddress(settings.payment_address || "");
+      const list: PaymentAddress[] = Array.isArray(settings.payment_addresses)
+        ? settings.payment_addresses
+        : [];
+      setAddresses(list);
       setAdminContactLink(settings.admin_contact_link || "");
     }
   }, [settings]);
 
   const saveSettingsMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await db
-        .from("payment_settings")
-        .upsert({ id: "default", payment_address: paymentAddress, admin_contact_link: adminContactLink });
+    mutationFn: async (nextAddresses: PaymentAddress[]) => {
+      const cleaned = nextAddresses.filter((a) => a.address.trim() !== "");
+      const { error } = await db.from("payment_settings").upsert({
+        id: "default",
+        // Keep the legacy single field pointing at the first address so
+        // anything on the bot side still reading payment_address keeps working.
+        payment_address: cleaned[0]?.address || "",
+        payment_addresses: cleaned,
+        admin_contact_link: adminContactLink,
+      });
       if (error) throw error;
+      return cleaned;
     },
-    onSuccess: () => {
+    onSuccess: (cleaned) => {
+      setAddresses(cleaned);
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
       toast.success("Settings saved");
     },
     onError: (err: any) => toast.error("Save failed", { description: err?.message }),
   });
+
+  const addAddress = () => {
+    const id = crypto.randomUUID();
+    setAddresses((prev) => [...prev, { id, label: "", address: "" }]);
+    setEditingAddressId(id);
+  };
+
+  const updateAddress = (id: string, patch: Partial<PaymentAddress>) => {
+    setAddresses((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  };
+
+  const deleteAddress = (id: string) => {
+    const next = addresses.filter((a) => a.id !== id);
+    setAddresses(next);
+    if (editingAddressId === id) setEditingAddressId(null);
+    saveSettingsMutation.mutate(next);
+  };
 
   // Combined client list from both existing admin lists — read-only lookups,
   // nothing here writes back to mt5_copier_requests or
@@ -130,19 +208,27 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
     queryKey: ["payment-share-client-options"],
     queryFn: async (): Promise<ClientOption[]> => {
       const [copierRes, accountRes] = await Promise.all([
-        db.from("mt5_copier_requests").select("id, name, contact_number").order("created_at", { ascending: false }),
+        db
+          .from("mt5_copier_requests")
+          .select("id, name, contact_number, telegram_username, telegram_chat_id")
+          .order("created_at", { ascending: false }),
         db
           .from("account_management_applications")
-          .select("id, name, whatsapp, telegram_username")
+          .select("id, name, whatsapp, telegram_username, telegram_chat_id")
           .order("created_at", { ascending: false }),
       ]);
 
+      // Both source lists already link clients to the Telegram bot
+      // (Copy Management / Account Management screens) — reuse that chat id
+      // here so a client who's already linked doesn't need a second,
+      // payment-specific "start the bot" link.
       const copierOptions: ClientOption[] = (copierRes.data || []).map((r: any) => ({
         source_type: "copier" as const,
         source_id: r.id,
         name: r.name || "Unnamed",
         contact: r.contact_number,
-        telegram_username: null,
+        telegram_username: r.telegram_username ?? null,
+        telegram_chat_id: r.telegram_chat_id ?? null,
       }));
 
       const accountOptions: ClientOption[] = (accountRes.data || []).map((r: any) => ({
@@ -151,6 +237,7 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
         name: r.name || "Unnamed",
         contact: r.whatsapp,
         telegram_username: r.telegram_username,
+        telegram_chat_id: r.telegram_chat_id ?? null,
       }));
 
       return [...copierOptions, ...accountOptions];
@@ -211,11 +298,18 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
   );
   const selectedShare = selectedKey ? sharesByKey.get(selectedKey) : undefined;
 
+  // The chat id the client is actually reachable on: prefer what's already
+  // saved on this payment-share row, otherwise fall back to the chat id
+  // they linked via Copy Management / Account Management.
+  const effectiveChatId = selectedShare?.telegram_chat_id ?? selectedOption?.telegram_chat_id ?? null;
+  const alreadyLinkedElsewhere = !selectedShare?.telegram_chat_id && !!selectedOption?.telegram_chat_id;
+
   const handleSelect = (key: string) => {
     setSelectedKey(key);
     const existing = sharesByKey.get(key);
     setProfitInput(existing?.profit_amount != null ? String(existing.profit_amount) : "");
     setShareInput(existing?.share_percentage != null ? String(existing.share_percentage) : "");
+    document.getElementById("payment-share-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const saveMutation = useMutation({
@@ -224,6 +318,12 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
       const profit = profitInput === "" ? null : Number(profitInput);
       const sharePct = shareInput === "" ? null : Number(shareInput);
 
+      // Carry over the chat id from the client's existing Telegram link
+      // (Copy Management / Account Management) if this payment-share row
+      // doesn't already have one of its own — that's what lets "Send
+      // Payment Request" work right away for an already-linked client.
+      const chatId = selectedShare?.telegram_chat_id ?? selectedOption.telegram_chat_id ?? null;
+
       const { error } = await db.from("client_payment_shares").upsert(
         {
           source_type: selectedOption.source_type,
@@ -231,6 +331,8 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
           client_name: selectedOption.name,
           client_contact: selectedOption.contact,
           telegram_username: selectedShare?.telegram_username ?? selectedOption.telegram_username,
+          telegram_chat_id: chatId,
+          status: selectedShare?.status ?? (chatId ? "linked" : "draft"),
           profit_amount: profit,
           share_percentage: sharePct,
         },
@@ -290,45 +392,95 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Settings className="h-4 w-4" />
-            Payment Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Payment Address / ID</Label>
-            <Input
-              value={paymentAddress}
-              onChange={(e) => setPaymentAddress(e.target.value)}
-              placeholder="e.g. bank account / UPI ID / wallet address"
-            />
+      <SectionCard title="Payment Settings" icon={<Settings className="h-4 w-4" />}>
+        <div className="space-y-2">
+          <Label>Payment Addresses</Label>
+          {addresses.length === 0 && (
+            <p className="text-sm text-muted-foreground">No saved addresses yet.</p>
+          )}
+          <div className="space-y-2">
+            {addresses.map((a) =>
+              editingAddressId === a.id ? (
+                <div key={a.id} className="flex flex-col sm:flex-row gap-2 border rounded-lg p-2">
+                  <Input
+                    className="sm:w-40"
+                    value={a.label}
+                    placeholder="Label (e.g. USDT TRC20)"
+                    onChange={(e) => updateAddress(a.id, { label: e.target.value })}
+                  />
+                  <Input
+                    className="flex-1"
+                    value={a.address}
+                    placeholder="Address / account / UPI ID"
+                    onChange={(e) => updateAddress(a.id, { address: e.target.value })}
+                  />
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditingAddressId(null);
+                        saveSettingsMutation.mutate(addresses);
+                      }}
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingAddressId(null)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between gap-2 border rounded-lg p-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span className="font-medium">{a.label || "Untitled"}</span>
+                    <span className="text-muted-foreground ml-2 truncate">{a.address || "—"}</span>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="sm" variant="ghost" onClick={() => setEditingAddressId(a.id)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => deleteAddress(a.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )
+            )}
           </div>
-          <div>
-            <Label>Admin Contact Link</Label>
-            <Input
-              value={adminContactLink}
-              onChange={(e) => setAdminContactLink(e.target.value)}
-              placeholder="e.g. https://t.me/yourusername"
-            />
-          </div>
-          <Button onClick={() => saveSettingsMutation.mutate()} disabled={saveSettingsMutation.isPending} size="sm">
-            {saveSettingsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Settings
+          <Button size="sm" variant="outline" onClick={addAddress}>
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Add Address
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+        <div>
+          <Label>Admin Contact Link</Label>
+          <Input
+            value={adminContactLink}
+            onChange={(e) => setAdminContactLink(e.target.value)}
+            placeholder="e.g. https://t.me/yourusername"
+          />
+        </div>
+        <Button
+          onClick={() => saveSettingsMutation.mutate(addresses)}
+          disabled={saveSettingsMutation.isPending}
+          size="sm"
+        >
+          {saveSettingsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Save Settings
+        </Button>
+      </SectionCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
-            Profit Share & Payment Requests
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div id="payment-share-form">
+      <SectionCard title="Profit Share & Payment Requests" icon={<Wallet className="h-5 w-5" />}>
           <div>
             <Label>Select Client</Label>
             <Popover open={clientComboOpen} onOpenChange={setClientComboOpen}>
@@ -436,20 +588,23 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
 
                 {selectedShare && (
                   <>
-                    <Button
-                      variant="outline"
-                      onClick={() => copyLink(selectedShare.link_token)}
-                      disabled={!!selectedShare.telegram_chat_id}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      {selectedShare.telegram_chat_id ? "Already Linked" : "Copy Telegram Link"}
-                    </Button>
+                    {/* Only needed as a fallback for a client who genuinely
+                        hasn't linked the bot anywhere yet. Once they're
+                        linked (here or via Copy/Account Management), this
+                        step is skipped entirely and Send Payment Request
+                        works directly. */}
+                    {!effectiveChatId && (
+                      <Button variant="outline" onClick={() => copyLink(selectedShare.link_token)}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Telegram Link
+                      </Button>
+                    )}
 
                     <Button
                       variant="outline"
                       onClick={() => sendRequestMutation.mutate(selectedShare.id)}
                       disabled={
-                        !selectedShare.telegram_chat_id ||
+                        !effectiveChatId ||
                         sendRequestMutation.isPending ||
                         !profitInput ||
                         !shareInput
@@ -468,7 +623,7 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
                       onClick={() => verifyMutation.mutate(selectedShare.id)}
                       disabled={
                         verifyMutation.isPending ||
-                        !selectedShare.telegram_chat_id ||
+                        !effectiveChatId ||
                         ["draft", "linked", "verified"].includes(selectedShare.status)
                       }
                     >
@@ -485,9 +640,17 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
 
               {selectedShare && (
                 <div className="space-y-2">
-                  <Badge variant="secondary" className={STATUS_LABEL[selectedShare.status]?.className || ""}>
-                    {STATUS_LABEL[selectedShare.status]?.label || selectedShare.status}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className={STATUS_LABEL[selectedShare.status]?.className || ""}>
+                      {STATUS_LABEL[selectedShare.status]?.label || selectedShare.status}
+                    </Badge>
+                    {alreadyLinkedElsewhere && (
+                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500">
+                        <Link2 className="h-3 w-3 mr-1" />
+                        Telegram already linked
+                      </Badge>
+                    )}
+                  </div>
                   {selectedShare.payment_proof && (
                     <p className="text-sm text-muted-foreground">
                       Proof / reference: <span className="text-foreground">{selectedShare.payment_proof}</span>
@@ -497,60 +660,60 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">All Payment Share Requests</CardTitle>
-          <div className="relative mt-2">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={listSearch}
-              onChange={(e) => setListSearch(e.target.value)}
-              placeholder="Search by name, status, proof..."
-              className="pl-8"
-            />
+      <SectionCard title="All Payment Share Requests">
+        <div className="relative -mt-2 mb-2">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            placeholder="Search by name, status, proof..."
+            className="pl-8"
+          />
+        </div>
+        {loadingShares ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        </CardHeader>
-        <CardContent>
-          {loadingShares ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : !shares || shares.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No payment share requests yet.</p>
-          ) : filteredShares.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No matches for "{listSearch}".</p>
-          ) : (
-            <div className="space-y-2">
-              {filteredShares.map((s) => (
-                <div key={s.id} className="flex items-center justify-between border rounded-lg p-3 text-sm">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      {s.source_type === "copier" ? (
-                        <Zap className="h-3.5 w-3.5 text-yellow-600" />
-                      ) : (
-                        <BriefcaseBusiness className="h-3.5 w-3.5 text-cyan-600" />
-                      )}
-                      {s.client_name}
-                      {s.telegram_chat_id && <Link2 className="h-3.5 w-3.5 text-emerald-500" />}
-                    </div>
-                    <div className="text-muted-foreground text-xs mt-0.5">
-                      Profit: {s.profit_amount ?? "—"} · Share: {s.share_percentage ?? "—"}% · Amount:{" "}
-                      {s.share_amount ?? "—"}
-                      {s.payment_proof ? ` · Proof: ${s.payment_proof}` : ""}
-                    </div>
+        ) : !shares || shares.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">No payment share requests yet.</p>
+        ) : filteredShares.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">No matches for "{listSearch}".</p>
+        ) : (
+          <div className="space-y-2">
+            {filteredShares.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => handleSelect(`${s.source_type}:${s.source_id}`)}
+                className="w-full flex items-center justify-between border rounded-lg p-3 text-sm text-left hover:bg-muted/50 transition-colors"
+              >
+                <div>
+                  <div className="font-medium flex items-center gap-2">
+                    {s.source_type === "copier" ? (
+                      <Zap className="h-3.5 w-3.5 text-yellow-600" />
+                    ) : (
+                      <BriefcaseBusiness className="h-3.5 w-3.5 text-cyan-600" />
+                    )}
+                    {s.client_name}
+                    {s.telegram_chat_id && <Link2 className="h-3.5 w-3.5 text-emerald-500" />}
                   </div>
-                  <Badge variant="secondary" className={STATUS_LABEL[s.status]?.className || ""}>
-                    {STATUS_LABEL[s.status]?.label || s.status}
-                  </Badge>
+                  <div className="text-muted-foreground text-xs mt-0.5">
+                    Profit: {s.profit_amount ?? "—"} · Share: {s.share_percentage ?? "—"}% · Amount:{" "}
+                    {s.share_amount ?? "—"}
+                    {s.payment_proof ? ` · Proof: ${s.payment_proof}` : ""}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <Badge variant="secondary" className={STATUS_LABEL[s.status]?.className || ""}>
+                  {STATUS_LABEL[s.status]?.label || s.status}
+                </Badge>
+              </button>
+            ))}
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 };
