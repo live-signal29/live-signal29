@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,9 @@ import {
   Server,
   Key,
   Lock,
+  Mail,
+  Globe,
+  StickyNote,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -47,13 +52,17 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 
-const applicationSchema = z.object({
+const contactDetailsSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
   whatsapp: z.string().regex(/^\+\d{1,4}\d{6,14}$/, "Enter a valid WhatsApp number with your own country code (e.g., +447911..., +1415..., +9198..., +92300...)"),
   telegram_username: z.string()
     .transform((v) => v.replace(/^@/, "").trim())
     .refine((v) => v.length >= 5 && v.length <= 32, "Telegram username must be 5-32 characters")
     .refine((v) => /^[a-zA-Z0-9_]+$/.test(v), "Telegram username can only contain letters, numbers and underscores"),
+});
+
+// Tab 1 — connect an existing MT4/MT5 trading account directly.
+const tradingAccountSchema = contactDetailsSchema.extend({
   preferred_broker: z.string().min(2, "Enter your preferred broker"),
   platform_type: z.string().min(1, "Select platform type"),
   broker_server: z.string().min(2, "Enter broker server"),
@@ -61,6 +70,16 @@ const applicationSchema = z.object({
   trading_password: z.string().min(4, "Password must be at least 4 characters"),
   account_size: z.string().min(1, "Select an account size"),
 });
+
+// Tab 2 — hand over the broker site/app login instead of MT4/MT5 credentials.
+const brokerLoginSchema = contactDetailsSchema.extend({
+  broker_site_name: z.string().min(2, "Enter broker site or app name"),
+  broker_email: z.string().email("Enter a valid broker email"),
+  broker_password: z.string().min(4, "Password must be at least 4 characters"),
+  note: z.string().max(500, "Note is too long").optional(),
+});
+
+type SubmissionMethod = "trading_account" | "broker_login";
 
 const plans = [
   {
@@ -109,10 +128,12 @@ const steps = [
 ];
 
 const AccountManagement = () => {
+  const [submissionMethod, setSubmissionMethod] = useState<SubmissionMethod>("trading_account");
   const [formData, setFormData] = useState({
     name: "", whatsapp: "", telegram_username: "", preferred_broker: "",
     platform_type: "", broker_server: "", trading_login: "",
-    trading_password: "", account_size: ""
+    trading_password: "", account_size: "",
+    broker_site_name: "", broker_email: "", broker_password: "", note: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -210,12 +231,13 @@ const AccountManagement = () => {
     e.preventDefault();
     setErrors({});
     try {
-      const validated = applicationSchema.parse(formData);
+      const schema = submissionMethod === "trading_account" ? tradingAccountSchema : brokerLoginSchema;
+      const validated = schema.parse(formData);
       setIsSubmitting(true);
 
       const { data: inserted, error } = await supabase
         .from('account_management_applications')
-        .insert([validated])
+        .insert([{ ...validated, submission_type: submissionMethod }])
         .select('id')
         .single();
 
@@ -225,7 +247,7 @@ const AccountManagement = () => {
       try {
         const { data: notifyResult } = await supabase.functions.invoke(
           'account-management-notify',
-          { body: { ...validated, applicationId: inserted?.id } }
+          { body: { ...validated, submission_type: submissionMethod, applicationId: inserted?.id } }
         );
         telegram_link = notifyResult?.telegram_link ?? null;
       } catch (err) {
@@ -235,7 +257,8 @@ const AccountManagement = () => {
       setFormData({
         name: "", whatsapp: "", telegram_username: "", preferred_broker: "",
         platform_type: "", broker_server: "", trading_login: "",
-        trading_password: "", account_size: ""
+        trading_password: "", account_size: "",
+        broker_site_name: "", broker_email: "", broker_password: "", note: ""
       });
 
       if (telegram_link && inserted?.id) {
@@ -513,120 +536,213 @@ const AccountManagement = () => {
 
                 <div className="h-px bg-slate-100 dark:bg-slate-800/60" />
 
-                {/* ---------------- Broker & Trading Account ---------------- */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    <Building2 className="h-3.5 w-3.5" />
-                    Broker &amp; Trading Account
-                  </div>
+                {/* ---------------- Connection Method Tabs ---------------- */}
+                <Tabs
+                  value={submissionMethod}
+                  onValueChange={(v) => { setSubmissionMethod(v as SubmissionMethod); setErrors({}); }}
+                  className="space-y-4"
+                >
+                  <TabsList className="grid w-full grid-cols-2 h-11 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/60">
+                    <TabsTrigger
+                      value="trading_account"
+                      className="gap-1.5 text-xs font-semibold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm"
+                    >
+                      <Key className="h-3.5 w-3.5" />
+                      Trading Account
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="broker_login"
+                      className="gap-1.5 text-xs font-semibold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm"
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      Broker Login
+                    </TabsTrigger>
+                  </TabsList>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* ---- Tab 1: MT4/MT5 trading account (server + investor login) ---- */}
+                  <TabsContent value="trading_account" className="space-y-5 mt-0">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        <Building2 className="h-3.5 w-3.5" />
+                        Broker &amp; Trading Account
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Preferred Broker <span className="text-red-500">*</span></Label>
+                          <div className="relative">
+                            <Building2 className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input
+                              placeholder="Exness / XM / IC Markets"
+                              value={formData.preferred_broker}
+                              onChange={(e) => setFormData({ ...formData, preferred_broker: e.target.value })}
+                              className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                            />
+                          </div>
+                          {errors.preferred_broker && <p className="text-[10px] text-destructive">{errors.preferred_broker}</p>}
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Platform Type <span className="text-red-500">*</span></Label>
+                          <div className="relative">
+                            <Settings2 className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                            <Select value={formData.platform_type} onValueChange={(v) => setFormData({ ...formData, platform_type: v })}>
+                              <SelectTrigger className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus:ring-emerald-500/40">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="MT4">MT4</SelectItem>
+                                <SelectItem value="MT5">MT5</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {errors.platform_type && <p className="text-[10px] text-destructive">{errors.platform_type}</p>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Broker Server Name <span className="text-red-500">*</span></Label>
+                        <div className="relative">
+                          <Server className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            placeholder="e.g., Exness-Real11"
+                            value={formData.broker_server}
+                            onChange={(e) => setFormData({ ...formData, broker_server: e.target.value })}
+                            className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                          />
+                        </div>
+                        {errors.broker_server && <p className="text-[10px] text-destructive">{errors.broker_server}</p>}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Trading Login (ID) <span className="text-red-500">*</span></Label>
+                          <div className="relative">
+                            <Key className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input
+                              placeholder="8373738"
+                              value={formData.trading_login}
+                              onChange={(e) => setFormData({ ...formData, trading_login: e.target.value.replace(/\D/g, '') })}
+                              className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                            />
+                          </div>
+                          {errors.trading_login && <p className="text-[10px] text-destructive">{errors.trading_login}</p>}
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Trading Password <span className="text-red-500">*</span></Label>
+                          <div className="relative">
+                            <Lock className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input
+                              type="password"
+                              placeholder="Investor/Master Password"
+                              value={formData.trading_password}
+                              onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
+                              className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                            />
+                          </div>
+                          {errors.trading_password && <p className="text-[10px] text-destructive">{errors.trading_password}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-slate-100 dark:bg-slate-800/60" />
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        <Wallet className="h-3.5 w-3.5" />
+                        Account Tier
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Selected Account Tier Size <span className="text-red-500">*</span></Label>
+                        <div className="relative">
+                          <DollarSign className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                          <Select value={formData.account_size} onValueChange={(v) => setFormData({ ...formData, account_size: v })}>
+                            <SelectTrigger className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus:ring-emerald-500/40">
+                              <SelectValue placeholder="Select Account Size" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="$100">$100 (Starter)</SelectItem>
+                              <SelectItem value="$1,000">$1,000 (Growth)</SelectItem>
+                              <SelectItem value="$10,000">$10,000 (Pro)</SelectItem>
+                              <SelectItem value="$50,000">$50,000 (Institutional)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {errors.account_size && <p className="text-[10px] text-destructive">{errors.account_size}</p>}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* ---- Tab 2: hand over the broker site/app login instead ---- */}
+                  <TabsContent value="broker_login" className="space-y-3 mt-0">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <Globe className="h-3.5 w-3.5" />
+                      Broker Details
+                    </div>
+
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Preferred Broker <span className="text-red-500">*</span></Label>
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Broker Site or App Name <span className="text-red-500">*</span></Label>
                       <div className="relative">
-                        <Building2 className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Globe className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <Input
-                          placeholder="Exness / XM / IC Markets"
-                          value={formData.preferred_broker}
-                          onChange={(e) => setFormData({ ...formData, preferred_broker: e.target.value })}
+                          placeholder="e.g., Exness / XM / IC Markets app"
+                          value={formData.broker_site_name}
+                          onChange={(e) => setFormData({ ...formData, broker_site_name: e.target.value })}
                           className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
                         />
                       </div>
-                      {errors.preferred_broker && <p className="text-[10px] text-destructive">{errors.preferred_broker}</p>}
+                      {errors.broker_site_name && <p className="text-[10px] text-destructive">{errors.broker_site_name}</p>}
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Platform Type <span className="text-red-500">*</span></Label>
-                      <div className="relative">
-                        <Settings2 className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-                        <Select value={formData.platform_type} onValueChange={(v) => setFormData({ ...formData, platform_type: v })}>
-                          <SelectTrigger className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus:ring-emerald-500/40">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MT4">MT4</SelectItem>
-                            <SelectItem value="MT5">MT5</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Broker Email <span className="text-red-500">*</span></Label>
+                        <div className="relative">
+                          <Mail className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            type="email"
+                            placeholder="you@example.com"
+                            value={formData.broker_email}
+                            onChange={(e) => setFormData({ ...formData, broker_email: e.target.value })}
+                            className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                          />
+                        </div>
+                        {errors.broker_email && <p className="text-[10px] text-destructive">{errors.broker_email}</p>}
                       </div>
-                      {errors.platform_type && <p className="text-[10px] text-destructive">{errors.platform_type}</p>}
-                    </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Broker Server Name <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <Server className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <Input
-                        placeholder="e.g., Exness-Real11"
-                        value={formData.broker_server}
-                        onChange={(e) => setFormData({ ...formData, broker_server: e.target.value })}
-                        className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
-                      />
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Broker Password <span className="text-red-500">*</span></Label>
+                        <div className="relative">
+                          <Lock className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            type="password"
+                            placeholder="Broker login password"
+                            value={formData.broker_password}
+                            onChange={(e) => setFormData({ ...formData, broker_password: e.target.value })}
+                            className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                          />
+                        </div>
+                        {errors.broker_password && <p className="text-[10px] text-destructive">{errors.broker_password}</p>}
+                      </div>
                     </div>
-                    {errors.broker_server && <p className="text-[10px] text-destructive">{errors.broker_server}</p>}
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Trading Login (ID) <span className="text-red-500">*</span></Label>
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Note <span className="text-slate-400 font-normal">(optional)</span></Label>
                       <div className="relative">
-                        <Key className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          placeholder="8373738"
-                          value={formData.trading_login}
-                          onChange={(e) => setFormData({ ...formData, trading_login: e.target.value.replace(/\D/g, '') })}
-                          className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        <StickyNote className="h-4 w-4 absolute left-3.5 top-3 text-slate-400" />
+                        <Textarea
+                          placeholder="Anything else we should know?"
+                          value={formData.note}
+                          onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                          className="min-h-[80px] pl-10 pt-2.5 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
                         />
                       </div>
-                      {errors.trading_login && <p className="text-[10px] text-destructive">{errors.trading_login}</p>}
+                      {errors.note && <p className="text-[10px] text-destructive">{errors.note}</p>}
                     </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Trading Password <span className="text-red-500">*</span></Label>
-                      <div className="relative">
-                        <Lock className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          type="password"
-                          placeholder="Investor/Master Password"
-                          value={formData.trading_password}
-                          onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
-                          className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
-                        />
-                      </div>
-                      {errors.trading_password && <p className="text-[10px] text-destructive">{errors.trading_password}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-slate-100 dark:bg-slate-800/60" />
-
-                {/* ---------------- Account Tier ---------------- */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    <Wallet className="h-3.5 w-3.5" />
-                    Account Tier
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Selected Account Tier Size <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <DollarSign className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-                      <Select value={formData.account_size} onValueChange={(v) => setFormData({ ...formData, account_size: v })}>
-                        <SelectTrigger className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus:ring-emerald-500/40">
-                          <SelectValue placeholder="Select Account Size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="$100">$100 (Starter)</SelectItem>
-                          <SelectItem value="$1,000">$1,000 (Growth)</SelectItem>
-                          <SelectItem value="$10,000">$10,000 (Pro)</SelectItem>
-                          <SelectItem value="$50,000">$50,000 (Institutional)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {errors.account_size && <p className="text-[10px] text-destructive">{errors.account_size}</p>}
-                  </div>
-                </div>
+                  </TabsContent>
+                </Tabs>
 
                 <Button type="submit" className="w-full h-11 text-sm font-bold rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-lg shadow-emerald-500/25 transition-transform active:scale-[0.99]" disabled={isSubmitting}>
                   {isSubmitting ? (
