@@ -27,6 +27,8 @@ import {
   Eye,
   EyeOff,
   Trash2,
+  Globe,
+  StickyNote,
 } from "lucide-react";
 
 const db = supabase as any;
@@ -38,12 +40,19 @@ interface AccountApplication {
   whatsapp: string;
   telegram_username: string | null;
   telegram_chat_id: number | null;
-  preferred_broker: string;
+  submission_type: "trading_account" | "broker_login" | null;
+  // trading_account fields
+  preferred_broker: string | null;
   platform_type: string | null;
   broker_server: string | null;
   trading_login: string | null;
   trading_password: string | null;
-  account_size: string;
+  account_size: string | null;
+  // broker_login fields
+  broker_site_name: string | null;
+  broker_email: string | null;
+  broker_password: string | null;
+  note: string | null;
   status: string | null;
   created_at: string;
 }
@@ -294,7 +303,18 @@ const AccountApplications = () => {
                         />
                         <span className="font-semibold text-lg">{app.name}</span>
                         {getStatusBadge(app.status || "pending")}
-                        <Badge variant="outline">{app.account_size}</Badge>
+                        {app.submission_type === "broker_login" ? (
+                          <Badge variant="outline" className="border-sky-500/30 text-sky-600 dark:text-sky-400 gap-1">
+                            <Globe className="h-3 w-3" />
+                            Broker Login
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1">
+                            <Key className="h-3 w-3" />
+                            Trading Account
+                          </Badge>
+                        )}
+                        {app.account_size && <Badge variant="outline">{app.account_size}</Badge>}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
@@ -333,10 +353,12 @@ const AccountApplications = () => {
                             </span>
                           </div>
                         )}
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Building2 className="h-4 w-4" />
-                          {app.preferred_broker} {app.platform_type && `(${app.platform_type})`}
-                        </div>
+                        {app.preferred_broker && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Building2 className="h-4 w-4" />
+                            {app.preferred_broker} {app.platform_type && `(${app.platform_type})`}
+                          </div>
+                        )}
                       </div>
 
                       {messagingId === app.id && (
@@ -408,6 +430,49 @@ const AccountApplications = () => {
                         </div>
                       )}
 
+                      {(app.broker_site_name || app.broker_email || app.broker_password) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm mt-2 p-2 rounded-lg bg-muted/30 border border-border/30">
+                          {app.broker_site_name && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Globe className="h-4 w-4 text-sky-500" />
+                              <span className="font-mono text-xs">{app.broker_site_name}</span>
+                            </div>
+                          )}
+                          {app.broker_email && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Mail className="h-4 w-4 text-emerald-500" />
+                              <a href={`mailto:${app.broker_email}`} className="font-mono text-xs hover:text-primary">{app.broker_email}</a>
+                            </div>
+                          )}
+                          {app.broker_password && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Lock className="h-4 w-4 text-amber-500" />
+                              <span className="font-mono text-xs">
+                                Pass: <span className="font-bold text-foreground">{visiblePasswords[app.id] ? app.broker_password : '••••••••'}</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(app.id)}
+                                className="p-1 hover:bg-muted rounded transition-colors"
+                              >
+                                {visiblePasswords[app.id] ? (
+                                  <EyeOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                ) : (
+                                  <Eye className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {app.note && (
+                        <div className="flex items-start gap-2 text-sm mt-1 p-2 rounded-lg bg-muted/20 border border-border/20 text-muted-foreground">
+                          <StickyNote className="h-4 w-4 mt-0.5 shrink-0" />
+                          <span>{app.note}</span>
+                        </div>
+                      )}
+
                       <p className="text-xs text-muted-foreground">
                         Applied: {format(new Date(app.created_at), 'PPp')}
                       </p>
@@ -419,7 +484,7 @@ const AccountApplications = () => {
                           variant="outline"
                           size="sm"
                           className="bg-emerald-500/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
-                          onClick={() => window.open(`https://wa.me/${app.whatsapp.replace(/\D/g, '')}?text=Hi ${encodeURIComponent(app.name)}, regarding your Account Management application for ${encodeURIComponent(app.account_size)} account...`, '_blank')}
+                          onClick={() => window.open(`https://wa.me/${app.whatsapp.replace(/\D/g, '')}?text=Hi ${encodeURIComponent(app.name)}, regarding your Account Management application${app.account_size ? ` for ${encodeURIComponent(app.account_size)} account` : ""}...`, '_blank')}
                         >
                           <MessageCircle className="h-4 w-4 mr-1" />
                           WhatsApp
