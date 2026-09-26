@@ -3,12 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Loader2,
   TrendingUp,
   TrendingDown,
@@ -108,214 +102,227 @@ export const CopierLeaderboard = () => {
   return (
     <div className="pb-24">
 
-      {/* ========================================================= */}
-      {/* PREMIUM HERO BANNER                                      */}
-      {/* ========================================================= */}
-
+      {/* =========================================================
+          COMPACT HORIZONTAL HERO BANNER
+          ========================================================= */}
       <div
         className="
-          relative
-          mb-4
-          overflow-hidden
-          rounded-[24px]
-          border
-          border-emerald-400/20
-          bg-[#032f27]
-          shadow-[0_12px_40px_rgba(0,0,0,0.18)]
+          relative mb-4 overflow-hidden rounded-[26px]
+          border border-emerald-400/20
+          bg-gradient-to-br from-[#063d31] via-[#075443] to-[#031f20]
+          shadow-[0_12px_35px_rgba(0,80,60,0.20)]
+          px-4 py-3.5 sm:px-5 sm:py-4
         "
       >
-        {/* Background glow */}
-        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-emerald-400/20 blur-[70px]" />
-
-        <div className="pointer-events-none absolute -left-20 bottom-0 h-52 w-52 rounded-full bg-teal-400/10 blur-[70px]" />
-
-        {/* Subtle grid */}
+        {/* Background grid */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(110,231,183,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.5) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
+          className="
+            pointer-events-none absolute inset-0 opacity-[0.14]
+            bg-[linear-gradient(rgba(110,231,183,0.45)_1px,transparent_1px),linear-gradient(90deg,rgba(110,231,183,0.45)_1px,transparent_1px)]
+            bg-[size:28px_28px]
+          "
         />
+
+        {/* Glow effects */}
+        <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-emerald-400/20 blur-3xl" />
+
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-teal-400/10 blur-3xl" />
 
         {/* Decorative chart line */}
         <svg
-          className="pointer-events-none absolute right-[-20px] top-[95px] h-[150px] w-[55%] opacity-[0.10]"
-          viewBox="0 0 500 150"
+          className="pointer-events-none absolute right-0 bottom-8 h-32 w-1/2 opacity-[0.10]"
+          viewBox="0 0 400 120"
+          fill="none"
           preserveAspectRatio="none"
         >
           <path
-            d="M0 125 C70 105 85 120 135 90 C185 60 205 110 255 78 C310 43 335 72 380 42 C425 12 450 35 500 5"
-            fill="none"
+            d="M0 105 C50 95 60 80 105 88 C145 96 165 42 205 58 C245 73 255 18 300 38 C340 56 350 20 400 5"
             stroke="#6ee7b7"
             strokeWidth="3"
           />
         </svg>
 
-        <div className="relative p-4 sm:p-5">
+        <div className="relative z-10">
 
-          {/* Top row */}
-          <div className="flex items-center justify-between gap-3">
+          {/* TOP BAR */}
+          <div className="flex items-center justify-between gap-2">
 
             <div
               className="
-                inline-flex
-                items-center
-                gap-2
-                rounded-full
-                border
-                border-emerald-300/30
-                bg-emerald-300/10
-                px-3
-                py-1.5
+                inline-flex items-center gap-1.5
+                rounded-full border border-emerald-300/25
+                bg-emerald-300/[0.08]
+                px-3 py-1.5
               "
             >
-              <span className="flex h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+              <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
 
               <span className="text-[10px] sm:text-xs font-bold tracking-wide text-emerald-100">
                 MT5 & MT4 COPY
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
-
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-bold text-emerald-200">
+            <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold">
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-emerald-200">
                 MT5
               </span>
 
-              <span className="text-[9px] text-emerald-200/50">
-                /
-              </span>
+              <span className="text-emerald-100/40">/</span>
 
-              <span className="rounded-full border border-sky-300/20 bg-sky-400/10 px-2.5 py-1 text-[9px] font-bold text-sky-200">
+              <span className="rounded-full border border-sky-300/20 bg-sky-400/10 px-2.5 py-1 text-sky-200">
                 MT4
               </span>
-
             </div>
           </div>
 
-          {/* Main hero content */}
-          <div className="mt-4 flex items-center gap-3 sm:gap-5">
+          {/* MAIN HORIZONTAL CONTENT */}
+          <div className="mt-3 flex items-center gap-3 sm:gap-5">
 
-            {/* Left illustration */}
-            <div className="relative h-[142px] w-[118px] shrink-0 sm:h-[158px] sm:w-[135px]">
+            {/* GRAPH / PHONE ICON */}
+            <div className="relative h-[112px] w-[104px] shrink-0 sm:h-[132px] sm:w-[124px]">
 
-              {/* Phone frame */}
+              {/* Outer glass frame */}
               <div
                 className="
-                  absolute
-                  left-1/2
-                  top-1/2
-                  h-[125px]
-                  w-[78px]
-                  -translate-x-1/2
-                  -translate-y-1/2
-                  rotate-[-3deg]
-                  rounded-[20px]
-                  border
-                  border-emerald-300/35
-                  bg-gradient-to-b
-                  from-emerald-400/10
-                  to-black/30
-                  shadow-[0_0_28px_rgba(16,185,129,0.20)]
+                  absolute inset-0 rounded-[25px]
+                  border border-emerald-300/30
+                  bg-gradient-to-br
+                  from-emerald-300/[0.10]
+                  to-transparent
+                  shadow-[0_0_25px_rgba(16,185,129,0.18)]
+                "
+              />
+
+              {/* Inner chart */}
+              <div
+                className="
+                  absolute inset-[12px]
+                  overflow-hidden rounded-[17px]
+                  border border-emerald-300/15
+                  bg-[#032b27]/80
                 "
               >
+                <svg
+                  viewBox="0 0 120 100"
+                  className="h-full w-full"
+                  preserveAspectRatio="none"
+                >
+                  <defs>
+                    <linearGradient
+                      id="heroBars"
+                      x1="0"
+                      y1="1"
+                      x2="0"
+                      y2="0"
+                    >
+                      <stop offset="0%" stopColor="#059669" />
+                      <stop offset="100%" stopColor="#6ee7b7" />
+                    </linearGradient>
 
-                {/* Phone inner */}
-                <div className="absolute inset-[7px] overflow-hidden rounded-[14px] border border-emerald-300/10 bg-[#052d27]">
+                    <filter
+                      id="heroGlow"
+                      x="-50%"
+                      y="-50%"
+                      width="200%"
+                      height="200%"
+                    >
+                      <feGaussianBlur
+                        stdDeviation="2"
+                        result="blur"
+                      />
 
-                  {/* Mini chart bars */}
-                  <div className="absolute inset-x-2 bottom-4 top-5 flex items-end justify-between gap-1">
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
 
-                    {[30, 44, 35, 61, 48, 78, 58, 92].map(
-                      (height, index) => (
-                        <div
-                          key={index}
-                          className="
-                            w-full
-                            rounded-t-[3px]
-                            bg-gradient-to-t
-                            from-emerald-700
-                            to-emerald-300
-                            opacity-80
-                          "
-                          style={{ height: `${height}%` }}
-                        />
-                      )
-                    )}
-
-                  </div>
-
-                  {/* Rising line */}
-                  <svg
-                    className="absolute inset-0 h-full w-full"
-                    viewBox="0 0 100 140"
-                    preserveAspectRatio="none"
-                  >
-                    <polyline
-                      points="7,108 18,91 30,99 43,68 55,76 68,48 80,54 94,20"
-                      fill="none"
+                  {/* Grid */}
+                  {[20, 40, 60, 80].map((y) => (
+                    <line
+                      key={`h-${y}`}
+                      x1="0"
+                      y1={y}
+                      x2="120"
+                      y2={y}
                       stroke="#6ee7b7"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                      strokeOpacity="0.08"
+                      strokeWidth="1"
                     />
+                  ))}
 
-                    <circle
-                      cx="94"
-                      cy="20"
-                      r="3"
-                      fill="#a7f3d0"
+                  {[20, 40, 60, 80, 100].map((x) => (
+                    <line
+                      key={`v-${x}`}
+                      x1={x}
+                      y1="0"
+                      x2={x}
+                      y2="100"
+                      stroke="#6ee7b7"
+                      strokeOpacity="0.08"
+                      strokeWidth="1"
                     />
-                  </svg>
+                  ))}
 
-                </div>
+                  {/* Bars */}
+                  {[28, 42, 34, 58, 47, 68, 56, 78].map((h, i) => (
+                    <rect
+                      key={i}
+                      x={i * 13 + 5}
+                      y={100 - h}
+                      width="7"
+                      height={h}
+                      rx="1.5"
+                      fill="url(#heroBars)"
+                      opacity="0.55"
+                    />
+                  ))}
+
+                  {/* Line */}
+                  <polyline
+                    points="4,83 19,66 34,73 49,46 64,54 79,34 94,43 111,13"
+                    fill="none"
+                    stroke="#6ee7b7"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    filter="url(#heroGlow)"
+                  />
+
+                  {/* End point */}
+                  <circle
+                    cx="111"
+                    cy="13"
+                    r="3"
+                    fill="#a7f3d0"
+                  />
+                </svg>
               </div>
 
-              {/* MT5 floating badge */}
+              {/* MT5 badge */}
               <div
                 className="
-                  absolute
-                  left-0
-                  top-3
-                  rotate-[-5deg]
-                  rounded-xl
-                  border
-                  border-emerald-200/30
-                  bg-gradient-to-br
-                  from-emerald-300
-                  to-emerald-600
-                  px-2
-                  py-1
-                  text-[9px]
-                  font-extrabold
-                  text-white
-                  shadow-[0_5px_18px_rgba(16,185,129,0.35)]
+                  absolute -left-2 top-2
+                  -rotate-6 rounded-full
+                  bg-gradient-to-br from-emerald-300 to-emerald-500
+                  px-2.5 py-1.5
+                  text-[9px] font-extrabold text-white
+                  shadow-[0_5px_14px_rgba(16,185,129,0.35)]
                 "
               >
                 MT5
               </div>
 
-              {/* MT4 floating badge */}
+              {/* MT4 badge */}
               <div
                 className="
-                  absolute
-                  right-[-2px]
-                  top-[45px]
-                  rotate-[6deg]
-                  rounded-xl
-                  border
-                  border-sky-200/30
-                  bg-gradient-to-br
-                  from-sky-400
-                  to-blue-600
-                  px-2
-                  py-1
-                  text-[9px]
-                  font-extrabold
-                  text-white
-                  shadow-[0_5px_18px_rgba(59,130,246,0.30)]
+                  absolute -right-3 top-10
+                  rotate-6 rounded-full
+                  bg-gradient-to-br from-sky-400 to-blue-600
+                  px-2.5 py-1.5
+                  text-[9px] font-extrabold text-white
+                  shadow-[0_5px_14px_rgba(59,130,246,0.35)]
                 "
               >
                 MT4
@@ -324,50 +331,36 @@ export const CopierLeaderboard = () => {
               {/* Sync button */}
               <div
                 className="
-                  absolute
-                  bottom-1
-                  left-1/2
-                  flex
-                  h-10
-                  w-10
-                  -translate-x-1/2
-                  items-center
-                  justify-center
+                  absolute -bottom-1 left-1/2
+                  flex h-9 w-9 -translate-x-1/2
+                  items-center justify-center
                   rounded-full
-                  border
-                  border-emerald-200/40
-                  bg-gradient-to-br
-                  from-emerald-300
-                  to-emerald-600
-                  shadow-[0_5px_20px_rgba(16,185,129,0.45)]
+                  border border-emerald-200/40
+                  bg-gradient-to-br from-emerald-300 to-emerald-500
+                  shadow-[0_5px_18px_rgba(16,185,129,0.45)]
                 "
               >
-                <RefreshCw className="h-5 w-5 text-white" />
+                <RefreshCw className="h-4.5 w-4.5 text-white" />
               </div>
-
             </div>
 
-            {/* Text */}
+            {/* TEXT CONTENT */}
             <div className="min-w-0 flex-1">
 
-              <div className="mb-1.5 flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
 
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
-
-                <span className="text-[9px] sm:text-[10px] font-bold tracking-[0.08em] text-emerald-200/80">
-                  AUTOMATED COPY TRADING
+                <span className="text-[9px] sm:text-[11px] font-bold uppercase tracking-wide text-emerald-200/80">
+                  Automated Copy Trading
                 </span>
-
               </div>
 
               <h2
                 className="
-                  text-[25px]
-                  font-black
-                  leading-[0.98]
-                  tracking-[-0.04em]
-                  text-white
-                  sm:text-[32px]
+                  mt-1
+                  text-[24px] leading-[0.98]
+                  sm:text-[30px]
+                  font-black tracking-tight text-white
                 "
               >
                 Automate Your{" "}
@@ -376,154 +369,141 @@ export const CopierLeaderboard = () => {
                 </span>
               </h2>
 
-              <p className="mt-2 max-w-[330px] text-[10px] leading-[1.45] text-emerald-100/65 sm:text-xs">
-                Connect your real MT5 or MT4 account and let verified signals
-                execute automatically.
+              <p
+                className="
+                  mt-2
+                  max-w-[470px]
+                  text-[10px] leading-[1.45]
+                  sm:text-[12px]
+                  text-emerald-50/65
+                "
+              >
+                Connect your real MT5 or MT4 account and let
+                verified signals execute automatically.
               </p>
-
             </div>
-
           </div>
 
-          {/* Features */}
+          {/* FEATURES ROW */}
           <div
             className="
-              mt-3
-              grid
-              grid-cols-3
-              overflow-hidden
-              rounded-xl
-              border
-              border-emerald-200/15
-              bg-black/10
+              mt-3 grid grid-cols-3
+              overflow-hidden rounded-2xl
+              border border-emerald-300/15
+              bg-black/[0.08]
             "
           >
+            <div className="flex items-center justify-center gap-1.5 py-2">
+              <Zap className="h-4 w-4 text-emerald-300" />
 
-            <div className="flex items-center justify-center gap-1.5 px-1 py-2.5">
-              <Zap className="h-4 w-4 shrink-0 text-emerald-300" />
-              <span className="text-[9px] font-semibold text-emerald-50/75 sm:text-[10px]">
+              <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-50/75">
                 Auto Copy
               </span>
             </div>
 
-            <div className="flex items-center justify-center gap-1.5 border-x border-emerald-200/10 px-1 py-2.5">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-300" />
-              <span className="text-[9px] font-semibold text-emerald-50/75 sm:text-[10px]">
+            <div className="flex items-center justify-center gap-1.5 border-x border-emerald-300/15 py-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+
+              <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-50/75">
                 Secure
               </span>
             </div>
 
-            <div className="flex items-center justify-center gap-1.5 px-1 py-2.5">
-              <BarChart3 className="h-4 w-4 shrink-0 text-emerald-300" />
-              <span className="text-[9px] font-semibold text-emerald-50/75 sm:text-[10px]">
+            <div className="flex items-center justify-center gap-1.5 py-2">
+              <BarChart3 className="h-4 w-4 text-emerald-300" />
+
+              <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-50/75">
                 Performance
               </span>
             </div>
-
           </div>
 
-          {/* Compact information strip */}
+          {/* ACCOUNT REQUIREMENT MINI BAR */}
           <div
             className="
-              mt-2
-              flex
-              items-center
-              justify-center
-              gap-3
-              rounded-xl
-              border
-              border-emerald-300/20
-              bg-emerald-400/5
-              px-2
-              py-2
-              sm:gap-6
+              mt-2.5 grid grid-cols-2
+              overflow-hidden rounded-2xl
+              border border-emerald-300/15
+              bg-black/[0.08]
             "
           >
+            <div className="flex items-center justify-center gap-2 py-2">
 
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
+              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-300" />
 
-              <div>
-                <div className="text-[8px] font-bold text-emerald-100 sm:text-[9px]">
+              <div className="min-w-0">
+                <div className="text-[9px] sm:text-[11px] font-bold text-emerald-50">
                   REAL ACCOUNT
                 </div>
 
-                <div className="text-[7px] text-emerald-100/50 sm:text-[8px]">
+                <div className="text-[7px] sm:text-[9px] text-emerald-100/45">
                   MT5 / MT4 ONLY
                 </div>
               </div>
             </div>
 
-            <div className="h-7 w-px bg-emerald-200/15" />
+            <div className="flex items-center justify-center gap-2 border-l border-emerald-300/15 py-2">
 
-            <div className="flex items-center gap-1.5">
-              <DollarSign className="h-3.5 w-3.5 text-emerald-300" />
+              <DollarSign className="h-4 w-4 shrink-0 text-emerald-300" />
 
-              <div>
-                <div className="text-[8px] font-bold text-emerald-100 sm:text-[9px]">
+              <div className="min-w-0">
+                <div className="text-[9px] sm:text-[11px] font-bold text-emerald-50">
                   $100 MINIMUM
                 </div>
 
-                <div className="text-[7px] text-emerald-100/50 sm:text-[8px]">
+                <div className="text-[7px] sm:text-[9px] text-emerald-100/45">
                   UNLIMITED MAXIMUM
                 </div>
               </div>
             </div>
-
           </div>
 
-          {/* CTA */}
+          {/* CONNECT BUTTON */}
           <Button
             type="button"
             onClick={() => setConnectOpen(true)}
             className="
-              relative
-              mt-3
-              h-12
-              w-full
-              rounded-full
-              border
-              border-emerald-200/20
+              relative mt-2.5
+              h-11 sm:h-12
+              w-full rounded-full
+              border border-emerald-200/20
               bg-gradient-to-r
               from-emerald-400
               via-emerald-500
-              to-teal-500
-              text-sm
-              font-extrabold
+              to-teal-400
               text-white
-              shadow-[0_7px_24px_rgba(16,185,129,0.30)]
-              hover:from-emerald-300
-              hover:via-emerald-400
-              hover:to-teal-400
-              sm:h-13
-              sm:text-base
+              text-xs sm:text-sm
+              font-extrabold
+              shadow-[0_7px_20px_rgba(16,185,129,0.28)]
+              hover:brightness-105
+              active:scale-[0.99]
+              transition-all
             "
           >
-            <Link2 className="mr-2 h-4.5 w-4.5" />
+            <Link2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
 
             Connect MT5 / MT4
 
-            <ChevronRight className="ml-2 h-5 w-5" />
+            <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
 
-          {/* Footer reassurance */}
-          <div className="mt-2 flex items-center justify-center gap-2 text-[8px] text-emerald-100/35 sm:text-[9px]">
+          {/* FOOTER MICRO TEXT */}
+          <div className="mt-1.5 flex items-center justify-center gap-2 text-[7px] sm:text-[9px] text-emerald-100/35">
             <LockKeyhole className="h-3 w-3" />
+
             <span>Secure connection</span>
 
-            <span className="text-emerald-200/20">•</span>
+            <span className="text-emerald-100/20">•</span>
 
             <span>Takes less than 2 minutes</span>
           </div>
-
         </div>
       </div>
 
-      {/* ========================================================= */}
-      {/* IMPORTANT REQUIREMENTS                                   */}
-      {/* ========================================================= */}
-
-      <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-emerald-500/10 to-card p-4 shadow-sm sm:p-5">
+      {/* =========================================================
+          IMPORTANT REQUIREMENTS
+          ========================================================= */}
+      <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-emerald-500/10 to-card p-4 sm:p-5 shadow-sm">
 
         <div className="flex items-start justify-between gap-3">
 
@@ -536,31 +516,29 @@ export const CopierLeaderboard = () => {
               </div>
 
               <div>
-                <h3 className="text-sm font-bold text-foreground sm:text-base">
+                <h3 className="font-bold text-sm sm:text-base text-foreground">
                   Important Requirements
                 </h3>
 
-                <p className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
                   Please read before connecting your account
                 </p>
               </div>
 
             </div>
-
           </div>
 
           <Badge
             variant="secondary"
-            className="shrink-0 bg-amber-500/15 text-[9px] font-semibold text-amber-600 dark:text-amber-400 sm:text-[10px]"
+            className="shrink-0 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9px] sm:text-[10px] font-semibold"
           >
             Required
           </Badge>
-
         </div>
 
         <div className="mt-4 space-y-2.5">
 
-          {/* BALANCE */}
+          {/* MINIMUM / MAXIMUM BALANCE */}
           <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/60 p-3">
 
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -569,13 +547,15 @@ export const CopierLeaderboard = () => {
 
             <div className="min-w-0">
 
-              <div className="text-xs font-bold text-foreground sm:text-sm">
+              <div className="text-xs sm:text-sm font-bold text-foreground">
                 Account Balance — $100 Minimum, Unlimited Maximum
               </div>
 
-              <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]">
+              <p className="mt-0.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
                 A minimum account balance of{" "}
-                <span className="font-semibold text-foreground">$100</span>{" "}
+                <span className="font-semibold text-foreground">
+                  $100
+                </span>{" "}
                 is required. There is{" "}
                 <span className="font-semibold text-foreground">
                   no maximum balance limit
@@ -584,7 +564,6 @@ export const CopierLeaderboard = () => {
               </p>
 
             </div>
-
           </div>
 
           {/* PROFIT SHARE */}
@@ -596,11 +575,11 @@ export const CopierLeaderboard = () => {
 
             <div className="min-w-0">
 
-              <div className="text-xs font-bold text-foreground sm:text-sm">
+              <div className="text-xs sm:text-sm font-bold text-foreground">
                 Profit Share — 35%
               </div>
 
-              <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]">
+              <p className="mt-0.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
                 <span className="font-semibold text-foreground">
                   35% of generated profits
                 </span>{" "}
@@ -612,7 +591,6 @@ export const CopierLeaderboard = () => {
               </p>
 
             </div>
-
           </div>
 
           {/* TELEGRAM UPDATES */}
@@ -624,11 +602,11 @@ export const CopierLeaderboard = () => {
 
             <div className="min-w-0">
 
-              <div className="text-xs font-bold text-foreground sm:text-sm">
+              <div className="text-xs sm:text-sm font-bold text-foreground">
                 Automatic Profit Updates
               </div>
 
-              <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]">
+              <p className="mt-0.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
                 Our{" "}
                 <span className="font-semibold text-foreground">
                   team bot will automatically send your profit and performance
@@ -638,7 +616,6 @@ export const CopierLeaderboard = () => {
               </p>
 
             </div>
-
           </div>
 
           {/* TELEGRAM VERIFICATION */}
@@ -650,11 +627,11 @@ export const CopierLeaderboard = () => {
 
             <div className="min-w-0">
 
-              <div className="text-xs font-bold text-foreground sm:text-sm">
+              <div className="text-xs sm:text-sm font-bold text-foreground">
                 Telegram Verification is Required
               </div>
 
-              <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]">
+              <p className="mt-0.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
                 After submitting your copy trading request, a verification
                 popup will appear. You{" "}
                 <span className="font-semibold text-foreground">
@@ -668,10 +645,9 @@ export const CopierLeaderboard = () => {
               </p>
 
             </div>
-
           </div>
 
-          {/* NOT ACCEPTED */}
+          {/* ACCOUNT TYPES NOT ACCEPTED */}
           <div className="flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/5 p-3">
 
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
@@ -680,11 +656,11 @@ export const CopierLeaderboard = () => {
 
             <div className="min-w-0">
 
-              <div className="text-xs font-bold text-foreground sm:text-sm">
+              <div className="text-xs sm:text-sm font-bold text-foreground">
                 Account Types Not Accepted
               </div>
 
-              <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]">
+              <p className="mt-0.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
                 <span className="font-semibold text-rose-600 dark:text-rose-400">
                   Demo, Cent, Contest, and Bonus accounts
                 </span>{" "}
@@ -693,7 +669,6 @@ export const CopierLeaderboard = () => {
               </p>
 
             </div>
-
           </div>
 
           {/* MT5 DETAILS */}
@@ -705,11 +680,11 @@ export const CopierLeaderboard = () => {
 
             <div className="min-w-0">
 
-              <div className="text-xs font-bold text-foreground sm:text-sm">
+              <div className="text-xs sm:text-sm font-bold text-foreground">
                 Provide Correct MT5 Details
               </div>
 
-              <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]">
+              <p className="mt-0.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
                 Make sure your{" "}
                 <span className="font-semibold text-foreground">
                   MT5 Login, Broker Name, Broker Server, and Trading Password
@@ -719,12 +694,10 @@ export const CopierLeaderboard = () => {
               </p>
 
             </div>
-
           </div>
-
         </div>
 
-        {/* WARNING */}
+        {/* IMPORTANT WARNING */}
         <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
 
           <div className="flex items-start gap-2">
@@ -733,26 +706,30 @@ export const CopierLeaderboard = () => {
               <span className="text-sm">⚠️</span>
             </div>
 
-            <p className="text-[10px] leading-relaxed text-amber-700 dark:text-amber-300 sm:text-[11px]">
-              <span className="font-bold">Important:</span> After submitting
-              your request, you{" "}
+            <p className="text-[10px] sm:text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+
+              <span className="font-bold">
+                Important:
+              </span>{" "}
+
+              After submitting your request, you{" "}
+
               <span className="font-bold">
                 MUST start the Telegram bot
               </span>{" "}
+
               from the verification popup. Your request cannot be fully
               verified until the bot is started.
+
             </p>
 
           </div>
-
         </div>
-
       </div>
 
-      {/* ========================================================= */}
-      {/* LEADERBOARD HEADER                                       */}
-      {/* ========================================================= */}
-
+      {/* =========================================================
+          SECTION DIVIDER
+          ========================================================= */}
       <div className="relative my-5">
 
         <div className="absolute inset-0 flex items-center">
@@ -761,7 +738,7 @@ export const CopierLeaderboard = () => {
 
         <div className="relative flex justify-center">
 
-          <span className="flex items-center gap-1.5 bg-background px-3 text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+          <span className="bg-background px-3 text-xs font-extrabold tracking-wider uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
 
             <BarChart3 className="h-3.5 w-3.5" />
 
@@ -770,34 +747,36 @@ export const CopierLeaderboard = () => {
           </span>
 
         </div>
-
       </div>
 
-      {/* ========================================================= */}
-      {/* LOADING / EMPTY / LEADERBOARD                           */}
-      {/* ========================================================= */}
-
+      {/* =========================================================
+          LEADERBOARD
+          ========================================================= */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
+        <div className="flex justify-center items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : !visibleStats || visibleStats.length === 0 ? (
-        <div className="py-20 text-center">
 
-          <p className="text-lg text-muted-foreground">
+        <div className="text-center py-20">
+
+          <p className="text-muted-foreground text-lg">
             No copier accounts published yet
           </p>
 
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm mt-1">
             Connect your MT5 account and check back once it's live.
           </p>
 
         </div>
+
       ) : (
+
         <div
           id="copier-leaderboard-list"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
         >
+
           {visibleStats.map((s) => {
 
             const rejectedMessage = `Hello, my name is ${
@@ -822,12 +801,12 @@ export const CopierLeaderboard = () => {
                       setSelected(s);
                     }
                   }}
-                  className="card-3d-hover cursor-pointer rounded-2xl border border-emerald-500/20 bg-card p-4 text-left shadow-sm"
+                  className="text-left rounded-2xl border border-emerald-500/20 bg-card p-4 shadow-sm card-3d-hover cursor-pointer"
                 >
 
                   <div className="flex items-start justify-between gap-2">
 
-                    <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
 
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                         <User className="h-4.5 w-4.5" />
@@ -835,20 +814,22 @@ export const CopierLeaderboard = () => {
 
                       <div className="min-w-0">
 
-                        <div className="truncate text-sm font-bold">
+                        <div className="font-bold text-sm truncate">
                           {s.name || "Copier User"}
                         </div>
 
                         <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+
                           CONNECTED
+
                         </span>
 
                       </div>
-
                     </div>
 
-                    <div className="min-w-0 shrink-0 text-right">
+                    <div className="text-right shrink-0 min-w-0">
 
                       <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
 
@@ -858,9 +839,9 @@ export const CopierLeaderboard = () => {
 
                       </div>
 
-                      <div className="mt-0.5 flex items-center justify-end gap-1 truncate text-[10px] font-medium text-foreground">
+                      <div className="flex items-center justify-end gap-1 text-[10px] font-medium text-foreground mt-0.5 truncate">
 
-                        <Database className="h-3 w-3 shrink-0 text-emerald-500" />
+                        <Database className="h-3 w-3 text-emerald-500 shrink-0" />
 
                         <span className="truncate">
                           {brokerLabel(s)}
@@ -869,14 +850,13 @@ export const CopierLeaderboard = () => {
                       </div>
 
                     </div>
-
                   </div>
 
                   <div className="mt-3 grid grid-cols-3 divide-x divide-border/50 rounded-xl bg-muted/30 py-2.5">
 
                     <div className="flex flex-col items-center px-1">
 
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-500">
+                      <span className="flex items-center gap-1 text-emerald-500 text-[10px] font-semibold">
 
                         <TrendingUp className="h-3 w-3" />
 
@@ -884,7 +864,7 @@ export const CopierLeaderboard = () => {
 
                       </span>
 
-                      <span className="mt-0.5 text-sm font-bold">
+                      <span className="text-sm font-bold mt-0.5">
                         +{fmtPercent(s.profit_percent)}
                       </span>
 
@@ -892,7 +872,7 @@ export const CopierLeaderboard = () => {
 
                     <div className="flex flex-col items-center px-1">
 
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-destructive">
+                      <span className="flex items-center gap-1 text-destructive text-[10px] font-semibold">
 
                         <TrendingDown className="h-3 w-3" />
 
@@ -900,7 +880,7 @@ export const CopierLeaderboard = () => {
 
                       </span>
 
-                      <span className="mt-0.5 text-sm font-bold">
+                      <span className="text-sm font-bold mt-0.5">
                         -{fmtPercent(s.loss_percent)}
                       </span>
 
@@ -908,7 +888,7 @@ export const CopierLeaderboard = () => {
 
                     <div className="flex flex-col items-center px-1">
 
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-primary">
+                      <span className="flex items-center gap-1 text-primary text-[10px] font-semibold">
 
                         <Gauge className="h-3 w-3" />
 
@@ -916,7 +896,7 @@ export const CopierLeaderboard = () => {
 
                       </span>
 
-                      <span className="mt-0.5 truncate text-sm font-bold">
+                      <span className="text-sm font-bold mt-0.5 truncate">
                         {s.risk_reward_ratio || "—"}
                       </span>
 
@@ -924,7 +904,7 @@ export const CopierLeaderboard = () => {
 
                   </div>
 
-                  <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                  <p className="mt-2 text-[10px] text-muted-foreground text-center">
                     Connected since {format(new Date(s.created_at), "PP")}
                   </p>
 
@@ -946,10 +926,10 @@ export const CopierLeaderboard = () => {
                       setSelected(s);
                     }
                   }}
-                  className="card-3d-hover flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-amber-500/20 bg-card p-4 text-left shadow-sm"
+                  className="text-left rounded-2xl border border-amber-500/20 bg-card p-4 shadow-sm card-3d-hover cursor-pointer flex items-center justify-between gap-3"
                 >
 
-                  <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
 
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
                       <User className="h-4.5 w-4.5" />
@@ -957,7 +937,7 @@ export const CopierLeaderboard = () => {
 
                     <div className="min-w-0">
 
-                      <div className="truncate text-sm font-bold">
+                      <div className="font-bold text-sm truncate">
                         {s.name || "Copier User"}
                       </div>
 
@@ -969,12 +949,11 @@ export const CopierLeaderboard = () => {
 
                       </span>
 
-                      <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
                         Broker: {brokerPlain(s)} • Waiting for verification.
                       </p>
 
                     </div>
-
                   </div>
 
                   <Button
@@ -985,10 +964,13 @@ export const CopierLeaderboard = () => {
                       e.stopPropagation();
                       setSelected(s);
                     }}
-                    className="h-8 shrink-0 border-amber-500/30 text-[11px] text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                    className="h-8 shrink-0 text-[11px] border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
                   >
+
                     View Request
-                    <ChevronRight className="ml-0.5 h-3 w-3" />
+
+                    <ChevronRight className="h-3 w-3 ml-0.5" />
+
                   </Button>
 
                 </div>
@@ -1008,12 +990,12 @@ export const CopierLeaderboard = () => {
                     setSelected(s);
                   }
                 }}
-                className="card-3d-hover cursor-pointer rounded-2xl border border-rose-500/20 bg-card p-4 text-left shadow-sm"
+                className="text-left rounded-2xl border border-rose-500/20 bg-card p-4 shadow-sm card-3d-hover cursor-pointer"
               >
 
                 <div className="flex items-start justify-between gap-2">
 
-                  <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
 
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400">
                       <User className="h-4.5 w-4.5" />
@@ -1021,7 +1003,7 @@ export const CopierLeaderboard = () => {
 
                     <div className="min-w-0">
 
-                      <div className="truncate text-sm font-bold">
+                      <div className="font-bold text-sm truncate">
                         {s.name || "Copier User"}
                       </div>
 
@@ -1033,14 +1015,13 @@ export const CopierLeaderboard = () => {
 
                       </span>
 
-                      <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
                         Broker: {brokerPlain(s)} • Request rejected.
                       </p>
 
                     </div>
 
                   </div>
-
                 </div>
 
                 <a
@@ -1048,30 +1029,35 @@ export const CopierLeaderboard = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-rose-500/10 py-2 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-500/15 dark:text-rose-400"
+                  className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/15 text-rose-600 dark:text-rose-400 text-xs font-semibold py-2 transition-colors"
                 >
+
                   <Send className="h-3.5 w-3.5" />
+
                   Ask Reason (Telegram)
+
                 </a>
 
               </div>
             );
           })}
+
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* DIALOG MODAL                                             */}
-      {/* ========================================================= */}
-
+      {/* =========================================================
+          DIALOG MODAL
+          ========================================================= */}
       <Dialog
         open={!!selected}
         onOpenChange={(open) => !open && setSelected(null)}
       >
+
         <DialogContent className="sm:max-w-sm">
 
           {selected && (
             <>
+
               <DialogHeader>
 
                 <div className="flex items-center gap-2">
@@ -1080,9 +1066,15 @@ export const CopierLeaderboard = () => {
                     <User className="h-4 w-4" />
                   </div>
 
-                  <DialogTitle className="text-base">
-                    {selected.name || "Copier User"}
-                  </DialogTitle>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">
+                      MT5 / MT4 Copier
+                    </div>
+
+                    <DialogTitle className="text-base">
+                      {selected.name || "Copier User"}
+                    </DialogTitle>
+                  </div>
 
                 </div>
 
@@ -1090,9 +1082,9 @@ export const CopierLeaderboard = () => {
 
               <div className="space-y-3">
 
-                <div className="flex items-center justify-between rounded-lg bg-muted/40 p-2.5 text-xs">
+                <div className="rounded-lg bg-muted/40 p-2.5 flex items-center justify-between text-xs">
 
-                  <span className="font-medium text-muted-foreground">
+                  <span className="text-muted-foreground font-medium">
                     Broker
                   </span>
 
@@ -1114,7 +1106,7 @@ export const CopierLeaderboard = () => {
 
                     </span>
 
-                    <p className="mt-1.5 text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-1.5">
                       Your account is still waiting for admin verification.
                       We'll update this as soon as it's reviewed.
                     </p>
@@ -1129,7 +1121,7 @@ export const CopierLeaderboard = () => {
 
                       <div className="rounded-lg bg-muted/40 p-3">
 
-                        <div className="flex items-center gap-1 text-xs font-semibold text-emerald-500">
+                        <div className="flex items-center gap-1 text-emerald-500 text-xs font-semibold">
 
                           <TrendingUp className="h-3.5 w-3.5" />
 
@@ -1149,7 +1141,7 @@ export const CopierLeaderboard = () => {
 
                       <div className="rounded-lg bg-muted/40 p-3">
 
-                        <div className="flex items-center gap-1 text-xs font-semibold text-destructive">
+                        <div className="flex items-center gap-1 text-destructive text-xs font-semibold">
 
                           <TrendingDown className="h-3.5 w-3.5" />
 
@@ -1171,7 +1163,7 @@ export const CopierLeaderboard = () => {
 
                     <div className="rounded-lg bg-muted/40 p-3">
 
-                      <div className="flex items-center gap-1 text-xs font-semibold text-primary">
+                      <div className="flex items-center gap-1 text-primary text-xs font-semibold">
 
                         <Gauge className="h-3.5 w-3.5" />
 
@@ -1189,7 +1181,7 @@ export const CopierLeaderboard = () => {
 
                 )}
 
-                <p className="text-center text-[11px] text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground text-center">
 
                   {selected.status === "pending"
                     ? "Submitted"
@@ -1207,10 +1199,9 @@ export const CopierLeaderboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ========================================================= */}
-      {/* CONNECT DIALOG                                           */}
-      {/* ========================================================= */}
-
+      {/* =========================================================
+          CONNECT DIALOG
+          ========================================================= */}
       <MT5CopierConnectDialog
         open={connectOpen}
         onOpenChange={setConnectOpen}
@@ -1224,13 +1215,21 @@ export const CopierLeaderboard = () => {
         }
       />
 
-      {/* ========================================================= */}
-      {/* BOTTOM NAVIGATION                                        */}
-      {/* ========================================================= */}
+      {/* =========================================================
+          BOTTOM NAVIGATION
+          ========================================================= */}
+      <div
+        className="
+          fixed bottom-0 left-0 right-0 z-50
+          bg-background/95 backdrop-blur
+          border-t border-border/40
+          px-4 py-2
+          flex items-center justify-between
+          max-w-md mx-auto sm:max-w-xl
+        "
+      >
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-w-md items-center justify-between border-t border-border/40 bg-background/95 px-4 py-2 backdrop-blur sm:max-w-xl">
-
-        <button className="flex flex-col items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+        <button className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 gap-0.5">
 
           <LineChart className="h-5 w-5" />
 
@@ -1238,11 +1237,11 @@ export const CopierLeaderboard = () => {
             Signals
           </span>
 
-          <span className="mt-0.5 h-1 w-6 rounded-full bg-emerald-500" />
+          <span className="h-1 w-6 bg-emerald-500 rounded-full mt-0.5" />
 
         </button>
 
-        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
 
           <BarChart3 className="h-5 w-5" />
 
@@ -1252,7 +1251,7 @@ export const CopierLeaderboard = () => {
 
         </button>
 
-        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
 
           <FileText className="h-5 w-5" />
 
@@ -1262,7 +1261,7 @@ export const CopierLeaderboard = () => {
 
         </button>
 
-        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
 
           <Wallet className="h-5 w-5" />
 
@@ -1272,7 +1271,7 @@ export const CopierLeaderboard = () => {
 
         </button>
 
-        <button className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-foreground">
+        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
 
           <UserCheck className="h-5 w-5" />
 
