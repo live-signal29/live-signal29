@@ -107,89 +107,112 @@ export const CopierLeaderboard = () => {
   return (
     <div className="pb-24">
       {/* =========================================================
-          REDESIGNED PROFESSIONAL HERO BANNER (Compact & Sleek)
+          ULTRA-PROFESSIONAL REDESIGNED HERO BANNER
       ========================================================= */}
-      <div className="relative mb-4 overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-[#022f27] via-[#033f31] to-[#011c17] p-4 shadow-xl sm:p-5">
-        {/* Background Glow Effects */}
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-400/15 blur-[50px]" />
-        <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-cyan-400/10 blur-[50px]" />
+      <div className="relative mb-4 overflow-hidden rounded-[24px] border border-emerald-500/30 bg-gradient-to-br from-[#022f27] via-[#033a2f] to-[#011c17] p-4 shadow-[0_12px_35px_rgba(2,47,39,0.35)] sm:p-5">
+        {/* Ambient Glows */}
+        <div className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-emerald-400/20 blur-[55px]" />
+        <div className="pointer-events-none absolute -bottom-12 -left-12 h-44 w-44 rounded-full bg-cyan-400/10 blur-[55px]" />
 
-        {/* Subtle Grid Overlay */}
+        {/* Tech Grid Pattern */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.08]"
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(110,231,183,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.5) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
+              "linear-gradient(rgba(110,231,183,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,183,0.6) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
           }}
         />
 
         <div className="relative">
-          {/* Top Badge & Status */}
+          {/* Top Status & Platform Badges */}
           <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-extrabold tracking-wider text-emerald-300">
-                PRO COPY TRADING
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 backdrop-blur-md">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+              <span className="text-[10px] font-extrabold tracking-wider text-emerald-200">
+                AI COPY TRADING PRO
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 border border-emerald-500/20">
-              <span className="text-[10px] font-bold text-emerald-300">MT5</span>
-              <span className="text-[10px] text-emerald-500/50">/</span>
-              <span className="text-[10px] font-bold text-sky-300">MT4</span>
+            <div className="flex items-center gap-1 rounded-full bg-black/40 px-3 py-1 border border-emerald-500/20 backdrop-blur-md">
+              <span className="text-[10px] font-extrabold text-emerald-300">MT5</span>
+              <span className="text-[10px] text-emerald-500/40">•</span>
+              <span className="text-[10px] font-extrabold text-sky-300">MT4</span>
             </div>
           </div>
 
-          {/* Center Title & Short Info */}
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
+          {/* Main Hero Body with Mini Live Chart Graphic */}
+          <div className="mt-4 grid grid-cols-[1fr_auto] items-center gap-3">
+            <div className="min-w-0">
               <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">
-                Automate Your <span className="text-emerald-400">Trading</span>
+                Automate Your <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Trading Signals</span>
               </h1>
               <p className="mt-1 text-[11px] leading-relaxed text-emerald-100/70 sm:text-xs">
-                Connect your real MT5/MT4 account securely and execute verified signals instantly.
+                Link your official MT5/MT4 account securely and mirror high-winrate signals automatically.
               </p>
             </div>
 
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/20 shadow-inner text-emerald-300">
-              <Zap className="h-6 w-6" />
+            {/* Mini SVG Chart Card Icon */}
+            <div className="relative flex h-16 w-20 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/30 bg-[#012620]/90 p-1.5 shadow-inner">
+              <svg viewBox="0 0 100 50" className="h-full w-full">
+                <defs>
+                  <linearGradient id="miniChartGrad" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#059669" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#34d399" stopOpacity="0.8" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M0 45 L15 32 L30 38 L45 20 L60 25 L75 12 L90 18 L100 5 L100 50 L0 50 Z"
+                  fill="url(#miniChartGrad)"
+                />
+                <path
+                  d="M0 45 L15 32 L30 38 L45 20 L60 25 L75 12 L90 18 L100 5"
+                  fill="none"
+                  stroke="#34d399"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md">
+                <TrendingUp className="h-3 w-3" />
+              </div>
             </div>
           </div>
 
-          {/* Mini Features Badges Row */}
-          <div className="mt-3.5 grid grid-cols-3 gap-2">
-            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/20 py-2 px-1 text-center">
+          {/* Feature Highlights Grid */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/25 py-2 px-1.5 backdrop-blur-sm">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <span className="text-[10px] font-semibold text-emerald-100 truncate">100% Secure</span>
+              <span className="text-[10px] font-bold text-emerald-100 truncate">100% Secure</span>
             </div>
-            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/20 py-2 px-1 text-center">
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/25 py-2 px-1.5 backdrop-blur-sm">
               <DollarSign className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <span className="text-[10px] font-semibold text-emerald-100 truncate">$100 Min</span>
+              <span className="text-[10px] font-bold text-emerald-100 truncate">$100 Min</span>
             </div>
-            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/20 py-2 px-1 text-center">
-              <BarChart3 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <span className="text-[10px] font-semibold text-emerald-100 truncate">Auto Copy</span>
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-black/25 py-2 px-1.5 backdrop-blur-sm">
+              <Zap className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span className="text-[10px] font-bold text-emerald-100 truncate">Instant Sync</span>
             </div>
           </div>
 
-          {/* Connect Action Button */}
+          {/* Premium Connect Button */}
           <Button
             type="button"
             onClick={() => setConnectOpen(true)}
-            className="mt-3.5 h-11 w-full rounded-xl border border-emerald-300/30 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 text-xs font-black text-white shadow-lg shadow-emerald-900/40 hover:from-emerald-400 hover:to-teal-300 sm:h-12 sm:text-sm"
+            className="mt-4 h-12 w-full rounded-xl border border-emerald-300/30 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 text-xs font-black text-white shadow-[0_8px_20px_rgba(16,185,129,0.3)] hover:from-emerald-400 hover:to-teal-300 sm:h-13 sm:text-sm"
           >
             <Link2 className="mr-2 h-4 w-4" />
             <span>Connect MT5 / MT4 Account</span>
             <ChevronRight className="ml-1.5 h-4 w-4" />
           </Button>
 
-          {/* Footer Subtext */}
-          <div className="mt-2 flex items-center justify-center gap-1.5 text-[9px] text-emerald-200/50 sm:text-[10px]">
-            <LockKeyhole className="h-3 w-3" />
-            <span>Encrypted & secure connection</span>
+          {/* Trust Subtext */}
+          <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[9px] text-emerald-200/50 sm:text-[10px]">
+            <LockKeyhole className="h-3 w-3 text-emerald-400" />
+            <span>Encrypted broker connection</span>
             <span>•</span>
-            <span>Takes under 2 mins</span>
+            <span>Setup takes under 2 minutes</span>
           </div>
         </div>
       </div>
