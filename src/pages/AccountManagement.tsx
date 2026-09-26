@@ -235,13 +235,33 @@ const AccountManagement = () => {
       const validated = schema.parse(formData);
       setIsSubmitting(true);
 
-      const { data: inserted, error } = await supabase
-        .from('account_management_applications')
-        .insert([{ ...validated, submission_type: submissionMethod }])
-        .select('id')
-        .single();
+      // Submitted through a SECURITY DEFINER RPC instead of a direct table
+      // insert — direct anon inserts into this table were being rejected
+      // by RLS even with a fully permissive INSERT policy, so this routes
+      // around that instead of depending on it.
+      const v = validated as Record<string, string | undefined>;
+      const { data: newId, error } = await supabase.rpc(
+        'submit_account_management_application',
+        {
+          p_submission_type: submissionMethod,
+          p_name: v.name!,
+          p_whatsapp: v.whatsapp!,
+          p_telegram_username: v.telegram_username,
+          p_preferred_broker: v.preferred_broker,
+          p_platform_type: v.platform_type,
+          p_broker_server: v.broker_server,
+          p_trading_login: v.trading_login,
+          p_trading_password: v.trading_password,
+          p_account_size: v.account_size,
+          p_broker_site_name: v.broker_site_name,
+          p_broker_email: v.broker_email,
+          p_broker_password: v.broker_password,
+          p_note: v.note,
+        }
+      );
 
       if (error) throw error;
+      const inserted = { id: newId as unknown as string };
 
       let telegram_link: string | null = null;
       try {
