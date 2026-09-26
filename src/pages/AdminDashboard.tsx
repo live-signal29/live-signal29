@@ -29,6 +29,7 @@ import {
   Ticket,
   TrendingUp,
   Users,
+  Wallet,
   X,
   Zap,
   Loader2,
@@ -94,6 +95,12 @@ const TelegramPairApprovals = lazyWithRetry(
   () => import("@/components/admin/TelegramPairApprovals")
 );
 
+const PaymentShareManagement = lazyWithRetry(
+  () => import("@/components/admin/PaymentShareManagement")
+);
+
+import AdminGlobalSearch from "@/components/admin/AdminGlobalSearch";
+
 /* =========================================================
    LOADER
 ========================================================= */
@@ -152,6 +159,12 @@ const menuItems = [
     color: "text-yellow-600",
   },
   {
+    id: "payment-share",
+    label: "Payments",
+    icon: Wallet,
+    color: "text-green-600",
+  },
+  {
     id: "performance",
     label: "Performance",
     icon: BarChart3,
@@ -194,6 +207,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState("signals");
+  const [searchHandoff, setSearchHandoff] = useState<{ tab: string; term: string } | null>(null);
 
   const [showSignalForm, setShowSignalForm] = useState(false);
   const [showChartForm, setShowChartForm] = useState(false);
@@ -448,6 +462,16 @@ const AdminDashboard = () => {
 
           </div>
 
+        </div>
+
+        {/* GLOBAL SEARCH */}
+        <div className="border-t px-3 py-2 sm:px-5">
+          <AdminGlobalSearch
+            onNavigate={(tab, term) => {
+              setActiveTab(tab);
+              setSearchHandoff({ tab, term });
+            }}
+          />
         </div>
 
         {/* ===================================================
@@ -750,15 +774,19 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === "users" && (
-            <UserManagement />
+            <UserManagement initialSearch={searchHandoff?.tab === "users" ? searchHandoff.term : undefined} />
           )}
 
           {activeTab === "accounts" && (
-            <AccountApplications />
+            <AccountApplications initialSearch={searchHandoff?.tab === "accounts" ? searchHandoff.term : undefined} />
           )}
 
           {activeTab === "copier" && (
-            <MT5CopierManagement />
+            <MT5CopierManagement initialSearch={searchHandoff?.tab === "copier" ? searchHandoff.term : undefined} />
+          )}
+
+          {activeTab === "payment-share" && (
+            <PaymentShareManagement initialSearch={searchHandoff?.tab === "payment-share" ? searchHandoff.term : undefined} />
           )}
 
           {activeTab === "performance" && (
