@@ -21,6 +21,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  HandCoins,
   Plus,
   Search,
   Send,
@@ -29,7 +30,6 @@ import {
   Ticket,
   TrendingUp,
   Users,
-  Wallet,
   X,
   Zap,
   Loader2,
@@ -95,11 +95,9 @@ const TelegramPairApprovals = lazyWithRetry(
   () => import("@/components/admin/TelegramPairApprovals")
 );
 
-const PaymentShareManagement = lazyWithRetry(
-  () => import("@/components/admin/PaymentShareManagement")
+const ProfitShareManagement = lazyWithRetry(
+  () => import("@/components/admin/ProfitShareManagement")
 );
-
-import AdminGlobalSearch from "@/components/admin/AdminGlobalSearch";
 
 /* =========================================================
    LOADER
@@ -159,16 +157,16 @@ const menuItems = [
     color: "text-yellow-600",
   },
   {
-    id: "payment-share",
-    label: "Payments",
-    icon: Wallet,
-    color: "text-green-600",
-  },
-  {
     id: "performance",
     label: "Performance",
     icon: BarChart3,
     color: "text-indigo-600",
+  },
+  {
+    id: "profit-share",
+    label: "Profit Share",
+    icon: HandCoins,
+    color: "text-emerald-700",
   },
   {
     id: "coupons",
@@ -207,7 +205,6 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState("signals");
-  const [searchHandoff, setSearchHandoff] = useState<{ tab: string; term: string } | null>(null);
 
   const [showSignalForm, setShowSignalForm] = useState(false);
   const [showChartForm, setShowChartForm] = useState(false);
@@ -462,16 +459,6 @@ const AdminDashboard = () => {
 
           </div>
 
-        </div>
-
-        {/* GLOBAL SEARCH */}
-        <div className="border-t px-3 py-2 sm:px-5">
-          <AdminGlobalSearch
-            onNavigate={(tab, term) => {
-              setActiveTab(tab);
-              setSearchHandoff({ tab, term });
-            }}
-          />
         </div>
 
         {/* ===================================================
@@ -774,23 +761,23 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === "users" && (
-            <UserManagement initialSearch={searchHandoff?.tab === "users" ? searchHandoff.term : undefined} />
+            <UserManagement />
           )}
 
           {activeTab === "accounts" && (
-            <AccountApplications initialSearch={searchHandoff?.tab === "accounts" ? searchHandoff.term : undefined} />
+            <AccountApplications />
           )}
 
           {activeTab === "copier" && (
-            <MT5CopierManagement initialSearch={searchHandoff?.tab === "copier" ? searchHandoff.term : undefined} />
-          )}
-
-          {activeTab === "payment-share" && (
-            <PaymentShareManagement initialSearch={searchHandoff?.tab === "payment-share" ? searchHandoff.term : undefined} />
+            <MT5CopierManagement />
           )}
 
           {activeTab === "performance" && (
             <PerformanceManagement />
+          )}
+
+          {activeTab === "profit-share" && (
+            <ProfitShareManagement />
           )}
 
           {activeTab === "coupons" && (

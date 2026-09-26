@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
@@ -10,8 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   TrendingUp, 
   Shield, 
+  ShieldCheck,
   Clock, 
   MessageCircle, 
   FileText, 
@@ -24,7 +32,15 @@ import {
   DollarSign,
   Zap,
   Crown,
-  Star
+  Star,
+  Loader2,
+  Wifi,
+  User,
+  Mail,
+  Building2,
+  Server,
+  Key,
+  Lock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -105,6 +121,70 @@ const AccountManagement = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
 
+  // Set right after a successful submit. The application is saved at this
+  // point, but not yet confirmed — confirmation only happens once the
+  // applicant actually starts the Telegram bot (that's what gives us a
+  // chat_id to message them on automatically, e.g. for profit-share
+  // payment requests later).
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [verified, setVerified] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTelegramTimers = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  // While the "confirm on Telegram" screen is showing, poll for the
+  // applicant having linked (i.e. tapped Start in the bot).
+  useEffect(() => {
+    if (!telegramLink || !applicationId || verified) return;
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("account-management-status", {
+          body: { id: applicationId },
+        });
+        if (data?.success && data?.linked) {
+          setVerified(true);
+        }
+      } catch {
+        // silent — just try again on the next tick
+      }
+    }, 2500);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [telegramLink, applicationId, verified]);
+
+  useEffect(() => {
+    if (!verified) return;
+    toast.success("Telegram linked!", {
+      description: "Your application is confirmed. Our team will reach out shortly.",
+    });
+    closeTimeoutRef.current = setTimeout(() => {
+      setTelegramLink(null);
+      setApplicationId(null);
+      setVerified(false);
+    }, 3000);
+
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verified]);
+
+  useEffect(() => () => clearTelegramTimers(), []);
+
   const handleScroll = () => {
     if (sliderRef.current) {
       const scrollLeft = sliderRef.current.scrollLeft;
@@ -134,26 +214,42 @@ const AccountManagement = () => {
     try {
       const validated = applicationSchema.parse(formData);
       setIsSubmitting(true);
-      
-      const { error } = await supabase
+
+      const { data: inserted, error } = await supabase
         .from('account_management_applications')
-        .insert([validated]);
+        .insert([validated])
+        .select('id')
+        .single();
 
       if (error) throw error;
 
-      supabase.functions
-        .invoke('account-management-notify', { body: validated })
-        .catch((err) => console.error('Notify failed:', err));
+      let telegram_link: string | null = null;
+      try {
+        const { data: notifyResult } = await supabase.functions.invoke(
+          'account-management-notify',
+          { body: { ...validated, applicationId: inserted?.id } }
+        );
+        telegram_link = notifyResult?.telegram_link ?? null;
+      } catch (err) {
+        console.error('Notify failed:', err);
+      }
 
-      toast.success("Application submitted successfully!", {
-        description: "We'll contact you on WhatsApp shortly."
-      });
-      
       setFormData({
         name: "", whatsapp: "", telegram_username: "", email: "", preferred_broker: "",
         platform_type: "", broker_server: "", trading_login: "",
         trading_password: "", account_size: ""
       });
+
+      if (telegram_link && inserted?.id) {
+        // Don't show the generic success toast yet — the application isn't
+        // confirmed until they start the Telegram bot.
+        setApplicationId(inserted.id);
+        setTelegramLink(telegram_link);
+      } else {
+        toast.success("Application submitted successfully!", {
+          description: "We'll contact you on WhatsApp shortly."
+        });
+      }
     } catch (err) {
       if (err instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -345,151 +441,228 @@ const AccountManagement = () => {
 
         {/* Application Form */}
         <section id="apply-form" className="max-w-xl mx-auto pt-2 scroll-mt-20">
-          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl">
-            <CardHeader className="text-center pb-1">
+          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl shadow-slate-900/5 dark:shadow-black/20 overflow-hidden">
+            <CardHeader className="text-center pb-3 border-b border-slate-100 dark:border-slate-800/60 bg-gradient-to-b from-emerald-500/[0.04] to-transparent">
+              <div className="mx-auto mb-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
+                <ShieldCheck className="h-5 w-5 text-white" />
+              </div>
               <CardTitle className="text-lg font-bold">Secure Your Allocation</CardTitle>
               <p className="text-xs text-slate-500 dark:text-slate-400">Submit your trading account details for connection review</p>
             </CardHeader>
             <CardContent className="p-5">
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Full Name</Label>
-                    <Input
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                    />
-                    {errors.name && <p className="text-[10px] text-destructive">{errors.name}</p>}
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <Label className="text-xs">WhatsApp Number <span className="text-red-500">*</span></Label>
-                    <Input
-                      placeholder="e.g., +447911123456"
-                      value={formData.whatsapp}
-                      onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                    />
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                      Use your own country code — e.g. +44 (UK), +1 (US/Canada), +91 (India),
-                      +92 (Pakistan). Don't just enter +92 if that isn't your country.
-                    </p>
-                    {errors.whatsapp && <p className="text-[10px] text-destructive">{errors.whatsapp}</p>}
-                  </div>
-                </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Telegram Username <span className="text-red-500">*</span></Label>
-                  <Input
-                    placeholder="e.g., @aliraza"
-                    value={formData.telegram_username}
-                    onChange={(e) => setFormData({ ...formData, telegram_username: e.target.value })}
-                    className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                  />
-                  {errors.telegram_username && <p className="text-[10px] text-destructive">{errors.telegram_username}</p>}
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs">Email Address</Label>
-                  <Input
-                    type="email"
-                    placeholder="john@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                  />
-                  {errors.email && <p className="text-[10px] text-destructive">{errors.email}</p>}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Preferred Broker</Label>
-                    <Input
-                      placeholder="Exness / XM / IC Markets"
-                      value={formData.preferred_broker}
-                      onChange={(e) => setFormData({ ...formData, preferred_broker: e.target.value })}
-                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                    />
-                    {errors.preferred_broker && <p className="text-[10px] text-destructive">{errors.preferred_broker}</p>}
+                {/* ---------------- Contact Details ---------------- */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <User className="h-3.5 w-3.5" />
+                    Contact Details
                   </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Platform Type</Label>
-                    <Select value={formData.platform_type} onValueChange={(v) => setFormData({ ...formData, platform_type: v })}>
-                      <SelectTrigger className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MT4">MT4</SelectItem>
-                        <SelectItem value="MT5">MT5</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.platform_type && <p className="text-[10px] text-destructive">{errors.platform_type}</p>}
-                  </div>
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Full Name <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <User className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="John Doe"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        />
+                      </div>
+                      {errors.name && <p className="text-[10px] text-destructive">{errors.name}</p>}
+                    </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Broker Server Name</Label>
-                  <Input
-                    placeholder="e.g., Exness-Real11"
-                    value={formData.broker_server}
-                    onChange={(e) => setFormData({ ...formData, broker_server: e.target.value })}
-                    className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                  />
-                  {errors.broker_server && <p className="text-[10px] text-destructive">{errors.broker_server}</p>}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Trading Login (ID)</Label>
-                    <Input
-                      placeholder="8373738"
-                      value={formData.trading_login}
-                      onChange={(e) => setFormData({ ...formData, trading_login: e.target.value.replace(/\D/g, '') })}
-                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                    />
-                    {errors.trading_login && <p className="text-[10px] text-destructive">{errors.trading_login}</p>}
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Email Address <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Mail className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type="email"
+                          placeholder="john@example.com"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        />
+                      </div>
+                      {errors.email && <p className="text-[10px] text-destructive">{errors.email}</p>}
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Trading Password</Label>
-                    <Input
-                      type="password"
-                      placeholder="Investor/Master Password"
-                      value={formData.trading_password}
-                      onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
-                      className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50"
-                    />
-                    {errors.trading_password && <p className="text-[10px] text-destructive">{errors.trading_password}</p>}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">WhatsApp Number <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <MessageCircle className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="e.g., +447911123456"
+                          value={formData.whatsapp}
+                          onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                          className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                        Use your own country code — e.g. +44 (UK), +1 (US/Canada), +91 (India),
+                        +92 (Pakistan). Don't just enter +92 if that isn't your country.
+                      </p>
+                      {errors.whatsapp && <p className="text-[10px] text-destructive">{errors.whatsapp}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Telegram Username <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Send className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="e.g., @aliraza"
+                          value={formData.telegram_username}
+                          onChange={(e) => setFormData({ ...formData, telegram_username: e.target.value })}
+                          className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                        Required to confirm your application via our Telegram bot after you submit.
+                      </p>
+                      {errors.telegram_username && <p className="text-[10px] text-destructive">{errors.telegram_username}</p>}
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Selected Account Tier Size</Label>
-                  <Select value={formData.account_size} onValueChange={(v) => setFormData({ ...formData, account_size: v })}>
-                    <SelectTrigger className="h-8 text-xs bg-slate-50/50 dark:bg-slate-950/50">
-                      <SelectValue placeholder="Select Account Size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="$100">$100 (Starter)</SelectItem>
-                      <SelectItem value="$1,000">$1,000 (Growth)</SelectItem>
-                      <SelectItem value="$10,000">$10,000 (Pro)</SelectItem>
-                      <SelectItem value="$50,000">$50,000 (Institutional)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.account_size && <p className="text-[10px] text-destructive">{errors.account_size}</p>}
+                <div className="h-px bg-slate-100 dark:bg-slate-800/60" />
+
+                {/* ---------------- Broker & Trading Account ---------------- */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Broker &amp; Trading Account
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Preferred Broker <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Building2 className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Exness / XM / IC Markets"
+                          value={formData.preferred_broker}
+                          onChange={(e) => setFormData({ ...formData, preferred_broker: e.target.value })}
+                          className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        />
+                      </div>
+                      {errors.preferred_broker && <p className="text-[10px] text-destructive">{errors.preferred_broker}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Platform Type <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Settings2 className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                        <Select value={formData.platform_type} onValueChange={(v) => setFormData({ ...formData, platform_type: v })}>
+                          <SelectTrigger className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus:ring-emerald-500/40">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="MT4">MT4</SelectItem>
+                            <SelectItem value="MT5">MT5</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {errors.platform_type && <p className="text-[10px] text-destructive">{errors.platform_type}</p>}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Broker Server Name <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Server className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        placeholder="e.g., Exness-Real11"
+                        value={formData.broker_server}
+                        onChange={(e) => setFormData({ ...formData, broker_server: e.target.value })}
+                        className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                      />
+                    </div>
+                    {errors.broker_server && <p className="text-[10px] text-destructive">{errors.broker_server}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Trading Login (ID) <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Key className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="8373738"
+                          value={formData.trading_login}
+                          onChange={(e) => setFormData({ ...formData, trading_login: e.target.value.replace(/\D/g, '') })}
+                          className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        />
+                      </div>
+                      {errors.trading_login && <p className="text-[10px] text-destructive">{errors.trading_login}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Trading Password <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Lock className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type="password"
+                          placeholder="Investor/Master Password"
+                          value={formData.trading_password}
+                          onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
+                          className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
+                        />
+                      </div>
+                      {errors.trading_password && <p className="text-[10px] text-destructive">{errors.trading_password}</p>}
+                    </div>
+                  </div>
                 </div>
 
-                <Button type="submit" className="w-full mt-2 h-9 text-xs font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-lg shadow-emerald-500/25" disabled={isSubmitting}>
-                  {isSubmitting ? "Submitting Application..." : (
+                <div className="h-px bg-slate-100 dark:bg-slate-800/60" />
+
+                {/* ---------------- Account Tier ---------------- */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <Wallet className="h-3.5 w-3.5" />
+                    Account Tier
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Selected Account Tier Size <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <DollarSign className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                      <Select value={formData.account_size} onValueChange={(v) => setFormData({ ...formData, account_size: v })}>
+                        <SelectTrigger className="h-9 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus:ring-emerald-500/40">
+                          <SelectValue placeholder="Select Account Size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="$100">$100 (Starter)</SelectItem>
+                          <SelectItem value="$1,000">$1,000 (Growth)</SelectItem>
+                          <SelectItem value="$10,000">$10,000 (Pro)</SelectItem>
+                          <SelectItem value="$50,000">$50,000 (Institutional)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {errors.account_size && <p className="text-[10px] text-destructive">{errors.account_size}</p>}
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-11 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-lg shadow-emerald-500/25 transition-transform active:scale-[0.99]" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      Submitting Application...
+                    </>
+                  ) : (
                     <>
                       <Send className="h-3.5 w-3.5 mr-2" />
                       Submit Application Now
                     </>
                   )}
                 </Button>
+
+                <p className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
+                  <ShieldCheck className="h-3 w-3" />
+                  Your details are encrypted and only used for account verification
+                </p>
               </form>
             </CardContent>
           </Card>
@@ -527,7 +700,88 @@ const AccountManagement = () => {
           </div>
         </section>
       </main>
-      
+
+      {/* =====================================================
+          TELEGRAM CONFIRMATION — shown right after a successful
+          submit. The application is saved already, but stays
+          unconfirmed until the applicant starts the bot (same flow
+          as the Copy Management "Connect" dialog).
+      ===================================================== */}
+      <Dialog
+        open={!!telegramLink}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            clearTelegramTimers();
+            setTelegramLink(null);
+            setApplicationId(null);
+            setVerified(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md p-6">
+          {verified ? (
+            <>
+              <DialogHeader className="items-center text-center space-y-2">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+                  <CheckCircle2 className="h-7 w-7" />
+                </div>
+                <DialogTitle className="text-lg">Verified Successfully!</DialogTitle>
+                <DialogDescription className="text-sm">
+                  Your application is confirmed. Our team will reach out on WhatsApp shortly.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="pt-2 flex justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader className="items-center text-center space-y-2">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-500">
+                  <Clock className="h-7 w-7" />
+                </div>
+                <DialogTitle className="text-lg">Application Received — Not Confirmed Yet</DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed">
+                  Your details have been sent to our team, but your application is still{" "}
+                  <span className="font-semibold text-foreground">pending</span>. To confirm your
+                  application and get notified the moment your status changes, start our Telegram
+                  bot below.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 pt-1">
+                <Button
+                  asChild
+                  className="w-full h-11 gap-2 bg-[#26A5E4] hover:bg-[#1e8fc9] text-white font-semibold"
+                >
+                  <a href={telegramLink ?? "#"} target="_blank" rel="noopener noreferrer">
+                    <Send className="h-4 w-4" />
+                    Start Bot to Confirm Application
+                  </a>
+                </Button>
+
+                <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Waiting for you to confirm in Telegram...
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <p className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    Required to confirm your application and send you status updates.
+                  </p>
+                  <p className="flex items-start gap-1.5 text-[11px] leading-snug text-amber-600 dark:text-amber-400">
+                    <Wifi className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    If Telegram doesn't open or shows an error, turn on a VPN and try again —
+                    Telegram is restricted in some countries without one.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );
