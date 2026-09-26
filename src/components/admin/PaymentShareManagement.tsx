@@ -361,6 +361,38 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
     onError: (err: any) => toast.error("Could not send request", { description: err?.message }),
   });
 
+  // "Send Payment Request" used to send whatever was last SAVED in the
+  // database, ignoring unsaved edits sitting in the Profit Amount / Profit
+  // Share % boxes — so re-using it for a new amount without clicking Save
+  // first silently re-sent the old numbers. Now it always saves the
+  // current inputs first, then sends using the freshly saved row.
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const handleSendRequest = async () => {
+    if (!selectedOption) return;
+    setIsSendingRequest(true);
+    try {
+      await saveMutation.mutateAsync();
+
+      const { data: freshRow, error: freshError } = await db
+        .from("client_payment_shares")
+        .select("id")
+        .eq("source_type", selectedOption.source_type)
+        .eq("source_id", selectedOption.source_id)
+        .maybeSingle();
+
+      if (freshError || !freshRow) {
+        toast.error("Could not find the saved payment share to send");
+        return;
+      }
+
+      await sendRequestMutation.mutateAsync(freshRow.id);
+    } catch {
+      // saveMutation / sendRequestMutation already show their own toast.
+    } finally {
+      setIsSendingRequest(false);
+    }
+  };
+
   const verifyMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data, error } = await db.functions.invoke("payment-share-verify", { body: { id } });
@@ -433,23 +465,33 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
               ) : (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between gap-2 border rounded-lg p-2 text-sm"
+                  className="flex items-start justify-between gap-2 border rounded-lg p-2 text-sm"
                 >
-                  <div className="min-w-0">
-                    <span className="font-medium">{a.label || "Untitled"}</span>
-                    <span className="text-muted-foreground ml-2 truncate">{a.address || "—"}</span>
+                  {/* min-w-0 + break-all so a long address wraps onto its own
+                      line instead of pushing the Edit/Delete buttons off the
+                      right edge of the screen on mobile. */}
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="font-medium truncate">{a.label || "Untitled"}</div>
+                    <div className="text-muted-foreground text-xs break-all mt-0.5">
+                      {a.address || "—"}
+                    </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <Button size="sm" variant="ghost" onClick={() => setEditingAddressId(a.id)}>
-                      <Pencil className="h-3.5 w-3.5" />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-9 w-9 p-0"
+                      onClick={() => setEditingAddressId(a.id)}
+                    >
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-destructive"
+                      className="h-9 w-9 p-0 text-destructive"
                       onClick={() => deleteAddress(a.id)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -602,15 +644,17 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
 
                     <Button
                       variant="outline"
-                      onClick={() => sendRequestMutation.mutate(selectedShare.id)}
+                      onClick={handleSendRequest}
                       disabled={
                         !effectiveChatId ||
+                        isSendingRequest ||
+                        saveMutation.isPending ||
                         sendRequestMutation.isPending ||
                         !profitInput ||
                         !shareInput
                       }
                     >
-                      {sendRequestMutation.isPending ? (
+                      {isSendingRequest || sendRequestMutation.isPending ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
                         <Send className="h-4 w-4 mr-2" />
