@@ -65,12 +65,13 @@ const Header = () => {
   return (
     <>
       {/* Top Banners */}
-      {!isPremium ? (
-        <>
-          <FlashSaleBanner />
-          <TrialBanner />
-        </>
-      ) : null}
+      {!isPremium && <FlashSaleBanner />}
+      <TrialBanner />
+      {/* TrialBanner always renders — it shows the trial countdown for
+          free/trial users, its own "Premium User" welcome banner for
+          premium users, or nothing at all. Gating the whole component
+          behind !isPremium (as before) was hiding the premium welcome
+          banner entirely, since it never got the chance to render. */}
 
       {/* Header */}
       <header
