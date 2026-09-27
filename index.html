@@ -121,55 +121,104 @@
     
     <style>
       /* Boot splash: visible instantly, before any JS bundle is downloaded. React replaces it on mount. */
-      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-      #boot-splash img{width:88px;height:88px;border-radius:50%;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.15)}
-      #boot-splash .bs-bar{width:144px;height:3px;border-radius:3px;overflow:hidden;background:rgba(14,165,233,.18)}
-      #boot-splash .bs-bar span{display:block;width:50%;height:100%;border-radius:3px;background:#0EA5E9;animation:bs-slide 1.2s ease-in-out infinite}
-      #boot-splash .bs-status{font-size:12px;letter-spacing:.2px;color:#64748b;padding:4px 12px;border-radius:999px;transition:all .25s}
-      #boot-splash .bs-status.warn{color:#b45309;background:rgba(245,158,11,.14)}
-      #boot-splash .bs-status.bad{color:#b91c1c;background:rgba(239,68,68,.12)}
-      #boot-splash button{margin-top:-6px;font-size:12px;padding:6px 16px;border-radius:999px;border:1px solid #0EA5E9;background:transparent;color:#0EA5E9}
-      .dark #boot-splash .bs-status{color:#94a3b8}
-      .dark #boot-splash .bs-status.warn{color:#fbbf24}
-      .dark #boot-splash .bs-status.bad{color:#f87171}
-      @keyframes bs-slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0b1a1f}
+      .dark #boot-splash{background:#0b1a1f}
+      #boot-splash .bs-logo-wrap{position:relative;width:88px;height:88px}
+      #boot-splash img{width:88px;height:88px;border-radius:50%;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.15);display:block}
+      /* Modern spinner ring drawn around the logo instead of a sliding bar */
+      #boot-splash .bs-spinner{position:absolute;inset:-7px;border-radius:50%;border:3px solid rgba(14,165,233,.18);border-top-color:#0EA5E9;animation:bs-spin .85s linear infinite}
+      #boot-splash .bs-pill{display:flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.2px;color:#94a3b8;padding:5px 14px;border-radius:999px;background:rgba(148,163,184,.12);transition:color .25s,background-color .25s}
+      #boot-splash .bs-dot{width:7px;height:7px;border-radius:50%;background:#94a3b8;flex:none;transition:background-color .25s}
+      #boot-splash .bs-pill.fast{color:#4ade80;background:rgba(34,197,94,.14)}
+      #boot-splash .bs-pill.fast .bs-dot{background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.18)}
+      #boot-splash .bs-pill.normal{color:#38bdf8;background:rgba(14,165,233,.14)}
+      #boot-splash .bs-pill.normal .bs-dot{background:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+      #boot-splash .bs-pill.warn{color:#fbbf24;background:rgba(245,158,11,.16)}
+      #boot-splash .bs-pill.warn .bs-dot{background:#fbbf24;animation:bs-pulse 1s ease-in-out infinite}
+      #boot-splash .bs-pill.bad{color:#f87171;background:rgba(239,68,68,.16)}
+      #boot-splash .bs-pill.bad .bs-dot{background:#f87171;animation:bs-pulse 1s ease-in-out infinite}
+      #boot-splash .bs-msg{font-size:12px;color:#64748b;min-height:14px}
+      #boot-splash button{margin-top:2px;font-size:12px;padding:6px 16px;border-radius:999px;border:1px solid #0EA5E9;background:transparent;color:#0EA5E9}
+      @keyframes bs-spin{to{transform:rotate(360deg)}}
+      @keyframes bs-pulse{0%,100%{opacity:1}50%{opacity:.35}}
     </style>
     <div id="root">
       <div id="boot-splash" role="status" aria-live="polite">
-        <img src="/loader-logo.png" alt="Live Signals" width="88" height="88" />
-        <div class="bs-bar"><span></span></div>
-        <div class="bs-status" id="bs-status">Loading…</div>
+        <div class="bs-logo-wrap">
+          <img src="/loader-logo.png" alt="Live Signals" width="88" height="88" />
+          <div class="bs-spinner"></div>
+        </div>
+        <div class="bs-pill normal" id="bs-pill"><span class="bs-dot"></span><span id="bs-pill-label">Checking network…</span></div>
+        <div class="bs-msg" id="bs-status">Loading…</div>
       </div>
     </div>
     <script>
-      // Tells the user what is going on while the bundle downloads (React toasts don't exist yet at this point)
+      // Detects network quality (offline / slow / normal / fast) and keeps the
+      // splash + a live status pill on screen instead of a blank white page
+      // while the bundle downloads (React toasts don't exist yet at this point).
       (function () {
+        var pill = document.getElementById('bs-pill');
+        var label = document.getElementById('bs-pill-label');
         var st = document.getElementById('bs-status');
-        if (!st) return;
+        if (!pill || !label || !st) return;
         var start = Date.now(), retryBtn = null;
-        function set(msg, cls) { st.textContent = msg; st.className = 'bs-status ' + (cls || ''); }
-        function slowNet() {
-          var c = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
-          return !!c && (c.effectiveType === 'slow-2g' || c.effectiveType === '2g' || (c.downlink > 0 && c.downlink < 0.7));
+
+        function getConn() {
+          return navigator.connection || navigator.webkitConnection || navigator.mozConnection;
         }
-        function tick() {
-          if (!document.getElementById('boot-splash')) { clearInterval(timer); return; }
+
+        // Classifies the current connection into one of 4 states.
+        function classify() {
+          if (!navigator.onLine) return 'offline';
+          var c = getConn();
+          if (c && c.effectiveType) {
+            if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g') return 'slow';
+            if (c.effectiveType === '3g') return 'normal';
+            if (c.effectiveType === '4g') return 'fast';
+          }
+          if (c && typeof c.downlink === 'number' && c.downlink > 0) {
+            if (c.downlink < 0.7) return 'slow';
+            if (c.downlink < 2) return 'normal';
+            return 'fast';
+          }
+          return 'normal'; // Connection API unsupported (e.g. iOS) — assume normal.
+        }
+
+        var STATES = {
+          offline: { cls: 'bad', label: 'No internet connection', msg: "You're offline — waiting for a connection" },
+          slow:    { cls: 'warn', label: 'Slow network', msg: 'Loading may take longer than usual' },
+          normal:  { cls: 'normal', label: 'Normal network', msg: 'Loading…' },
+          fast:    { cls: 'fast', label: 'Fast network', msg: 'Loading…' }
+        };
+
+        function render(state) {
+          var s = STATES[state];
+          pill.className = 'bs-pill ' + s.cls;
+          label.textContent = s.label;
           var sec = (Date.now() - start) / 1000;
-          if (!navigator.onLine) { set('No internet connection', 'bad'); return; }
           if (sec > 15) {
-            set('Still loading — network is very slow', 'bad');
+            st.textContent = 'Still loading — this is taking longer than expected';
             if (!retryBtn) {
               retryBtn = document.createElement('button');
               retryBtn.textContent = 'Retry';
               retryBtn.onclick = function () { location.reload(); };
               st.parentNode.appendChild(retryBtn);
             }
-          } else if (sec > 4 || slowNet()) set('Slow network — loading may take longer', 'warn');
-          else set('Loading…');
+          } else {
+            st.textContent = s.msg;
+          }
         }
+
+        function tick() {
+          if (!document.getElementById('boot-splash')) { clearInterval(timer); return; }
+          render(classify());
+        }
+
         var timer = setInterval(tick, 1000);
         window.addEventListener('online', tick);
         window.addEventListener('offline', tick);
+        var conn = getConn();
+        if (conn && conn.addEventListener) conn.addEventListener('change', tick);
         tick();
       })();
     </script>
