@@ -556,6 +556,24 @@ const AccountManagement = () => {
 
                 <div className="h-px bg-slate-100 dark:bg-slate-800/60" />
 
+                {/* ---------------- Any broker accepted ---------------- */}
+                <div className="flex items-start gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Globe className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Any Broker Account Accepted
+                    </div>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        Exness, XM, Deriv, Binomo, IC Markets, FBS, HFM
+                      </span>{" "}
+                      and every other broker — any MT4/MT5 or broker-site login is accepted, as long as it's a genuine live trading account.
+                    </p>
+                  </div>
+                </div>
+
                 {/* ---------------- Connection Method Tabs ---------------- */}
                 <Tabs
                   value={submissionMethod}
