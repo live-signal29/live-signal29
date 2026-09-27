@@ -1516,7 +1516,7 @@ const SignalsDashboard = () => {
                                             const showBanner =
                                               !isPremium &&
                                               globalSignalIndex %
-                                                15 ===
+                                                3 ===
                                               0;
 
                                             const showAd =
