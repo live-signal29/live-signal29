@@ -284,6 +284,56 @@ const Premium = () => {
     ? "All premium signals"
     : `All ${selectedCategory.toLowerCase()} signals`;
 
+  // Distinct look per tier, so Yearly/Lifetime read as clearly higher-value
+  // than Monthly/Quarterly/Half-Yearly at a glance (not just smaller text).
+  const tierStyles: Record<
+    string,
+    {
+      card: string;
+      badge: { label: string; classes: string } | null;
+      price: string;
+      button: string;
+    }
+  > = {
+    standard: {
+      card: "border-border/40 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20",
+      badge: null,
+      price: "bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent",
+      button:
+        "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
+    },
+    popular: {
+      card: "border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl ring-1 ring-primary/30",
+      badge: {
+        label: "⭐ Popular",
+        classes: "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground",
+      },
+      price: "bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent",
+      button:
+        "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
+    },
+    vip: {
+      card: "border-violet-500/50 bg-gradient-to-br from-violet-500/10 via-background to-background shadow-xl ring-1 ring-violet-500/30",
+      badge: {
+        label: "👑 VIP",
+        classes: "bg-gradient-to-r from-violet-500 to-indigo-500 text-white",
+      },
+      price: "bg-gradient-to-r from-violet-500 to-indigo-500 bg-clip-text text-transparent",
+      button:
+        "bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-600 hover:to-indigo-600 shadow-violet-500/30",
+    },
+    elite: {
+      card: "border-amber-500/60 bg-gradient-to-br from-amber-500/10 via-background to-background shadow-xl ring-1 ring-amber-500/40",
+      badge: {
+        label: "💎 Elite",
+        classes: "bg-gradient-to-r from-amber-500 to-yellow-600 text-white",
+      },
+      price: "bg-gradient-to-r from-amber-500 to-yellow-600 bg-clip-text text-transparent",
+      button:
+        "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 shadow-amber-500/30",
+    },
+  };
+
   const plans = [
     {
       name: "Monthly",
@@ -294,6 +344,7 @@ const Premium = () => {
       payOnly: 30,
       discount: null,
       popular: false,
+      tier: "standard",
       features: [
         baseFeature,
         "Daily 2-5 trade signals",
@@ -310,6 +361,7 @@ const Premium = () => {
       payOnly: 75,
       discount: "17% Off",
       popular: true,
+      tier: "popular",
       features: [
         baseFeature,
         "Save 17% vs paying monthly",
@@ -326,6 +378,7 @@ const Premium = () => {
       payOnly: 120,
       discount: "33% Off",
       popular: false,
+      tier: "standard",
       features: [
         baseFeature,
         "Save 33% vs paying monthly",
@@ -342,6 +395,7 @@ const Premium = () => {
       payOnly: 180,
       discount: "50% Off",
       popular: false,
+      tier: "vip",
       features: [
         baseFeature,
         "Best value — save 50% vs monthly",
@@ -359,6 +413,7 @@ const Premium = () => {
       payOnly: 250,
       discount: "Best Value",
       popular: false,
+      tier: "elite",
       features: [
         baseFeature,
         "Pay once, own it forever",
@@ -367,6 +422,7 @@ const Premium = () => {
       ],
     },
   ];
+
 
   /* =====================================================
      COUPON
@@ -1077,17 +1133,16 @@ const Premium = () => {
                       className="pl-3 md:pl-4 basis-[92%] sm:basis-1/2 lg:basis-1/4 flex justify-center"
                     >
 
+                      {(() => {
+                      const style = tierStyles[plan.tier] || tierStyles.standard;
+                      return (
                       <Card
                         className={`
                           relative overflow-hidden group cursor-pointer
                           transition-all duration-500
                           hover:scale-[1.02] hover:shadow-2xl
                           w-full max-w-[340px] sm:max-w-none min-h-[420px]
-                          ${
-                            plan.popular
-                              ? "border-primary/50 bg-gradient-to-br from-primary/5 via-background to-background shadow-xl ring-1 ring-primary/30"
-                              : "border-border/40 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20"
-                          }
+                          ${style.card}
                         `}
                         onClick={() =>
                           handleSelectPlan(
@@ -1096,14 +1151,14 @@ const Premium = () => {
                         }
                       >
 
-                        {/* Popular */}
+                        {/* Tier badge (Popular / VIP / Elite) */}
 
-                        {plan.popular && (
+                        {style.badge && (
 
                           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
 
-                            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm px-4 py-1">
-                              ⭐ Popular
+                            <Badge className={`${style.badge.classes} text-sm px-4 py-1 shadow-md`}>
+                              {style.badge.label}
                             </Badge>
 
                           </div>
@@ -1134,7 +1189,7 @@ const Premium = () => {
                                 FIXED USD CARD PRICE
                                 ================================ */}
 
-                            <p className="text-4xl md:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                            <p className={`text-4xl md:text-5xl font-black ${style.price}`}>
                               ${plan.payOnly.toFixed(2)}
                             </p>
 
@@ -1279,7 +1334,7 @@ const Premium = () => {
 
                           <Button
                             disabled={purchasing}
-                            className="w-full h-12 font-bold text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md"
+                            className={`w-full h-12 font-bold text-base shadow-md ${style.button}`}
                             onClick={(event) => {
                               event.stopPropagation();
 
@@ -1302,6 +1357,8 @@ const Premium = () => {
                         </CardContent>
 
                       </Card>
+                      );
+                      })()}
 
                     </CarouselItem>
                   );
