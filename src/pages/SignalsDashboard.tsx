@@ -1463,7 +1463,8 @@ const SignalsDashboard = () => {
                           return (
                             <>
                               {openSignalCount ===
-                                0 && (
+                                0 &&
+                                !isPremium && (
                                 <ExnessSignalBanner />
                               )}
 
@@ -1513,8 +1514,9 @@ const SignalsDashboard = () => {
                                               1;
 
                                             const showBanner =
+                                              !isPremium &&
                                               globalSignalIndex %
-                                                3 ===
+                                                15 ===
                                               0;
 
                                             const showAd =
@@ -1585,7 +1587,8 @@ const SignalsDashboard = () => {
                                                   signalCard
                                                 )}
 
-                                                {isFinalOpenSignal && (
+                                                {isFinalOpenSignal &&
+                                                  !isPremium && (
                                                   <ExnessSignalBanner />
                                                 )}
 
