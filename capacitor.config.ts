@@ -9,19 +9,20 @@ const config: CapacitorConfig = {
     url: 'https://live-signal29.vercel.app/',
     cleartext: false,
   },
-  // Plain dark background (resources/splash.png is now a solid color, no
-  // logo/text baked in) + Android's own small native spinner — a minimal,
-  // modern "just spinning" look instead of a big branded splash graphic.
-  // launchAutoHide is OFF: src/main.tsx hides it once the web app is ready,
-  // with a 20s hard safety ceiling so it can never get stuck.
   plugins: {
     SplashScreen: {
-      launchAutoHide: false,
-      backgroundColor: '#EAFBF4',
+      // Let Android show its launch splash only briefly, then hand over to
+      // the lightweight HTML loader. Do NOT call SplashScreen.show() manually.
+      launchAutoHide: true,
+      launchShowDuration: 700,
+      launchFadeOutDuration: 180,
+      backgroundColor: '#EFFFF8',
       androidScaleType: 'CENTER',
-      showSpinner: true,
-      spinnerColor: '#16A34A',
-      androidSpinnerStyle: 'large',
+      showSpinner: false,
+      spinnerColor: '#22C55E',
+      androidSpinnerStyle: 'small',
+      splashFullScreen: false,
+      splashImmersive: false,
     },
   },
 };

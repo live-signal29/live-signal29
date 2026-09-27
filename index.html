@@ -113,112 +113,56 @@
     <!-- Theme initialization script (prevents flash of unstyled content) -->
     <script>
       (function() {
-        const theme = localStorage.getItem('theme') || 
+        const theme = localStorage.getItem('theme') ||
           (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         document.documentElement.classList.toggle('dark', theme === 'dark');
       })();
     </script>
     
     <style>
-      /* Boot splash: visible instantly, before any JS bundle is downloaded. React replaces it on mount. */
-      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0b1a1f}
-      .dark #boot-splash{background:#0b1a1f}
-      #boot-splash .bs-logo-wrap{position:relative;width:40px;height:40px}
-      #boot-splash img{width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.15);display:block}
-      /* Modern spinner ring drawn around the (small) logo instead of a sliding bar */
-      #boot-splash .bs-spinner{position:absolute;inset:-5px;border-radius:50%;border:2.5px solid rgba(14,165,233,.18);border-top-color:#0EA5E9;animation:bs-spin .8s linear infinite}
-      #boot-splash .bs-pill{display:flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.2px;color:#94a3b8;padding:5px 14px;border-radius:999px;background:rgba(148,163,184,.12);transition:color .25s,background-color .25s}
-      #boot-splash .bs-dot{width:7px;height:7px;border-radius:50%;background:#94a3b8;flex:none;transition:background-color .25s}
-      #boot-splash .bs-pill.fast{color:#4ade80;background:rgba(34,197,94,.14)}
-      #boot-splash .bs-pill.fast .bs-dot{background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.18)}
-      #boot-splash .bs-pill.normal{color:#38bdf8;background:rgba(14,165,233,.14)}
-      #boot-splash .bs-pill.normal .bs-dot{background:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.18)}
-      #boot-splash .bs-pill.warn{color:#fbbf24;background:rgba(245,158,11,.16)}
-      #boot-splash .bs-pill.warn .bs-dot{background:#fbbf24;animation:bs-pulse 1s ease-in-out infinite}
-      #boot-splash .bs-pill.bad{color:#f87171;background:rgba(239,68,68,.16)}
-      #boot-splash .bs-pill.bad .bs-dot{background:#f87171;animation:bs-pulse 1s ease-in-out infinite}
+      /* Lightweight web boot loader shown after the native Android splash. */
+      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(145deg,#f4fffb 0%,#eefcff 52%,#f5faff 100%);color:#0f172a}
+      #boot-splash .bs-loader{position:relative;width:62px;height:62px;border-radius:50%;background:conic-gradient(from 0deg,#22c55e,#14b8a6,#38bdf8,#22c55e);animation:bs-spin .85s linear infinite;box-shadow:0 8px 26px rgba(20,184,166,.18)}
+      #boot-splash .bs-loader::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#f3fffc;box-shadow:inset 0 0 0 1px rgba(15,118,110,.08)}
+      #boot-splash .bs-loader::before{content:"";position:absolute;left:50%;top:4px;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:#ffffff;box-shadow:0 0 10px rgba(255,255,255,.9);z-index:2}
+      #boot-splash .bs-title{font-size:13px;font-weight:700;letter-spacing:.16em;color:#0f766e}
       #boot-splash .bs-msg{font-size:12px;color:#64748b;min-height:14px}
-      #boot-splash button{margin-top:2px;font-size:12px;padding:6px 16px;border-radius:999px;border:1px solid #0EA5E9;background:transparent;color:#0EA5E9}
+      #boot-splash .bs-pulse{display:flex;gap:5px;margin-top:1px}
+      #boot-splash .bs-pulse span{width:5px;height:5px;border-radius:50%;background:#22c55e;animation:bs-pulse 1s ease-in-out infinite}
+      #boot-splash .bs-pulse span:nth-child(2){background:#14b8a6;animation-delay:.15s}
+      #boot-splash .bs-pulse span:nth-child(3){background:#38bdf8;animation-delay:.3s}
       @keyframes bs-spin{to{transform:rotate(360deg)}}
-      @keyframes bs-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+      @keyframes bs-pulse{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-3px);opacity:1}}
     </style>
     <div id="root">
       <div id="boot-splash" role="status" aria-live="polite">
-        <div class="bs-logo-wrap">
-          <img src="/loader-logo.png" alt="Live Signals" width="40" height="40" />
-          <div class="bs-spinner"></div>
-        </div>
-        <div class="bs-pill normal" id="bs-pill"><span class="bs-dot"></span><span id="bs-pill-label">Checking network…</span></div>
+        <div class="bs-loader" aria-hidden="true"></div>
+        <div class="bs-title">LIVE SIGNALS</div>
+        <div class="bs-pulse" aria-hidden="true"><span></span><span></span><span></span></div>
         <div class="bs-msg" id="bs-status">Loading…</div>
       </div>
     </div>
     <script>
-      // Detects network quality (offline / slow / normal / fast) and keeps the
-      // splash + a live status pill on screen instead of a blank white page
-      // while the bundle downloads (React toasts don't exist yet at this point).
       (function () {
-        var pill = document.getElementById('bs-pill');
-        var label = document.getElementById('bs-pill-label');
         var st = document.getElementById('bs-status');
-        if (!pill || !label || !st) return;
-        var start = Date.now(), retryBtn = null;
-
-        function getConn() {
-          return navigator.connection || navigator.webkitConnection || navigator.mozConnection;
-        }
-
-        // Classifies the current connection into one of 4 states.
-        function classify() {
-          if (!navigator.onLine) return 'offline';
-          var c = getConn();
-          if (c && c.effectiveType) {
-            if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g') return 'slow';
-            if (c.effectiveType === '3g') return 'normal';
-            if (c.effectiveType === '4g') return 'fast';
-          }
-          if (c && typeof c.downlink === 'number' && c.downlink > 0) {
-            if (c.downlink < 0.7) return 'slow';
-            if (c.downlink < 2) return 'normal';
-            return 'fast';
-          }
-          return 'normal'; // Connection API unsupported (e.g. iOS) — assume normal.
-        }
-
-        var STATES = {
-          offline: { cls: 'bad', label: 'No internet connection', msg: "You're offline — waiting for a connection" },
-          slow:    { cls: 'warn', label: 'Slow network', msg: 'Loading may take longer than usual' },
-          normal:  { cls: 'normal', label: 'Normal network', msg: 'Loading…' },
-          fast:    { cls: 'fast', label: 'Fast network', msg: 'Loading…' }
-        };
-
-        function render(state) {
-          var s = STATES[state];
-          pill.className = 'bs-pill ' + s.cls;
-          label.textContent = s.label;
-          var sec = (Date.now() - start) / 1000;
-          if (sec > 15) {
-            st.textContent = 'Still loading — this is taking longer than expected';
-            if (!retryBtn) {
-              retryBtn = document.createElement('button');
-              retryBtn.textContent = 'Retry';
-              retryBtn.onclick = function () { location.reload(); };
-              st.parentNode.appendChild(retryBtn);
-            }
-          } else {
-            st.textContent = s.msg;
-          }
-        }
-
+        if (!st) return;
+        var start = Date.now();
         function tick() {
-          if (!document.getElementById('boot-splash')) { clearInterval(timer); return; }
-          render(classify());
+          if (!document.getElementById('boot-splash')) return;
+          if (!navigator.onLine) {
+            st.textContent = 'Waiting for internet connection…';
+          } else if ((Date.now() - start) > 15000) {
+            st.textContent = 'Still loading…';
+          } else {
+            st.textContent = 'Loading…';
+          }
         }
-
-        var timer = setInterval(tick, 1000);
+        var timer = setInterval(function(){
+          tick();
+          if (!document.getElementById('boot-splash')) clearInterval(timer);
+        }, 1000);
         window.addEventListener('online', tick);
         window.addEventListener('offline', tick);
-        var conn = getConn();
-        if (conn && conn.addEventListener) conn.addEventListener('change', tick);
         tick();
       })();
     </script>
