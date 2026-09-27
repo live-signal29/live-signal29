@@ -121,12 +121,12 @@
     
     <style>
       /* Boot splash: visible instantly, before any JS bundle is downloaded. React replaces it on mount. */
-      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0b1a1f}
+      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0b1a1f}
       .dark #boot-splash{background:#0b1a1f}
-      #boot-splash .bs-logo-wrap{position:relative;width:88px;height:88px}
-      #boot-splash img{width:88px;height:88px;border-radius:50%;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.15);display:block}
-      /* Modern spinner ring drawn around the logo instead of a sliding bar */
-      #boot-splash .bs-spinner{position:absolute;inset:-7px;border-radius:50%;border:3px solid rgba(14,165,233,.18);border-top-color:#0EA5E9;animation:bs-spin .85s linear infinite}
+      #boot-splash .bs-logo-wrap{position:relative;width:40px;height:40px}
+      #boot-splash img{width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.15);display:block}
+      /* Modern spinner ring drawn around the (small) logo instead of a sliding bar */
+      #boot-splash .bs-spinner{position:absolute;inset:-5px;border-radius:50%;border:2.5px solid rgba(14,165,233,.18);border-top-color:#0EA5E9;animation:bs-spin .8s linear infinite}
       #boot-splash .bs-pill{display:flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.2px;color:#94a3b8;padding:5px 14px;border-radius:999px;background:rgba(148,163,184,.12);transition:color .25s,background-color .25s}
       #boot-splash .bs-dot{width:7px;height:7px;border-radius:50%;background:#94a3b8;flex:none;transition:background-color .25s}
       #boot-splash .bs-pill.fast{color:#4ade80;background:rgba(34,197,94,.14)}
@@ -145,7 +145,7 @@
     <div id="root">
       <div id="boot-splash" role="status" aria-live="polite">
         <div class="bs-logo-wrap">
-          <img src="/loader-logo.png" alt="Live Signals" width="88" height="88" />
+          <img src="/loader-logo.png" alt="Live Signals" width="40" height="40" />
           <div class="bs-spinner"></div>
         </div>
         <div class="bs-pill normal" id="bs-pill"><span class="bs-dot"></span><span id="bs-pill-label">Checking network…</span></div>

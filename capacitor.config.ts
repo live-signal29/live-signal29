@@ -9,20 +9,19 @@ const config: CapacitorConfig = {
     url: 'https://live-signal29.vercel.app/',
     cleartext: false,
   },
-  // Keeps the branded splash (resources/splash.png) on screen while the
-  // remote URL above is being fetched, instead of a blank white WebView.
-  // launchAutoHide is OFF on purpose: with a remote server.url there is no
-  // local bundle to time against, so a fixed duration used to hide the
-  // splash before a slow connection had actually finished loading the page
-  // — that gap was the white screen. The splash now stays up until
-  // src/main.tsx calls SplashScreen.hide() itself, right after the web
-  // app has taken over (see that file).
+  // Plain dark background (resources/splash.png is now a solid color, no
+  // logo/text baked in) + Android's own small native spinner — a minimal,
+  // modern "just spinning" look instead of a big branded splash graphic.
+  // launchAutoHide is OFF: src/main.tsx hides it once the web app is ready,
+  // with a 20s hard safety ceiling so it can never get stuck.
   plugins: {
     SplashScreen: {
       launchAutoHide: false,
       backgroundColor: '#0b1a1f',
       androidScaleType: 'CENTER_CROP',
-      showSpinner: false,
+      showSpinner: true,
+      spinnerColor: '#0EA5E9',
+      androidSpinnerStyle: 'small',
     },
   },
 };
