@@ -7,11 +7,9 @@ import { loadGoogleTranslate } from "./lib/googleTranslate";
 
 loadGoogleTranslate();
 
-// Splash-hide helper: called once React has painted, AND as a hard safety
-// net after MAX_SPLASH_MS regardless of what happens — so a slow network
-// shows the branded splash for longer, but the app can never get
-// permanently stuck behind it (whichever call runs first wins; the rest
-// are harmless no-ops since hide() on an already-hidden splash does nothing).
+// Splash-hide helper: called once React has painted, with a hard safety net.
+// The native launch splash is configured to auto-hide quickly; this helper is
+// only a safe fallback and never re-opens the native splash.
 const MAX_SPLASH_MS = 20000;
 let splashHidden = false;
 const hideSplash = () => {
@@ -23,13 +21,6 @@ const hideSplash = () => {
       // Not running inside the native app, or the plugin isn't present — ignore.
     });
 };
-
-// Safety net: force the native splash to be visible from the very first
-// JS tick, in case the native "show on launch" step is ever skipped for any
-// reason. Harmless no-op outside the native app (web fallback implementation).
-import("@capacitor/splash-screen")
-  .then(({ SplashScreen }) => SplashScreen.show({ autoHide: false }))
-  .catch(() => {});
 
 // Hard ceiling: even if the app fails to load/render for any reason, never
 // leave the user stuck behind the splash forever.
