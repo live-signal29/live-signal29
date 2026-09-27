@@ -17,6 +17,11 @@ import { GoogleAuth } from "npm:google-auth-library@9";
 
 const PACKAGE_NAME = "co.median.android.krkqyaz";
 const PREMIUM_PRODUCT_ID = "premium";
+// One-time (non-renewing) Play Console product backing the Lifetime plan.
+const LIFETIME_PRODUCT_ID = "premium_lifetime";
+// Far-future end date used to represent "never expires" for Lifetime,
+// since the profiles table has no separate "no expiry" flag.
+const LIFETIME_END_DATE = "2099-12-31T23:59:59.000Z";
 // canceled = user turned off auto-renew but the paid period is still running
 const VALID_STATES = new Set([
   "SUBSCRIPTION_STATE_ACTIVE",
@@ -83,7 +88,7 @@ Deno.serve(async (req: Request) => {
     if (!productId || !purchaseToken) {
       return json({ success: false, error: "Missing productId or purchaseToken" }, 400);
     }
-    if (productId !== PREMIUM_PRODUCT_ID) {
+    if (productId !== PREMIUM_PRODUCT_ID && productId !== LIFETIME_PRODUCT_ID) {
       return json({ success: false, error: "Unknown product" }, 400);
     }
 
@@ -95,8 +100,102 @@ Deno.serve(async (req: Request) => {
     const user = userData?.user;
     if (userErr || !user) return json({ success: false, error: "Not logged in" }, 401);
 
-    // Ask Google about this token
     const accessToken = await googleAccessToken();
+
+    // ---------- Lifetime: one-time (non-renewing) product ----------
+    if (productId === LIFETIME_PRODUCT_ID) {
+      const gRes = await fetch(
+        `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/products/${LIFETIME_PRODUCT_ID}/tokens/${encodeURIComponent(purchaseToken)}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const purchase = await gRes.json();
+      if (!gRes.ok) {
+        console.error("Google verification failed (lifetime):", JSON.stringify(purchase));
+        return json({ success: false, error: "Google could not verify this purchase", details: purchase?.error?.message }, 400);
+      }
+
+      // purchaseState: 0 = purchased, 1 = canceled, 2 = pending
+      if (purchase.purchaseState === 2) {
+        return json({ success: false, pending: true, error: "Payment is still pending" }, 202);
+      }
+      if (purchase.purchaseState !== 0) {
+        return json({ success: false, error: `Purchase not valid (state ${purchase.purchaseState})` }, 400);
+      }
+
+      const boundTo = purchase.obfuscatedExternalAccountId;
+      if (boundTo && boundTo !== user.id) {
+        return json({ success: false, error: "This purchase belongs to another account" }, 403);
+      }
+      const { data: existingLifetime } = await admin
+        .from("play_billing_purchases")
+        .select("id, user_id")
+        .eq("purchase_token", purchaseToken)
+        .maybeSingle();
+      if (existingLifetime && existingLifetime.user_id !== user.id) {
+        return json({ success: false, error: "This purchase belongs to another account" }, 403);
+      }
+
+      // Acknowledge within 3 days or Google refunds the purchase
+      if (purchase.acknowledgementState === 0) {
+        const ack = await fetch(
+          `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/products/${LIFETIME_PRODUCT_ID}/tokens/${encodeURIComponent(purchaseToken)}:acknowledge`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: "{}",
+          },
+        );
+        if (!ack.ok) console.error("Acknowledge failed (lifetime):", ack.status, await ack.text());
+      }
+
+      const lifetimeRow = {
+        user_id: user.id,
+        product_id: LIFETIME_PRODUCT_ID,
+        purchase_token: purchaseToken,
+        purchase_type: "inapp",
+        order_id: purchase.orderId ?? null,
+        purchase_state: "PURCHASED",
+        raw_response: purchase,
+        verified_at: new Date().toISOString(),
+      };
+      if (existingLifetime) {
+        await admin.from("play_billing_purchases").update(lifetimeRow).eq("id", existingLifetime.id);
+      } else {
+        await admin.from("play_billing_purchases").insert(lifetimeRow);
+      }
+
+      const { data: lifetimeProfile } = await admin
+        .from("profiles")
+        .select("subscription_status")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const lifetimeUpdate: Record<string, unknown> = {
+        subscription_status: "premium",
+        subscription_plan: "premium-lifetime",
+        subscription_end_date: LIFETIME_END_DATE,
+      };
+      if (!existingLifetime || lifetimeProfile?.subscription_status !== "premium") {
+        lifetimeUpdate.subscription_start_date = new Date().toISOString();
+      }
+      const { error: lifetimeUpdateError } = await admin.from("profiles").update(lifetimeUpdate).eq("id", user.id);
+      if (lifetimeUpdateError) {
+        console.error("Failed to update profile (lifetime):", lifetimeUpdateError);
+        return json({ success: false, error: "Verified but failed to grant access" }, 500);
+      }
+
+      return json({
+        success: true,
+        basePlanId: "lifetime",
+        expiry: LIFETIME_END_DATE,
+        state: "LIFETIME_ACTIVE",
+        testPurchase: !!purchase.testPurchase,
+      });
+    }
+
+    // ---------- Subscription (existing flow) ----------
+
+    // Ask Google about this token
     const gRes = await fetch(
       `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
@@ -163,19 +262,38 @@ Deno.serve(async (req: Request) => {
       await admin.from("play_billing_purchases").insert(row);
     }
 
-    // Grant / extend premium (never shorten a longer period the user already has)
+    // Grant premium for THIS plan. Each base plan (monthly / quarterly /
+    // half-yearly / yearly) always gets its own real expiry straight from
+    // Google — never propped up by whatever end date was stored before.
+    //
+    // The old rule ("keep the longer of currentEnd vs new expiry") was the
+    // bug: once a user's end date was ever pushed far into the future (e.g.
+    // by a Lifetime purchase), every later monthly/quarterly/yearly purchase
+    // kept inheriting that far-future date instead of showing its own real,
+    // short remaining time.
     const { data: profile } = await admin
       .from("profiles")
-      .select("subscription_status, subscription_end_date")
+      .select("subscription_status, subscription_plan")
       .eq("id", user.id)
       .maybeSingle();
-    const currentEnd = profile?.subscription_end_date ? new Date(profile.subscription_end_date) : null;
-    const newEnd = currentEnd && currentEnd > expiry ? currentEnd : expiry;
+
+    // Exception: an existing Lifetime grant is permanent and must never be
+    // silently downgraded by a stray/older subscription sync call.
+    if (profile?.subscription_plan === "premium-lifetime") {
+      return json({
+        success: true,
+        basePlanId,
+        expiry: LIFETIME_END_DATE,
+        state: "LIFETIME_ACTIVE",
+        note: "User already has Lifetime; subscription purchase logged but plan/expiry left unchanged.",
+        testPurchase: !!sub.testPurchase,
+      });
+    }
 
     const update: Record<string, unknown> = {
       subscription_status: "premium",
       subscription_plan: basePlanId ? `premium-${basePlanId}` : "premium",
-      subscription_end_date: newEnd.toISOString(),
+      subscription_end_date: expiry.toISOString(),
     };
     if (!existing || profile?.subscription_status !== "premium") {
       update.subscription_start_date = new Date().toISOString();
