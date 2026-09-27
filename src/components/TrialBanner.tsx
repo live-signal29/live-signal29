@@ -19,14 +19,6 @@ const TrialBanner = () => {
     loadTrialInfo();
   }, []);
 
-  // Auto-hide premium banner after 5 seconds
-  useEffect(() => {
-    if (!isPremium) return;
-    const t = setTimeout(() => setHidePremium(true), 5000);
-    return () => clearTimeout(t);
-  }, [isPremium]);
-
-
   // Live countdown timer
   useEffect(() => {
     if (!trialEndDate) return;
@@ -77,17 +69,23 @@ const TrialBanner = () => {
     }
   };
 
-  // Show premium banner for premium users (auto-hide after 5s)
+  // Show premium banner for premium users (stays until manually dismissed)
   if (isPremium) {
     if (hidePremium) return null;
     return (
-      <div className="bg-gradient-to-r from-primary/20 to-success/20 border-b border-primary/30 animate-in fade-in slide-in-from-top-2 duration-500">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-center gap-2 text-sm">
-            <span className="font-medium">
-              ⭐ You are our Premium User - Enjoy unlimited access!
+      <div className="bg-primary/10 border-b border-primary/20">
+        <div className="container mx-auto px-3 py-1">
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="truncate whitespace-nowrap text-xs font-medium text-foreground">
+              ⭐ Premium Member — Unlimited Access
             </span>
-            <button onClick={() => setHidePremium(true)} className="ml-2 text-xs opacity-60 hover:opacity-100">✕</button>
+            <button
+              onClick={() => setHidePremium(true)}
+              aria-label="Dismiss"
+              className="shrink-0 text-muted-foreground/70 hover:text-foreground"
+            >
+              <span className="text-xs leading-none">✕</span>
+            </button>
           </div>
         </div>
       </div>
