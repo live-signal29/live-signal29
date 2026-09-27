@@ -38,10 +38,10 @@ jobs:
         run: |
           npm install @capacitor/assets --save-dev
           npx capacitor-assets generate --android \
-            --splashBackgroundColor '#0b1a1f' \
-            --splashBackgroundColorDark '#0b1a1f' \
-            --iconBackgroundColor '#0b1a1f' \
-            --iconBackgroundColorDark '#0b1a1f'
+            --splashBackgroundColor '#EAFBF4' \
+            --splashBackgroundColorDark '#EAFBF4' \
+            --iconBackgroundColor '#EAFBF4' \
+            --iconBackgroundColorDark '#EAFBF4'
 
       - name: Sync Capacitor
         run: npx cap sync android
