@@ -120,52 +120,102 @@
     </script>
     
     <style>
-      /* Lightweight web boot loader shown after the native Android splash. */
-      #boot-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(145deg,#f4fffb 0%,#eefcff 52%,#f5faff 100%);color:#0f172a}
-      #boot-splash .bs-loader{position:relative;width:62px;height:62px;border-radius:50%;background:conic-gradient(from 0deg,#22c55e,#14b8a6,#38bdf8,#22c55e);animation:bs-spin .85s linear infinite;box-shadow:0 8px 26px rgba(20,184,166,.18)}
+      /* Lightweight web boot loader: same light visual style as AppLoader. */
+      #boot-splash{position:fixed;inset:0;z-index:99999;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(145deg,#f2fff9 0%,#edfcff 52%,#f5faff 100%);color:#334155}
+      #boot-splash .bs-wrap{display:flex;flex-direction:column;align-items:center}
+      #boot-splash .bs-loader{position:relative;width:64px;height:64px;border-radius:50%;background:conic-gradient(from 0deg,#22c55e,#14b8a6,#38bdf8,#22c55e);animation:bs-spin .85s linear infinite;box-shadow:0 8px 26px rgba(20,184,166,.18)}
       #boot-splash .bs-loader::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#f3fffc;box-shadow:inset 0 0 0 1px rgba(15,118,110,.08)}
-      #boot-splash .bs-loader::before{content:"";position:absolute;left:50%;top:4px;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:#ffffff;box-shadow:0 0 10px rgba(255,255,255,.9);z-index:2}
-      #boot-splash .bs-title{font-size:13px;font-weight:700;letter-spacing:.16em;color:#0f766e}
-      #boot-splash .bs-msg{font-size:12px;color:#64748b;min-height:14px}
-      #boot-splash .bs-pulse{display:flex;gap:5px;margin-top:1px}
-      #boot-splash .bs-pulse span{width:5px;height:5px;border-radius:50%;background:#22c55e;animation:bs-pulse 1s ease-in-out infinite}
+      #boot-splash .bs-logo{position:absolute;inset:15px;width:34px;height:34px;margin:auto;object-fit:contain;z-index:3}
+      #boot-splash .bs-loader::before{content:"";position:absolute;left:50%;top:4px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.95);z-index:2}
+      #boot-splash .bs-title{margin-top:28px;font-size:13px;font-weight:700;letter-spacing:.18em;color:#0f766e}
+      #boot-splash .bs-pulse{display:flex;gap:7px;margin-top:16px}
+      #boot-splash .bs-pulse span{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:bs-pulse 1s ease-in-out infinite}
       #boot-splash .bs-pulse span:nth-child(2){background:#14b8a6;animation-delay:.15s}
       #boot-splash .bs-pulse span:nth-child(3){background:#38bdf8;animation-delay:.3s}
+      #boot-splash .bs-network{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:9px 18px;border:1px solid #d1fae5;border-radius:999px;background:#ecfdf5;color:#059669;font-size:14px;font-weight:500;box-shadow:0 2px 8px rgba(15,118,110,.06)}
+      #boot-splash .bs-network-dot{width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+      #boot-splash .bs-network-dot.slow{background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.12)}
+      #boot-splash .bs-network-dot.offline{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.12)}
+      #boot-splash .bs-msg{margin-top:14px;font-size:14px;color:#64748b;text-align:center;max-width:320px}
+      #boot-splash .bs-retry{display:none;margin-top:20px;border:2px solid #0ea5e9;border-radius:999px;padding:9px 26px;background:transparent;color:#0284c7;font-size:14px;font-weight:500}
       @keyframes bs-spin{to{transform:rotate(360deg)}}
       @keyframes bs-pulse{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-3px);opacity:1}}
     </style>
     <div id="root">
       <div id="boot-splash" role="status" aria-live="polite">
-        <div class="bs-loader" aria-hidden="true"></div>
-        <div class="bs-title">LIVE SIGNALS</div>
-        <div class="bs-pulse" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div class="bs-msg" id="bs-status">Loading…</div>
+        <div class="bs-wrap">
+          <div class="bs-loader" aria-hidden="true"><img class="bs-logo" src="/loader-logo.png" alt="" /></div>
+          <div class="bs-pulse" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="bs-network"><span id="bs-network-dot" class="bs-network-dot"></span><span id="bs-network-label">Checking network…</span><span id="bs-network-latency" style="opacity:.65;font-size:11px"></span></div>
+          <div class="bs-msg" id="bs-status">Loading live data…</div>
+          <button id="bs-retry" class="bs-retry" type="button">Retry</button>
+        </div>
       </div>
     </div>
     <script>
       (function () {
-        var st = document.getElementById('bs-status');
-        if (!st) return;
-        var start = Date.now();
-        function tick() {
-          if (!document.getElementById('boot-splash')) return;
+        var splash = document.getElementById('boot-splash');
+        var status = document.getElementById('bs-status');
+        var label = document.getElementById('bs-network-label');
+        var dot = document.getElementById('bs-network-dot');
+        var latencyEl = document.getElementById('bs-network-latency');
+        var retry = document.getElementById('bs-retry');
+        if (!splash || !status || !label || !dot || !retry) return;
+
+        function probe() {
           if (!navigator.onLine) {
-            st.textContent = 'Waiting for internet connection…';
-          } else if ((Date.now() - start) > 15000) {
-            st.textContent = 'Still loading…';
-          } else {
-            st.textContent = 'Loading…';
+            label.textContent = 'No internet connection';
+            dot.className = 'bs-network-dot offline';
+            status.textContent = 'Waiting for internet connection…';
+            retry.style.display = 'inline-block';
+            if (latencyEl) latencyEl.textContent = '';
+            return Promise.resolve();
           }
+
+          label.textContent = 'Checking network…';
+          dot.className = 'bs-network-dot';
+          retry.style.display = 'none';
+          var controller = new AbortController();
+          var timer = setTimeout(function(){ controller.abort(); }, 5000);
+          var started = performance.now();
+          var url = (window.location.origin || 'https://live-signal29.vercel.app') + '/?network_probe=' + Date.now();
+
+          return fetch(url, {cache:'no-store', credentials:'same-origin', signal:controller.signal, headers:{'Cache-Control':'no-cache'}})
+            .then(function(res){
+              var ms = Math.round(performance.now() - started);
+              if (latencyEl) latencyEl.textContent = ms + ' ms';
+              if (!res.ok || ms >= 900) {
+                label.textContent = 'Slow network';
+                dot.className = 'bs-network-dot slow';
+                status.textContent = 'Still loading — this is taking longer than expected';
+                retry.style.display = 'inline-block';
+              } else if (ms >= 300) {
+                label.textContent = 'Normal network';
+                dot.className = 'bs-network-dot';
+                status.textContent = 'Loading live data…';
+              } else {
+                label.textContent = 'Fast network';
+                dot.className = 'bs-network-dot';
+                status.textContent = 'Loading live data…';
+              }
+            })
+            .catch(function(){
+              label.textContent = navigator.onLine ? 'Slow network' : 'No internet connection';
+              dot.className = navigator.onLine ? 'bs-network-dot slow' : 'bs-network-dot offline';
+              status.textContent = navigator.onLine ? 'Still loading — this is taking longer than expected' : 'Waiting for internet connection…';
+              retry.style.display = 'inline-block';
+              if (latencyEl) latencyEl.textContent = '';
+            })
+            .finally(function(){ clearTimeout(timer); });
         }
-        var timer = setInterval(function(){
-          tick();
-          if (!document.getElementById('boot-splash')) clearInterval(timer);
-        }, 1000);
-        window.addEventListener('online', tick);
-        window.addEventListener('offline', tick);
-        tick();
+
+        retry.addEventListener('click', function(){ probe(); });
+        window.addEventListener('online', probe);
+        window.addEventListener('offline', probe);
+        probe();
       })();
     </script>
+    
     <!-- Hidden mount point for Google Website Translator (drives 20+ language switching from the menu; our own UI hides its default toolbar via CSS) -->
     <div id="google_translate_element" style="display:none"></div>
     
