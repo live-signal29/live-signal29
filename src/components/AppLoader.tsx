@@ -135,11 +135,15 @@ const AppLoader = ({ label = 'Loading live data' }: { label?: string }) => {
       aria-live="polite"
     >
       <div className="flex flex-col items-center">
-        <div className="relative h-16 w-16 rounded-full bg-[conic-gradient(from_0deg,#22c55e,#14b8a6,#38bdf8,#22c55e)] p-[6px] shadow-[0_8px_26px_rgba(20,184,166,.18)] animate-spin">
-          <div className="relative flex h-full w-full items-center justify-center rounded-full bg-[#f3fffc]">
+        <div className="relative h-16 w-16">
+          {/* Rotating ring — logo is NOT inside this, so only the ring spins */}
+          <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#22c55e,#14b8a6,#38bdf8,#22c55e)] shadow-[0_8px_26px_rgba(20,184,166,.18)] animate-spin">
+            <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,.95)]" />
+          </div>
+          {/* Static logo, sits on top and never rotates */}
+          <div className="absolute inset-[6px] flex items-center justify-center rounded-full bg-[#f3fffc]">
             <img src="/loader-logo.png" alt="" className="h-8 w-8 object-contain" />
           </div>
-          <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,.95)]" />
         </div>
 
         <div className="mt-5 flex items-center gap-2" aria-hidden="true">
