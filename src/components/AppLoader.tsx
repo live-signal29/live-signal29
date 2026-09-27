@@ -18,79 +18,57 @@ const classify = (): NetState => {
     if (c.downlink < 2) return 'normal';
     return 'fast';
   }
-  return 'normal'; // Connection API unsupported (e.g. iOS Safari/WebView) — assume normal.
+  return 'normal';
 };
 
-const PILL_STYLES: Record<NetState, string> = {
-  offline: 'text-red-400 bg-red-500/15',
-  slow: 'text-amber-400 bg-amber-500/15',
-  normal: 'text-sky-400 bg-sky-500/15',
-  fast: 'text-emerald-400 bg-emerald-500/15',
-};
-
-const DOT_STYLES: Record<NetState, string> = {
-  offline: 'bg-red-400 animate-pulse',
-  slow: 'bg-amber-400 animate-pulse',
-  normal: 'bg-sky-400',
-  fast: 'bg-emerald-400',
-};
-
-const PILL_LABEL: Record<NetState, string> = {
-  offline: 'No internet connection',
-  slow: 'Slow network',
-  normal: 'Normal network',
-  fast: 'Fast network',
-};
-
-const MESSAGE: Record<NetState, string> = {
-  offline: "You're offline — waiting for a connection",
-  slow: 'Loading may take longer than usual',
+const STATUS: Record<NetState, string> = {
+  offline: 'Waiting for internet…',
+  slow: 'Slow network…',
   normal: 'Loading…',
   fast: 'Loading…',
 };
 
-// Same look as the static boot splash in index.html, so there's no visual jump when React takes over.
+const DOT: Record<NetState, string> = {
+  offline: 'bg-red-500',
+  slow: 'bg-amber-500',
+  normal: 'bg-teal-500',
+  fast: 'bg-emerald-500',
+};
+
 const AppLoader = ({ label = 'Loading live data' }: { label?: string }) => {
   const [net, setNet] = useState<NetState>(() => classify());
-  const [stalled, setStalled] = useState(false);
 
   useEffect(() => {
     const update = () => setNet(classify());
     update();
-
     const conn = getConn();
     conn?.addEventListener?.('change', update);
     window.addEventListener('online', update);
     window.addEventListener('offline', update);
-
-    const t = setTimeout(() => setStalled(true), 15000);
     return () => {
       conn?.removeEventListener?.('change', update);
       window.removeEventListener('online', update);
       window.removeEventListener('offline', update);
-      clearTimeout(t);
     };
   }, []);
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center gap-4"
+      className="min-h-screen flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50 text-slate-700"
       role="status"
       aria-live="polite"
     >
-      <div className="relative w-10 h-10">
-        <img src="/loader-logo.png" alt="Live Signals" width={40} height={40} className="rounded-full bg-white shadow-md" />
-        <div className="absolute -inset-[5px] rounded-full border-[2.5px] border-sky-500/20 border-t-sky-500 animate-spin" />
+      <div className="relative w-16 h-16 rounded-full bg-[conic-gradient(from_0deg,#22c55e,#14b8a6,#38bdf8,#22c55e)] animate-spin shadow-lg shadow-teal-500/15">
+        <div className="absolute inset-[6px] rounded-full bg-[#f3fffc]" />
+        <span className="absolute left-1/2 top-1 w-2 h-2 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,.95)]" />
       </div>
-
-      <div className={`flex items-center gap-2 text-xs px-3.5 py-1.5 rounded-full transition-colors ${PILL_STYLES[net]}`}>
-        <span className={`w-1.5 h-1.5 rounded-full flex-none ${DOT_STYLES[net]}`} />
-        {PILL_LABEL[net]}
+      <div className="text-[13px] font-bold tracking-[0.16em] text-teal-700">LIVE SIGNALS</div>
+      <div className="flex items-center gap-1.5" aria-hidden="true">
+        <span className={`h-1.5 w-1.5 rounded-full ${DOT[net]} animate-pulse`} />
+        <span className={`h-1.5 w-1.5 rounded-full ${DOT[net]} animate-pulse [animation-delay:150ms]`} />
+        <span className={`h-1.5 w-1.5 rounded-full ${DOT[net]} animate-pulse [animation-delay:300ms]`} />
       </div>
-
-      <p className="text-xs text-muted-foreground min-h-[14px]">
-        {stalled ? 'Still loading — this is taking longer than expected' : MESSAGE[net] === 'Loading…' ? `${label}…` : MESSAGE[net]}
-      </p>
+      <p className="text-xs text-slate-500">{net === 'normal' || net === 'fast' ? `${label}…` : STATUS[net]}</p>
     </div>
   );
 };
