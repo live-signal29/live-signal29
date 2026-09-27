@@ -78,9 +78,9 @@ const AppLoader = ({ label = 'Loading live data' }: { label?: string }) => {
       role="status"
       aria-live="polite"
     >
-      <div className="relative w-[88px] h-[88px]">
-        <img src="/loader-logo.png" alt="Live Signals" width={88} height={88} className="rounded-full bg-white shadow-lg" />
-        <div className="absolute -inset-[7px] rounded-full border-[3px] border-sky-500/20 border-t-sky-500 animate-spin" />
+      <div className="relative w-10 h-10">
+        <img src="/loader-logo.png" alt="Live Signals" width={40} height={40} className="rounded-full bg-white shadow-md" />
+        <div className="absolute -inset-[5px] rounded-full border-[2.5px] border-sky-500/20 border-t-sky-500 animate-spin" />
       </div>
 
       <div className={`flex items-center gap-2 text-xs px-3.5 py-1.5 rounded-full transition-colors ${PILL_STYLES[net]}`}>
