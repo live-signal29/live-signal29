@@ -433,10 +433,24 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                           {user.subscription_status}
                         </span>
                       </TableCell>
-                      <TableCell>{calculateDaysRemaining(user.trial_end_date)}</TableCell>
                       <TableCell>
-                        {user.subscription_end_date 
-                          ? new Date(user.subscription_end_date).toLocaleDateString() 
+                        {/* "Trial Remaining" only means something for a free-trial
+                           user. A premium user's plan length lives in "Premium
+                           Expires" — trial_end_date is a leftover field from
+                           their original free trial and is unrelated to any
+                           plan they later bought, so don't show it here once
+                           they're premium (it was confusingly showing e.g.
+                           "31 days" for every paid plan, regardless of
+                           monthly/quarterly/yearly/lifetime). */}
+                        {user.subscription_status === 'premium'
+                          ? '—'
+                          : calculateDaysRemaining(user.trial_end_date)}
+                      </TableCell>
+                      <TableCell>
+                        {user.subscription_plan === 'premium-lifetime'
+                          ? 'Never (Lifetime)'
+                          : user.subscription_end_date
+                          ? new Date(user.subscription_end_date).toLocaleString()
                           : "-"}
                       </TableCell>
                       <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
