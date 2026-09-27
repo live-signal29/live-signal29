@@ -37,7 +37,11 @@ jobs:
       - name: Generate app icon & splash
         run: |
           npm install @capacitor/assets --save-dev
-          npx capacitor-assets generate --android
+          npx capacitor-assets generate --android \
+            --splashBackgroundColor '#0b1a1f' \
+            --splashBackgroundColorDark '#0b1a1f' \
+            --iconBackgroundColor '#0b1a1f' \
+            --iconBackgroundColorDark '#0b1a1f'
 
       - name: Sync Capacitor
         run: npx cap sync android
