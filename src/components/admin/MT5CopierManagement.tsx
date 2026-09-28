@@ -77,6 +77,9 @@ const MT5CopierManagement = ({ initialSearch }: { initialSearch?: string } = {})
   const [messagingReq, setMessagingReq] = useState<{ id: string; channel: "whatsapp" | "telegram" } | null>(null);
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkMode, setBulkMode] = useState<"increase" | "decrease" | "set">("increase");
+  const [bulkProfit, setBulkProfit] = useState("");
+  const [bulkLoss, setBulkLoss] = useState("");
 
   useEffect(() => {
     if (initialSearch) setSearchTerm(initialSearch);
@@ -143,6 +146,94 @@ const MT5CopierManagement = ({ initialSearch }: { initialSearch?: string } = {})
       toast.error("Failed to delete selected copiers", { description: err?.message });
     },
   });
+
+  // Bulk performance: apply Profit % / Loss % to all selected copiers.
+  // increase = add to existing %, decrease = subtract (min 0), set = overwrite.
+  // Amounts and R:R are recalculated exactly like the single-user save.
+  const bulkPerformanceMutation = useMutation({
+    mutationFn: async ({
+      ids,
+      mode,
+      profit,
+      loss,
+    }: {
+      ids: string[];
+      mode: "increase" | "decrease" | "set";
+      profit: number | null;
+      loss: number | null;
+    }) => {
+      const apply = (current: number, delta: number | null) => {
+        if (delta === null) return current;
+        if (mode === "set") return Math.max(0, delta);
+        const next = mode === "increase" ? current + delta : current - delta;
+        return Math.max(0, Math.round(next * 100) / 100);
+      };
+
+      const targets = (requests || []).filter((r) => ids.includes(r.id));
+      const results = await Promise.all(
+        targets.map(async (req) => {
+          const balance = req.account_balance || 0;
+          const profitPercent = apply(req.profit_percent || 0, profit);
+          const lossPercent = apply(req.loss_percent || 0, loss);
+          const profitAmount = profitPercent > 0 ? Math.round(((balance * profitPercent) / 100) * 100) / 100 : 0;
+          const lossAmount = lossPercent > 0 ? Math.round(((balance * lossPercent) / 100) * 100) / 100 : 0;
+          const riskReward =
+            profitPercent > 0 && lossPercent > 0
+              ? `1:${Number((profitPercent / lossPercent).toFixed(2))}`
+              : "N/A";
+
+          const { error } = await db
+            .from("mt5_copier_requests")
+            .update({
+              profit_percent: profitPercent,
+              loss_percent: lossPercent,
+              profit_amount: profitAmount,
+              loss_amount: lossAmount,
+              risk_reward_ratio: riskReward,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", req.id);
+          return error;
+        })
+      );
+      const failed = results.filter(Boolean).length;
+      if (failed > 0) throw new Error(`${failed} of ${targets.length} updates failed`);
+      return targets.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["mt5-copier-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["copier-leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["mt5-copier-public-stats"] });
+      setBulkProfit("");
+      setBulkLoss("");
+      toast.success(`Performance updated for ${count} copier${count === 1 ? "" : "s"}`);
+    },
+    onError: (err: any) => {
+      toast.error("Bulk update failed", { description: err?.message });
+    },
+  });
+
+  const applyBulkPerformance = () => {
+    const profit = bulkProfit.trim() === "" ? null : Number(bulkProfit);
+    const loss = bulkLoss.trim() === "" ? null : Number(bulkLoss);
+    if ((profit !== null && (!Number.isFinite(profit) || profit < 0)) || (loss !== null && (!Number.isFinite(loss) || loss < 0))) {
+      toast.error("Enter valid positive % values");
+      return;
+    }
+    if (profit === null && loss === null) {
+      toast.error("Enter Profit % or Loss %");
+      return;
+    }
+    if (selectedIds.length === 0) {
+      toast.error("Select at least one user");
+      return;
+    }
+    const verb = bulkMode === "increase" ? "Increase" : bulkMode === "decrease" ? "Decrease" : "Set";
+    const parts = [profit !== null ? `Profit ${profit}%` : null, loss !== null ? `Loss ${loss}%` : null].filter(Boolean).join(", ");
+    if (window.confirm(`${verb} ${parts} for ${selectedIds.length} selected user${selectedIds.length === 1 ? "" : "s"}?`)) {
+      bulkPerformanceMutation.mutate({ ids: selectedIds, mode: bulkMode, profit, loss });
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<CopierRequest> }) => {
@@ -361,6 +452,51 @@ const MT5CopierManagement = ({ initialSearch }: { initialSearch?: string } = {})
             {filteredRequests && filteredRequests.length > 0 && filteredRequests.every((r) => selectedIds.includes(r.id))
               ? "Unselect All"
               : "Select All"}
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border/60 bg-muted/30 p-2 mt-1">
+          <div className="w-full text-[11px] font-semibold text-muted-foreground">
+            Bulk Performance {selectedIds.length > 0 ? `- ${selectedIds.length} selected` : "- select users first"}
+          </div>
+          <Select value={bulkMode} onValueChange={(v) => setBulkMode(v as "increase" | "decrease" | "set")}>
+            <SelectTrigger className="h-8 w-[110px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="increase">Increase</SelectItem>
+              <SelectItem value="decrease">Decrease</SelectItem>
+              <SelectItem value="set">Set</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={bulkProfit}
+            onChange={(e) => setBulkProfit(e.target.value)}
+            placeholder="Profit %"
+            className="h-8 w-[90px] text-xs"
+          />
+          <Input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={bulkLoss}
+            onChange={(e) => setBulkLoss(e.target.value)}
+            placeholder="Loss %"
+            className="h-8 w-[90px] text-xs"
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={selectedIds.length === 0 || bulkPerformanceMutation.isPending}
+            onClick={applyBulkPerformance}
+          >
+            {bulkPerformanceMutation.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+            Apply
           </Button>
         </div>
         <div className="relative pt-1">
