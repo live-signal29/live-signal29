@@ -15,6 +15,7 @@ import {
   Gauge,
   User,
   ChevronRight,
+  ChevronDown,
   ShieldCheck,
   Zap,
   BarChart3,
@@ -86,6 +87,7 @@ const lastSyncLabel = (s: PublicCopierStat) => {
 export const CopierLeaderboard = () => {
   const [selected, setSelected] = useState<PublicCopierStat | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [showRequirements, setShowRequirements] = useState(false);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["mt5-copier-public-stats"],
@@ -264,14 +266,30 @@ export const CopierLeaderboard = () => {
             </div>
           </div>
 
-          <Badge
-            variant="secondary"
-            className="shrink-0 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9px] sm:text-[10px] font-semibold"
-          >
-            Required
-          </Badge>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <Badge
+              variant="secondary"
+              className="shrink-0 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9px] sm:text-[10px] font-semibold"
+            >
+              Required
+            </Badge>
+
+            <button
+              type="button"
+              onClick={() => setShowRequirements((v) => !v)}
+              aria-expanded={showRequirements}
+              className="flex items-center gap-0.5 text-[10px] sm:text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
+            >
+              {showRequirements ? "Hide details" : "View details"}
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${showRequirements ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
         </div>
 
+        {showRequirements && (
+        <>
         <div className="mt-4 space-y-2.5">
           {/* MINIMUM / MAXIMUM BALANCE */}
           <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/60 p-3">
@@ -452,6 +470,8 @@ export const CopierLeaderboard = () => {
             </p>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* SECTION DIVIDER & LEADERBOARD HEADER */}
