@@ -16,6 +16,18 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -23,6 +35,8 @@ import {
   Send,
   CheckCircle2,
   XCircle,
+  AlertTriangle,
+  ImageIcon,
   Copy,
   Wallet,
   Zap,
@@ -126,6 +140,7 @@ interface PaymentShare {
   share_amount: number | null;
   status: string;
   payment_proof: string | null;
+  payment_proof_photo: string | null;
   reminder_count: number;
   created_at: string;
   updated_at: string;
@@ -144,6 +159,63 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   support_requested: { label: "Needs Support", className: "bg-red-500/10 text-red-500" },
 };
 
+const normalizeProof = (v: string | null | undefined) => (v || "").trim().toLowerCase();
+
+// Loads the client's payment screenshot through an admin-only edge function
+// (the Telegram bot token never reaches the browser).
+const ProofScreenshot = ({ shareId, fileId }: { shareId: string; fileId: string }) => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["payment-proof-photo", shareId, fileId],
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async (): Promise<string> => {
+      const { data, error } = await db.functions.invoke("payment-share-proof-photo", { body: { id: shareId } });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Could not load screenshot");
+      return data.image as string;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return (
+      <p className="text-sm text-destructive">
+        {(error as any)?.message || "Could not load the screenshot."}
+      </p>
+    );
+  }
+  return (
+    <img
+      src={data}
+      alt="Payment screenshot"
+      className="w-full max-h-[50vh] object-contain rounded-md border bg-muted/30"
+    />
+  );
+};
+
+type ListFilter = "all" | "pending" | "proof" | "not_received" | "verified";
+
+const filterOf = (status: string): Exclude<ListFilter, "all"> => {
+  if (status === "client_marked_paid") return "proof";
+  if (status === "payment_not_received") return "not_received";
+  if (status === "verified") return "verified";
+  return "pending";
+};
+
+const FILTER_LABELS: { key: ListFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "proof", label: "Proof Received" },
+  { key: "not_received", label: "Not Received" },
+  { key: "verified", label: "Verified" },
+];
+
 const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const queryClient = useQueryClient();
   const [selectedKey, setSelectedKey] = useState<string>("");
@@ -156,6 +228,13 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [clientComboOpen, setClientComboOpen] = useState(false);
   const [listSearch, setListSearch] = useState("");
+  const [listFilter, setListFilter] = useState<ListFilter>("all");
+  const [showProofPhoto, setShowProofPhoto] = useState(false);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
+  const [amountConfirmed, setAmountConfirmed] = useState(false);
+  const [duplicateConfirmed, setDuplicateConfirmed] = useState(false);
+  const [notReceivedOpen, setNotReceivedOpen] = useState(false);
+  const [notReceivedReason, setNotReceivedReason] = useState("");
 
   useEffect(() => {
     if (initialSearch) setListSearch(initialSearch);
@@ -339,16 +418,26 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
     return map;
   }, [shares]);
 
+  const filterCounts = useMemo(() => {
+    const counts: Record<ListFilter, number> = { all: 0, pending: 0, proof: 0, not_received: 0, verified: 0 };
+    (shares || []).forEach((s) => {
+      counts.all += 1;
+      counts[filterOf(s.status)] += 1;
+    });
+    return counts;
+  }, [shares]);
+
   const filteredShares = useMemo(() => {
     const q = listSearch.trim().toLowerCase();
-    if (!q) return shares || [];
     return (shares || []).filter((s) => {
+      if (listFilter !== "all" && filterOf(s.status) !== listFilter) return false;
+      if (!q) return true;
       const statusLabel = STATUS_LABEL[s.status]?.label || s.status;
       return [s.client_name, s.client_contact, s.telegram_username, s.payment_proof, statusLabel, s.source_type]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q));
     });
-  }, [shares, listSearch]);
+  }, [shares, listSearch, listFilter]);
 
   const selectedOption = useMemo(
     () => (clientOptions || []).find((c) => `${c.source_type}:${c.source_id}` === selectedKey) || null,
@@ -360,6 +449,14 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
   const selectedShare = latestShare && latestShare.status !== "verified" ? latestShare : undefined;
   const lastRequestVerified = !!latestShare && latestShare.status === "verified";
 
+  // Other requests that already used this exact transaction ID.
+  const duplicateShares = useMemo(() => {
+    if (!selectedShare) return [];
+    const p = normalizeProof(selectedShare.payment_proof);
+    if (!p) return [];
+    return (shares || []).filter((o) => o.id !== selectedShare.id && normalizeProof(o.payment_proof) === p);
+  }, [shares, selectedShare]);
+
   // The chat id the client is actually reachable on: prefer what's already
   // saved on this payment-share row, otherwise fall back to the chat id
   // they linked via Copy Management / Account Management.
@@ -369,6 +466,7 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
 
   const handleSelect = (key: string) => {
     setSelectedKey(key);
+    setShowProofPhoto(false);
     const latest = sharesByKey.get(key);
     const existing = latest && latest.status !== "verified" ? latest : undefined;
     setProfitInput(existing?.profit_amount != null ? String(existing.profit_amount) : "");
@@ -492,14 +590,17 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
   });
 
   const notReceivedMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { data, error } = await db.functions.invoke("payment-share-not-received", { body: { id } });
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data, error } = await db.functions.invoke("payment-share-not-received", {
+        body: { id, reason: reason.trim() },
+      });
       if (error) throw error;
       if (data && data.success === false) throw new Error(data.error || "Failed to notify client");
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-payment-shares"] });
+      setNotReceivedReason("");
       toast.success("Client notified — payment not received");
     },
     onError: (err: any) => toast.error("Could not notify client", { description: err?.message }),
@@ -830,7 +931,11 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
 
                     <Button
                       variant="outline"
-                      onClick={() => verifyMutation.mutate(selectedShare.id)}
+                      onClick={() => {
+                        setAmountConfirmed(false);
+                        setDuplicateConfirmed(false);
+                        setVerifyDialogOpen(true);
+                      }}
                       disabled={
                         verifyMutation.isPending ||
                         !effectiveChatId ||
@@ -848,7 +953,10 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
                     <Button
                       variant="outline"
                       className="border-rose-500/40 text-rose-600 hover:bg-rose-500/10 hover:text-rose-600"
-                      onClick={() => notReceivedMutation.mutate(selectedShare.id)}
+                      onClick={() => {
+                        setNotReceivedReason("");
+                        setNotReceivedOpen(true);
+                      }}
                       disabled={
                         notReceivedMutation.isPending ||
                         !effectiveChatId ||
@@ -886,10 +994,51 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
                       </Badge>
                     )}
                   </div>
-                  {selectedShare.payment_proof && (
-                    <p className="text-sm text-muted-foreground">
-                      Proof / reference: <span className="text-foreground">{selectedShare.payment_proof}</span>
-                    </p>
+                  {(selectedShare.payment_proof || selectedShare.payment_proof_photo) && (
+                    <div className="rounded-lg border p-3 space-y-2 text-sm">
+                      <div className="font-medium">Payment Proof</div>
+                      <div className="text-muted-foreground">
+                        Expected amount:{" "}
+                        <span className="font-semibold text-foreground">
+                          {Number(selectedShare.share_amount ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground break-all">
+                        Transaction ID:{" "}
+                        <span className="font-semibold text-foreground">
+                          {selectedShare.payment_proof || "not submitted"}
+                        </span>
+                      </div>
+                      {duplicateShares.length > 0 && (
+                        <div className="flex items-start gap-2 rounded-md bg-rose-500/10 text-rose-600 p-2 text-xs">
+                          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>
+                            Duplicate transaction ID — already used on:{" "}
+                            {duplicateShares
+                              .map((d) => `${d.client_name || "Unknown"} (${STATUS_LABEL[d.status]?.label || d.status})`)
+                              .join(", ")}
+                          </span>
+                        </div>
+                      )}
+                      {selectedShare.payment_proof_photo && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowProofPhoto((v) => !v)}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            {showProofPhoto ? "Hide screenshot" : "Show screenshot"}
+                          </Button>
+                          {showProofPhoto && (
+                            <ProofScreenshot
+                              shareId={selectedShare.id}
+                              fileId={selectedShare.payment_proof_photo}
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -899,7 +1048,20 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
       </div>
 
       <SectionCard title="All Payment Share Requests">
-        <div className="relative -mt-2 mb-2">
+        <div className="flex flex-wrap gap-2 -mt-2 mb-2">
+          {FILTER_LABELS.map((f) => (
+            <Button
+              key={f.key}
+              size="sm"
+              variant={listFilter === f.key ? "default" : "outline"}
+              className="h-8 rounded-full px-3 text-xs"
+              onClick={() => setListFilter(f.key)}
+            >
+              {f.label} ({filterCounts[f.key]})
+            </Button>
+          ))}
+        </div>
+        <div className="relative mb-2">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={listSearch}
@@ -915,7 +1077,7 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
         ) : !shares || shares.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">No payment share requests yet.</p>
         ) : filteredShares.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">No matches for "{listSearch}".</p>
+          <p className="text-sm text-muted-foreground py-4 text-center">No matches for your search or filter.</p>
         ) : (
           <div className="space-y-2">
             {filteredShares.map((s) => (
@@ -952,6 +1114,110 @@ const PaymentShareManagement = ({ initialSearch }: { initialSearch?: string } = 
           </div>
         )}
       </SectionCard>
+
+      {/* ---- Confirm: Verify & Send Receipt ---- */}
+      <AlertDialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Verify payment & send receipt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The client will receive a receipt on Telegram. Please check the proof against the amount you expect.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {selectedShare && (
+            <div className="space-y-3 text-sm">
+              <div className="rounded-lg border p-3 space-y-1">
+                <div>
+                  Client: <span className="font-semibold">{selectedShare.client_name}</span>
+                </div>
+                <div>
+                  Expected amount:{" "}
+                  <span className="font-semibold">{Number(selectedShare.share_amount ?? 0).toFixed(2)}</span>
+                </div>
+                <div className="break-all">
+                  Transaction ID:{" "}
+                  <span className="font-semibold">{selectedShare.payment_proof || "not submitted"}</span>
+                </div>
+              </div>
+              {selectedShare.payment_proof_photo ? (
+                verifyDialogOpen && (
+                  <ProofScreenshot shareId={selectedShare.id} fileId={selectedShare.payment_proof_photo} />
+                )
+              ) : (
+                <p className="text-xs text-muted-foreground">No screenshot was submitted.</p>
+              )}
+              {duplicateShares.length > 0 && (
+                <div className="space-y-2 rounded-md bg-rose-500/10 text-rose-600 p-2 text-xs">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>
+                      Duplicate transaction ID — already used on:{" "}
+                      {duplicateShares.map((d) => d.client_name || "Unknown").join(", ")}
+                    </span>
+                  </div>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={duplicateConfirmed}
+                      onCheckedChange={(v) => setDuplicateConfirmed(v === true)}
+                    />
+                    <span>I have checked this and still want to verify.</span>
+                  </label>
+                </div>
+              )}
+              <label className="flex items-start gap-2 cursor-pointer">
+                <Checkbox checked={amountConfirmed} onCheckedChange={(v) => setAmountConfirmed(v === true)} />
+                <span>
+                  I confirm the payment of{" "}
+                  <span className="font-semibold">{Number(selectedShare.share_amount ?? 0).toFixed(2)}</span> has
+                  actually been received.
+                </span>
+              </label>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!amountConfirmed || (duplicateShares.length > 0 && !duplicateConfirmed)}
+              onClick={() => selectedShare && verifyMutation.mutate(selectedShare.id)}
+            >
+              Verify & Send Receipt
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ---- Confirm: I Have Not Received ---- */}
+      <AlertDialog open={notReceivedOpen} onOpenChange={setNotReceivedOpen}>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tell the client the payment was not received?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The client will get a message on Telegram asking them to recheck and resubmit their proof, or contact
+              admin. Their current proof will be cleared.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label>Note for the client (optional)</Label>
+            <Textarea
+              value={notReceivedReason}
+              onChange={(e) => setNotReceivedReason(e.target.value.slice(0, 300))}
+              placeholder="e.g. The amount received was lower than requested."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground text-right">{notReceivedReason.length}/300</p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                selectedShare && notReceivedMutation.mutate({ id: selectedShare.id, reason: notReceivedReason })
+              }
+            >
+              Send to Client
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
