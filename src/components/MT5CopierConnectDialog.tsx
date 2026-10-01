@@ -187,7 +187,14 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
 
   const update = (field: keyof FormState) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  ) => {
+    let value = e.target.value;
+    // For MT5 Login, extract only digits
+    if (field === "mt5_login") {
+      value = value.replace(/\D/g, "");
+    }
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
 
   const validateWhatsAppNumber = (phone: string): { valid: boolean; message: string } => {
     const cleanPhone = phone.trim();
@@ -238,6 +245,20 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
     return { valid: true, message: "" };
   };
 
+  const validateMT5Login = (login: string): { valid: boolean; message: string } => {
+    const clean = login.trim();
+    if (!clean) {
+      return { valid: false, message: "MT5 Login is required." };
+    }
+    if (!/^\d+$/.test(clean)) {
+      return { valid: false, message: "MT5 Login must contain only numbers (e.g., 37383838)." };
+    }
+    if (clean.length < 5) {
+      return { valid: false, message: "MT5 Login appears to be too short. Check and try again." };
+    }
+    return { valid: true, message: "" };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -251,6 +272,14 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
       !form.mt5_password.trim()
     ) {
       toast.error("Please fill all required fields");
+      return;
+    }
+
+    const mt5LoginCheck = validateMT5Login(form.mt5_login);
+    if (!mt5LoginCheck.valid) {
+      toast.error("Invalid MT5 Login", {
+        description: mt5LoginCheck.message,
+      });
       return;
     }
 
@@ -447,12 +476,15 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
               <Label htmlFor="mt5_login" className={fieldLabelClass}>MT5 Login</Label>
               <Input
                 id="mt5_login"
-                placeholder="e.g., 8373738"
+                placeholder="e.g., 37383838"
                 value={form.mt5_login}
                 onChange={update("mt5_login")}
                 inputMode="numeric"
                 className={fieldInputClass}
               />
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                ✓ Enter ONLY numbers (e.g., 37383838)
+              </p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="broker_name" className={fieldLabelClass}>Broker Name</Label>
