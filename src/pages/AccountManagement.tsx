@@ -658,12 +658,15 @@ const AccountManagement = () => {
                           <div className="relative">
                             <Key className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                             <Input
-                              placeholder="8373738"
+                              placeholder="e.g., 37383838"
                               value={formData.trading_login}
                               onChange={(e) => setFormData({ ...formData, trading_login: e.target.value.replace(/\D/g, '') })}
                               className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
                             />
                           </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <span>✓ Enter ONLY numbers (e.g., 37383838)</span>
+                          </p>
                           {errors.trading_login && <p className="text-[10px] text-destructive">{errors.trading_login}</p>}
                         </div>
 
@@ -679,6 +682,10 @@ const AccountManagement = () => {
                               className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
                             />
                           </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <Shield className="h-3 w-3" />
+                            <span>Used only to connect your account — kept private and secure</span>
+                          </p>
                           {errors.trading_password && <p className="text-[10px] text-destructive">{errors.trading_password}</p>}
                         </div>
                       </div>
