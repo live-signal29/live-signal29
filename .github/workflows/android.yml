@@ -1,0 +1,687 @@
+name: Build Android App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install web dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Install Capacitor
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/app @capacitor/browser
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Generate app icon & splash
+        run: |
+          npm install @capacitor/assets --save-dev
+          npx capacitor-assets generate --android \
+            --splashBackgroundColor '#EAFBF4' \
+            --splashBackgroundColorDark '#EAFBF4' \
+            --iconBackgroundColor '#EAFBF4' \
+            --iconBackgroundColorDark '#EAFBF4'
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Fix Kotlin duplicate class conflict
+        run: |
+          cat >> android/app/build.gradle << 'EOF'
+
+          configurations.all {
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+          }
+          EOF
+
+      - name: Install Android SDK 36
+        run: |
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/tools/bin:$PATH"
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set target/compile SDK to 36
+        run: |
+          sed -i "s/compileSdkVersion = [0-9]*/compileSdkVersion = 36/" android/variables.gradle
+          sed -i "s/targetSdkVersion = [0-9]*/targetSdkVersion = 36/" android/variables.gradle
+
+      - name: Add Google login deep link (return from browser to app)
+        run: |
+          python3 - << 'PY'
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p).read()
+          f = """<intent-filter>
+                      <action android:name="android.intent.action.VIEW" />
+                      <category android:name="android.intent.category.DEFAULT" />
+                      <category android:name="android.intent.category.BROWSABLE" />
+                      <data android:scheme="co.median.android.krkqyaz" android:host="auth" />
+                  </intent-filter>
+              """
+          assert "</activity>" in s
+          s = s.replace("</activity>", f + "</activity>", 1)
+          open(p, "w").write(s)
+          PY
+
+      - name: Add OneSignal native SDK dependency
+        run: |
+          sed -i '/^dependencies {/a\    implementation("com.onesignal:OneSignal:[5.6.1, 5.9.99]")' android/app/build.gradle
+
+      - name: Add notification permission + OneSignal native init
+        run: |
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' android/app/src/main/AndroidManifest.xml
+          sed -i 's/<application/<application android:name=".OneSignalApp"/' android/app/src/main/AndroidManifest.xml
+
+          APPDIR=android/app/src/main/java/co/median/android/krkqyaz
+          mkdir -p "$APPDIR"
+
+          cat > "$APPDIR/OneSignalApp.java" << 'EOF'
+          package co.median.android.krkqyaz;
+
+          import android.app.Application;
+          import com.onesignal.OneSignal;
+
+          public class OneSignalApp extends Application {
+              @Override
+              public void onCreate() {
+                  super.onCreate();
+                  try {
+                      OneSignal.initWithContext(this, "ecd43f8e-031e-41f0-a082-9af60943a575");
+                  } catch (Throwable t) {
+                      // Never let a push-SDK issue crash the whole app
+                      t.printStackTrace();
+                  }
+              }
+          }
+          EOF
+
+          MAINACT=android/app/src/main/java/co/median/android/krkqyaz/MainActivity.java
+          cat > "$MAINACT" << 'EOF'
+          package co.median.android.krkqyaz;
+
+          import android.Manifest;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.net.Uri;
+          import android.provider.Settings;
+          import android.webkit.WebView;
+          import androidx.activity.OnBackPressedCallback;
+          import androidx.browser.customtabs.CustomTabsIntent;
+          import android.webkit.JavascriptInterface;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
+
+          import com.getcapacitor.BridgeActivity;
+          import com.onesignal.Continue;
+          import com.onesignal.OneSignal;
+
+          public class MainActivity extends BridgeActivity {
+
+              // Exposed to the website as window.NativePush
+              public class NativePush {
+                  // Supabase user id becomes this device's OneSignal external_id
+                  @JavascriptInterface
+                  public void login(String externalId) {
+                      try {
+                          if (externalId != null && !externalId.isEmpty()) {
+                              OneSignal.login(externalId);
+                          }
+                      } catch (Throwable t) {
+                          t.printStackTrace();
+                      }
+                  }
+
+                  @JavascriptInterface
+                  public void logout() {
+                      try {
+                          OneSignal.logout();
+                      } catch (Throwable t) {
+                          t.printStackTrace();
+                      }
+                  }
+
+                  // true if notifications are allowed for this app
+                  @JavascriptInterface
+                  public boolean hasPermission() {
+                      try {
+                          return OneSignal.getNotifications().getPermission();
+                      } catch (Throwable t) {
+                          return true;
+                      }
+                  }
+
+                  // Shows the system permission dialog; if Android already blocked it
+                  // (denied twice) it sends the user to the app's notification settings.
+                  @JavascriptInterface
+                  public void requestPermission() {
+                      runOnUiThread(() -> {
+                          try {
+                              OneSignal.getNotifications().requestPermission(true, Continue.none());
+                          } catch (Throwable t) {
+                              t.printStackTrace();
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void openSettings() {
+                      runOnUiThread(() -> {
+                          try {
+                              Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                              intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                              intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                              startActivity(intent);
+                          } catch (Throwable t) {
+                              t.printStackTrace();
+                          }
+                      });
+                  }
+              }
+
+              // Exposed to the website as window.NativeBrowser.
+              // http(s) pages open in an in-app Chrome Custom Tab: BACK / X returns
+              // straight to the app. Telegram / WhatsApp / Play Store open their app.
+              public class NativeBrowser {
+                  @JavascriptInterface
+                  public void open(final String url) {
+                      runOnUiThread(() -> {
+                          try {
+                              Uri uri = Uri.parse(url);
+                              String scheme = uri.getScheme();
+                              String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+                              boolean web = "http".equals(scheme) || "https".equals(scheme);
+                              boolean appLink = host.equals("t.me") || host.equals("telegram.me")
+                                      || host.equals("wa.me") || host.equals("api.whatsapp.com")
+                                      || host.equals("play.google.com");
+                              if (!web || appLink) {
+                                  startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                              } else {
+                                  new CustomTabsIntent.Builder().setShowTitle(true).build()
+                                          .launchUrl(MainActivity.this, uri);
+                              }
+                          } catch (Throwable t) {
+                              try {
+                                  startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                              } catch (Throwable ignored) { }
+                          }
+                      });
+                  }
+              }
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                              != PackageManager.PERMISSION_GRANTED) {
+                          ActivityCompat.requestPermissions(this,
+                                  new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+                      }
+                  }
+                  try {
+                      if (getBridge() != null && getBridge().getWebView() != null) {
+                          getBridge().getWebView().addJavascriptInterface(new NativePush(), "NativePush");
+                          getBridge().getWebView().addJavascriptInterface(
+                                  new BillingBridge(this, getBridge().getWebView()), "NativeBilling");
+                          getBridge().getWebView().addJavascriptInterface(new NativeBrowser(), "NativeBrowser");
+                      }
+                  } catch (Throwable t) {
+                      t.printStackTrace();
+                  }
+
+                  // BACK button: ask the website first (it goes back one screen / to home),
+                  // then the WebView history, and only then close the app.
+                  try {
+                      getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+                          @Override
+                          public void handleOnBackPressed() {
+                              final WebView wv = getBridge() != null ? getBridge().getWebView() : null;
+                              if (wv == null) {
+                                  finish();
+                                  return;
+                              }
+                              wv.evaluateJavascript(
+                                      "(function(){try{return !!(window.__appBack&&window.__appBack());}catch(e){return false;}})()",
+                                      value -> {
+                                          if ("true".equals(value)) return;
+                                          if (wv.canGoBack()) wv.goBack();
+                                          else finish();
+                                      });
+                          }
+                      });
+                  } catch (Throwable t) {
+                      t.printStackTrace();
+                  }
+              }
+          }
+          EOF
+
+      - name: Add Google Play Billing (Play Billing Library 8)
+        run: |
+          # Play requires Billing Library 8+ for all new uploads (Aug 31 2026, extension Nov 1 2026)
+          sed -i '/^dependencies {/a\    implementation("com.android.billingclient:billing:8.0.0")' android/app/build.gradle
+          # Chrome Custom Tabs (in-app browser used by NativeBrowser)
+          sed -i '/^dependencies {/a\    implementation("androidx.browser:browser:1.8.0")' android/app/build.gradle
+
+          APPDIR=android/app/src/main/java/co/median/android/krkqyaz
+          mkdir -p "$APPDIR"
+
+          cat > "$APPDIR/BillingBridge.java" << 'EOF'
+          package co.median.android.krkqyaz;
+
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.WebView;
+
+          import com.android.billingclient.api.BillingClient;
+          import com.android.billingclient.api.BillingClientStateListener;
+          import com.android.billingclient.api.BillingFlowParams;
+          import com.android.billingclient.api.BillingResult;
+          import com.android.billingclient.api.PendingPurchasesParams;
+          import com.android.billingclient.api.ProductDetails;
+          import com.android.billingclient.api.Purchase;
+          import com.android.billingclient.api.PurchasesUpdatedListener;
+          import com.android.billingclient.api.QueryProductDetailsParams;
+          import com.android.billingclient.api.QueryPurchasesParams;
+
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+
+          import java.util.Collections;
+          import java.util.List;
+
+          /**
+           * Google Play Billing (Play Billing Library 8) exposed to the website as
+           * window.NativeBilling. Java cannot return a Promise to JS, so every call
+           * carries a callback id and the result is sent back through
+           * window.__nativeBilling.resolve(id, payload)  (see src/lib/playBilling.ts).
+           *
+           * Payload shape: { ok: true, ... }  or  { ok: false, code, message }
+           * code = "cancelled" | "pending" | "error"
+           */
+          public class BillingBridge implements PurchasesUpdatedListener {
+
+              private interface Failure { void run(String message); }
+              private interface ProductCallback { void done(ProductDetails details, String error); }
+
+              private final Activity activity;
+              private final WebView webView;
+              private final BillingClient client;
+              private String purchaseCallbackId = null;
+
+              public BillingBridge(Activity activity, WebView webView) {
+                  this.activity = activity;
+                  this.webView = webView;
+                  this.client = BillingClient.newBuilder(activity)
+                          .setListener(this)
+                          .enablePendingPurchases(
+                                  PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+                          .enableAutoServiceReconnection()
+                          .build();
+              }
+
+              // ---------- helpers ----------
+
+              private void respond(final String id, final JSONObject payload) {
+                  final String js = "window.__nativeBilling&&window.__nativeBilling.resolve("
+                          + JSONObject.quote(id) + "," + payload.toString() + ")";
+                  activity.runOnUiThread(() -> webView.evaluateJavascript(js, null));
+              }
+
+              private void fail(String id, String code, String message) {
+                  try {
+                      JSONObject o = new JSONObject();
+                      o.put("ok", false);
+                      o.put("code", code);
+                      o.put("message", message == null ? "" : message);
+                      respond(id, o);
+                  } catch (Exception ignored) { }
+              }
+
+              private void withClient(final Runnable ready, final Failure failure) {
+                  if (client.isReady()) {
+                      ready.run();
+                      return;
+                  }
+                  client.startConnection(new BillingClientStateListener() {
+                      @Override
+                      public void onBillingSetupFinished(BillingResult result) {
+                          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                              ready.run();
+                          } else {
+                              failure.run("Google Play billing unavailable: " + result.getDebugMessage());
+                          }
+                      }
+
+                      @Override
+                      public void onBillingServiceDisconnected() { }
+                  });
+              }
+
+              private void queryProduct(String productId, String productType, final ProductCallback cb) {
+                  QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
+                          .setProductId(productId)
+                          .setProductType(productType)
+                          .build();
+                  QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
+                          .setProductList(Collections.singletonList(product))
+                          .build();
+
+                  client.queryProductDetailsAsync(params, (result, queryResult) -> {
+                      if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                          cb.done(null, result.getDebugMessage());
+                          return;
+                      }
+                      List<ProductDetails> list = queryResult.getProductDetailsList();
+                      if (list == null || list.isEmpty()) {
+                          cb.done(null, "Product not found in Play Console (is it active and is this build installed from Play?)");
+                      } else {
+                          cb.done(list.get(0), null);
+                      }
+                  });
+              }
+
+              private JSONObject purchaseToJson(Purchase p) throws Exception {
+                  JSONObject o = new JSONObject();
+                  o.put("productId", p.getProducts().isEmpty() ? "" : p.getProducts().get(0));
+                  o.put("purchaseToken", p.getPurchaseToken());
+                  o.put("orderId", p.getOrderId());
+                  o.put("purchaseState", p.getPurchaseState());
+                  o.put("autoRenewing", p.isAutoRenewing());
+                  return o;
+              }
+
+              // ---------- JS API ----------
+
+              /** Prices for every base plan of a subscription product. */
+              @JavascriptInterface
+              public void getOffers(final String id, final String productId) {
+                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, BillingClient.ProductType.SUBS, (details, error) -> {
+                      if (details == null) {
+                          fail(id, "error", error);
+                          return;
+                      }
+                      try {
+                          JSONArray offers = new JSONArray();
+                          List<ProductDetails.SubscriptionOfferDetails> list = details.getSubscriptionOfferDetails();
+                          if (list != null) {
+                              for (ProductDetails.SubscriptionOfferDetails o : list) {
+                                  List<ProductDetails.PricingPhase> phases = o.getPricingPhases().getPricingPhaseList();
+                                  if (phases.isEmpty()) continue;
+                                  // last phase = the regular recurring price
+                                  ProductDetails.PricingPhase phase = phases.get(phases.size() - 1);
+                                  JSONObject j = new JSONObject();
+                                  j.put("basePlanId", o.getBasePlanId());
+                                  j.put("offerId", o.getOfferId() == null ? JSONObject.NULL : o.getOfferId());
+                                  j.put("formattedPrice", phase.getFormattedPrice());
+                                  j.put("priceAmountMicros", phase.getPriceAmountMicros());
+                                  j.put("currency", phase.getPriceCurrencyCode());
+                                  j.put("billingPeriod", phase.getBillingPeriod());
+                                  offers.put(j);
+                              }
+                          }
+                          JSONObject out = new JSONObject();
+                          out.put("ok", true);
+                          out.put("offers", offers);
+                          respond(id, out);
+                      } catch (Exception e) {
+                          fail(id, "error", String.valueOf(e.getMessage()));
+                      }
+                  }), message -> fail(id, "error", message)));
+              }
+
+              /**
+               * Opens Google's purchase sheet for one base plan.
+               * accountId (the Supabase user id) is stored on the purchase as the
+               * "obfuscated account id" so the server can prove who bought it.
+               */
+              @JavascriptInterface
+              public void purchase(final String id, final String productId, final String basePlanId, final String accountId) {
+                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, BillingClient.ProductType.SUBS, (details, error) -> {
+                      if (details == null) {
+                          fail(id, "error", error);
+                          return;
+                      }
+
+                      ProductDetails.SubscriptionOfferDetails chosen = null;
+                      List<ProductDetails.SubscriptionOfferDetails> list = details.getSubscriptionOfferDetails();
+                      if (list != null) {
+                          for (ProductDetails.SubscriptionOfferDetails o : list) {
+                              if (!basePlanId.equals(o.getBasePlanId())) continue;
+                              if (o.getOfferId() == null) { chosen = o; break; }   // plain base plan
+                              if (chosen == null) chosen = o;                      // fallback: any offer of that plan
+                          }
+                      }
+                      if (chosen == null) {
+                          fail(id, "error", "Base plan \"" + basePlanId + "\" not found or not active in Play Console");
+                          return;
+                      }
+
+                      BillingFlowParams.ProductDetailsParams pdp = BillingFlowParams.ProductDetailsParams.newBuilder()
+                              .setProductDetails(details)
+                              .setOfferToken(chosen.getOfferToken())
+                              .build();
+                      BillingFlowParams.Builder builder = BillingFlowParams.newBuilder()
+                              .setProductDetailsParamsList(Collections.singletonList(pdp));
+                      if (accountId != null && !accountId.isEmpty()) {
+                          builder.setObfuscatedAccountId(accountId);
+                      }
+
+                      purchaseCallbackId = id;
+                      BillingResult launch = client.launchBillingFlow(activity, builder.build());
+                      if (launch.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                          purchaseCallbackId = null;
+                          fail(id, "error", launch.getDebugMessage());
+                      }
+                  }), message -> fail(id, "error", message)));
+              }
+
+              /**
+               * Opens Google's purchase sheet for a one-time (non-subscription)
+               * product — used for the Lifetime plan. No base plan / offer token:
+               * one-time products are priced directly.
+               */
+              @JavascriptInterface
+              public void purchaseInApp(final String id, final String productId, final String accountId) {
+                  activity.runOnUiThread(() -> withClient(() -> queryProduct(productId, BillingClient.ProductType.INAPP, (details, error) -> {
+                      if (details == null) {
+                          fail(id, "error", error);
+                          return;
+                      }
+
+                      BillingFlowParams.ProductDetailsParams pdp = BillingFlowParams.ProductDetailsParams.newBuilder()
+                              .setProductDetails(details)
+                              .build();
+                      BillingFlowParams.Builder builder = BillingFlowParams.newBuilder()
+                              .setProductDetailsParamsList(Collections.singletonList(pdp));
+                      if (accountId != null && !accountId.isEmpty()) {
+                          builder.setObfuscatedAccountId(accountId);
+                      }
+
+                      purchaseCallbackId = id;
+                      BillingResult launch = client.launchBillingFlow(activity, builder.build());
+                      if (launch.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                          purchaseCallbackId = null;
+                          fail(id, "error", launch.getDebugMessage());
+                      }
+                  }), message -> fail(id, "error", message)));
+              }
+
+              /**
+               * Everything this Google account currently owns — subscriptions AND
+               * one-time (lifetime) purchases — merged into one list so restore /
+               * app-start sync catches both.
+               */
+              @JavascriptInterface
+              public void getPurchases(final String id) {
+                  activity.runOnUiThread(() -> withClient(() -> {
+                      QueryPurchasesParams subsParams = QueryPurchasesParams.newBuilder()
+                              .setProductType(BillingClient.ProductType.SUBS)
+                              .build();
+                      client.queryPurchasesAsync(subsParams, (subsResult, subsPurchases) -> {
+                          if (subsResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                              fail(id, "error", subsResult.getDebugMessage());
+                              return;
+                          }
+                          QueryPurchasesParams inappParams = QueryPurchasesParams.newBuilder()
+                                  .setProductType(BillingClient.ProductType.INAPP)
+                                  .build();
+                          client.queryPurchasesAsync(inappParams, (inappResult, inappPurchases) -> {
+                              if (inappResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                                  fail(id, "error", inappResult.getDebugMessage());
+                                  return;
+                              }
+                              try {
+                                  JSONArray arr = new JSONArray();
+                                  for (Purchase p : subsPurchases) arr.put(purchaseToJson(p));
+                                  for (Purchase p : inappPurchases) arr.put(purchaseToJson(p));
+                                  JSONObject out = new JSONObject();
+                                  out.put("ok", true);
+                                  out.put("purchases", arr);
+                                  respond(id, out);
+                              } catch (Exception e) {
+                                  fail(id, "error", String.valueOf(e.getMessage()));
+                              }
+                          });
+                      });
+                  }, message -> fail(id, "error", message)));
+              }
+
+              /** Opens the Play Store's own "Manage subscription" screen. */
+              @JavascriptInterface
+              public void manage(final String productId) {
+                  activity.runOnUiThread(() -> {
+                      try {
+                          Uri uri = Uri.parse("https://play.google.com/store/account/subscriptions?sku="
+                                  + Uri.encode(productId) + "&package=" + activity.getPackageName());
+                          activity.startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                      } catch (Exception e) {
+                          e.printStackTrace();
+                      }
+                  });
+              }
+
+              // ---------- Google -> app: result of the purchase sheet ----------
+
+              @Override
+              public void onPurchasesUpdated(BillingResult result, List<Purchase> purchases) {
+                  final String id = purchaseCallbackId;
+                  purchaseCallbackId = null;
+                  if (id == null) return; // not started from JS (e.g. a purchase completed later) — the app-start sync handles it
+
+                  int code = result.getResponseCode();
+                  if (code == BillingClient.BillingResponseCode.USER_CANCELED) {
+                      fail(id, "cancelled", "");
+                      return;
+                  }
+                  if (code != BillingClient.BillingResponseCode.OK || purchases == null) {
+                      fail(id, "error", result.getDebugMessage());
+                      return;
+                  }
+
+                  try {
+                      JSONArray done = new JSONArray();
+                      boolean pending = false;
+                      for (Purchase p : purchases) {
+                          if (p.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                              done.put(purchaseToJson(p));
+                          } else if (p.getPurchaseState() == Purchase.PurchaseState.PENDING) {
+                              pending = true;
+                          }
+                      }
+                      if (done.length() > 0) {
+                          JSONObject out = new JSONObject();
+                          out.put("ok", true);
+                          out.put("purchases", done);
+                          respond(id, out);
+                      } else if (pending) {
+                          fail(id, "pending", "");
+                      } else {
+                          fail(id, "error", "No completed purchase returned");
+                      }
+                  } catch (Exception e) {
+                      fail(id, "error", String.valueOf(e.getMessage()));
+                  }
+              }
+          }
+          EOF
+
+      - name: Set app version
+        run: |
+          sed -i "s/versionName \".*\"/versionName \"9.8.9.9.5\"/" android/app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode $((90000 + ${{ github.run_number }}))/" android/app/build.gradle
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-key.jks
+
+      - name: Add signing config
+        run: |
+          cat >> android/app/build.gradle << 'EOF'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("upload-key.jks")
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+
+      - name: Build Release AAB (for Play Store)
+        run: cd android && ./gradlew bundleRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+
+      - name: Build Release APK
+        run: cd android && ./gradlew assembleRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
