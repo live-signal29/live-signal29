@@ -6,7 +6,7 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 // cache-first strategy (this is what was serving the old theme colors
 // after deploys). Bump this again any time you need to force a hard
 // cache clear for all users.
-const CACHE = "trendisfriend-v4";
+const CACHE = "trendisfriend-v5";
 const offlineFallbackPage = "/offline.html";
 
 // Skip waiting to activate new service worker immediately
