@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { oauthSignIn } from "@/lib/nativeAuth";
 import { ArrowLeft, Globe, Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
@@ -60,12 +61,7 @@ const handleOAuthLogin = async (provider: "google" | "apple") => {
 if (provider === "google") setGoogleLoading(true);
 
 try {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: `${window.location.origin}/`,
-    },
-  });
+  const { error } = await oauthSignIn(provider, "/");
 
   if (error) toast.error(error.message);
 } catch {

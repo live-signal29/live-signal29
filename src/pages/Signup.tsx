@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { oauthSignIn } from "@/lib/nativeAuth";
 import { ArrowLeft, Globe, Eye, EyeOff, Check, X } from "lucide-react";
 import { signupSchema } from "@/lib/validations";
 
@@ -136,13 +137,7 @@ const handleOAuthSignup = async (
 provider: "google" | "apple"
 ) => {
 try {
-const { error } = await supabase.auth.signInWithOAuth({
-provider,
-
-    options: {
-      redirectTo: `${window.location.origin}${returnUrl}`,
-    },
-  });
+const { error } = await oauthSignIn(provider, returnUrl);
 
   if (error) throw error;
 } catch (error: any) {
