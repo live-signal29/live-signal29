@@ -20,7 +20,7 @@ const Footer = () => {
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
-              Institutional grade PAMM and automated copy trading solutions.
+              Smart trading signals and automated copy trading solutions.
             </p>
           </div>
 
