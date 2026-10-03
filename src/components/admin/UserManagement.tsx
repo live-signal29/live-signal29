@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Edit, CheckSquare, Trash2 } from "lucide-react";
+import UserStatsCards from "./UserStatsCards";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface UserProfile {
@@ -301,6 +302,8 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
 
   return (
     <div className="space-y-6">
+      <UserStatsCards />
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

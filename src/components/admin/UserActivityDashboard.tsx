@@ -120,12 +120,22 @@ const UserActivityDashboard = () => {
           .map(l => l.user_id)
       ).size;
 
+      // Accurate server-side counters (not limited to the last 100 logins)
+      let serverStats: any = null;
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        const { data } = await (supabase as any).rpc("admin_user_stats", { _tz: tz });
+        serverStats = data;
+      } catch {
+        /* fall back to the local numbers below */
+      }
+
       setUserActivities(activities);
       setLoginHistory(loginsWithEmail);
       setSignalViews(viewsWithDetails);
       setStats({
-        totalUsers: profiles?.length || 0,
-        activeToday,
+        totalUsers: serverStats?.total ?? (profiles?.length || 0),
+        activeToday: serverStats?.active_today ?? activeToday,
         totalSignalViews: views?.length || 0,
         avgViewsPerUser: profiles?.length ? Math.round(((views?.length || 0) / profiles.length) * 10) / 10 : 0
       });
