@@ -71,8 +71,25 @@ const brokerPlain = (s: PublicCopierStat) => {
     : s.broker_name;
 };
 
+// Privacy: other people's full name / broker are never shown publicly.
+// Only the owner of a request (same device) sees their own full details.
+const shortName = (name: string | null) => {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "Copier User";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+};
+
+const displayName = (s: PublicCopierStat) =>
+  isOwnCopierRequestId(s.id) ? s.name || "Copier User" : shortName(s.name);
+
+const brokerPublic = (s: PublicCopierStat) =>
+  isOwnCopierRequestId(s.id) ? brokerPlain(s) : "MT5 Live account";
+
 const brokerLabel = (s: PublicCopierStat) =>
-  s.broker_name ? `MT5 • ${brokerPlain(s)}` : "MT5 • Account";
+  isOwnCopierRequestId(s.id) && s.broker_name
+    ? `MT5 • ${brokerPlain(s)}`
+    : "MT5 • Live account";
 
 const lastSyncLabel = (s: PublicCopierStat) => {
   const ts = s.last_synced_at || s.updated_at || s.created_at;
@@ -88,6 +105,7 @@ export const CopierLeaderboard = () => {
   const [selected, setSelected] = useState<PublicCopierStat | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
+  const [sortMode, setSortMode] = useState<"profit" | "newest">("profit");
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["mt5-copier-public-stats"],
@@ -103,9 +121,32 @@ export const CopierLeaderboard = () => {
     },
   });
 
-  const visibleStats = stats?.filter(
-    (s) => s.status !== "rejected" || isOwnCopierRequestId(s.id)
+  // Public list shows ONLY connected accounts. Pending / rejected requests
+  // are visible just to the person who submitted them.
+  const visibleStats = (stats ?? []).filter(
+    (s) => s.status === "connected" || isOwnCopierRequestId(s.id)
   );
+
+  const ownOpenRequests = visibleStats.filter((s) => s.status !== "connected");
+  const connectedStats = visibleStats.filter((s) => s.status === "connected");
+
+  const byProfit = [...connectedStats].sort(
+    (a, b) => (b.profit_percent ?? -Infinity) - (a.profit_percent ?? -Infinity)
+  );
+  const rankById = new Map<string, number>(
+    byProfit.map((s, i) => [s.id, i + 1] as [string, number])
+  );
+
+  const sortedConnected =
+    sortMode === "profit"
+      ? byProfit
+      : [...connectedStats].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime()
+        );
+
+  const orderedStats = [...ownOpenRequests, ...sortedConnected];
 
   return (
     <div className="pb-24">
@@ -488,11 +529,36 @@ export const CopierLeaderboard = () => {
         </div>
       </div>
 
+      {connectedStats.length > 1 && (
+        <div className="mb-3 flex items-center justify-end gap-1.5 text-[11px]">
+          <span className="text-muted-foreground">Sort:</span>
+          {(
+            [
+              ["profit", "Top profit"],
+              ["newest", "Newest"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setSortMode(mode)}
+              className={`rounded-full px-2.5 py-1 font-semibold transition ${
+                sortMode === mode
+                  ? "bg-emerald-500 text-white"
+                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : !visibleStats || visibleStats.length === 0 ? (
+      ) : orderedStats.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-muted-foreground text-lg">
             No copier accounts published yet
@@ -507,7 +573,7 @@ export const CopierLeaderboard = () => {
           id="copier-leaderboard-list"
           className="grid grid-cols-1 sm:grid-cols-2 gap-3"
         >
-          {visibleStats.map((s) => {
+          {orderedStats.map((s) => {
             const rejectedMessage = `Hello, my name is ${
               s.name || "Copier User"
             }. I submitted an MT5 Copier connection request which was rejected. Could you please let me know the reason? Thank you.`;
@@ -529,7 +595,7 @@ export const CopierLeaderboard = () => {
                       setSelected(s);
                     }
                   }}
-                  className="text-left rounded-2xl border border-emerald-500/20 bg-card p-4 shadow-sm card-3d-hover cursor-pointer"
+                  className="text-left rounded-2xl border border-emerald-500/20 bg-card p-3 shadow-sm card-3d-hover cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -538,8 +604,23 @@ export const CopierLeaderboard = () => {
                       </div>
 
                       <div className="min-w-0">
-                        <div className="font-bold text-sm truncate">
-                          {s.name || "Copier User"}
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {rankById.get(s.id) && rankById.get(s.id)! <= 3 && s.profit_percent != null && (
+                            <span
+                              className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${
+                                rankById.get(s.id) === 1
+                                  ? "bg-amber-400/20 text-amber-600 dark:text-amber-400"
+                                  : rankById.get(s.id) === 2
+                                  ? "bg-slate-400/20 text-slate-600 dark:text-slate-300"
+                                  : "bg-orange-500/20 text-orange-700 dark:text-orange-400"
+                              }`}
+                            >
+                              #{rankById.get(s.id)}
+                            </span>
+                          )}
+                          <span className="font-bold text-sm truncate">
+                            {displayName(s)}
+                          </span>
                         </div>
 
                         <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -565,7 +646,7 @@ export const CopierLeaderboard = () => {
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-3 divide-x divide-border/50 rounded-xl bg-muted/30 py-2.5">
+                  <div className="mt-2 grid grid-cols-3 divide-x divide-border/50 rounded-xl bg-muted/30 py-2">
                     <div className="flex flex-col items-center px-1">
                       <span className="flex items-center gap-1 text-emerald-500 text-[10px] font-semibold">
                         <TrendingUp className="h-3 w-3" />
@@ -600,7 +681,7 @@ export const CopierLeaderboard = () => {
                     </div>
                   </div>
 
-                  <p className="mt-2 text-[10px] text-muted-foreground text-center">
+                  <p className="mt-1.5 text-[10px] text-muted-foreground text-center">
                     Connected since {format(new Date(s.created_at), "PP")}
                   </p>
                 </div>
@@ -629,7 +710,7 @@ export const CopierLeaderboard = () => {
 
                     <div className="min-w-0">
                       <div className="font-bold text-sm truncate">
-                        {s.name || "Copier User"}
+                        {displayName(s)}
                       </div>
 
                       <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
@@ -638,7 +719,7 @@ export const CopierLeaderboard = () => {
                       </span>
 
                       <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                        Broker: {brokerPlain(s)} • Waiting for verification.
+                        Broker: {brokerPublic(s)} • Waiting for verification.
                       </p>
                     </div>
                   </div>
@@ -682,7 +763,7 @@ export const CopierLeaderboard = () => {
 
                     <div className="min-w-0">
                       <div className="font-bold text-sm truncate">
-                        {s.name || "Copier User"}
+                        {displayName(s)}
                       </div>
 
                       <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400">
@@ -691,7 +772,7 @@ export const CopierLeaderboard = () => {
                       </span>
 
                       <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                        Broker: {brokerPlain(s)} • Request rejected.
+                        Broker: {brokerPublic(s)} • Request rejected.
                       </p>
                     </div>
                   </div>
@@ -713,6 +794,14 @@ export const CopierLeaderboard = () => {
         </div>
       )}
 
+      {connectedStats.length > 0 && (
+        <p className="mt-4 px-2 text-center text-[10px] leading-relaxed text-muted-foreground">
+          Figures are reported by our team and updated periodically — they
+          are not a live broker feed. Past performance does not guarantee
+          future results. Trading involves risk.
+        </p>
+      )}
+
       {/* DIALOG MODAL */}
       <Dialog
         open={!!selected}
@@ -728,7 +817,7 @@ export const CopierLeaderboard = () => {
                   </div>
 
                   <DialogTitle className="text-base">
-                    {selected.name || "Copier User"}
+                    {displayName(selected)}
                   </DialogTitle>
                 </div>
               </DialogHeader>
@@ -740,7 +829,7 @@ export const CopierLeaderboard = () => {
                   </span>
 
                   <span className="font-bold text-foreground">
-                    {brokerPlain(selected)}
+                    {brokerPublic(selected)}
                   </span>
                 </div>
 
