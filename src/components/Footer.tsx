@@ -59,23 +59,6 @@ const Footer = () => {
         {/* Divider */}
         <div className="h-px w-full bg-slate-200/60 dark:bg-slate-800/80" />
 
-        {/* SpacerrApps Featured Badge */}
-        <div className="flex justify-center items-center pt-1">
-          <a
-            href="https://spacerrapps.com/apps/live-signals-buy-sell?utm_source=badge&utm_medium=referral&utm_campaign=featured"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Live-signals Buy/Sell is featured on SpacerrApps"
-          >
-            <img
-              src="https://spacerrapps.com/badge/live-signals-buy-sell.svg?v=3&theme=light"
-              alt="Live-signals Buy/Sell is featured on SpacerrApps"
-              width={234}
-              height={54}
-              loading="lazy"
-            />
-          </a>
-        </div>
 
         {/* Bottom Section: Copyright */}
         <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-2">
