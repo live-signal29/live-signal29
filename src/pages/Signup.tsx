@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Globe, Eye, EyeOff, Check, X } from "lucide-react";
+import AuthLanguagePicker from "@/components/AuthLanguagePicker";
+import { ArrowLeft, Eye, EyeOff, Check, X } from "lucide-react";
 import { signupSchema } from "@/lib/validations";
 
 const Signup = () => {
@@ -249,30 +250,7 @@ dark:text-slate-100
         <ArrowLeft className="h-4 w-4" />
       </button>
 
-      <span
-        className="
-          text-xs
-          font-semibold
-
-          text-emerald-600
-          dark:text-emerald-400
-
-          bg-emerald-500/10
-          border
-          border-emerald-500/20
-
-          px-3
-          py-1
-          rounded-full
-
-          flex
-          items-center
-          gap-1.5
-        "
-      >
-        <Globe className="h-3 w-3" />
-        AUTO
-      </span>
+      <AuthLanguagePicker />
 
     </div>
 
