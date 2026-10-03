@@ -1,4 +1,5 @@
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
+import { authEntryPath, markReturningUser } from "@/lib/authEntry";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -339,6 +340,7 @@ const ProtectedRoute = ({
       ({ data: { session: s } }) => {
         if (!mounted) return;
 
+        if (s) markReturningUser();
         setSession(s);
         setLoading(false);
       }
@@ -349,6 +351,7 @@ const ProtectedRoute = ({
     } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!mounted) return;
 
+      if (s) markReturningUser();
       setSession(s);
       setLoading(false);
     });
@@ -365,10 +368,16 @@ const ProtectedRoute = ({
 
   if (!session) {
     const returnUrl = `${location.pathname}${location.search}`;
+    const entry = authEntryPath();
+    const isHome = returnUrl === "/";
 
     return (
       <Navigate
-        to={`/login?returnUrl=${encodeURIComponent(returnUrl)}`}
+        to={
+          entry === "/signup" && isHome
+            ? "/signup"
+            : `${entry}?returnUrl=${encodeURIComponent(returnUrl)}`
+        }
         replace
       />
     );
