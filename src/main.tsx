@@ -4,10 +4,8 @@ import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
 import { loadGoogleTranslate } from "./lib/googleTranslate";
-import { initNativeAuthListener } from "./lib/nativeAuth";
 
 loadGoogleTranslate();
-initNativeAuthListener().catch(() => {});
 
 // Splash-hide helper: called once React has painted, with a hard safety net.
 // The native launch splash is configured to auto-hide quickly; this helper is
