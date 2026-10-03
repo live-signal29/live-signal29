@@ -1,5 +1,6 @@
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { authEntryPath, markReturningUser } from "@/lib/authEntry";
+import { pingActive } from "@/lib/activityPing";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -340,7 +341,10 @@ const ProtectedRoute = ({
       ({ data: { session: s } }) => {
         if (!mounted) return;
 
-        if (s) markReturningUser();
+        if (s) {
+          markReturningUser();
+          pingActive();
+        }
         setSession(s);
         setLoading(false);
       }
@@ -351,7 +355,10 @@ const ProtectedRoute = ({
     } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!mounted) return;
 
-      if (s) markReturningUser();
+      if (s) {
+          markReturningUser();
+          pingActive();
+        }
       setSession(s);
       setLoading(false);
     });
