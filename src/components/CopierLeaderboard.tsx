@@ -60,8 +60,22 @@ interface PublicCopierStat {
 const fmtPercent = (v: number | null) =>
   v === null || v === undefined ? "—" : `${v}%`;
 
+// Dollar amount: hidden when empty or 0 (so "$0" never sits under a big %).
 const fmtMoney = (v: number | null) =>
-  v === null || v === undefined ? "—" : `$${v}`;
+  v === null || v === undefined || Number(v) === 0 ? "" : `$${v}`;
+
+// "+40%" / "-1%"; zero shows plain "0%" (never "-0%").
+const fmtSigned = (sign: "+" | "-", v: number | null) =>
+  v === null || v === undefined
+    ? "—"
+    : Number(v) === 0
+    ? "0%"
+    : `${sign}${v}%`;
+
+const fmtRR = (v: string | null) => {
+  const t = (v || "").trim();
+  return !t || t.toUpperCase() === "N/A" ? "—" : t;
+};
 
 const brokerPlain = (s: PublicCopierStat) => {
   if (!s.broker_name) return "Not specified";
@@ -654,7 +668,7 @@ export const CopierLeaderboard = () => {
                       </span>
 
                       <span className="text-sm font-bold mt-0.5">
-                        +{fmtPercent(s.profit_percent)}
+                        {fmtSigned("+", s.profit_percent)}
                       </span>
                     </div>
 
@@ -665,7 +679,7 @@ export const CopierLeaderboard = () => {
                       </span>
 
                       <span className="text-sm font-bold mt-0.5">
-                        -{fmtPercent(s.loss_percent)}
+                        {fmtSigned("-", s.loss_percent)}
                       </span>
                     </div>
 
@@ -676,7 +690,7 @@ export const CopierLeaderboard = () => {
                       </span>
 
                       <span className="text-sm font-bold mt-0.5 truncate">
-                        {s.risk_reward_ratio || "—"}
+                        {fmtRR(s.risk_reward_ratio)}
                       </span>
                     </div>
                   </div>
@@ -858,9 +872,11 @@ export const CopierLeaderboard = () => {
                           {fmtPercent(selected.profit_percent)}
                         </div>
 
-                        <div className="text-xs text-muted-foreground">
-                          {fmtMoney(selected.profit_amount)}
-                        </div>
+                        {fmtMoney(selected.profit_amount) && (
+                          <div className="text-xs text-muted-foreground">
+                            {fmtMoney(selected.profit_amount)}
+                          </div>
+                        )}
                       </div>
 
                       <div className="rounded-lg bg-muted/40 p-3">
@@ -873,9 +889,11 @@ export const CopierLeaderboard = () => {
                           {fmtPercent(selected.loss_percent)}
                         </div>
 
-                        <div className="text-xs text-muted-foreground">
-                          {fmtMoney(selected.loss_amount)}
-                        </div>
+                        {fmtMoney(selected.loss_amount) && (
+                          <div className="text-xs text-muted-foreground">
+                            {fmtMoney(selected.loss_amount)}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -886,7 +904,7 @@ export const CopierLeaderboard = () => {
                       </div>
 
                       <div className="text-lg font-bold">
-                        {selected.risk_reward_ratio || "—"}
+                        {fmtRR(selected.risk_reward_ratio)}
                       </div>
                     </div>
                   </>
