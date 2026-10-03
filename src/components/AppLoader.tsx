@@ -66,10 +66,10 @@ const MESSAGE: Record<NetState, string> = {
 };
 
 const PILL: Record<NetState, string> = {
-  offline: 'bg-red-50 border-red-100 text-red-600',
-  slow: 'bg-amber-50 border-amber-100 text-amber-600',
-  normal: 'bg-teal-50 border-teal-100 text-teal-600',
-  fast: 'bg-emerald-50 border-emerald-100 text-emerald-600',
+  offline: 'bg-red-50 border-red-100 text-red-600 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-400',
+  slow: 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-400',
+  normal: 'bg-teal-50 border-teal-100 text-teal-600 dark:bg-teal-500/10 dark:border-teal-400/25 dark:text-teal-300',
+  fast: 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-400/25 dark:text-emerald-300',
 };
 
 const DOT: Record<NetState, string> = {
@@ -130,18 +130,18 @@ const AppLoader = ({ label = 'Loading live data' }: { label?: string }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[99999] flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#f2fff9] via-[#edfcff] to-[#f5faff] px-6 text-slate-700"
+      className="fixed inset-0 z-[99999] flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#f2fff9] via-[#edfcff] to-[#f5faff] px-6 text-slate-700 dark:from-[#070b16] dark:via-[#0b1324] dark:to-[#0a1220] dark:text-slate-300"
       role="status"
       aria-live="polite"
     >
       <div className="flex flex-col items-center">
         <div className="relative h-16 w-16">
           {/* Rotating ring — logo is NOT inside this, so only the ring spins */}
-          <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#22c55e,#14b8a6,#38bdf8,#22c55e)] shadow-[0_8px_26px_rgba(20,184,166,.18)] animate-spin">
+          <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#22c55e,#14b8a6,#38bdf8,#22c55e)] shadow-[0_8px_26px_rgba(20,184,166,.18)] dark:shadow-[0_8px_30px_rgba(20,184,166,.28)] animate-spin">
             <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,.95)]" />
           </div>
           {/* Static logo, sits on top and never rotates */}
-          <div className="absolute inset-[6px] flex items-center justify-center rounded-full bg-[#f3fffc]">
+          <div className="absolute inset-[6px] flex items-center justify-center rounded-full bg-[#f3fffc] dark:bg-[#121a2c]">
             <img src="/loader-logo.png" alt="" className="h-8 w-8 object-contain" />
           </div>
         </div>
@@ -160,7 +160,7 @@ const AppLoader = ({ label = 'Loading live data' }: { label?: string }) => {
           )}
         </div>
 
-        <p className="mt-4 max-w-[320px] text-center text-sm text-slate-500">
+        <p className="mt-4 max-w-[320px] text-center text-sm text-slate-500 dark:text-slate-400">
           {statusMessage}
         </p>
 
@@ -168,7 +168,7 @@ const AppLoader = ({ label = 'Loading live data' }: { label?: string }) => {
           <button
             type="button"
             onClick={() => void checkNetwork(true)}
-            className="mt-6 rounded-full border-2 border-sky-500 px-7 py-2.5 text-sm font-medium text-sky-600 transition active:scale-95 hover:bg-sky-50"
+            className="mt-6 rounded-full border-2 border-sky-500 px-7 py-2.5 text-sm font-medium text-sky-600 transition active:scale-95 hover:bg-sky-50 dark:border-sky-400 dark:text-sky-400 dark:hover:bg-sky-500/10"
           >
             Retry
           </button>
