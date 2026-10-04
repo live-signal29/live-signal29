@@ -11,6 +11,10 @@ export const REWARDED_AD_SECONDS = 10;
 
 type AdMobResult = "rewarded" | "closed" | "unavailable";
 
+// Last reason AdMob wasn't available — shown as a toast so we can see
+// WHY the ad didn't play (remove the toast once ads work).
+let lastAdError = "";
+
 /**
  * Real AdMob rewarded video (Android app only). Resolves:
  *  - "rewarded"    user watched the ad and earned the reward -> unlock
@@ -18,8 +22,14 @@ type AdMobResult = "rewarded" | "closed" | "unavailable";
  *  - "unavailable" no ad / plugin missing / error -> caller falls back
  */
 const showAdMobRewarded = async (): Promise<AdMobResult> => {
-  if (!isNativeApp()) return "unavailable";
-  if (!(await initAdMob())) return "unavailable";
+  if (!isNativeApp()) {
+    lastAdError = "not native app (Capacitor missing)";
+    return "unavailable";
+  }
+  if (!(await initAdMob())) {
+    lastAdError = "AdMob plugin missing / init failed (old app build?)";
+    return "unavailable";
+  }
 
   return new Promise<AdMobResult>((resolve) => {
     const handles: any[] = [];
@@ -54,17 +64,22 @@ const showAdMobRewarded = async (): Promise<AdMobResult> => {
           await AdMob.addListener("onRewardedVideoAdDismissed", () =>
             done(rewarded ? "rewarded" : "closed")
           ),
-          await AdMob.addListener("onRewardedVideoAdFailedToLoad", () =>
-            done("unavailable")
-          ),
-          await AdMob.addListener("onRewardedVideoAdFailedToShow", () =>
-            done("unavailable")
-          )
+          await AdMob.addListener("onRewardedVideoAdFailedToLoad", (err: any) => {
+            lastAdError = `load failed: code ${err?.code} ${err?.message ?? ""}`;
+            done("unavailable");
+          }),
+          await AdMob.addListener("onRewardedVideoAdFailedToShow", (err: any) => {
+            lastAdError = `show failed: code ${err?.code} ${err?.message ?? ""}`;
+            done("unavailable");
+          })
         );
 
         // If the ad never starts within 30s (slow network / no fill), fall back.
         timer = setTimeout(() => {
-          if (!showed) done("unavailable");
+          if (!showed) {
+            lastAdError = "timeout: ad did not start in 30s";
+            done("unavailable");
+          }
         }, 30000);
 
         await AdMob.prepareRewardVideoAd({
@@ -75,6 +90,7 @@ const showAdMobRewarded = async (): Promise<AdMobResult> => {
         await AdMob.showRewardVideoAd();
       } catch (e) {
         console.warn("AdMob rewarded failed:", e);
+        lastAdError = `error: ${(e as any)?.message ?? String(e)}`;
         done("unavailable");
       }
     })();
@@ -108,14 +124,26 @@ const runCountdown = (
 export const showRewardedAd = async (
   onTick?: (secondsRemaining: number) => void
 ): Promise<boolean> => {
+  let result: AdMobResult = "unavailable";
+
   if (isNativeApp()) {
-    const result = await showAdMobRewarded();
-    if (result === "closed") {
-      toast.info("Ad poora dekhna zaroori hai, tab signal unlock hoga.");
-      return false;
-    }
-    // "rewarded" or "unavailable" -> countdown below
+    result = await showAdMobRewarded();
+  } else {
+    lastAdError = "not native app (Capacitor missing) - old/Median build?";
   }
 
+  if (result === "closed") {
+    toast.info("Ad poora dekhna zaroori hai, tab signal unlock hoga.");
+    return false;
+  }
+
+  if (result === "unavailable") {
+    // Debug toast (v3): tells us WHY the ad did not play. Remove later.
+    toast.error(`[v3] Ad nahi chala: ${lastAdError || "unknown"}`, {
+      duration: 12000,
+    });
+  }
+
+  // "rewarded" or "unavailable" -> countdown
   return runCountdown(onTick);
 };
