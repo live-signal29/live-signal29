@@ -15,6 +15,13 @@ type AdMobResult = "rewarded" | "closed" | "unavailable";
 // WHY the ad didn't play (remove the toast once ads work).
 let lastAdError = "";
 
+// TEMPORARY: while the AdMob account is "not approved yet", real ad units
+// return "code 3". Google's official demo rewarded unit always serves test
+// ads, so the whole flow (ad -> back -> 10s timer -> unlock) can be tested.
+// Test ads earn NOTHING. Set this to false once AdMob approves the account.
+const USE_GOOGLE_TEST_AD = true;
+const GOOGLE_TEST_REWARDED_ID = "ca-app-pub-3940256099942544/5224354917";
+
 /**
  * Real AdMob rewarded video (Android app only). Resolves:
  *  - "rewarded"    user watched the ad and earned the reward -> unlock
@@ -83,9 +90,9 @@ const showAdMobRewarded = async (): Promise<AdMobResult> => {
         }, 30000);
 
         await AdMob.prepareRewardVideoAd({
-          adId: ADMOB_IDS.rewarded,
+          adId: USE_GOOGLE_TEST_AD ? GOOGLE_TEST_REWARDED_ID : ADMOB_IDS.rewarded,
           // Dev builds use Google's test ads. Never tap your own live ads.
-          isTesting: import.meta.env.DEV,
+          isTesting: import.meta.env.DEV || USE_GOOGLE_TEST_AD,
         });
         await AdMob.showRewardVideoAd();
       } catch (e) {
