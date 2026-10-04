@@ -42,6 +42,7 @@ const ChartAnalysis = lazyWithRetry(() => import("./pages/ChartAnalysis"));
 const Contact = lazyWithRetry(() => import("./pages/Contact"));
 const Terms = lazyWithRetry(() => import("./pages/Terms"));
 const Privacy = lazyWithRetry(() => import("./pages/Privacy"));
+const DeleteAccount = lazyWithRetry(() => import("./pages/DeleteAccount"));
 const About = lazyWithRetry(() => import("./pages/About"));
 const Login = lazyWithRetry(() => import("./pages/Login"));
 const Signup = lazyWithRetry(() => import("./pages/Signup"));
@@ -582,6 +583,11 @@ const App = () => (
                   <Route
                     path="/privacy"
                     element={<Privacy />}
+                  />
+
+                  <Route
+                    path="/delete-account"
+                    element={<DeleteAccount />}
                   />
 
                   <Route
