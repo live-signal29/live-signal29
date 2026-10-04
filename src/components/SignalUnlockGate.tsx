@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useSignalUnlock } from "@/hooks/useSignalUnlock";
 import { showRewardedAd, REWARDED_AD_SECONDS } from "@/lib/rewardedAd";
 import { playUnlockSound } from "@/lib/sound";
+import { isNativeApp } from "@/lib/admob";
 
 interface SignalUnlockGateProps {
   signalId: string;
@@ -303,7 +304,7 @@ export const SignalUnlockGate = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">
-                      Watch {REWARDED_AD_SECONDS}s &amp; Unlock
+                      {isNativeApp() ? "Watch Ad" : `Watch ${REWARDED_AD_SECONDS}s`} &amp; Unlock
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       Free — {dailyUnlocksRemaining} left today
