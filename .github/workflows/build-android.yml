@@ -29,7 +29,7 @@ jobs:
         run: npm run build
 
       - name: Install Capacitor
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor-community/admob@8
 
       - name: Add Android platform
         run: npx cap add android
@@ -45,6 +45,14 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Add AdMob App ID (manifest + strings)
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          STRINGS=android/app/src/main/res/values/strings.xml
+          sed -i 's#</application>#    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="@string/admob_app_id" />\n    </application>#' "$MANIFEST"
+          sed -i 's#</resources>#    <string name="admob_app_id">ca-app-pub-1895906484640218~1309077730</string>\n</resources>#' "$STRINGS"
+          grep -n "admob" "$MANIFEST" "$STRINGS"
 
       - name: Fix Kotlin duplicate class conflict
         run: |
