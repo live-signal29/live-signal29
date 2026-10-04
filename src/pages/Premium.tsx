@@ -61,6 +61,7 @@ import {
   type PremiumPlanId,
 } from "@/hooks/usePlayBilling";
 import { playUnlockSound } from "@/lib/sound";
+import { isNativeApp } from "@/lib/openExternal";
 
 import {
   Dialog,
@@ -72,6 +73,18 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AffiliateBannerCarousel } from "@/components/AffiliateBannerCarousel";
+
+const PLAY_STORE_APP_URL =
+  "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
+
+const PlayBadgeIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 512 512" className={className} aria-hidden="true">
+    <path d="M99.617 8.057a19.777 19.777 0 0 0-13.462 19.075v457.744c0 8.987 5.404 16.436 13.462 19.075l281.303-247.947z" fill="#00d0ff" />
+    <path d="M370.719 255.998L99.617 8.057c1.339-.633 2.828-1.048 4.371-1.221 4.048-.454 8.209.412 11.845 2.596l246.16 145.204z" fill="#00f076" />
+    <path d="M361.993 357.362l-246.16 145.205c-3.636 2.184-7.797 3.049-11.845 2.596-1.543-.173-3.032-.588-4.371-1.221l271.102-247.943z" fill="#ff3a44" />
+    <path d="M493.279 234.629c14.395 8.496 14.395 33.746 0 42.243l-59.083 34.868-71.477-55.741 71.477-55.741z" fill="#ffcf00" />
+  </svg>
+);
 
 const Premium = () => {
   const [selectedCategory, setSelectedCategory] =
@@ -1533,6 +1546,26 @@ const Premium = () => {
               </p>
 
             </div>
+
+            {!isNativeApp() && !paymentSubmitted && (
+              <div className="mx-5 mt-4 flex items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground leading-snug">
+                  Don&apos;t want to pay manually? Download our Play Store app and pay with Google Play.
+                </p>
+                <a
+                  href={PLAY_STORE_APP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-black px-2.5 py-1.5 text-white ring-1 ring-white/20 active:scale-95 transition"
+                >
+                  <PlayBadgeIcon className="h-5 w-5" />
+                  <span className="flex flex-col leading-none text-left">
+                    <span className="text-[8px] uppercase tracking-wide opacity-80">Get it on</span>
+                    <span className="text-[13px] font-semibold">Google Play</span>
+                  </span>
+                </a>
+              </div>
+            )}
 
             {paymentDetails &&
               !paymentSubmitted && (
