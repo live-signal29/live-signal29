@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { OneSignalProvider } from "@/components/OneSignalProvider";
 import AppLoader from "@/components/AppLoader";
 import PlayBillingSync from "@/components/PlayBillingSync";
+import PremiumCelebration from "@/components/PremiumCelebration";
 import NativeAppBehavior from "@/components/NativeAppBehavior";
 import { NetworkQualityToast } from "@/components/NetworkQualityToast";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -440,6 +441,9 @@ const App = () => (
 
           {/* AdMob banner (Android app, free users, main screens only) */}
           <AdBanner />
+
+          {/* 🎉 Premium activated (Google Play + manual payment approved) */}
+          <PremiumCelebration />
 
           <div className="has-bottom-nav">
             <ErrorBoundary label="Something went wrong loading this page.">
