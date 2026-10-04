@@ -99,7 +99,12 @@ const PaymentShareManagement = lazyWithRetry(
   () => import("@/components/admin/PaymentShareManagement")
 );
 
+const PremiumPayments = lazyWithRetry(
+  () => import("@/components/admin/PremiumPayments")
+);
+
 import AdminGlobalSearch from "@/components/admin/AdminGlobalSearch";
+import AdminNotificationBell from "@/components/admin/AdminNotificationBell";
 
 /* =========================================================
    LOADER
@@ -157,6 +162,12 @@ const menuItems = [
     label: "Copier",
     icon: Zap,
     color: "text-yellow-600",
+  },
+  {
+    id: "premium-payments",
+    label: "Premium Pay",
+    icon: Wallet,
+    color: "text-emerald-600",
   },
   {
     id: "payment-share",
@@ -410,6 +421,8 @@ const AdminDashboard = () => {
 
           <div className="hidden items-center gap-2 sm:flex">
 
+            <AdminNotificationBell onNavigate={setActiveTab} />
+
             <Button
               variant="outline"
               size="sm"
@@ -435,6 +448,8 @@ const AdminDashboard = () => {
           {/* MOBILE ACTIONS */}
 
           <div className="flex items-center gap-1 sm:hidden">
+
+            <AdminNotificationBell onNavigate={setActiveTab} />
 
             <Button
               variant="ghost"
@@ -783,6 +798,10 @@ const AdminDashboard = () => {
 
           {activeTab === "copier" && (
             <MT5CopierManagement initialSearch={searchHandoff?.tab === "copier" ? searchHandoff.term : undefined} />
+          )}
+
+          {activeTab === "premium-payments" && (
+            <PremiumPayments />
           )}
 
           {activeTab === "payment-share" && (
