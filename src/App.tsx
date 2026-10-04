@@ -28,6 +28,7 @@ import NativeAppBehavior from "@/components/NativeAppBehavior";
 import { NetworkQualityToast } from "@/components/NetworkQualityToast";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
+import AdBanner from "@/components/AdBanner";
 
 // Lazy load all pages for better performance
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
@@ -435,6 +436,9 @@ const App = () => (
 
           {/* Global pull-to-refresh */}
           <PullToRefresh />
+
+          {/* AdMob banner (Android app, free users, main screens only) */}
+          <AdBanner />
 
           <div className="has-bottom-nav">
             <ErrorBoundary label="Something went wrong loading this page.">
