@@ -81,33 +81,10 @@ const showAdMobRewarded = async (): Promise<AdMobResult> => {
   });
 };
 
-/**
- * Runs a visible countdown from REWARDED_AD_SECONDS down to 0.
- * onTick is called
- * once per second with the seconds remaining (including the
- * initial call with the full duration), so the caller can render
- * "10", "9", "8"... in the UI. Resolves true once the countdown
- * finishes naturally.
- */
-export const showRewardedAd = async (
+const runCountdown = (
   onTick?: (secondsRemaining: number) => void
-): Promise<boolean> => {
-  // 1) Android app: real AdMob rewarded ad. Unlock ONLY if watched fully.
-  if (isNativeApp()) {
-    const result = await showAdMobRewarded();
-    if (result === "rewarded") {
-      onTick?.(0);
-      return true;
-    }
-    if (result === "closed") {
-      toast.info("Ad poora dekhna zaroori hai, tab signal unlock hoga.");
-      return false;
-    }
-    // "unavailable" -> fall through to the old countdown below
-  }
-
-  // 2) Website (or no AdMob ad available): old countdown flow.
-  return new Promise((resolve) => {
+): Promise<boolean> =>
+  new Promise((resolve) => {
     let secondsRemaining = REWARDED_AD_SECONDS;
     onTick?.(secondsRemaining);
 
@@ -121,4 +98,24 @@ export const showRewardedAd = async (
       }
     }, 1000);
   });
+
+/**
+ * Flow: tap -> AdMob rewarded ad plays -> user comes back after the
+ * reward -> 10 second countdown -> signal unlocks.
+ * Ad closed early (no reward) -> no unlock.
+ * AdMob unavailable (website / no fill) -> just the 10s countdown.
+ */
+export const showRewardedAd = async (
+  onTick?: (secondsRemaining: number) => void
+): Promise<boolean> => {
+  if (isNativeApp()) {
+    const result = await showAdMobRewarded();
+    if (result === "closed") {
+      toast.info("Ad poora dekhna zaroori hai, tab signal unlock hoga.");
+      return false;
+    }
+    // "rewarded" or "unavailable" -> countdown below
+  }
+
+  return runCountdown(onTick);
 };
