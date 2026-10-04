@@ -421,7 +421,7 @@ const AdminDashboard = () => {
 
           <div className="hidden items-center gap-2 sm:flex">
 
-            <AdminNotificationBell onNavigate={setActiveTab} />
+            <AdminNotificationBell onNavigate={setActiveTab} activeTab={activeTab} />
 
             <Button
               variant="outline"
@@ -449,7 +449,7 @@ const AdminDashboard = () => {
 
           <div className="flex items-center gap-1 sm:hidden">
 
-            <AdminNotificationBell onNavigate={setActiveTab} />
+            <AdminNotificationBell onNavigate={setActiveTab} activeTab={activeTab} />
 
             <Button
               variant="ghost"
