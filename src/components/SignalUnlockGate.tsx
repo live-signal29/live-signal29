@@ -12,8 +12,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSignalUnlock } from "@/hooks/useSignalUnlock";
-import { showRewardedAd } from "@/lib/rewardedAd";
+import { showRewardedAd, REWARDED_AD_SECONDS } from "@/lib/rewardedAd";
 import { playUnlockSound } from "@/lib/sound";
+import { isNativeApp } from "@/lib/admob";
 
 interface SignalUnlockGateProps {
   signalId: string;
@@ -26,6 +27,52 @@ interface SignalUnlockGateProps {
   time?: string;
   children: React.ReactNode;
 }
+
+// Circular countdown ring — pure SVG, no extra deps.
+const CountdownRing = ({
+  secondsLeft,
+  total,
+}: {
+  secondsLeft: number;
+  total: number;
+}) => {
+  const size = 88;
+  const stroke = 5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = 1 - secondsLeft / total;
+  const dashoffset = circumference * (1 - progress);
+
+  return (
+    <div className="relative flex h-[88px] w-[88px] items-center justify-center">
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="hsl(var(--muted))"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="hsl(173 80% 40%)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashoffset}
+          className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+        />
+      </svg>
+      <span className="absolute text-2xl font-bold tabular-nums text-teal-600">
+        {secondsLeft}
+      </span>
+    </div>
+  );
+};
 
 // Wrap any signal card with this component:
 //   <SignalUnlockGate
@@ -51,6 +98,7 @@ export const SignalUnlockGate = ({
   // Popup state
   const [pickerOpen, setPickerOpen] = useState(false);
   const [watchingAd, setWatchingAd] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(REWARDED_AD_SECONDS);
   // true for a brief moment right after the countdown finishes,
   // shown inside the popup before it auto-closes
   const [justUnlocked, setJustUnlocked] = useState(false);
@@ -85,6 +133,7 @@ export const SignalUnlockGate = ({
   };
 
   const openPicker = () => {
+    setSecondsLeft(REWARDED_AD_SECONDS);
     setWatchingAd(false);
     setJustUnlocked(false);
     setPickerOpen(true);
@@ -99,7 +148,7 @@ export const SignalUnlockGate = ({
     }
 
     setWatchingAd(true);
-    const watched = await showRewardedAd();
+    const watched = await showRewardedAd((remaining) => setSecondsLeft(remaining));
 
     if (watched) {
       const ok = await recordUnlock("ad");
@@ -216,13 +265,13 @@ export const SignalUnlockGate = ({
                 </>
               ) : (
                 <>
-                  <Loader2 className="h-[56px] w-[56px] animate-spin text-teal-600" />
+                  <CountdownRing secondsLeft={secondsLeft} total={REWARDED_AD_SECONDS} />
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">
-                      Ad load ho raha hai…
+                      Signal unlock ho raha hai…
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Ad poora dekho, reward milte hi signal unlock hoga
+                      Bas {secondsLeft} second aur ruko
                     </p>
                   </div>
                 </>
@@ -255,7 +304,7 @@ export const SignalUnlockGate = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">
-                      Watch Ad &amp; Unlock
+                      {isNativeApp() ? "Watch Ad" : `Watch ${REWARDED_AD_SECONDS}s`} &amp; Unlock
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       Free — {dailyUnlocksRemaining} left today
