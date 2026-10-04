@@ -60,7 +60,7 @@ import {
   usePlayBilling,
   type PremiumPlanId,
 } from "@/hooks/usePlayBilling";
-import { playUnlockSound } from "@/lib/sound";
+import { celebratePremium } from "@/components/PremiumCelebration";
 import { isNativeApp } from "@/lib/openExternal";
 
 import {
@@ -606,13 +606,8 @@ const Premium = () => {
 
       switch (result.status) {
         case "success":
-          playUnlockSound();
-
-          toast.success(
-            "Premium activated! 🎉 All signals are unlocked."
-          );
-
-          navigate("/");
+          // Plays the sound + confetti, then opens the signals dashboard.
+          celebratePremium({ planName: `${plan.name} Premium` });
           break;
 
         case "pending":
