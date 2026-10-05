@@ -51,7 +51,7 @@ import { MT5CopierBanner } from "@/components/MT5CopierBanner";
 
 const SIGNALS_PER_PAGE = 20;
 
-const SIGNALS_REFRESH_MS = 5000;
+const SIGNALS_REFRESH_MS = 30000;
 const MARKET_IDEAS_REFRESH_MS = 30000;
 
 const CATEGORIES = [
@@ -611,7 +611,7 @@ const SignalsDashboard = () => {
     refetchInterval:
       SIGNALS_REFRESH_MS,
 
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
 
     refetchOnWindowFocus: true,
 
@@ -906,7 +906,7 @@ const SignalsDashboard = () => {
     refetchInterval:
       MARKET_IDEAS_REFRESH_MS,
 
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
 
     refetchOnWindowFocus: true,
 
