@@ -45,6 +45,9 @@ import {
   Mail,
   Globe,
   StickyNote,
+  ChevronDown,
+  Globe2,
+  KeyRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -82,45 +85,7 @@ const brokerLoginSchema = contactDetailsSchema.extend({
 type SubmissionMethod = "trading_account" | "broker_login";
 type ServiceMode = "management" | "recovery";
 
-const plans = [
-  {
-    title: "Starter Plan",
-    amount: "$100",
-    profitSharing: "50 / 50",
-    dailyReturn: "Up to 45%",
-    color: "from-blue-500/15 to-cyan-500/15 text-blue-500 dark:text-blue-400",
-    icon: Wallet,
-    features: ["Hybrid AI + Manual", "Daily Reports", "Low-Risk Settings"]
-  },
-  {
-    title: "Growth Plan",
-    amount: "$1,000",
-    profitSharing: "40 / 60",
-    dailyReturn: "Up to 35%",
-    color: "from-emerald-500/15 to-green-500/15 text-emerald-500 dark:text-emerald-400",
-    icon: TrendingUp,
-    popular: true,
-    features: ["Advanced Risk Control", "Dedicated Support", "Verified Reports"]
-  },
-  {
-    title: "Pro Trader",
-    amount: "$10,000",
-    profitSharing: "30 / 70",
-    dailyReturn: "Up to 25%",
-    color: "from-purple-500/15 to-violet-500/15 text-purple-500 dark:text-purple-400",
-    icon: Crown,
-    features: ["VIP Trading Mode", "Smart Lot Optimization", "Auto-Risk Protection"]
-  },
-  {
-    title: "Institutional",
-    amount: "$50,000",
-    profitSharing: "20 / 80",
-    dailyReturn: "Up to 16%",
-    color: "from-amber-500/15 to-orange-500/15 text-amber-500 dark:text-amber-400",
-    icon: Star,
-    features: ["Private Client Manager", "Highest Capital Protection", "Priority Payouts"]
-  }
-];
+
 
 const steps = [
   { icon: Link2, title: "Connect Account", desc: "Link securely via MT4/MT5" },
@@ -130,6 +95,7 @@ const steps = [
 
 const AccountManagement = () => {
   const [serviceMode, setServiceMode] = useState<ServiceMode>("management");
+  const [requirementsOpen, setRequirementsOpen] = useState(true);
   const [submissionMethod, setSubmissionMethod] = useState<SubmissionMethod>("trading_account");
   const [formData, setFormData] = useState({
     name: "", whatsapp: "", telegram_username: "", preferred_broker: "",
@@ -139,8 +105,6 @@ const AccountManagement = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [activeSlide, setActiveSlide] = useState(0);
-  const sliderRef = useRef<HTMLDivElement>(null);
 
   // Set right after a successful submit. The application is saved at this
   // point, but not yet confirmed — confirmation only happens once the
@@ -397,173 +361,127 @@ const AccountManagement = () => {
           </div>
         </section>
 
-        {/* Service Highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {(
-            serviceMode === "management"
-              ? [
-                  { icon: BarChart3, title: "MT4 / MT5", desc: "Professional trading platforms" },
-                  { icon: ShieldCheck, title: "Risk Controlled", desc: "Defined risk management rules" },
-                  { icon: Clock, title: "Active Monitoring", desc: "Ongoing monitoring & support" },
-                ]
-              : [
-                  { icon: TrendingUp, title: "Recovery Plan", desc: "Structured recovery assessment" },
-                  { icon: Shield, title: "Risk Controlled", desc: "No reckless over-leveraging" },
-                  { icon: Clock, title: "Active Monitoring", desc: "Ongoing monitoring & support" },
-                ]
-          ).map((item) => {
-            const Icon = item.icon;
-            return (
-              <Card key={item.title} className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 p-4 shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    <Icon className="h-5 w-5" />
+        {/* Important Requirements */}
+        <section className="space-y-3">
+          <Card className="border-emerald-200/70 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/80 via-white/80 to-cyan-50/60 dark:from-emerald-950/30 dark:via-slate-900/80 dark:to-cyan-950/20 shadow-sm overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                    <ShieldCheck className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="font-bold text-sm">{item.title}</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">{item.desc}</div>
+                    <CardTitle className="text-lg font-bold">Important Requirements</CardTitle>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                      Please read before connecting your account
+                    </p>
                   </div>
                 </div>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Investment Tiers - Taller & Slideable with Pagination Dots */}
-        <section className="space-y-3">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-1">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight">
-                {serviceMode === "management" ? "Management Plans" : "Recovery Plans"}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {serviceMode === "management"
-                  ? "Choose the account size that matches your trading capital"
-                  : "Choose the recovery tier that matches your account situation"}
-              </p>
-            </div>
-          </div>
-
-          {/* Slider Container */}
-          <div 
-            ref={sliderRef}
-            onScroll={handleScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-2 pt-1 px-1 no-scrollbar md:grid md:grid-cols-2 lg:grid-cols-4"
-          >
-            {plans.map((plan, index) => {
-              const Icon = plan.icon;
-              return (
-                <div 
-                  key={index}
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, account_size: plan.amount }));
-                    document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className={cn(
-                    "relative min-w-[285px] sm:min-w-[300px] md:min-w-0 min-h-[385px] snap-center rounded-2xl p-5 cursor-pointer transition-all duration-300 flex flex-col justify-between shadow-md",
-                    "bg-white dark:bg-slate-900/80 border backdrop-blur-md",
-                    "hover:border-emerald-500/50 hover:shadow-lg hover:-translate-y-1",
-                    plan.popular 
-                      ? "border-emerald-500/60 ring-2 ring-emerald-500/25 shadow-emerald-500/10" 
-                      : "border-slate-200 dark:border-slate-800/80"
-                  )}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-[10px] px-3 py-0.5 shadow-sm">
-                        Most Popular
-                      </Badge>
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={cn("p-2.5 rounded-xl bg-gradient-to-br", plan.color)}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{plan.title}</span>
-                    </div>
-
-                    <div className="mb-4">
-                      <div className="text-3xl font-black tracking-tight">{plan.amount}</div>
-                    </div>
-
-                    <div className="space-y-2.5 py-3 border-y border-slate-100 dark:border-slate-800/80 mb-4 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500 dark:text-slate-400">{serviceMode === "management" ? "Profit Split" : "Service Model"}</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{serviceMode === "management" ? plan.profitSharing : "Risk-controlled"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500 dark:text-slate-400">{serviceMode === "management" ? "Target Return" : "Approach"}</span>
-                        <span className="font-bold">{serviceMode === "management" ? plan.dailyReturn : "Assessment first"}</span>
-                      </div>
-                    </div>
-
-                    <ul className="space-y-2 mb-4">
-                      {plan.features.map((feat, i) => (
-                        <li key={i} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Attractive Button */}
-                  <Button 
-                    size="sm" 
-                    className={cn("w-full text-xs font-bold py-2 text-white shadow-md border", serviceMode === "management" ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 shadow-emerald-500/25 border-emerald-400/30" : "bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:to-amber-600 shadow-orange-500/20 border-orange-400/30")}
+                <div className="shrink-0 text-right">
+                  <Badge className="border-0 bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                    Required
+                  </Badge>
+                  <button
+                    type="button"
+                    onClick={() => setRequirementsOpen((v) => !v)}
+                    className="mt-2 block ml-auto text-xs font-bold text-emerald-600 dark:text-emerald-400"
                   >
-                    {serviceMode === "management" ? "Select Management Plan" : "Select Recovery Plan"}
-                  </Button>
+                    {requirementsOpen ? "Hide details" : "Show details"}{" "}
+                    <ChevronDown className={cn("inline h-3.5 w-3.5 transition-transform", requirementsOpen && "rotate-180")} />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </CardHeader>
 
-          {/* Swipe Indicator Dots (Mobile Only) */}
-          <div className="flex justify-center items-center gap-1.5 pt-1 md:hidden">
-            {plans.map((_, idx) => (
-              <span
-                key={idx}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
-                  activeSlide === idx ? "w-6 bg-emerald-500" : "w-1.5 bg-slate-300 dark:bg-slate-700"
-                )}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* Seamless Onboarding */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold tracking-tight text-center">{serviceMode === "management" ? "How Account Management Works" : "How Loss Recovery Works"}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {steps.map((step, idx) => {
-              const StepIcon = step.icon;
-              return (
-                <div key={idx} className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 shadow-sm">
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-                    <StepIcon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-semibold text-primary mb-0.5">Step 0{idx + 1}</div>
-                    <div className="font-bold text-xs">{step.title}</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">{step.desc}</div>
+            {requirementsOpen && (
+              <CardContent className="space-y-3 pt-0">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
+                      <DollarSign className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm">Account Balance — $100 Minimum, Unlimited Maximum</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                        A minimum account balance of <strong>$100</strong> is required. There is <strong>no maximum balance limit.</strong>
+                      </p>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
 
-        <div className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-3 shadow-sm">
-          <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
-            <span className="font-bold text-slate-800 dark:text-slate-200">Switching service?</span>{" "}
-            Your broker, MT4/MT5 platform and account details stay the same. Only the requested service mode changes.
-          </p>
-        </div>
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
+                      <TrendingUp className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm">Profit Share — {serviceMode === "management" ? "40%" : "50%"}</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                        <strong>{serviceMode === "management" ? "40%" : "50%"}</strong> of generated profits will be shared with our team. The remaining <strong>{serviceMode === "management" ? "60%" : "50%"} belongs to you.</strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-sky-500/10 p-2.5 text-sky-600 dark:text-sky-400">
+                      <Send className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm">Automatic Profit Updates</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                        Our team bot will automatically send your <strong>profit and performance details</strong> through Telegram.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
+                      <Globe2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm">Any Broker Account Accepted</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                        We support <strong>Exness, XM, Deriv, Binomo, IC Markets, FBS, HFM</strong> and every other broker — any MT4/MT5 or broker-site login is accepted, as long as it&apos;s a genuine live trading account.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/60 dark:bg-red-950/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-red-500/10 p-2.5 text-red-600 dark:text-red-400">
+                      <Shield className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm">Account Types Not Accepted</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                        Demo, Cent, Contest, and Bonus accounts cannot be connected. Requests using these account types will be rejected.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
+                      <KeyRound className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm">Provide Correct MT5 Details</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                        Make sure your <strong>MT5 Login, Broker Name, Broker Server, and Trading Password</strong> are entered correctly so our team can verify and connect your account.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        </section>
 
         {/* Application Form */}
         <section id="apply-form" className="max-w-xl mx-auto pt-2 scroll-mt-20">
@@ -573,12 +491,12 @@ const AccountManagement = () => {
                 <ShieldCheck className="h-5 w-5 text-white" />
               </div>
               <CardTitle className="text-lg font-bold">
-                {serviceMode === "management" ? "Connect Your Trading Account" : "Start Your Recovery Assessment"}
+                {serviceMode === "management" ? "Connect Your Trading Account" : "Start Your Recovery Account"}
               </CardTitle>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {serviceMode === "management"
                   ? "Use your existing broker, platform and account details to get started."
-                  : "Use the same broker, platform and account details. We will assess the account before proposing a recovery plan."}
+                  : "Use your existing broker, platform and account details for the recovery service."}
               </p>
             </CardHeader>
             <CardContent className="p-5">
@@ -791,7 +709,7 @@ const AccountManagement = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Selected Account Tier Size <span className="text-red-500">*</span></Label>
+                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Account Size <span className="text-red-500">*</span></Label>
                         <div className="relative">
                           <DollarSign className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
                           <Select value={formData.account_size} onValueChange={(v) => setFormData({ ...formData, account_size: v })}>
