@@ -80,6 +80,7 @@ const brokerLoginSchema = contactDetailsSchema.extend({
 });
 
 type SubmissionMethod = "trading_account" | "broker_login";
+type ServiceMode = "management" | "recovery";
 
 const plans = [
   {
@@ -128,6 +129,7 @@ const steps = [
 ];
 
 const AccountManagement = () => {
+  const [serviceMode, setServiceMode] = useState<ServiceMode>("management");
   const [submissionMethod, setSubmissionMethod] = useState<SubmissionMethod>("trading_account");
   const [formData, setFormData] = useState({
     name: "", whatsapp: "", telegram_username: "", preferred_broker: "",
@@ -240,6 +242,11 @@ const AccountManagement = () => {
       // by RLS even with a fully permissive INSERT policy, so this routes
       // around that instead of depending on it.
       const v = validated as Record<string, string | undefined>;
+      const serviceLabel = serviceMode === "recovery" ? "Loss Recovery" : "Account Management";
+      const submittedNote = [
+        `Service requested: ${serviceLabel}`,
+        v.note?.trim(),
+      ].filter(Boolean).join(" — ");
       const { data: newId, error } = await supabase.rpc(
         'submit_account_management_application',
         {
@@ -256,7 +263,7 @@ const AccountManagement = () => {
           p_broker_site_name: v.broker_site_name,
           p_broker_email: v.broker_email,
           p_broker_password: v.broker_password,
-          p_note: v.note,
+          p_note: submittedNote,
         }
       );
 
@@ -267,7 +274,7 @@ const AccountManagement = () => {
       try {
         const { data: notifyResult } = await supabase.functions.invoke(
           'account-management-notify',
-          { body: { ...validated, submission_type: submissionMethod, applicationId: inserted?.id } }
+          { body: { ...validated, submission_type: submissionMethod, service_mode: serviceMode, service_label: serviceLabel, applicationId: inserted?.id } }
         );
         telegram_link = notifyResult?.telegram_link ?? null;
       } catch (err) {
@@ -314,56 +321,126 @@ const AccountManagement = () => {
         <MT5CopierBanner />
         <SpecialOfferBanner page="account" />
 
-        {/* Hero Section */}
-        <section className="text-center space-y-3 py-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wide uppercase">
-            <Zap className="h-3.5 w-3.5 animate-pulse" />
-            Institutional Grade PAMM / Copier Service
+        {/* Service Switcher + Hero */}
+        <section className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 p-1.5 shadow-sm">
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => setServiceMode("management")}
+                className={cn(
+                  "flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-xs sm:text-sm font-bold transition-all",
+                  serviceMode === "management"
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/20"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                )}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Account Management
+              </button>
+              <button
+                type="button"
+                onClick={() => setServiceMode("recovery")}
+                className={cn(
+                  "flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-xs sm:text-sm font-bold transition-all",
+                  serviceMode === "recovery"
+                    ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                )}
+              >
+                <TrendingUp className="h-4 w-4" />
+                Loss Recovery
+              </button>
+            </div>
           </div>
-          <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">
-            Professional <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">Account Management</span>
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-xs md:text-sm max-w-lg mx-auto">
-            Hands-free verified trading managed by elite professionals with strict risk parameters.
-          </p>
+
+          <div className="text-center space-y-2 py-1">
+            <div className={cn(
+              "inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase",
+              serviceMode === "management"
+                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                : "bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400"
+            )}>
+              {serviceMode === "management" ? (
+                <ShieldCheck className="h-3.5 w-3.5" />
+              ) : (
+                <TrendingUp className="h-3.5 w-3.5" />
+              )}
+              {serviceMode === "management" ? "MT4 / MT5 Account Management" : "MT4 / MT5 Loss Recovery Service"}
+            </div>
+
+            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">
+              {serviceMode === "management" ? (
+                <>Professional <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">Account Management</span></>
+              ) : (
+                <>Trading <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">Loss Recovery</span></>
+              )}
+            </h1>
+
+            <p className="text-slate-600 dark:text-slate-400 text-xs md:text-sm max-w-xl mx-auto">
+              {serviceMode === "management"
+                ? "Let our team manage your existing MT4/MT5 account with defined risk controls, active monitoring and a structured trading plan."
+                : "A structured, risk-controlled approach for accounts recovering from previous trading losses. Recovery is not guaranteed and depends on market conditions."
+              }
+            </p>
+
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              {["Same Broker", "Same Platform", "Same Account Details"].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 px-3 py-1 text-[10px] font-semibold text-slate-600 dark:text-slate-300"
+                >
+                  ✓ {item}
+                </span>
+              ))}
+            </div>
+          </div>
         </section>
 
-        {/* Strategy & Quick Trust Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md md:col-span-2 p-4 flex flex-col justify-between shadow-sm">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-base">Hybrid AI + Manual Edge</h3>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Our core strategy blends lightning-fast AI pattern detection with institutional price-action analysis to secure high-probability setups with optimized drawdowns.
-            </p>
-          </Card>
-
-          <Card className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md p-4 flex flex-col justify-center space-y-2 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Win Rate</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400 text-base">98%</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Active Investors</span>
-              <span className="font-bold text-primary text-base">500+</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Total Managed</span>
-              <span className="font-bold text-amber-500 text-base">$2M+</span>
-            </div>
-          </Card>
+        {/* Service Highlights */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {(
+            serviceMode === "management"
+              ? [
+                  { icon: BarChart3, title: "MT4 / MT5", desc: "Professional trading platforms" },
+                  { icon: ShieldCheck, title: "Risk Controlled", desc: "Defined risk management rules" },
+                  { icon: Clock, title: "Active Monitoring", desc: "Ongoing monitoring & support" },
+                ]
+              : [
+                  { icon: TrendingUp, title: "Recovery Plan", desc: "Structured recovery assessment" },
+                  { icon: Shield, title: "Risk Controlled", desc: "No reckless over-leveraging" },
+                  { icon: Clock, title: "Active Monitoring", desc: "Ongoing monitoring & support" },
+                ]
+          ).map((item) => {
+            const Icon = item.icon;
+            return (
+              <Card key={item.title} className="border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 p-4 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm">{item.title}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">{item.desc}</div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Investment Tiers - Taller & Slideable with Pagination Dots */}
         <section className="space-y-3">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-1">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Investment Tiers</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Swipe horizontally to explore packages</p>
+              <h2 className="text-xl font-bold tracking-tight">
+                {serviceMode === "management" ? "Management Plans" : "Recovery Plans"}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {serviceMode === "management"
+                  ? "Choose the account size that matches your trading capital"
+                  : "Choose the recovery tier that matches your account situation"}
+              </p>
             </div>
           </div>
 
@@ -413,12 +490,12 @@ const AccountManagement = () => {
 
                     <div className="space-y-2.5 py-3 border-y border-slate-100 dark:border-slate-800/80 mb-4 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-slate-500 dark:text-slate-400">Profit Split</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{plan.profitSharing}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{serviceMode === "management" ? "Profit Split" : "Service Model"}</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{serviceMode === "management" ? plan.profitSharing : "Risk-controlled"}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500 dark:text-slate-400">Target Return</span>
-                        <span className="font-bold">{plan.dailyReturn}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{serviceMode === "management" ? "Target Return" : "Approach"}</span>
+                        <span className="font-bold">{serviceMode === "management" ? plan.dailyReturn : "Assessment first"}</span>
                       </div>
                     </div>
 
@@ -435,9 +512,9 @@ const AccountManagement = () => {
                   {/* Attractive Button */}
                   <Button 
                     size="sm" 
-                    className="w-full text-xs font-bold py-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/30"
+                    className={cn("w-full text-xs font-bold py-2 text-white shadow-md border", serviceMode === "management" ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 shadow-emerald-500/25 border-emerald-400/30" : "bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:to-amber-600 shadow-orange-500/20 border-orange-400/30")}
                   >
-                    Select Plan
+                    {serviceMode === "management" ? "Select Management Plan" : "Select Recovery Plan"}
                   </Button>
                 </div>
               );
@@ -460,7 +537,7 @@ const AccountManagement = () => {
 
         {/* Seamless Onboarding */}
         <section className="space-y-3">
-          <h2 className="text-lg font-bold tracking-tight text-center">Seamless Onboarding</h2>
+          <h2 className="text-lg font-bold tracking-tight text-center">{serviceMode === "management" ? "How Account Management Works" : "How Loss Recovery Works"}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {steps.map((step, idx) => {
               const StepIcon = step.icon;
@@ -480,6 +557,14 @@ const AccountManagement = () => {
           </div>
         </section>
 
+        <div className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-3 shadow-sm">
+          <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+            <span className="font-bold text-slate-800 dark:text-slate-200">Switching service?</span>{" "}
+            Your broker, MT4/MT5 platform and account details stay the same. Only the requested service mode changes.
+          </p>
+        </div>
+
         {/* Application Form */}
         <section id="apply-form" className="max-w-xl mx-auto pt-2 scroll-mt-20">
           <Card className="border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl shadow-slate-900/5 dark:shadow-black/20 overflow-hidden">
@@ -487,8 +572,14 @@ const AccountManagement = () => {
               <div className="mx-auto mb-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
                 <ShieldCheck className="h-5 w-5 text-white" />
               </div>
-              <CardTitle className="text-lg font-bold">Secure Your Allocation</CardTitle>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Submit your trading account details for connection review</p>
+              <CardTitle className="text-lg font-bold">
+                {serviceMode === "management" ? "Connect Your Trading Account" : "Start Your Recovery Assessment"}
+              </CardTitle>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {serviceMode === "management"
+                  ? "Use your existing broker, platform and account details to get started."
+                  : "Use the same broker, platform and account details. We will assess the account before proposing a recovery plan."}
+              </p>
             </CardHeader>
             <CardContent className="p-5">
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -789,6 +880,17 @@ const AccountManagement = () => {
                   </TabsContent>
                 </Tabs>
 
+                {serviceMode === "recovery" && (
+                  <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/70 dark:bg-orange-950/20 p-3">
+                    <div className="flex items-start gap-2">
+                      <Shield className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400 mt-0.5" />
+                      <p className="text-[10px] leading-relaxed text-orange-800 dark:text-orange-300">
+                        Loss recovery is not guaranteed. The recovery approach, risk limits and suitability will be reviewed before any trading action.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <Button type="submit" className="w-full h-11 text-sm font-bold rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white shadow-lg shadow-emerald-500/25 transition-transform active:scale-[0.99]" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
@@ -805,7 +907,7 @@ const AccountManagement = () => {
 
                 <p className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
                   <ShieldCheck className="h-3 w-3" />
-                  Your details are encrypted and only used for account verification
+                  Your details are used only for service review and account connection
                 </p>
               </form>
             </CardContent>
