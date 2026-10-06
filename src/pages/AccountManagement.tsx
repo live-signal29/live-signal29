@@ -95,7 +95,7 @@ const steps = [
 
 const AccountManagement = () => {
   const [serviceMode, setServiceMode] = useState<ServiceMode>("management");
-  const [requirementsOpen, setRequirementsOpen] = useState(true);
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [submissionMethod, setSubmissionMethod] = useState<SubmissionMethod>("trading_account");
   const [formData, setFormData] = useState({
     name: "", whatsapp: "", telegram_username: "", preferred_broker: "",
@@ -685,7 +685,7 @@ const AccountManagement = () => {
                             <Lock className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                             <Input
                               type="password"
-                              placeholder="Investor/Master Password"
+                              placeholder="Enter Trading Password"
                               value={formData.trading_password}
                               onChange={(e) => setFormData({ ...formData, trading_password: e.target.value })}
                               className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus-visible:ring-emerald-500/40"
