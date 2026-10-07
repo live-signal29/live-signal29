@@ -27,7 +27,16 @@ const ITEMS: { key: keyof UserStats; label: string; tone?: string }[] = [
   { key: "expired", label: "Expired" },
 ];
 
-const UserStatsCards = () => {
+interface UserStatsCardsProps {
+  selected?: string | null;
+  onSelect?: (key: string) => void;
+}
+
+export const STAT_LABELS: Record<string, string> = Object.fromEntries(
+  ITEMS.map((i) => [i.key, i.label])
+);
+
+const UserStatsCards = ({ selected = null, onSelect }: UserStatsCardsProps) => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -82,7 +91,20 @@ const UserStatsCards = () => {
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {ITEMS.map(({ key, label, tone }) => (
-            <Card key={key}>
+            <Card
+              key={key}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelect?.(key)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onSelect?.(key);
+              }}
+              className={`cursor-pointer transition active:scale-[0.97] ${
+                selected === key
+                  ? "ring-2 ring-emerald-500 bg-emerald-500/5"
+                  : "hover:border-emerald-500/40"
+              }`}
+            >
               <CardContent className="p-3">
                 <div className="text-[11px] font-medium text-muted-foreground">
                   {label}
@@ -97,8 +119,8 @@ const UserStatsCards = () => {
       )}
 
       <p className="mt-2 text-[10px] text-muted-foreground">
-        "Active" = signed in or opened the app. Counts for today start from
-        your device's midnight.
+        Tap any box to see those users below. "Active" = signed in or opened
+        the app. Counts for today start from your device's midnight.
       </p>
     </div>
   );

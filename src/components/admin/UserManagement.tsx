@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Edit, CheckSquare, Trash2 } from "lucide-react";
-import UserStatsCards from "./UserStatsCards";
+import UserStatsCards, { STAT_LABELS } from "./UserStatsCards";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface UserProfile {
@@ -40,6 +40,10 @@ interface Subscription {
 
 const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statFilter, setStatFilter] = useState<string | null>(null);
+  const [statIds, setStatIds] = useState<Set<string> | null>(null);
+  const [statLoading, setStatLoading] = useState(false);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -282,7 +286,46 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     }
   };
 
+  const handleStatSelect = async (key: string) => {
+    // Tap the same box again to clear the filter
+    if (statFilter === key) {
+      setStatFilter(null);
+      setStatIds(null);
+      return;
+    }
+
+    setStatFilter(key);
+    setStatLoading(true);
+
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const { data, error } = await (supabase as any).rpc("admin_user_stat_ids", {
+        _kind: key,
+        _tz: tz,
+      });
+      if (error) throw error;
+
+      const ids = new Set<string>(
+        (data || []).map((row: any) => (typeof row === "string" ? row : Object.values(row)[0] as string))
+      );
+      setStatIds(ids);
+      setSearchTerm("");
+      setTimeout(
+        () => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        100
+      );
+    } catch (e: any) {
+      console.error("admin_user_stat_ids failed:", e);
+      toast.error("Could not load these users. Please try again.");
+      setStatFilter(null);
+      setStatIds(null);
+    } finally {
+      setStatLoading(false);
+    }
+  };
+
   const filteredUsers = users.filter((u) => {
+    if (statIds && !statIds.has(u.id)) return false;
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
     return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q);
@@ -302,7 +345,27 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
 
   return (
     <div className="space-y-6">
-      <UserStatsCards />
+      <UserStatsCards selected={statFilter} onSelect={handleStatSelect} />
+
+      <div ref={listRef} />
+      {statFilter && (
+        <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm">
+          <span className="font-semibold">
+            {STAT_LABELS[statFilter] || statFilter}:{" "}
+            {statLoading ? "loading…" : `${filteredUsers.length} users`}
+          </span>
+          <button
+            type="button"
+            className="text-xs font-semibold text-emerald-700 underline"
+            onClick={() => {
+              setStatFilter(null);
+              setStatIds(null);
+            }}
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
