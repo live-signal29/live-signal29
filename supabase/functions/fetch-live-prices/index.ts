@@ -33,7 +33,8 @@ type PriceSource =
   | "yahoo"
   | "binance"
   | "frankfurter"
-  | "stooq";
+  | "stooq"
+  | "deriv";
 
 interface YahooChartResult {
   chart?: {
@@ -349,6 +350,145 @@ async function fetchStooqPrice(
 
     return null;
   }
+}
+
+/* =========================================================
+   DERIV SYNTHETIC INDICES - LIVE TICK VIA DERIV WEBSOCKET API
+   ---------------------------------------------------------
+   Deriv's synthetic indices (Boom/Crash/Volatility) are not
+   available on any regular market-data REST API. Deriv exposes
+   a free public WebSocket API (no auth required for market
+   data). We open a short-lived connection, request the last
+   tick via `ticks_history`, and close immediately.
+
+   2026-10-07 FIX: the old endpoints (ws.derivws.com and
+   ws.binaryws.com with app_id=1089) now answer "400 Bad Request"
+   -- Deriv retired them. That is why BOOM/CRASH/VOL signals
+   stopped on Sep 21. The current public endpoint is
+   wss://api.derivws.com/trading/v1/options/ws/public
+========================================================= */
+
+const DERIV_WS_URL =
+  "wss://api.derivws.com/trading/v1/options/ws/public";
+
+const DERIV_SYMBOL_MAP: Record<string, string> = {
+  "BOOM 1000": "BOOM1000",
+  "CRASH 1000": "CRASH1000",
+  "VOL 75": "R_75",
+  "BOOM 500": "BOOM500",
+  "VOL 100": "R_100",
+};
+
+// Normalized (whitespace-stripped, uppercased) lookup so callers that
+// send "BOOM1000" (no space) match the same as "BOOM 1000".
+const DERIV_SYMBOL_MAP_NORMALIZED: Record<string, string> = Object.fromEntries(
+  Object.entries(DERIV_SYMBOL_MAP).map(([k, v]) => [
+    k.replace(/\s+/g, "").toUpperCase(),
+    v,
+  ])
+);
+
+function normalizePairKey(pair: string): string {
+  return pair.replace(/\s+/g, "").toUpperCase();
+}
+
+function isDerivPair(pair: string): boolean {
+  return Object.prototype.hasOwnProperty.call(
+    DERIV_SYMBOL_MAP_NORMALIZED,
+    normalizePairKey(pair)
+  );
+}
+
+function getDerivSymbol(pair: string): string | undefined {
+  return DERIV_SYMBOL_MAP_NORMALIZED[normalizePairKey(pair)];
+}
+
+async function fetchDerivPrice(
+  symbol: string
+): Promise<number | null> {
+  return await new Promise((resolve) => {
+    let settled = false;
+
+    let ws: WebSocket;
+
+    const finish = (value: number | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        ws?.close();
+      } catch {
+        // ignore
+      }
+      resolve(value);
+    };
+
+    const timer = setTimeout(() => {
+      console.error(`Deriv ${symbol}: timeout waiting for tick`);
+      finish(null);
+    }, 6000);
+
+    try {
+      ws = new WebSocket(DERIV_WS_URL);
+    } catch (error) {
+      console.error(`Deriv ${symbol} connect error:`, error);
+      clearTimeout(timer);
+      resolve(null);
+      return;
+    }
+
+    ws.onopen = () => {
+      try {
+        ws.send(
+          JSON.stringify({
+            ticks_history: symbol,
+            adjust_start_time: 1,
+            count: 1,
+            end: "latest",
+            start: 1,
+            style: "ticks",
+          })
+        );
+      } catch (error) {
+        console.error(`Deriv ${symbol} send error:`, error);
+        finish(null);
+      }
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data as string);
+
+        if (data?.error) {
+          console.error(
+            `Deriv API error for ${symbol}:`,
+            data.error?.message || data.error
+          );
+          finish(null);
+          return;
+        }
+
+        const prices = data?.history?.prices;
+
+        if (Array.isArray(prices) && prices.length > 0) {
+          const price = Number(prices[prices.length - 1]);
+          finish(validPrice(price) ? price : null);
+        }
+      } catch (error) {
+        console.error(`Deriv ${symbol} parse error:`, error);
+        finish(null);
+      }
+    };
+
+    ws.onerror = () => {
+      console.error(`Deriv ${symbol}: websocket error`);
+      finish(null);
+    };
+
+    ws.onclose = () => {
+      finish(null);
+    };
+  });
 }
 
 /* =========================================================
@@ -677,29 +817,35 @@ Deno.serve(async (req) => {
     await Promise.all(indexTasks);
 
     /* =====================================================
-       DERIV
-       
-       IMPORTANT:
-       No fake hardcoded market price.
-       If no real provider exists, pair stays
-       unavailable instead of generating a fake price.
+       DERIV SYNTHETIC INDICES
+       Fetched live from Deriv's own WebSocket API -- the only
+       real source for these symbols. Runs in parallel per pair.
     ===================================================== */
 
     const derivPairs =
-      requestedPairs.filter(
-        (pair) =>
-          pair === "BOOM 1000" ||
-          pair === "CRASH 1000" ||
-          pair === "VOL 75" ||
-          pair === "BOOM 500" ||
-          pair === "VOL 100"
-      );
+      requestedPairs.filter(isDerivPair);
 
-    for (const pair of derivPairs) {
-      console.log(
-        `No external live provider configured for ${pair}`
-      );
-    }
+    const derivTasks =
+      derivPairs
+        .filter((pair) => !validPrice(prices[pair]))
+        .map(async (pair) => {
+          const symbol = getDerivSymbol(pair);
+
+          if (!symbol) return;
+
+          const price = await fetchDerivPrice(symbol);
+
+          if (validPrice(price)) {
+            prices[pair] = roundPrice(price, 2);
+            sources[pair] = "deriv";
+          } else {
+            console.log(
+              `Deriv live price unavailable for ${pair} (${symbol})`
+            );
+          }
+        });
+
+    await Promise.all(derivTasks);
 
     /* =====================================================
        FINAL RESPONSE
