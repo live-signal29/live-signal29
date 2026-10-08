@@ -14,7 +14,7 @@ export function GlobalSearch() {
     if (!q.trim()) return setResults([]);
     const t = setTimeout(async () => {
       const [{ data: sigs }, { data: ideas }] = await Promise.all([
-        supabase.from("signals").select("id,pair,type,category").ilike("pair", `%${q}%`).eq("published", true).limit(5),
+        supabase.from("signals").select("id,pair,type,category").ilike("pair_key", `%${q.replace(/\s*\(.*\)\s*/g, "").replace(/[^A-Za-z0-9]/g, "").toLowerCase()}%`).eq("published", true).limit(5),
         supabase.from("market_ideas").select("id,title").ilike("title", `%${q}%`).limit(5),
       ]);
       setResults([
