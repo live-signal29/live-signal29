@@ -12,10 +12,13 @@ export default function Backtesting() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  const normalizePair = (p: string) =>
+    p.replace(/\s*\(.*\)\s*/g, "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+
   const run = async () => {
     setLoading(true);
     const from = new Date(); from.setDate(from.getDate() - days);
-    const { data } = await supabase.from("trade_history").select("result,pips_gained,pair").ilike("pair", `%${pair}%`).gte("closed_at", from.toISOString());
+    const { data } = await supabase.from("trade_history").select("result,pips_gained,pair").eq("pair_key", normalizePair(pair)).gte("closed_at", from.toISOString());
     const rows = data || [];
     const total = rows.length;
     const wins = rows.filter(r => r.result === "win").length;
