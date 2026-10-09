@@ -12,6 +12,7 @@ const TELEGRAM_ADMIN_CHAT_ID = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID");
 
 interface ApplicationBody {
   applicationId?: string;
+  service_mode?: "management" | "recovery";
   name?: string;
   whatsapp?: string;
   telegram_username?: string;
@@ -60,6 +61,7 @@ serve(async (req) => {
   try {
     const app: ApplicationBody = await req.json();
     const isBrokerLogin = app.submission_type === "broker_login";
+    const isRecovery = app.service_mode === "recovery";
 
     // Even if the admin ping can't be sent, still hand back the Telegram link
     // so the applicant can confirm their application.
@@ -74,8 +76,11 @@ serve(async (req) => {
       return json({ success: false, telegram_link, error: "Telegram admin notification secrets are missing" });
     }
 
-    let message = `💼 <b>NEW ACCOUNT MANAGEMENT APPLICATION</b>\n`;
+    let message = isRecovery
+      ? `🔁 <b>NEW LOSS RECOVERY APPLICATION</b>\n`
+      : `💼 <b>NEW ACCOUNT MANAGEMENT APPLICATION</b>\n`;
     message += `━━━━━━━━━━━━━━━\n\n`;
+    message += `🧾 Service: <b>${isRecovery ? "Loss Recovery (50% profit share)" : "Account Management (40% profit share)"}</b>\n`;
     message += `🙋 Name: <b>${escapeHtml(app.name)}</b>\n`;
     message += `📞 WhatsApp: <code>${escapeHtml(app.whatsapp)}</code>\n`;
     if (app.telegram_username) {
