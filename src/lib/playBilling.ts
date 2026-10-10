@@ -22,6 +22,12 @@ export const PREMIUM_PRODUCT_ID = "premium";
 // Console "one-time product", not a base plan of the subscription above.
 export const LIFETIME_PRODUCT_ID = "premium_lifetime";
 
+// One-time products for the Chinese Bot license (create both in Play Console -> Monetize -> One-time products).
+export const LICENSE_PRODUCT_IDS = {
+  "6m": "chinese_bot_6m",
+  lifetime: "chinese_bot_lifetime",
+} as const;
+
 export interface PlayPlanOffer {
   basePlanId: string;
   formattedPrice: string; // localized, e.g. "$75.00" / "₹6,200"
@@ -331,6 +337,50 @@ export async function purchaseLifetimePlan(
   return {
     status: "error",
     message: "Lifetime purchases need the latest app version from Google Play",
+  };
+}
+
+/**
+ * Opens Google's purchase sheet for any one-time (in-app) product.
+ * Native bridge only — same as the Lifetime plan.
+ */
+export async function purchaseInAppProduct(
+  productId: string,
+  accountId: string
+): Promise<PurchaseOutcome> {
+  const provider = getBillingProvider();
+
+  try {
+    if (provider === "native") {
+      const res = await callNative<{
+        ok: boolean;
+        code?: "cancelled" | "pending" | "error";
+        message?: string;
+        purchases?: Array<{ purchaseToken: string; orderId?: string }>;
+      }>(
+        (id) => window.NativeBilling!.purchaseInApp(id, productId, accountId),
+        10 * 60_000
+      );
+
+      if (res.ok && res.purchases?.[0]) {
+        return {
+          status: "purchased",
+          purchaseToken: res.purchases[0].purchaseToken,
+          orderId: res.purchases[0].orderId,
+        };
+      }
+      if (res.code === "cancelled") return { status: "cancelled" };
+      if (res.code === "pending") return { status: "pending" };
+      return { status: "error", message: res.message };
+    }
+  } catch (err) {
+    console.error("In-app purchase failed:", err);
+    return { status: "error", message: String((err as Error)?.message ?? err) };
+  }
+
+  return {
+    status: "error",
+    message: "This purchase needs the latest app version from Google Play",
   };
 }
 
