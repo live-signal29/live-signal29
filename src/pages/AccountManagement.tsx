@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ScreenshotPicker } from "@/components/ScreenshotPicker";
+import { uploadApplicationScreenshot } from "@/lib/applicationScreenshot";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +106,7 @@ const AccountManagement = () => {
     broker_site_name: "", broker_email: "", broker_password: "", note: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [screenshot, setScreenshot] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Set right after a successful submit. The application is saved at this
@@ -234,11 +237,24 @@ const AccountManagement = () => {
       if (error) throw error;
       const inserted = { id: newId as unknown as string };
 
+      // Optional screenshot — upload after the application is saved; never blocks the submit.
+      let screenshot_path: string | undefined;
+      if (screenshot) {
+        try {
+          screenshot_path = await uploadApplicationScreenshot(screenshot, "account");
+        } catch (uploadErr) {
+          console.error("Screenshot upload failed:", uploadErr);
+          toast.warning("Screenshot could not be uploaded", {
+            description: "Your application was submitted without it.",
+          });
+        }
+      }
+
       let telegram_link: string | null = null;
       try {
         const { data: notifyResult } = await supabase.functions.invoke(
           'account-management-notify',
-          { body: { ...validated, submission_type: submissionMethod, service_mode: serviceMode, service_label: serviceLabel, applicationId: inserted?.id } }
+          { body: { ...validated, submission_type: submissionMethod, service_mode: serviceMode, service_label: serviceLabel, applicationId: inserted?.id, screenshot_path } }
         );
         telegram_link = notifyResult?.telegram_link ?? null;
       } catch (err) {
@@ -251,6 +267,7 @@ const AccountManagement = () => {
         trading_password: "", account_size: "",
         broker_site_name: "", broker_email: "", broker_password: "", note: ""
       });
+      setScreenshot(null);
 
       if (telegram_link && inserted?.id) {
         // Don't show the generic success toast yet — the application isn't
@@ -797,6 +814,8 @@ const AccountManagement = () => {
                     </div>
                   </TabsContent>
                 </Tabs>
+
+                <ScreenshotPicker file={screenshot} onChange={setScreenshot} disabled={isSubmitting} />
 
                 {serviceMode === "recovery" && (
                   <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/70 dark:bg-orange-950/20 p-3">
