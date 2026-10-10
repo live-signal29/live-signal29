@@ -18,6 +18,7 @@ import {
   Clock3,
   Coins,
   Eye,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -102,6 +103,9 @@ const PaymentShareManagement = lazyWithRetry(
 const PremiumPayments = lazyWithRetry(
   () => import("@/components/admin/PremiumPayments")
 );
+const LicenseOrders = lazyWithRetry(
+  () => import("@/components/admin/LicenseOrders")
+);
 
 import AdminGlobalSearch from "@/components/admin/AdminGlobalSearch";
 import AdminNotificationBell from "@/components/admin/AdminNotificationBell";
@@ -168,6 +172,12 @@ const menuItems = [
     label: "Premium Pay",
     icon: Wallet,
     color: "text-emerald-600",
+  },
+  {
+    id: "licenses",
+    label: "Licenses",
+    icon: KeyRound,
+    color: "text-teal-600",
   },
   {
     id: "payment-share",
@@ -802,6 +812,10 @@ const AdminDashboard = () => {
 
           {activeTab === "premium-payments" && (
             <PremiumPayments />
+          )}
+
+          {activeTab === "licenses" && (
+            <LicenseOrders />
           )}
 
           {activeTab === "payment-share" && (
