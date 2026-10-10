@@ -169,8 +169,8 @@ serve(async (req) => {
       if (app.note) message += `📝 Note: ${escapeHtml(app.note)}\n`;
     } else {
       message += `\n🔐 <b>Method: Trading Account</b>\n`;
-      message += `💵 Account Size: <b>${escapeHtml(app.account_size)}</b>\n\n`;
-      message += `🏦 Broker: <b>${escapeHtml(app.preferred_broker)}</b>\n`;
+      if (app.account_size) message += `💵 Account Size: <b>${escapeHtml(app.account_size)}</b>\n`;
+      message += `\n🏦 Broker: <b>${escapeHtml(app.preferred_broker)}</b>\n`;
       if (app.platform_type) message += `🖥 Platform: ${escapeHtml(app.platform_type)}\n`;
       if (app.broker_server) message += `🌐 Server: <code>${escapeHtml(app.broker_server)}</code>\n`;
       if (app.trading_login) message += `👤 Login: <code>${escapeHtml(app.trading_login)}</code>\n`;
