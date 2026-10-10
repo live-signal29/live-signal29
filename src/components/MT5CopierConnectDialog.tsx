@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { rememberOwnCopierRequestId } from "@/lib/myCopierRequests";
+import { ScreenshotPicker } from "@/components/ScreenshotPicker";
+import { uploadApplicationScreenshot } from "@/lib/applicationScreenshot";
 
 interface FormState {
   name: string;
@@ -106,6 +108,7 @@ interface MT5CopierConnectDialogProps {
 export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5CopierConnectDialogProps) => {
   const [form, setForm] = useState<FormState>(loadDraft);
   const [submitting, setSubmitting] = useState(false);
+  const [screenshot, setScreenshot] = useState<File | null>(null);
 
   // Keep the draft in sync as the user types, so a refresh mid-fill doesn't
   // lose anything (password excluded — see saveDraft).
@@ -301,9 +304,22 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
 
     setSubmitting(true);
     try {
+      // Optional screenshot — upload first; if it fails the request still goes through.
+      let screenshot_path: string | undefined;
+      if (screenshot) {
+        try {
+          screenshot_path = await uploadApplicationScreenshot(screenshot, "copier");
+        } catch (uploadErr) {
+          console.error("Screenshot upload failed:", uploadErr);
+          toast.warning("Screenshot could not be uploaded", {
+            description: "Your request will be submitted without it.",
+          });
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke(
         "mt5-copier-request",
-        { body: form }
+        { body: { ...form, screenshot_path } }
       );
 
       if (error || !data?.success) {
@@ -312,6 +328,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
 
       rememberOwnCopierRequestId(data?.id);
       setForm(EMPTY_FORM);
+      setScreenshot(null);
       clearDraft();
 
       if (data?.telegram_link) {
@@ -536,6 +553,8 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
               className="text-base sm:text-sm"
             />
           </div>
+
+          <ScreenshotPicker file={screenshot} onChange={setScreenshot} disabled={submitting} />
 
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? (
