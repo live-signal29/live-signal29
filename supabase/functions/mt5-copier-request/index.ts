@@ -22,6 +22,7 @@ interface CopierRequestBody {
   broker_server?: string;
   mt5_password?: string;
   note?: string;
+  screenshot_path?: string;
 }
 
 function json(body: unknown, status = 200) {
@@ -69,7 +70,92 @@ async function getBotUsername(): Promise<string | null> {
   }
 }
 
-async function notifyAdmin(row: Record<string, any>): Promise<{ sent: boolean; error?: string }> {
+
+// ---- Optional screenshot support ----
+const SCREENSHOT_BUCKET = "application-screenshots";
+const SCREENSHOT_PATH_RE = /^copier\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/;
+
+// Returns the downloaded image only if the path has the expected shape and the file really exists.
+async function loadScreenshot(
+  supabase: ReturnType<typeof createClient>,
+  path: unknown
+): Promise<{ path: string; blob: Blob } | null> {
+  if (typeof path !== "string" || !SCREENSHOT_PATH_RE.test(path)) return null;
+  try {
+    const { data, error } = await supabase.storage.from(SCREENSHOT_BUCKET).download(path);
+    if (error || !data) return null;
+    return { path, blob: data };
+  } catch (e) {
+    console.error("screenshot download failed:", e);
+    return null;
+  }
+}
+
+async function tgSendPhoto(
+  chatId: string,
+  blob: Blob,
+  caption: string,
+  replyTo?: number
+): Promise<{ ok: boolean; message_id?: number; error?: string }> {
+  try {
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("photo", blob, "screenshot.jpg");
+    form.append("caption", caption);
+    form.append("parse_mode", "HTML");
+    if (replyTo) form.append("reply_to_message_id", String(replyTo));
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: "POST", body: form });
+    const result = await res.json();
+    if (res.ok && result.ok === true) return { ok: true, message_id: result.result?.message_id };
+    console.error("sendPhoto failed:", JSON.stringify(result));
+    return { ok: false, error: result?.description || `Telegram HTTP ${res.status}` };
+  } catch (e) {
+    console.error("sendPhoto error:", e);
+    return { ok: false, error: e instanceof Error ? e.message : "sendPhoto failed" };
+  }
+}
+
+// Sends the admin notification. With a screenshot: one photo message whose caption is the
+// notification when it fits (Telegram caption limit is 1024), otherwise the text message
+// followed by the photo as a reply to it.
+async function sendAdminNotification(
+  message: string,
+  screenshot: Blob | null,
+  photoCaption: string
+): Promise<{ ok: boolean; error?: string }> {
+  const chatId = TELEGRAM_ADMIN_CHAT_ID!;
+  if (screenshot && message.length <= 1000) {
+    const photo = await tgSendPhoto(chatId, screenshot, message);
+    if (photo.ok) return { ok: true };
+    // fall through to the plain text notification so the admin is never left without one
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: message,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+    }),
+  });
+  const result = await response.json();
+  if (!(response.ok && result.ok === true)) {
+    console.error("Telegram notify failed:", JSON.stringify(result));
+    return { ok: false, error: result?.description || `Telegram HTTP ${response.status}` };
+  }
+
+  if (screenshot && message.length > 1000) {
+    await tgSendPhoto(chatId, screenshot, photoCaption, result.result?.message_id);
+  }
+  return { ok: true };
+}
+
+async function notifyAdmin(
+  row: Record<string, any>,
+  screenshot: Blob | null
+): Promise<{ sent: boolean; error?: string }> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) {
     console.error("TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID missing — skipping admin notify");
     return { sent: false, error: "Telegram admin notification secrets are missing" };
@@ -85,22 +171,16 @@ async function notifyAdmin(row: Record<string, any>): Promise<{ sent: boolean; e
   message += `🔑 Password: <tg-spoiler>${escapeHtml(row.mt5_password)}</tg-spoiler>\n`;
   if (row.note) message += `\n📝 Note: <i>${escapeHtml(row.note)}</i>\n`;
   message += `\n🆔 Request ID: <code>${escapeHtml(row.id)}</code>`;
+  if (screenshot) message += `\n📸 <b>Screenshot attached</b>`;
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_ADMIN_CHAT_ID,
-        text: message,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-      }),
-    });
-    const result = await response.json();
-    if (response.ok && result.ok === true) return { sent: true };
-    console.error("Telegram admin notify failed:", JSON.stringify(result));
-    return { sent: false, error: result?.description || `Telegram HTTP ${response.status}` };
+    const result = await sendAdminNotification(
+      message,
+      screenshot,
+      `📸 Screenshot — ${escapeHtml(row.name || row.mt5_login)} (MT5 Copier)`
+    );
+    if (result.ok) return { sent: true };
+    return { sent: false, error: result.error };
   } catch (error) {
     console.error("Telegram admin notify error:", error);
     return { sent: false, error: error instanceof Error ? error.message : "Telegram request failed" };
@@ -139,6 +219,9 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // Optional screenshot (already uploaded by the browser) — ignored if the path isn't valid.
+    const shot = await loadScreenshot(supabase, body.screenshot_path);
+
     const { data: inserted, error: insertError } = await supabase
       .from("mt5_copier_requests")
       .insert({
@@ -150,6 +233,7 @@ serve(async (req) => {
         broker_server,
         mt5_password,
         note,
+        screenshot_path: shot?.path ?? null,
         status: "pending",
         is_public: true,
         profit_amount: 0,
@@ -165,7 +249,7 @@ serve(async (req) => {
       return json({ success: false, error: insertError?.message || "Could not save request" }, 500);
     }
 
-    const [notifyResult, botUsername] = await Promise.all([notifyAdmin(inserted), getBotUsername()]);
+    const [notifyResult, botUsername] = await Promise.all([notifyAdmin(inserted, shot?.blob ?? null), getBotUsername()]);
 
     if (notifyResult.sent) {
       await supabase.from("mt5_copier_requests").update({ telegram_notified: true }).eq("id", inserted.id);
