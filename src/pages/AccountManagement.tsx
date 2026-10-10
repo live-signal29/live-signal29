@@ -27,7 +27,6 @@ import {
   Clock, 
   MessageCircle, 
   FileText, 
-  Wallet,
   BarChart3,
   CheckCircle2,
   Send,
@@ -73,7 +72,6 @@ const tradingAccountSchema = contactDetailsSchema.extend({
   broker_server: z.string().min(2, "Enter broker server"),
   trading_login: z.string().regex(/^\d+$/, "Login must contain only numbers"),
   trading_password: z.string().min(4, "Password must be at least 4 characters"),
-  account_size: z.string().min(1, "Select an account size"),
 });
 
 // Tab 2 — hand over the broker site/app login instead of MT4/MT5 credentials.
@@ -102,7 +100,7 @@ const AccountManagement = () => {
   const [formData, setFormData] = useState({
     name: "", whatsapp: "", telegram_username: "", preferred_broker: "",
     platform_type: "", broker_server: "", trading_login: "",
-    trading_password: "", account_size: "",
+    trading_password: "",
     broker_site_name: "", broker_email: "", broker_password: "", note: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -226,7 +224,6 @@ const AccountManagement = () => {
           p_broker_server: v.broker_server,
           p_trading_login: v.trading_login,
           p_trading_password: v.trading_password,
-          p_account_size: v.account_size,
           p_broker_site_name: v.broker_site_name,
           p_broker_email: v.broker_email,
           p_broker_password: v.broker_password,
@@ -264,7 +261,7 @@ const AccountManagement = () => {
       setFormData({
         name: "", whatsapp: "", telegram_username: "", preferred_broker: "",
         platform_type: "", broker_server: "", trading_login: "",
-        trading_password: "", account_size: "",
+        trading_password: "",
         broker_site_name: "", broker_email: "", broker_password: "", note: ""
       });
       setScreenshot(null);
@@ -517,7 +514,7 @@ const AccountManagement = () => {
               </p>
             </CardHeader>
             <CardContent className="p-5">
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="w-full min-w-0 max-w-full space-y-5">
 
                 {/* ---------------- Contact Details ---------------- */}
                 <div className="space-y-3">
@@ -717,33 +714,6 @@ const AccountManagement = () => {
                       </div>
                     </div>
 
-                    <div className="h-px bg-slate-100 dark:bg-slate-800/60" />
-
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        <Wallet className="h-3.5 w-3.5" />
-                        Account Tier
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Account Size <span className="text-red-500">*</span></Label>
-                        <div className="relative">
-                          <DollarSign className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-                          <Select value={formData.account_size} onValueChange={(v) => setFormData({ ...formData, account_size: v })}>
-                            <SelectTrigger className="h-11 pl-10 text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 focus:ring-emerald-500/40">
-                              <SelectValue placeholder="Select Account Size" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="$100">$100 (Starter)</SelectItem>
-                              <SelectItem value="$1,000">$1,000 (Growth)</SelectItem>
-                              <SelectItem value="$10,000">$10,000 (Pro)</SelectItem>
-                              <SelectItem value="$50,000">$50,000 (Institutional)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {errors.account_size && <p className="text-[10px] text-destructive">{errors.account_size}</p>}
-                      </div>
-                    </div>
                   </TabsContent>
 
                   {/* ---- Tab 2: hand over the broker site/app login instead ---- */}
