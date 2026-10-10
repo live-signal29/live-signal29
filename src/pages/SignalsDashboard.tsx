@@ -17,7 +17,7 @@ import SEO from "@/components/SEO";
 import { getBreadcrumbStructuredData } from "@/components/StructuredData";
 import { supabase } from "@/integrations/supabase/client";
 
-import { Loader2, Maximize2 } from "lucide-react";
+import { Loader2, Maximize2, Link2, Bot as BotIcon } from "lucide-react";
 
 import {
   Card,
@@ -48,6 +48,7 @@ import { ChartReactions } from "@/components/ChartReactions";
 import { MarketClosedBanner } from "@/components/MarketClosedBanner";
 import { SignalUnlockGate } from "@/components/SignalUnlockGate";
 import { MT5CopierBanner } from "@/components/MT5CopierBanner";
+import BuyLicenseBot from "@/components/BuyLicenseBot";
 
 const SIGNALS_PER_PAGE = 20;
 
@@ -310,6 +311,7 @@ const SignalsDashboard = () => {
   });
 
   const [subCategory, setSubCategory] = useState<string>("all");
+  const [copierView, setCopierView] = useState<"options" | "request" | "license">("options");
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -343,6 +345,7 @@ const SignalsDashboard = () => {
     if (copierFromUrl) {
       setMainCategory("COPIER");
       setSubCategory("all");
+      setCopierView("options");
       return;
     }
 
@@ -375,6 +378,7 @@ const SignalsDashboard = () => {
      */
     if (category === "COPIER") {
       setMainCategory("COPIER");
+      setCopierView("options");
 
       navigate("/?tab=copier");
 
@@ -1378,9 +1382,64 @@ const SignalsDashboard = () => {
                 COPIER
                 ================================================== */}
 
-            {mainCategory ===
-              "COPIER" && (
-              <CopierLeaderboard />
+            {mainCategory === "COPIER" && (
+              <>
+                {copierView === "options" && (
+                  <div className="mx-auto w-full max-w-2xl space-y-4 py-3">
+                    <div className="text-center space-y-2 mb-5">
+                      <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                        MT5 + MT4 COPY
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Choose the service you want to open
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCopierView("request")}
+                      className="group flex w-full items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5 text-left shadow-sm transition hover:border-emerald-500/60 hover:shadow-md"
+                    >
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                        <Link2 className="h-6 w-6" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold text-base sm:text-lg">Request Copy Trading</span>
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          Open the existing MT5/MT4 copy trading section
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground text-xl transition group-hover:translate-x-1">›</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCopierView("license")}
+                      className="group flex w-full items-center gap-4 rounded-2xl border border-emerald-500/30 bg-card p-4 sm:p-5 text-left shadow-sm transition hover:border-emerald-500 hover:shadow-md"
+                    >
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                        <BotIcon className="h-6 w-6" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold text-base sm:text-lg">Buy License Bot</span>
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          Open the Live Signals Chinese Bot license page
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground text-xl transition group-hover:translate-x-1">›</span>
+                    </button>
+                  </div>
+                )}
+                {copierView === "request" && (
+                  <div className="space-y-3">
+                    <Button variant="outline" onClick={() => setCopierView("options")}>
+                      ← Back to options
+                    </Button>
+                    <CopierLeaderboard />
+                  </div>
+                )}
+                {copierView === "license" && (
+                  <BuyLicenseBot onBack={() => setCopierView("options")} />
+                )}
+              </>
             )}
 
             {/* ==================================================
