@@ -111,6 +111,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
   // Inside the Play Store app the license is bought with Google Play (like the Premium plans).
   const playAvailable = getBillingProvider() === "native";
   const [buyingPlay, setBuyingPlay] = useState(false);
+  const [buyingPlanId, setBuyingPlanId] = useState<PlanId | null>(null);
   const [boughtKey, setBoughtKey] = useState<{ key: string; label: string; expires: string | null } | null>(null);
 
   const verifyLicensePurchase = async (productId: string, purchaseToken: string) => {
@@ -125,6 +126,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
   const buyWithPlay = async (p: (typeof PLANS)[number]) => {
     if (buyingPlay) return;
     setBuyingPlay(true);
+    setBuyingPlanId(p.id);
     try {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) {
@@ -154,6 +156,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
       }
     } finally {
       setBuyingPlay(false);
+      setBuyingPlanId(null);
     }
   };
 
@@ -343,6 +346,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
               key={p.id}
               type="button"
               onClick={() => choosePlan(p)}
+              disabled={buyingPlay}
               className={`relative w-full rounded-3xl border p-5 text-left transition active:scale-[0.99] ${
                 p.id === "lifetime"
                   ? "border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-card to-card ring-1 ring-amber-500/30"
@@ -366,7 +370,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
                 </div>
               </div>
               <ul className="mt-4 space-y-2 text-sm">
-                {p.features.map((f) => (
+                {p.features.map((f) => playAvailable ? f.replace("Key delivered on Telegram", "Key delivered instantly in the app") : f).map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <Check className="h-4 w-4 shrink-0 text-emerald-500" />
                     {f}
@@ -378,7 +382,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
                   p.id === "lifetime" ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white" : "bg-emerald-400 text-emerald-950"
                 }`}
               >
-                {buyingPlay ? <Loader2 className="h-5 w-5 animate-spin" /> : playAvailable ? `Buy with Google Play — $${p.price}` : `Select ${p.label} — $${p.price}`}
+                {buyingPlanId === p.id ? <Loader2 className="h-5 w-5 animate-spin" /> : playAvailable ? `Buy with Google Play — $${p.price}` : `Select ${p.label} — $${p.price}`}
               </span>
             </button>
           ))}
