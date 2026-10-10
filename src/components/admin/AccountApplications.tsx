@@ -139,7 +139,7 @@ const AccountApplications = () => {
       case "contacted":
         return `Hi ${name}! 👋\nThanks for your Account Management application - our team has reviewed it and will be in touch shortly with next steps.`;
       case "approved":
-        return `Hi ${name}! 🎉\nGreat news - your Account Management application (${app.account_size}) has been approved. Welcome aboard!`;
+        return `Hi ${name}! 🎉\nGreat news - your Account Management application${app.account_size ? ` (${app.account_size})` : ""} has been approved. Welcome aboard!`;
       case "rejected":
         return `Hi ${name},\nThanks for applying for Account Management - unfortunately we couldn't approve this application right now. Feel free to reach out if you'd like more details or to re-apply.`;
       default:
