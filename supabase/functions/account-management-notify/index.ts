@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const TELEGRAM_ADMIN_CHAT_ID = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID");
 
@@ -28,6 +31,7 @@ interface ApplicationBody {
   broker_email?: string;
   broker_password?: string;
   note?: string;
+  screenshot_path?: string;
 }
 
 function json(body: unknown, status = 200) {
@@ -54,6 +58,51 @@ function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// ---- Optional screenshot support ----
+const SCREENSHOT_BUCKET = "application-screenshots";
+const SCREENSHOT_PATH_RE = /^account\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Returns the image only if the path has the expected shape and the file really exists.
+async function loadScreenshot(
+  supabase: ReturnType<typeof createClient>,
+  path: unknown
+): Promise<{ path: string; blob: Blob } | null> {
+  if (typeof path !== "string" || !SCREENSHOT_PATH_RE.test(path)) return null;
+  try {
+    const { data, error } = await supabase.storage.from(SCREENSHOT_BUCKET).download(path);
+    if (error || !data) return null;
+    return { path, blob: data };
+  } catch (e) {
+    console.error("screenshot download failed:", e);
+    return null;
+  }
+}
+
+async function tgSendPhoto(
+  chatId: string,
+  blob: Blob,
+  caption: string,
+  replyTo?: number
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("photo", blob, "screenshot.jpg");
+    form.append("caption", caption);
+    form.append("parse_mode", "HTML");
+    if (replyTo) form.append("reply_to_message_id", String(replyTo));
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: "POST", body: form });
+    const result = await res.json();
+    if (res.ok && result.ok === true) return { ok: true };
+    console.error("sendPhoto failed:", JSON.stringify(result));
+    return { ok: false, error: result?.description || `Telegram HTTP ${res.status}` };
+  } catch (e) {
+    console.error("sendPhoto error:", e);
+    return { ok: false, error: e instanceof Error ? e.message : "sendPhoto failed" };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ success: false, error: "POST method required" }, 405);
@@ -70,6 +119,30 @@ serve(async (req) => {
       botUsername && app.applicationId
         ? `https://t.me/${botUsername}?start=am_${app.applicationId}`
         : null;
+
+    // Optional screenshot: only accepted for a real, existing application that has none yet.
+    let shot: { path: string; blob: Blob } | null = null;
+    if (app.screenshot_path && app.applicationId && UUID_RE.test(app.applicationId)) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: existing } = await supabase
+        .from("account_management_applications")
+        .select("id, screenshot_path")
+        .eq("id", app.applicationId)
+        .maybeSingle();
+      if (existing && !existing.screenshot_path) {
+        shot = await loadScreenshot(supabase, app.screenshot_path);
+        if (shot) {
+          const { error: saveErr } = await supabase
+            .from("account_management_applications")
+            .update({ screenshot_path: shot.path })
+            .eq("id", app.applicationId);
+          if (saveErr) {
+            console.error("saving screenshot_path failed:", saveErr);
+            shot = null;
+          }
+        }
+      }
+    }
 
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) {
       console.error("TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID missing — skipping admin notify");
@@ -105,11 +178,22 @@ serve(async (req) => {
       if (app.note) message += `📝 Note: ${escapeHtml(app.note)}\n`;
     }
 
+    if (shot) message += `\n📸 <b>Screenshot attached</b>`;
+
+    const chatId = TELEGRAM_ADMIN_CHAT_ID;
+
+    // With a screenshot: one photo whose caption is the notification (limit 1024 chars).
+    // If it doesn't fit, or the photo fails, fall back to the text message (+ photo as a reply).
+    if (shot && message.length <= 1000) {
+      const photo = await tgSendPhoto(chatId, shot.blob, message);
+      if (photo.ok) return json({ success: true, telegram_link });
+    }
+
     const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: TELEGRAM_ADMIN_CHAT_ID,
+        chat_id: chatId,
         text: message,
         parse_mode: "HTML",
         disable_web_page_preview: true,
@@ -117,7 +201,17 @@ serve(async (req) => {
     });
     const result = await response.json();
 
-    if (response.ok && result.ok === true) return json({ success: true, telegram_link });
+    if (response.ok && result.ok === true) {
+      if (shot && message.length > 1000) {
+        await tgSendPhoto(
+          chatId,
+          shot.blob,
+          `📸 Screenshot — ${escapeHtml(app.name)} (${isRecovery ? "Loss Recovery" : "Account Management"})`,
+          result.result?.message_id
+        );
+      }
+      return json({ success: true, telegram_link });
+    }
 
     console.error("Telegram notify failed:", JSON.stringify(result));
     return json({
