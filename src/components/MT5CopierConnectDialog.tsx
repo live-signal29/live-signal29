@@ -429,7 +429,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain p-4 sm:p-6">
+      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6">
         <DialogHeader className="space-y-1 pb-1">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary p-1.5">
@@ -442,7 +442,7 @@ export const MT5CopierConnectDialog = ({ open, onOpenChange, onConfirmed }: MT5C
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="w-full min-w-0 max-w-full space-y-3">
           <div className="space-y-1">
             <Label htmlFor="name" className={fieldLabelClass}>Your Name</Label>
             <Input
