@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ScreenshotViewButton } from "./ScreenshotViewButton";
 import { format } from "date-fns";
 import {
   Phone,
@@ -53,6 +54,7 @@ interface CopierRequest {
   broker_server: string;
   mt5_password: string;
   note: string | null;
+  screenshot_path?: string | null;
   status: string;
   is_public: boolean;
   account_balance: number | null;
@@ -779,6 +781,10 @@ const MT5CopierManagement = ({ initialSearch }: { initialSearch?: string } = {})
 
                     {req.note && (
                       <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-2">{cleanDisplayText(req.note)}</p>
+                    )}
+
+                    {req.screenshot_path && (
+                      <ScreenshotViewButton path={req.screenshot_path} title={`Screenshot — ${req.name ?? req.mt5_login}`} />
                     )}
 
                     <p className="text-xs text-muted-foreground">

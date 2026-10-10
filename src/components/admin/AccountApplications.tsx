@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ScreenshotViewButton } from "./ScreenshotViewButton";
 import { format } from "date-fns";
 import {
   Mail,
@@ -53,6 +54,7 @@ interface AccountApplication {
   broker_email: string | null;
   broker_password: string | null;
   note: string | null;
+  screenshot_path?: string | null;
   status: string | null;
   created_at: string;
 }
@@ -471,6 +473,10 @@ const AccountApplications = () => {
                           <StickyNote className="h-4 w-4 mt-0.5 shrink-0" />
                           <span>{app.note}</span>
                         </div>
+                      )}
+
+                      {app.screenshot_path && (
+                        <ScreenshotViewButton path={app.screenshot_path} title={`Screenshot — ${app.name}`} />
                       )}
 
                       <p className="text-xs text-muted-foreground">
