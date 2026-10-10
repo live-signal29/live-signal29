@@ -65,3 +65,12 @@ verify_jwt = false
 
 [functions.payment-share-reminders]
 verify_jwt = false
+
+[functions.license-notify]
+verify_jwt = true
+
+[functions.license-send-key]
+verify_jwt = true
+
+[functions.telegram-webhook]
+verify_jwt = false
