@@ -11,6 +11,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+const TELEGRAM_ADMIN_CHAT_ID = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID");
 
 const KEY_RE = /^[A-Z0-9]{4}(-[A-Z0-9]{4}){3}$/;
 
@@ -36,6 +37,19 @@ async function tgSend(chatId: number | string, text: string) {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "send failed" };
   }
+}
+
+// Confirmation to the admin chat so every approve / reject / resend leaves a trace on Telegram.
+async function tellAdmin(order: any, headline: string, extra: string) {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  const who = order.customer_name || (order.telegram_username ? "@" + order.telegram_username : order.user_id || "User");
+  await tgSend(
+    TELEGRAM_ADMIN_CHAT_ID,
+    `${headline}\n━━━━━━━━━━━━━━━\n\n` +
+      `📦 Plan: <b>${esc(order.plan_label)}</b> • $${Number(order.amount).toFixed(0)}\n` +
+      `🙋 User: <b>${esc(who)}</b> (${order.source === "bot" ? "Bot" : "App"})\n` +
+      extra
+  );
 }
 
 const keyMessage = (planLabel: string, key: string) =>
@@ -106,6 +120,11 @@ serve(async (req) => {
         botSent = r.ok;
       }
       await notifyAppUser("License payment not verified", `We could not verify your payment for ${order.plan_label}. Please contact support.`);
+      await tellAdmin(
+        order,
+        "❌ <b>LICENSE REJECTED</b>",
+        `📨 User notified: ${botSent ? "✅ on the bot" : order.telegram_chat_id ? "⚠️ bot send failed" : "not linked to the bot"}${order.user_id ? " • in-app inbox ✅" : ""}`
+      );
       return json({ success: true, bot_sent: botSent });
     }
 
@@ -149,6 +168,12 @@ serve(async (req) => {
     }
 
     await notifyAppUser("🔑 Your Chinese Bot license key", `Your ${order.plan_label} key: ${key}`);
+    await tellAdmin(
+      order,
+      action === "approve" ? "✅ <b>LICENSE APPROVED</b>" : "🔁 <b>LICENSE KEY RESENT</b>",
+      `🔑 Key: <code>${esc(key)}</code>\n` +
+        `📨 Bot delivery: ${botSent ? "✅ sent" : "⚠️ not sent — " + esc(botError || "unknown")}${order.user_id ? "\n📥 In-app inbox ✅" : ""}`
+    );
 
     return json({ success: true, bot_sent: botSent, bot_error: botError, in_app_notified: !!order.user_id });
   } catch (e) {
