@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Loader2,
@@ -37,6 +38,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { MT5CopierConnectDialog } from "@/components/MT5CopierConnectDialog";
+import BuyLicenseBot from "@/components/BuyLicenseBot";
 import { isOwnCopierRequestId } from "@/lib/myCopierRequests";
 
 const db = supabase as any;
@@ -118,6 +120,8 @@ const lastSyncLabel = (s: PublicCopierStat) => {
 export const CopierLeaderboard = () => {
   const [selected, setSelected] = useState<PublicCopierStat | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [connectOptionsOpen, setConnectOptionsOpen] = useState(false);
+  const [licenseBotOpen, setLicenseBotOpen] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
   const [sortMode, setSortMode] = useState<"profit" | "newest">("profit");
 
@@ -291,7 +295,7 @@ export const CopierLeaderboard = () => {
 
         <Button
           type="button"
-          onClick={() => setConnectOpen(true)}
+          onClick={() => setConnectOptionsOpen(true)}
           className="relative mt-3 w-full h-10 sm:h-11 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/20"
         >
           <Link2 className="h-3.5 w-3.5 mr-1.5" />
@@ -922,7 +926,53 @@ export const CopierLeaderboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* CONNECT DIALOG */}
+      {/* CONNECT OPTIONS: shown only after clicking Connect MT5 / MT4 */}
+      <Dialog open={connectOptionsOpen} onOpenChange={setConnectOptionsOpen}>
+        <DialogContent className="w-[calc(100%-24px)] max-w-md rounded-2xl p-5 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Connect MT5 / MT4</DialogTitle>
+            <DialogDescription>Choose one option to continue.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 grid gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setConnectOptionsOpen(false);
+                setConnectOpen(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition hover:border-emerald-500/60 hover:bg-muted/40"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                <Link2 className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">Request Copy Trading</span>
+                <span className="mt-1 block text-xs text-muted-foreground">Continue with the existing MT5 copier request form.</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConnectOptionsOpen(false);
+                setLicenseBotOpen(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition hover:border-emerald-500/60 hover:bg-muted/40"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                <Bot className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">Buy License Bot</span>
+                <span className="mt-1 block text-xs text-muted-foreground">Open the Live Signals Chinese Bot page.</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing copy-trading request form, unchanged */}
       <MT5CopierConnectDialog
         open={connectOpen}
         onOpenChange={setConnectOpen}
@@ -935,6 +985,13 @@ export const CopierLeaderboard = () => {
             })
         }
       />
+
+      {/* License bot page */}
+      <Dialog open={licenseBotOpen} onOpenChange={setLicenseBotOpen}>
+        <DialogContent className="max-h-[92dvh] w-[calc(100%-16px)] max-w-2xl overflow-y-auto rounded-2xl p-3 sm:p-5">
+          <BuyLicenseBot onBack={() => setLicenseBotOpen(false)} />
+        </DialogContent>
+      </Dialog>
 
       {/* BOTTOM NAVIGATION BAR */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border/40 px-4 py-2 flex items-center justify-between max-w-md mx-auto sm:max-w-xl">
