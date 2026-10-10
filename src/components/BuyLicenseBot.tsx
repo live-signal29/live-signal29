@@ -17,6 +17,13 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { openExternal } from "@/lib/openExternal";
+import { FunctionsHttpError } from "@supabase/supabase-js";
+import {
+  LICENSE_PRODUCT_IDS,
+  getBillingProvider,
+  getExistingPlayPurchases,
+  purchaseInAppProduct,
+} from "@/lib/playBilling";
 
 /* =========================================================
    LIVE SIGNALS CHINESE BOT
@@ -65,7 +72,21 @@ const PLANS: {
   },
 ];
 
-type View = "home" | "plans" | "pay" | "done";
+type View = "home" | "plans" | "pay" | "done" | "playdone";
+
+// Reads the real reason out of a failed edge-function call.
+async function functionError(error: unknown): Promise<string> {
+  let message = String((error as Error)?.message ?? error);
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      message = body?.details ?? body?.error ?? message;
+    } catch {
+      /* keep generic message */
+    }
+  }
+  return message;
+}
 
 const formatLicenseKey = (value: string) => {
   const clean = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
@@ -86,6 +107,81 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
   const [txid, setTxid] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+
+  // Inside the Play Store app the license is bought with Google Play (like the Premium plans).
+  const playAvailable = getBillingProvider() === "native";
+  const [buyingPlay, setBuyingPlay] = useState(false);
+  const [boughtKey, setBoughtKey] = useState<{ key: string; label: string; expires: string | null } | null>(null);
+
+  const verifyLicensePurchase = async (productId: string, purchaseToken: string) => {
+    const { data, error } = await supabase.functions.invoke("verify-play-license", {
+      body: { productId, purchaseToken },
+    });
+    if (error) return { ok: false as const, message: await functionError(error) };
+    if (data?.success) return { ok: true as const, data };
+    return { ok: false as const, pending: !!data?.pending, message: data?.error || data?.details };
+  };
+
+  const buyWithPlay = async (p: (typeof PLANS)[number]) => {
+    if (buyingPlay) return;
+    setBuyingPlay(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        toast.error("Please login first.");
+        return;
+      }
+      const productId = LICENSE_PRODUCT_IDS[p.id];
+      const outcome = await purchaseInAppProduct(productId, auth.user.id);
+      if (outcome.status === "cancelled") return;
+      if (outcome.status === "pending") {
+        toast.info("Your payment is pending. Your key will appear once Google confirms it — tap “Restore purchase” later.");
+        return;
+      }
+      if (outcome.status === "error") {
+        toast.error(outcome.message ? `Purchase failed: ${outcome.message}` : "Couldn't complete the purchase.");
+        return;
+      }
+      const res = await verifyLicensePurchase(productId, outcome.purchaseToken);
+      if (res.ok) {
+        setBoughtKey({ key: res.data.license_key, label: res.data.plan_label, expires: res.data.expires_at });
+        setActive({ plan_label: res.data.plan_label, expires_at: res.data.expires_at });
+        setView("playdone");
+      } else if (res.pending) {
+        toast.info("Your payment is pending. Tap “Restore purchase” once Google confirms it.");
+      } else {
+        toast.error(`Could not activate: ${res.message || "unknown error"}. If you were charged, tap “Restore purchase”.`, { duration: 10000 });
+      }
+    } finally {
+      setBuyingPlay(false);
+    }
+  };
+
+  const restorePlay = async () => {
+    setBuyingPlay(true);
+    try {
+      const owned = (await getExistingPlayPurchases()).filter((x) =>
+        Object.values(LICENSE_PRODUCT_IDS).includes(x.productId as never)
+      );
+      if (owned.length === 0) {
+        toast.info("No Chinese Bot purchase found on this Google account.");
+        return;
+      }
+      let restored = false;
+      for (const x of owned) {
+        const res = await verifyLicensePurchase(x.productId, x.purchaseToken);
+        if (res.ok) {
+          setBoughtKey({ key: res.data.license_key, label: res.data.plan_label, expires: res.data.expires_at });
+          setActive({ plan_label: res.data.plan_label, expires_at: res.data.expires_at });
+          restored = true;
+        }
+      }
+      if (restored) setView("playdone");
+      else toast.error("Could not restore the purchase. Please contact support.");
+    } finally {
+      setBuyingPlay(false);
+    }
+  };
 
   // Show the user's current license (if any)
   useEffect(() => {
@@ -154,6 +250,10 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
   };
 
   const choosePlan = (p: (typeof PLANS)[number]) => {
+    if (playAvailable) {
+      buyWithPlay(p);
+      return;
+    }
     setPlan(p);
     setTxid("");
     setView("pay");
@@ -233,7 +333,9 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
         {backButton("Back", () => setView("home"))}
         <div className="mb-6 text-center">
           <h2 className="text-2xl font-black tracking-tight">Choose Your License</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Pick a plan, pay in crypto, receive your key on Telegram.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {playAvailable ? "Pick a plan and pay securely with Google Play." : "Pick a plan, pay in crypto, receive your key on Telegram."}
+          </p>
         </div>
         <div className="space-y-4">
           {PLANS.map((p) => (
@@ -276,11 +378,21 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
                   p.id === "lifetime" ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white" : "bg-emerald-400 text-emerald-950"
                 }`}
               >
-                Select {p.label} — ${p.price}
+                {buyingPlay ? <Loader2 className="h-5 w-5 animate-spin" /> : playAvailable ? `Buy with Google Play — $${p.price}` : `Select ${p.label} — $${p.price}`}
               </span>
             </button>
           ))}
         </div>
+        {playAvailable && (
+          <button
+            type="button"
+            onClick={restorePlay}
+            disabled={buyingPlay}
+            className="mt-5 self-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-60"
+          >
+            Restore purchase
+          </button>
+        )}
       </section>
     );
   }
@@ -367,6 +479,41 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
             </>
           )}
         </div>
+      </section>
+    );
+  }
+
+  /* ------------------------------ PLAY DONE ------------------------------ */
+  if (view === "playdone" && boughtKey) {
+    return (
+      <section className="mx-auto flex w-full max-w-2xl flex-col items-center px-3 py-10 text-center">
+        <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15">
+          <CheckCircle2 className="h-11 w-11 text-emerald-500" />
+        </div>
+        <h2 className="text-2xl font-black">Purchase Successful</h2>
+        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+          Your <b>{boughtKey.label}</b> Chinese Bot license is active
+          {boughtKey.expires ? ` until ${new Date(boughtKey.expires).toLocaleDateString()}` : " for life"}.
+        </p>
+        <div className="mt-5 flex w-full max-w-sm items-center gap-2 rounded-2xl bg-muted/60 p-3">
+          <code className="min-w-0 flex-1 text-center font-mono text-base font-bold tracking-wider">{boughtKey.key}</code>
+          <button
+            type="button"
+            onClick={() => copy(boughtKey.key, "Key copied")}
+            className="shrink-0 rounded-lg border border-border p-2 hover:bg-background"
+            aria-label="Copy key"
+          >
+            <Copy className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">Keep this key safe. It is also saved in your notifications.</p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-6 flex h-14 w-full max-w-sm items-center justify-center rounded-2xl bg-emerald-400 font-extrabold text-emerald-950 hover:bg-emerald-300"
+        >
+          Done
+        </button>
       </section>
     );
   }
