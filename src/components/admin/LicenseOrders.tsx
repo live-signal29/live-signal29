@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, Eye, EyeOff, Link2, Loader2, RefreshCw, RotateCw, Send, Shuffle, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Link2, Loader2, RefreshCw, RotateCw, Send, Shuffle, Smartphone, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ type Order = {
   key_sent_via_bot: boolean;
   activated_at: string | null;
   expires_at: string | null;
+  bound_device_id?: string | null;
   created_at: string;
   profile?: { email: string | null; full_name: string | null } | null;
 };
@@ -201,6 +202,63 @@ const LicenseOrders = () => {
     load();
   };
 
+  // Permanently delete an order (any status). An approved key stops working immediately.
+  const removeOrder = async (o: Order) => {
+    const warn =
+      o.status === "approved"
+        ? "Delete this license? The key stops working right away and the user is locked out of the site."
+        : "Delete this order?";
+    if (!confirm(`${warn}\n\nThis cannot be undone.`)) return;
+    setBusyId(o.id);
+    const { data, error } = await db.from("license_orders").delete().eq("id", o.id).select("id");
+    setBusyId(null);
+    if (error) {
+      toast.error(error.message || "Delete failed");
+      return;
+    }
+    if (!data?.length) {
+      toast.error("Not deleted. Check that you are signed in as admin.");
+      return;
+    }
+    toast.success("Deleted");
+    load();
+  };
+
+  const removeConn = async (c: Conn) => {
+    if (!confirm("Delete this connection request?\n\nThis cannot be undone.")) return;
+    setBusyId(c.id);
+    const { data, error } = await db.from("license_connections").delete().eq("id", c.id).select("id");
+    setBusyId(null);
+    if (error) {
+      toast.error(error.message || "Delete failed");
+      return;
+    }
+    if (!data?.length) {
+      toast.error("Not deleted. Check that you are signed in as admin.");
+      return;
+    }
+    toast.success("Deleted");
+    load();
+  };
+
+  // Frees the key so it can be activated on a new device (user changed phone/browser).
+  const resetDevice = async (o: Order) => {
+    if (!confirm("Reset the device lock? The key can then be activated on a new device (first device to use it gets locked).")) return;
+    setBusyId(o.id);
+    const { data, error } = await db
+      .from("license_orders")
+      .update({ bound_device_id: null, bound_at: null, updated_at: new Date().toISOString() })
+      .eq("id", o.id)
+      .select("id");
+    setBusyId(null);
+    if (error || !data?.length) {
+      toast.error(error?.message || "Reset failed");
+      return;
+    }
+    toast.success("Device lock reset");
+    load();
+  };
+
   const copy = (text: string) => {
     navigator.clipboard?.writeText(text);
     toast.success("Copied");
@@ -324,6 +382,12 @@ const LicenseOrders = () => {
                       )}
                     </div>
                   )}
+                  <div className="flex justify-end">
+                    <Button size="sm" variant="ghost" className="gap-1 text-red-600" disabled={busy} onClick={() => removeConn(c)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -450,14 +514,28 @@ const LicenseOrders = () => {
                       <span>
                         {o.key_sent_via_bot ? "✅ Delivered on bot" : "⚠️ Not delivered on bot"}
                         {o.activated_at ? " • 🔓 Activated" : " • Not activated yet"}
+                        {o.bound_device_id ? " • 📱 Site device locked" : ""}
                       </span>
                       <Button size="sm" variant="outline" className="gap-1" disabled={busy} onClick={() => resend(o)}>
                         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : o.key_sent_via_bot ? <RotateCw className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
                         {o.key_sent_via_bot ? "Resend" : "Send on bot"}
                       </Button>
                     </div>
+                    {o.bound_device_id && (
+                      <Button size="sm" variant="outline" className="w-full gap-1" disabled={busy} onClick={() => resetDevice(o)}>
+                        <Smartphone className="h-3.5 w-3.5" />
+                        Reset device lock
+                      </Button>
+                    )}
                   </div>
                 )}
+
+                <div className="flex justify-end border-t pt-2">
+                  <Button size="sm" variant="ghost" className="gap-1 text-red-600" disabled={busy} onClick={() => removeOrder(o)}>
+                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    Delete
+                  </Button>
+                </div>
               </div>
             );
           })}
