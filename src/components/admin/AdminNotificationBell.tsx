@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 const db = supabase as any;
 
-type Key = "payments" | "accounts" | "copier" | "shares" | "licenses";
+type Key = "payments" | "accounts" | "copier" | "shares" | "licenses" | "connections";
 
 const SOURCES: {
   key: Key;
@@ -30,6 +30,7 @@ const SOURCES: {
   { key: "payments", tab: "premium-payments", label: "Premium payments to approve", icon: CreditCard, table: "payment_submissions", filter: (q) => q.eq("status", "pending"), timeCol: "created_at" },
   { key: "accounts", tab: "accounts", label: "New account applications", icon: BriefcaseBusiness, table: "account_management_applications", filter: (q) => q.or("status.eq.pending,status.is.null"), timeCol: "created_at" },
   { key: "copier", tab: "copier", label: "MT5 copier requests", icon: Zap, table: "mt5_copier_requests", filter: (q) => q.eq("status", "pending"), timeCol: "created_at" },
+  { key: "connections", tab: "licenses", label: "Chinese Bot accounts to connect", icon: KeyRound, table: "license_connections", filter: (q) => q.eq("status", "pending"), timeCol: "created_at" },
   { key: "licenses", tab: "licenses", label: "Chinese Bot licenses to approve", icon: KeyRound, table: "license_orders", filter: (q) => q.eq("status", "pending"), timeCol: "created_at" },
   { key: "shares", tab: "payment-share", label: "Client payments to verify", icon: Wallet, table: "client_payment_shares", filter: (q) => q.eq("status", "client_marked_paid"), timeCol: "updated_at" },
 ];
@@ -41,6 +42,7 @@ const EMPTY: Record<Key, Stat> = {
   copier: { pending: 0, fresh: 0, latest: null },
   shares: { pending: 0, fresh: 0, latest: null },
   licenses: { pending: 0, fresh: 0, latest: null },
+  connections: { pending: 0, fresh: 0, latest: null },
 };
 
 const SEEN_PREFIX = "admin_bell_seen_";
@@ -68,7 +70,7 @@ const AdminNotificationBell = ({
 }) => {
   const [stats, setStats] = useState<Record<Key, Stat>>(EMPTY);
   // What to highlight inside the popover for this open (snapshot before clearing).
-  const [snapshot, setSnapshot] = useState<Record<Key, number>>({ payments: 0, accounts: 0, copier: 0, shares: 0, licenses: 0 });
+  const [snapshot, setSnapshot] = useState<Record<Key, number>>({ payments: 0, accounts: 0, copier: 0, shares: 0, licenses: 0, connections: 0 });
   const [open, setOpen] = useState(false);
   const statsRef = useRef(stats);
   statsRef.current = stats;
@@ -136,9 +138,10 @@ const AdminNotificationBell = ({
       copier: fresh.copier.fresh,
       shares: fresh.shares.fresh,
       licenses: fresh.licenses.fresh,
+      connections: fresh.connections.fresh,
     });
     // Opening the bell = you have seen everything in it.
-    markSeen(["payments", "accounts", "copier", "shares", "licenses"], fresh);
+    markSeen(["payments", "accounts", "copier", "shares", "licenses", "connections"], fresh);
   };
 
   const unread = SOURCES.reduce((n, s) => n + stats[s.key].fresh, 0);

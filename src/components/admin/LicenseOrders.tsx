@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, Loader2, RefreshCw, RotateCw, Send, Shuffle, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Link2, Loader2, RefreshCw, RotateCw, Send, Shuffle, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,18 @@ type Order = {
   profile?: { email: string | null; full_name: string | null } | null;
 };
 
+type Conn = {
+  id: string;
+  license_order_id: string;
+  user_id: string;
+  account_email: string;
+  account_password: string;
+  status: "pending" | "connected" | "failed";
+  created_at: string;
+  order?: Order | null;
+  profile?: { email: string | null; full_name: string | null } | null;
+};
+
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const generateKey = () => {
   const bytes = new Uint8Array(16);
@@ -65,7 +77,9 @@ const LicenseOrders = () => {
   const [rows, setRows] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all" | "connections">("pending");
+  const [conns, setConns] = useState<Conn[]>([]);
+  const [shownPw, setShownPw] = useState<Record<string, boolean>>({});
   const [keys, setKeys] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
@@ -89,6 +103,26 @@ const LicenseOrders = () => {
       list.forEach((r) => (r.profile = r.user_id ? map.get(r.user_id) || null : null));
     }
     setRows(list);
+
+    // Account-connection requests (email + password) from licensed users
+    const { data: cdata } = await db
+      .from("license_connections")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    const clist: Conn[] = cdata || [];
+    const orderMap = new Map<string, Order>(list.map((o) => [o.id, o]));
+    const cids = Array.from(new Set(clist.map((c) => c.user_id)));
+    let pmap = new Map<string, any>();
+    if (cids.length) {
+      const { data: cprofiles } = await db.from("profiles").select("id, email, full_name").in("id", cids);
+      pmap = new Map<string, any>((cprofiles || []).map((p: any) => [p.id, p]));
+    }
+    clist.forEach((c) => {
+      c.order = orderMap.get(c.license_order_id) || null;
+      c.profile = pmap.get(c.user_id) || null;
+    });
+    setConns(clist);
     setLoading(false);
   }, []);
 
@@ -152,12 +186,27 @@ const LicenseOrders = () => {
     }
   };
 
+  const setConnStatus = async (c: Conn, status: "connected" | "failed") => {
+    setBusyId(c.id);
+    const { error } = await db
+      .from("license_connections")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", c.id);
+    setBusyId(null);
+    if (error) {
+      toast.error(error.message || "Update failed");
+      return;
+    }
+    toast.success(status === "connected" ? "Marked as connected" : "Marked as failed");
+    load();
+  };
+
   const copy = (text: string) => {
     navigator.clipboard?.writeText(text);
     toast.success("Copied");
   };
 
-  const shown = filter === "all" ? rows : rows.filter((r) => r.status === filter);
+  const shown = filter === "all" || filter === "connections" ? rows : rows.filter((r) => r.status === filter);
   const count = (st: string) => rows.filter((r) => r.status === st).length;
 
   return (
@@ -174,7 +223,7 @@ const LicenseOrders = () => {
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {(["pending", "approved", "rejected", "all"] as const).map((f) => (
+        {(["pending", "approved", "rejected", "all", "connections"] as const).map((f) => (
           <Button
             key={f}
             size="sm"
@@ -182,8 +231,10 @@ const LicenseOrders = () => {
             onClick={() => setFilter(f)}
             className="shrink-0 capitalize"
           >
-            {f}
-            {f !== "all" && ` (${count(f)})`}
+            {f === "connections" ? "🔌 Connections" : f}
+            {f === "connections"
+              ? ` (${conns.filter((c) => c.status === "pending").length})`
+              : f !== "all" && ` (${count(f)})`}
           </Button>
         ))}
       </div>
@@ -192,6 +243,92 @@ const LicenseOrders = () => {
         <div className="flex min-h-[160px] items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
+      ) : filter === "connections" ? (
+        conns.length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">No account connection requests yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {conns.map((c) => {
+              const who = c.profile?.full_name || c.profile?.email || "User";
+              const busy = busyId === c.id;
+              return (
+                <div key={c.id} className="space-y-3 rounded-2xl border bg-card p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 truncate font-semibold">
+                        <Link2 className="h-4 w-4 shrink-0 text-primary" />
+                        {who}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{c.profile?.email}</p>
+                    </div>
+                    <Badge
+                      className={
+                        c.status === "pending"
+                          ? "bg-amber-100 text-amber-700"
+                          : c.status === "connected"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-red-100 text-red-700"
+                      }
+                    >
+                      {c.status}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-2 rounded-xl bg-muted/40 p-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 shrink-0 text-xs text-muted-foreground">Email</span>
+                      <code className="min-w-0 flex-1 break-all text-xs">{c.account_email}</code>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copy(c.account_email)}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 shrink-0 text-xs text-muted-foreground">Password</span>
+                      <code className="min-w-0 flex-1 break-all text-xs">
+                        {shownPw[c.id] ? c.account_password : "••••••••"}
+                      </code>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => setShownPw((p) => ({ ...p, [c.id]: !p[c.id] }))}
+                      >
+                        {shownPw[c.id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copy(c.account_password)}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    {c.order && (
+                      <div className="flex items-center gap-2">
+                        <span className="w-16 shrink-0 text-xs text-muted-foreground">License</span>
+                        <code className="min-w-0 flex-1 break-all text-xs">
+                          {c.order.plan_label} • {c.order.license_key}
+                        </code>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Submitted {new Date(c.created_at).toLocaleString()}</p>
+
+                  {c.status !== "connected" && (
+                    <div className="flex gap-2">
+                      <Button className="flex-1 gap-1 bg-emerald-600 hover:bg-emerald-700" disabled={busy} onClick={() => setConnStatus(c, "connected")}>
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        Mark Connected
+                      </Button>
+                      {c.status === "pending" && (
+                        <Button variant="outline" className="flex-1 gap-1 text-red-600" disabled={busy} onClick={() => setConnStatus(c, "failed")}>
+                          <X className="h-4 w-4" />
+                          Failed
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
       ) : shown.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">No license orders here.</p>
       ) : (
