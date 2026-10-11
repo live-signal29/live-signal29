@@ -7,7 +7,10 @@ import {
   CheckCircle2,
   Copy,
   Crown,
+  Eye,
+  EyeOff,
   KeyRound,
+  Link2,
   Loader2,
   Send,
   ShieldCheck,
@@ -97,7 +100,15 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
   const [view, setView] = useState<View>("home");
   const [licenseKey, setLicenseKey] = useState("");
   const [activating, setActivating] = useState(false);
-  const [active, setActive] = useState<{ plan_label: string; expires_at: string | null } | null>(null);
+  type ActiveLicense = { id: string; license_key: string; plan_label: string; expires_at: string | null };
+  type Connection = { id: string; account_email: string; status: "pending" | "connected" | "failed" };
+  const [active, setActive] = useState<ActiveLicense | null>(null);
+  const [conn, setConn] = useState<Connection | null>(null);
+  const [connEmail, setConnEmail] = useState("");
+  const [connPassword, setConnPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [editingConn, setEditingConn] = useState(false);
 
   const [plan, setPlan] = useState<(typeof PLANS)[number] | null>(null);
   type Method = { id: string; label: string; address: string };
@@ -147,7 +158,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
       const res = await verifyLicensePurchase(productId, outcome.purchaseToken);
       if (res.ok) {
         setBoughtKey({ key: res.data.license_key, label: res.data.plan_label, expires: res.data.expires_at });
-        setActive({ plan_label: res.data.plan_label, expires_at: res.data.expires_at });
+        await loadActive();
         setView("playdone");
       } else if (res.pending) {
         toast.info("Your payment is pending. Tap “Restore purchase” once Google confirms it.");
@@ -175,7 +186,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
         const res = await verifyLicensePurchase(x.productId, x.purchaseToken);
         if (res.ok) {
           setBoughtKey({ key: res.data.license_key, label: res.data.plan_label, expires: res.data.expires_at });
-          setActive({ plan_label: res.data.plan_label, expires_at: res.data.expires_at });
+          await loadActive();
           restored = true;
         }
       }
@@ -186,30 +197,83 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
     }
   };
 
-  // Show the user's current license (if any)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data: auth } = await supabase.auth.getUser();
-        if (!auth.user) return;
-        const { data } = await db
-          .from("license_orders")
-          .select("plan_label, expires_at")
-          .eq("activated_by", auth.user.id)
-          .eq("status", "approved")
-          .order("activated_at", { ascending: false })
+  // Current license of this user (if any) + the latest account-connection request
+  const loadActive = async () => {
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const { data } = await db
+        .from("license_orders")
+        .select("id, license_key, plan_label, expires_at")
+        .eq("activated_by", auth.user.id)
+        .eq("status", "approved")
+        .order("activated_at", { ascending: false })
+        .limit(1);
+      const row = data?.[0];
+      if (row && (!row.expires_at || new Date(row.expires_at) > new Date())) {
+        setActive(row);
+        const { data: c } = await db
+          .from("license_connections")
+          .select("id, account_email, status")
+          .eq("license_order_id", row.id)
+          .order("created_at", { ascending: false })
           .limit(1);
-        const row = data?.[0];
-        if (!cancelled && row && (!row.expires_at || new Date(row.expires_at) > new Date())) setActive(row);
-      } catch {
-        /* optional banner only */
+        setConn(c?.[0] ?? null);
+      } else {
+        setActive(null);
+        setConn(null);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    } catch {
+      /* optional */
+    }
+  };
+
+  useEffect(() => {
+    loadActive();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const submitConnection = async () => {
+    if (!active) return;
+    const email = connEmail.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast.error("Please enter a valid email.");
+      return;
+    }
+    if (connPassword.length < 4) {
+      toast.error("Please enter your account password.");
+      return;
+    }
+    setConnecting(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        toast.error("Please login first.");
+        return;
+      }
+      const { data: row, error } = await db
+        .from("license_connections")
+        .insert({
+          license_order_id: active.id,
+          user_id: auth.user.id,
+          account_email: email,
+          account_password: connPassword,
+          status: "pending",
+        })
+        .select("id, account_email, status")
+        .single();
+      if (error) throw error;
+      setConn(row);
+      setConnPassword("");
+      setEditingConn(false);
+      toast.success("Account submitted", { description: "Our team will connect it shortly." });
+      supabase.functions.invoke("license-connection-notify", { body: { connection_id: row.id } }).catch(() => {});
+    } catch (e: any) {
+      toast.error(e?.message || "Could not submit. Please try again.");
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   // Payment methods = whatever the admin set in Payment Settings (read through an RPC).
   useEffect(() => {
@@ -242,7 +306,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
         toast.error(data?.error || "Invalid license key.");
         return;
       }
-      setActive({ plan_label: data.plan_label, expires_at: data.expires_at });
+      await loadActive();
       setLicenseKey("");
       toast.success("Bot activated!", { description: `${data.plan_label} license is now active.` });
     } catch (e: any) {
@@ -513,10 +577,10 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
         <p className="mt-2 text-xs text-muted-foreground">Keep this key safe. It is also saved in your notifications.</p>
         <button
           type="button"
-          onClick={onBack}
+          onClick={() => setView("home")}
           className="mt-6 flex h-14 w-full max-w-sm items-center justify-center rounded-2xl bg-emerald-400 font-extrabold text-emerald-950 hover:bg-emerald-300"
         >
-          Done
+          Continue — Connect your account
         </button>
       </section>
     );
@@ -545,6 +609,127 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
         <button type="button" onClick={onBack} className="mt-3 text-sm font-medium text-muted-foreground hover:text-foreground">
           Close
         </button>
+      </section>
+    );
+  }
+
+  /* ------------------------------ CONNECT ACCOUNT (license active) ------------------------------ */
+  if (view === "home" && active) {
+    const showForm = !conn || conn.status === "failed" || editingConn;
+    return (
+      <section className="mx-auto flex w-full max-w-2xl flex-col items-center px-3 py-6">
+        {backButton("Back", onBack)}
+
+        <div className="mb-5 flex flex-col items-center text-center">
+          <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full border-4 border-emerald-500/40 bg-emerald-950/70">
+            <Link2 className="h-9 w-9 text-emerald-300" strokeWidth={1.5} />
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">Connect Your Account</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Your license is active. Link your account to start the bot.</p>
+        </div>
+
+        <div className="mb-4 w-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-500" />
+            <div className="text-sm">
+              <p className="font-bold text-emerald-600">License active • {active.plan_label}</p>
+              <p className="text-xs text-muted-foreground">
+                {active.expires_at ? `Valid until ${new Date(active.expires_at).toLocaleDateString()}` : "Lifetime access"}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-background/60 p-2">
+            <KeyRound className="h-4 w-4 shrink-0 text-emerald-500" />
+            <code className="min-w-0 flex-1 truncate text-center font-mono text-sm font-bold tracking-wider">{active.license_key}</code>
+            <button
+              type="button"
+              onClick={() => copy(active.license_key, "Key copied")}
+              className="shrink-0 rounded-lg border border-border p-1.5 hover:bg-background"
+              aria-label="Copy key"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {conn && (
+          <div
+            className={`mb-4 w-full rounded-2xl border p-4 text-sm ${
+              conn.status === "connected"
+                ? "border-emerald-500/40 bg-emerald-500/10"
+                : conn.status === "failed"
+                  ? "border-red-500/40 bg-red-500/10"
+                  : "border-amber-500/40 bg-amber-500/10"
+            }`}
+          >
+            <p className="font-bold">
+              {conn.status === "connected"
+                ? "✅ Account connected"
+                : conn.status === "failed"
+                  ? "❌ We could not connect this account"
+                  : "⏳ Waiting for our team to connect"}
+            </p>
+            <p className="mt-0.5 break-all text-xs text-muted-foreground">{conn.account_email}</p>
+            {conn.status === "failed" && <p className="mt-1 text-xs">Please check your email and password and submit again.</p>}
+            {conn.status !== "failed" && !editingConn && (
+              <button type="button" onClick={() => setEditingConn(true)} className="mt-2 text-xs font-semibold underline underline-offset-4">
+                Update details
+              </button>
+            )}
+          </div>
+        )}
+
+        {showForm && (
+          <div className="w-full rounded-3xl border border-border bg-card p-5 shadow-xl">
+            <p className="mb-3 text-base font-bold">Account details</p>
+            <label className="mb-1 block text-xs font-semibold text-muted-foreground">Email</label>
+            <input
+              type="email"
+              value={connEmail}
+              onChange={(e) => setConnEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="off"
+              className="h-14 w-full rounded-2xl border border-border bg-muted/50 px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+            />
+            <label className="mb-1 mt-4 block text-xs font-semibold text-muted-foreground">Password</label>
+            <div className="relative">
+              <input
+                type={showPw ? "text" : "password"}
+                value={connPassword}
+                onChange={(e) => setConnPassword(e.target.value)}
+                placeholder="Account password"
+                autoComplete="off"
+                className="h-14 w-full rounded-2xl border border-border bg-muted/50 px-4 pr-12 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-label={showPw ? "Hide password" : "Show password"}
+              >
+                {showPw ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={submitConnection}
+              disabled={connecting}
+              className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 font-extrabold text-emerald-950 transition hover:bg-emerald-300 disabled:opacity-60"
+            >
+              {connecting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Link2 className="h-5 w-5" />}
+              Connect Account
+            </button>
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              Shared only with our admin team to set up your bot.
+            </p>
+            {editingConn && (
+              <button type="button" onClick={() => setEditingConn(false)} className="mt-3 w-full text-center text-xs font-medium text-muted-foreground underline underline-offset-4">
+                Cancel
+              </button>
+            )}
+          </div>
+        )}
       </section>
     );
   }
