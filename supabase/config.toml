@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.verify-play-license]
 verify_jwt = true
+
+[functions.license-connection-notify]
+verify_jwt = true
