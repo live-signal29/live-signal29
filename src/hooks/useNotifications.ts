@@ -89,6 +89,11 @@ export const useNotifications = () => {
       navigate("/premium");
       toast.info("Apply the coupon code on the Premium page!");
     }
+
+    // Trial journey notifications (reminder / last day / expired / win-back)
+    if (typeof notification.type === "string" && notification.type.startsWith("trial_")) {
+      navigate(notification.type === "trial_winback_7d" ? "/signals" : "/premium#plans-section");
+    }
   };
 
   // Listen for real-time notifications
