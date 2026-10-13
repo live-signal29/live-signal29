@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Send } from "lucide-react";
+import { Check, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { openExternal } from "@/lib/openExternal";
@@ -14,6 +14,8 @@ type Props = {
   onLinked?: () => void;
   className?: string;
 };
+
+type Phase = "waiting" | "checking" | "signing";
 
 type Pending = { nonce: string; secret: string; url: string; startedAt: number; returnUrl: string };
 
@@ -76,7 +78,13 @@ export default function TelegramLoginButton({
   const navigate = useNavigate();
   const [starting, setStarting] = useState(false);
   const [waiting, setWaiting] = useState<{ url: string } | null>(null);
-  const ctl = useRef<{ stop: boolean; inFlight: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const [phase, setPhase] = useState<Phase>("waiting");
+  const ctl = useRef<{
+    stop: boolean;
+    inFlight: boolean;
+    timer: ReturnType<typeof setTimeout> | null;
+    checkNow: () => void;
+  } | null>(null);
 
   const stop = useCallback(() => {
     if (ctl.current) {
@@ -92,6 +100,7 @@ export default function TelegramLoginButton({
     async (r: Awaited<ReturnType<typeof checkTelegramAuth>>, ret: string) => {
       stop();
       if (r.status === "ok" && r.token_hash) {
+        setPhase("signing");
         const okSignIn = await signInWithToken(r.token_hash);
         clearPending();
         setWaiting(null);
@@ -136,10 +145,15 @@ export default function TelegramLoginButton({
   const startPolling = useCallback(
     (p: Pending) => {
       stop();
-      const c = { stop: false, inFlight: false, timer: null as ReturnType<typeof setTimeout> | null };
+      const c = {
+        stop: false,
+        inFlight: false,
+        timer: null as ReturnType<typeof setTimeout> | null,
+        checkNow: () => {},
+      };
       ctl.current = c;
 
-      const tick = async () => {
+      const tick = async (showChecking = false) => {
         if (c.stop || c.inFlight) return;
         if (Date.now() - p.startedAt > MAX_WAIT_MS) {
           c.stop = true;
@@ -149,11 +163,13 @@ export default function TelegramLoginButton({
           return;
         }
         c.inFlight = true;
+        if (showChecking) setPhase("checking");
         try {
           const r = await checkTelegramAuth(p.nonce, p.secret);
           if (c.stop) return;
           if (r.status === "pending") {
-            c.timer = setTimeout(tick, POLL_MS);
+            setPhase("waiting");
+            c.timer = setTimeout(() => tick(), POLL_MS);
             return;
           }
           c.stop = true;
@@ -169,19 +185,22 @@ export default function TelegramLoginButton({
         }
       };
 
+      const checkNow = () => {
+        if (c.stop || c.inFlight) return;
+        if (c.timer) clearTimeout(c.timer);
+        tick(true);
+      };
+      c.checkNow = checkNow;
+
       const onVisible = () => {
-        if (document.visibilityState === "visible" && !c.stop && !c.inFlight) {
-          if (c.timer) clearTimeout(c.timer);
-          tick();
-        }
+        if (document.visibilityState === "visible") checkNow();
       };
       document.addEventListener("visibilitychange", onVisible);
       window.addEventListener("focus", onVisible);
-      const origStop = stop;
-      void origStop;
 
+      setPhase("checking");
       setWaiting({ url: p.url });
-      tick();
+      tick(true);
 
       // remove listeners when this polling session ends
       const cleanup = setInterval(() => {
@@ -207,6 +226,7 @@ export default function TelegramLoginButton({
     stop();
     clearPending();
     setWaiting(null);
+    setPhase("waiting");
   };
 
   const begin = async () => {
@@ -233,30 +253,80 @@ export default function TelegramLoginButton({
   };
 
   if (waiting) {
+    const startDone = phase === "signing";
+    const stepIcon = (state: "done" | "active" | "todo") =>
+      state === "done" ? (
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+          <Check className="h-3 w-3" />
+        </span>
+      ) : state === "active" ? (
+        <Loader2 className="h-5 w-5 animate-spin text-sky-600" />
+      ) : (
+        <span className="h-5 w-5 rounded-full border-2 border-slate-300 dark:border-slate-600" />
+      );
+
+    const statusText =
+      phase === "signing"
+        ? "Telegram confirmed ✓ Signing you in…"
+        : phase === "checking"
+          ? "Checking if you pressed START…"
+          : "Waiting for you to press START in Telegram…";
+
     return (
       <div
-        className={`rounded-xl border border-sky-300/60 bg-sky-50 p-4 text-center text-sm dark:border-sky-500/30 dark:bg-sky-500/10 ${className}`}
+        className={`rounded-xl border border-sky-300/60 bg-sky-50 p-4 text-sm dark:border-sky-500/30 dark:bg-sky-500/10 ${className}`}
       >
-        <p className="font-semibold text-slate-900 dark:text-white">Open Telegram and press START</p>
-        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-          Then come back here. You will be signed in automatically.
+        <ol className="space-y-2.5 text-left">
+          <li className="flex items-center gap-3">
+            {stepIcon("done")}
+            <span className="text-slate-800 dark:text-slate-100">Open Telegram</span>
+          </li>
+          <li className="flex items-center gap-3">
+            {stepIcon(startDone ? "done" : "active")}
+            <span className="font-semibold text-slate-900 dark:text-white">Press START in the bot</span>
+          </li>
+          <li className="flex items-center gap-3">
+            {stepIcon(phase === "signing" ? "active" : "todo")}
+            <span className={phase === "signing" ? "font-semibold text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}>
+              Come back here — you are signed in
+            </span>
+          </li>
+        </ol>
+
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-center text-xs font-medium text-slate-700 dark:bg-white/5 dark:text-slate-200"
+        >
+          {statusText}
         </p>
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => openExternal(waiting.url)}
-            className="rounded-lg bg-[#229ED9] px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
-          >
-            Open Telegram again
-          </button>
-          <button
-            type="button"
-            onClick={cancel}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200"
-          >
-            Cancel
-          </button>
-        </div>
+
+        {phase !== "signing" && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => openExternal(waiting.url)}
+              className="rounded-lg bg-[#229ED9] px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
+            >
+              Open Telegram again
+            </button>
+            <button
+              type="button"
+              onClick={() => ctl.current?.checkNow()}
+              disabled={phase === "checking"}
+              className="rounded-lg border border-sky-400 px-3 py-2 text-xs font-semibold text-sky-700 disabled:opacity-50 dark:text-sky-300"
+            >
+              I pressed START
+            </button>
+            <button
+              type="button"
+              onClick={cancel}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -270,7 +340,7 @@ export default function TelegramLoginButton({
         className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-60"
       >
         <Send className="h-4 w-4" />
-        {starting ? "Please wait…" : label || (mode === "link" ? "Connect Telegram" : "Continue with Telegram")}
+        {starting ? "Opening Telegram…" : label || (mode === "link" ? "Connect Telegram" : "Continue with Telegram")}
       </button>
       {mode === "login" && (
         <p className="mt-2 text-center text-[11px] text-slate-500 dark:text-slate-400">
