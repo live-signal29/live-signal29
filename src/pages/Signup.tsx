@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AuthLanguagePicker from "@/components/AuthLanguagePicker";
+import TelegramLoginButton from "@/components/TelegramLoginButton";
 import { ArrowLeft, Eye, EyeOff, Check, X } from "lucide-react";
 import { signupSchema } from "@/lib/validations";
 
@@ -704,6 +705,14 @@ dark:text-slate-100
       </Button>
 
     </form>
+
+    <div className="my-4 flex items-center gap-3">
+      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+      <span className="text-xs text-slate-400">or</span>
+      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+    </div>
+
+    <TelegramLoginButton returnUrl={returnUrl} />
 
     <div className="pt-4" />
 
