@@ -41,15 +41,17 @@ function sleep(ms) {
 // To change a time or a count, edit the lists below.
 //
 // 2026-10-07 (owner request):
-//  - Gold: 10 signals/day = 6 FREE + 4 PREMIUM (premium slots end with *)
+//  - Gold: 10 signals/day
 //  - Silver: 3/day
 //  - US30: 2/day, NASDAQ: 2/day (S&P500 is not generated)
 //  - FOREX signals are OFF (no forex pairs in the schedule)
 //  - Deriv (BOOM 1000, CRASH 1000, VOL 75, BOOM 500, VOL 100): 1/day each
-// Time format: "HH:MM" = free signal, "HH:MM*" = premium signal.
 //  - A pair that still has an OPEN signal gets no new signal (slot skipped),
 //    so a pair can produce fewer signals than listed -- that is intended.
 //  - Signals never expire by time; they close only on TP3 / SL (auto-close-signals).
+//
+// 2026-10-12 (owner request): FREE vs PREMIUM is no longer decided by the
+// schedule. See "FREE vs PREMIUM" below. The "*" marker on a time is ignored.
 // =========================================================
 const PKT_OFFSET_MIN = 300;
 const SLOT_WINDOW_MIN = 45;
@@ -100,24 +102,33 @@ function dueSlots(nowMs) {
 }
 
 // =========================================================
-// PREMIUM MIX (per owner request 2026-09-13)
-// Gold free/premium is fixed by the schedule. Silver / BTC signals are
-// randomly marked premium (~22% chance) so free users sometimes see "upgrade".
+// FREE vs PREMIUM (owner request 2026-10-12)
+// Only ONE signal per category per day is FREE: the first signal generated
+// in that category since midnight Pakistan time. Every other generated
+// signal is PREMIUM. Categories: COMMODITIES, CRYPTO, DERIV.
+// Telegram posting is NOT changed: every signal (free or premium) is posted
+// to the Telegram channel exactly as before.
+// If the database check fails, the signal is made PREMIUM (fail closed).
 // =========================================================
-const PREMIUM_ELIGIBLE_PAIRS = new Set([
-  "XAU/USD (Gold)",
-  "XAG/USD (Silver)",
-  "BTC/USD",
-]);
-const PREMIUM_CHANCE = 0.22;
+async function shouldBePremium(category) {
+  const DAY = 86400000;
+  const off = PKT_OFFSET_MIN * 60000;
+  const todayStart = Math.floor((Date.now() + off) / DAY) * DAY - off;
 
-// Pairs whose free/premium split is fixed by the schedule ("*" = premium).
-const PREMIUM_BY_SLOT_PAIRS = new Set(["XAU/USD (Gold)"]);
+  const { count, error } = await supabase
+    .from("signals")
+    .select("id", { count: "exact", head: true })
+    .eq("category", category)
+    .eq("is_premium", false)
+    .gte("created_at", new Date(todayStart).toISOString());
 
-function shouldBePremium(pair, slot) {
-  if (PREMIUM_BY_SLOT_PAIRS.has(pair)) return slot?.premium === true;
-  if (!PREMIUM_ELIGIBLE_PAIRS.has(pair)) return false;
-  return Math.random() < PREMIUM_CHANCE;
+  if (error) {
+    console.error("FREE_CHECK_FAILED", category, error.message);
+    return true;
+  }
+
+  // A free signal already exists today in this category -> this one is premium.
+  return (count ?? 0) > 0;
 }
 
 // Key sent to fetch-live-prices for each pair, plus the keys we
@@ -884,6 +895,9 @@ async function tryGenerate(slot) {
     }
   }
 
+  // First signal of the day in this category is FREE, the rest are PREMIUM.
+  const isPremium = await shouldBePremium(signal.category);
+
   const insertData = {
     pair: signal.pair,
     category: signal.category,
@@ -898,7 +912,7 @@ async function tryGenerate(slot) {
     signal_type: signal.signal_type,
     status: "OPEN",
     signal_status: "OPEN",
-    is_premium: shouldBePremium(signal.pair, slot),
+    is_premium: isPremium,
     // NO time expiry (owner request 2026-10-07): a signal stays open until
     // its TP3 or SL is hit, however long that takes.
     expiry_time: null,
@@ -967,6 +981,7 @@ async function tryGenerate(slot) {
   return {
     generated: true,
     signal: inserted,
+    is_premium: isPremium,
     telegram_posted: telegramResult.success,
     telegram_error: telegramResult.error,
   };
