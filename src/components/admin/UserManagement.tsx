@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, Send, Loader2, Edit, CheckSquare, Trash2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { Loader2, Edit, CheckSquare, Trash2 } from "lucide-react";
 import UserStatsCards, { STAT_LABELS } from "./UserStatsCards";
+import TelegramBroadcastDialog from "./TelegramBroadcastDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface UserProfile {
@@ -57,10 +58,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const [bulkAction, setBulkAction] = useState("");
   const [bulkPlan, setBulkPlan] = useState("");
   const [bulkEndDate, setBulkEndDate] = useState("");
-
-  const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
-  const [telegramMessage, setTelegramMessage] = useState("");
-  const [sendingTelegram, setSendingTelegram] = useState(false);
+  // Telegram contact of each user (connected via "Continue with Telegram" / "Connect Telegram")
   const [telegramByUser, setTelegramByUser] = useState<Record<string, { username: string | null; first_name: string | null }>>({});
 
   useEffect(() => {
@@ -81,6 +79,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
       if (error) throw error;
       setUsers(data || []);
 
+      // Fetch all subscriptions
       const { data: subsData, error: subsError } = await supabase
         .from('subscriptions')
         .select('*')
@@ -89,17 +88,12 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
       if (subsError) throw subsError;
       setSubscriptions(subsData || []);
 
+      // Telegram contacts (best-effort: the list still works without them)
       const { data: tgRows } = await supabase
         .from('user_telegram' as any)
         .select('user_id, username, first_name');
       const tgMap: Record<string, { username: string | null; first_name: string | null }> = {};
-      if (tgRows) {
-        for (const r of (tgRows as any[])) {
-          if (r && r.user_id) {
-            tgMap[r.user_id] = { username: r.username, first_name: r.first_name };
-          }
-        }
-      }
+      for (const r of (tgRows as any[]) || []) tgMap[r.user_id] = { username: r.username, first_name: r.first_name };
       setTelegramByUser(tgMap);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -138,17 +132,185 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     }
   };
 
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const updates: any = {
+        subscription_status: newStatus || editingUser.subscription_status,
+        subscription_plan: newPlan || editingUser.subscription_plan,
+      };
+
+      if (newEndDate) {
+        if (newStatus === 'premium') {
+          updates.subscription_end_date = newEndDate;
+          updates.subscription_start_date = new Date().toISOString();
+        } else {
+          updates.trial_end_date = newEndDate;
+        }
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      // Log the action
+      await logAdminAction(
+        'user_update',
+        editingUser.id,
+        editingUser.email,
+        {
+          old_status: editingUser.subscription_status,
+          new_status: newStatus,
+          plan: newPlan,
+          end_date: newEndDate
+        }
+      );
+
+      toast.success("User updated successfully");
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast.error("Failed to update user");
+    }
+  };
+
+  const openEditDialog = (user: UserProfile) => {
+    setEditingUser(user);
+    setNewStatus(user.subscription_status);
+    setNewPlan(user.subscription_plan || "");
+    setNewEndDate("");
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // "Select all" applies only to the users currently shown in the table
+  // (the tapped stat box, the search filter...), never to every user.
+  const toggleSelectAll = () => {
+    const shownIds = filteredUsers.map(u => u.id);
+    const allShownSelected = shownIds.length > 0 && shownIds.every(id => selectedUsers.includes(id));
+    if (allShownSelected) {
+      setSelectedUsers(prev => prev.filter(id => !shownIds.includes(id)));
+    } else {
+      setSelectedUsers(prev => Array.from(new Set([...prev, ...shownIds])));
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (selectedUsers.length === 0) {
+      toast.error("Please select at least one user");
+      return;
+    }
+
+    if (!bulkAction) {
+      toast.error("Please select an action");
+      return;
+    }
+
+    try {
+      const updates: any = {};
+      
+      if (bulkAction === 'activate_premium') {
+        updates.subscription_status = 'premium';
+        updates.subscription_start_date = new Date().toISOString();
+        if (bulkPlan) updates.subscription_plan = bulkPlan;
+        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
+      } else if (bulkAction === 'deactivate') {
+        updates.subscription_status = 'expired';
+      } else if (bulkAction === 'extend_trial') {
+        updates.subscription_status = 'free_trial';
+        if (bulkEndDate) updates.trial_end_date = bulkEndDate;
+      } else if (bulkAction === 'extend_premium') {
+        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
+      }
+
+      // Update all selected users
+      for (const userId of selectedUsers) {
+        const { error } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', userId);
+
+        if (error) throw error;
+      }
+
+      // Log the bulk action
+      await logAdminAction(
+        `bulk_${bulkAction}`,
+        '',
+        '',
+        {
+          user_count: selectedUsers.length,
+          action: bulkAction,
+          plan: bulkPlan,
+          end_date: bulkEndDate
+        }
+      );
+
+      toast.success(`Successfully updated ${selectedUsers.length} user(s)`);
+      setSelectedUsers([]);
+      setBulkActionDialogOpen(false);
+      setBulkAction("");
+      setBulkPlan("");
+      setBulkEndDate("");
+      fetchUsers();
+    } catch (error) {
+      console.error("Error performing bulk action:", error);
+      toast.error("Failed to perform bulk action");
+    }
+  };
+
+  const handleDeleteUser = async (user: UserProfile) => {
+    try {
+      // Server-side deletion: removes auth user, revokes sessions, and deletes related data
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId: user.id },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if ((data as any)?.error) {
+        throw new Error((data as any).error);
+      }
+
+      // Log the admin action
+      await logAdminAction(
+        'user_delete',
+        user.id,
+        user.email,
+        { deleted_user: user.email, deleted_at: new Date().toISOString() }
+      );
+
+      toast.success(`User ${user.email} deleted successfully`);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      toast.error(`Failed to delete user: ${error.message || 'Unknown error'}`);
+    }
+  };
+
   const handleStatSelect = async (key: string) => {
+    // Tap the same box again to clear the filter
     if (statFilter === key) {
       setStatFilter(null);
       setStatIds(null);
-      setSelectedUsers([]);
       return;
     }
 
     setStatFilter(key);
     setStatLoading(true);
-    setSelectedUsers([]);
 
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -185,193 +347,12 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q) || tgName.includes(q.replace(/^@/, ""));
   });
 
-  const toggleSelectAll = () => {
-    const filteredIds = filteredUsers.map(u => u.id);
-    const isAllFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedUsers.includes(id));
-
-    if (isAllFilteredSelected) {
-      setSelectedUsers(prev => prev.filter(id => !filteredIds.includes(id)));
-    } else {
-      setSelectedUsers(prev => Array.from(new Set([...prev, ...filteredIds])));
-    }
-  };
-
-  const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleUpdateUser = async () => {
-    if (!editingUser) return;
-
-    try {
-      const updates: any = {
-        subscription_status: newStatus || editingUser.subscription_status,
-        subscription_plan: newPlan || editingUser.subscription_plan,
-      };
-
-      if (newEndDate) {
-        if (newStatus === 'premium') {
-          updates.subscription_end_date = newEndDate;
-          updates.subscription_start_date = new Date().toISOString();
-        } else {
-          updates.trial_end_date = newEndDate;
-        }
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', editingUser.id);
-
-      if (error) throw error;
-
-      await logAdminAction('user_update', editingUser.id, editingUser.email, {
-        old_status: editingUser.subscription_status,
-        new_status: newStatus,
-        plan: newPlan,
-        end_date: newEndDate
-      });
-
-      toast.success("User updated successfully");
-      setEditingUser(null);
-      fetchUsers();
-    } catch (error) {
-      console.error("Error updating user:", error);
-      toast.error("Failed to update user");
-    }
-  };
-
-  const openEditDialog = (user: UserProfile) => {
-    setEditingUser(user);
-    setNewStatus(user.subscription_status);
-    setNewPlan(user.subscription_plan || "");
-    setNewEndDate("");
-  };
-
-  const handleBulkAction = async () => {
-    if (selectedUsers.length === 0) {
-      toast.error("Please select at least one user");
-      return;
-    }
-
-    if (!bulkAction) {
-      toast.error("Please select an action");
-      return;
-    }
-
-    try {
-      const updates: any = {};
-      
-      if (bulkAction === 'activate_premium') {
-        updates.subscription_status = 'premium';
-        updates.subscription_start_date = new Date().toISOString();
-        if (bulkPlan) updates.subscription_plan = bulkPlan;
-        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
-      } else if (bulkAction === 'deactivate') {
-        updates.subscription_status = 'expired';
-      } else if (bulkAction === 'extend_trial') {
-        updates.subscription_status = 'free_trial';
-        if (bulkEndDate) updates.trial_end_date = bulkEndDate;
-      } else if (bulkAction === 'extend_premium') {
-        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
-      }
-
-      for (const userId of selectedUsers) {
-        const { error } = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', userId);
-
-        if (error) throw error;
-      }
-
-      await logAdminAction(`bulk_${bulkAction}`, '', '', {
-        user_count: selectedUsers.length,
-        action: bulkAction,
-        plan: bulkPlan,
-        end_date: bulkEndDate
-      });
-
-      toast.success(`Successfully updated ${selectedUsers.length} user(s)`);
-      setSelectedUsers([]);
-      setBulkActionDialogOpen(false);
-      setBulkAction("");
-      setBulkPlan("");
-      setBulkEndDate("");
-      fetchUsers();
-    } catch (error) {
-      console.error("Error performing bulk action:", error);
-      toast.error("Failed to perform bulk action");
-    }
-  };
-
-  const handleSendTelegramBulk = async () => {
-    if (!telegramMessage.trim()) {
-      toast.error("Kripya message likhein");
-      return;
-    }
-
-    const targetTelegramUsers = selectedUsers
-      .map(id => ({ userId: id, tg: telegramByUser[id] }))
-      .filter(item => item.tg && item.tg.username);
-
-    if (targetTelegramUsers.length === 0) {
-      toast.error("Selected users me se kisi ka Telegram username nahi milaa!");
-      return;
-    }
-
-    setSendingTelegram(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-telegram-bulk', {
-        body: {
-          users: targetTelegramUsers.map(u => ({
-            user_id: u.userId,
-            username: u.tg.username
-          })),
-          message: telegramMessage
-        }
-      });
-
-      if (error) throw error;
-
-      toast.success(`${targetTelegramUsers.length} Telegram user(s) ko message bhej diya gaya!`);
-      setTelegramDialogOpen(false);
-      setTelegramMessage("");
-    } catch (err: any) {
-      console.error("Telegram send error:", err);
-      toast.error("Message bhejne me dikkat aayi: " + (err.message || "Unknown error"));
-    } finally {
-      setSendingTelegram(false);
-    }
-  };
-
-  const handleDeleteUser = async (user: UserProfile) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { userId: user.id },
-      });
-
-      if (error || (data as any)?.error) {
-        throw new Error(error?.message || (data as any)?.error);
-      }
-
-      await logAdminAction('user_delete', user.id, user.email, { deleted_user: user.email, deleted_at: new Date().toISOString() });
-
-      toast.success(`User ${user.email} deleted successfully`);
-      fetchUsers();
-    } catch (error: any) {
-      console.error("Error deleting user:", error);
-      toast.error(`Failed to delete user: ${error.message || 'Unknown error'}`);
-    }
-  };
-
-  const getUserSubscriptions = (userId: string) => {
-    return subscriptions.filter(sub => sub.user_id === userId);
-  };
+  // Drop selected users that are no longer shown (when another stat box / search is applied)
+  const shownKey = filteredUsers.map(u => u.id).join(",");
+  useEffect(() => {
+    const shown = new Set(shownKey ? shownKey.split(",") : []);
+    setSelectedUsers(prev => (prev.every(id => shown.has(id)) ? prev : prev.filter(id => shown.has(id))));
+  }, [shownKey]);
 
   if (loading) {
     return (
@@ -381,7 +362,9 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     );
   }
 
-  const telegramSelectedCount = selectedUsers.filter(id => telegramByUser[id]?.username).length;
+  const getUserSubscriptions = (userId: string) => {
+    return subscriptions.filter(sub => sub.user_id === userId);
+  };
 
   return (
     <div className="space-y-6">
@@ -400,7 +383,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
             onClick={() => {
               setStatFilter(null);
               setStatIds(null);
-              setSelectedUsers([]);
             }}
           >
             Clear filter
@@ -410,110 +392,84 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center justify-between">
             <CardTitle>User Management</CardTitle>
-            
             {selectedUsers.length > 0 && (
-              <div className="flex gap-2">
-                <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="default" size="sm">
-                      <CheckSquare className="h-4 w-4 mr-2" />
-                      Bulk Actions ({selectedUsers.length})
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Bulk Update {selectedUsers.length} User(s)</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
+              <div className="flex flex-wrap items-center gap-2">
+              <TelegramBroadcastDialog
+                userIds={selectedUsers}
+                connectedIds={new Set(Object.keys(telegramByUser))}
+                onDone={() => setSelectedUsers([])}
+              />
+              <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" size="sm">
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Bulk Actions ({selectedUsers.length})
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Bulk Update {selectedUsers.length} User(s)</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Action</Label>
+                      <Select value={bulkAction} onValueChange={setBulkAction}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select action" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="activate_premium">Activate Premium</SelectItem>
+                          <SelectItem value="deactivate">Deactivate (Expire)</SelectItem>
+                          <SelectItem value="extend_trial">Extend Trial</SelectItem>
+                          <SelectItem value="extend_premium">Extend Premium</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {bulkAction === 'activate_premium' && (
                       <div className="space-y-2">
-                        <Label>Action</Label>
-                        <Select value={bulkAction} onValueChange={setBulkAction}>
+                        <Label>Plan Type</Label>
+                        <Select value={bulkPlan} onValueChange={setBulkPlan}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select action" />
+                            <SelectValue placeholder="Select plan" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="activate_premium">Activate Premium</SelectItem>
-                            <SelectItem value="deactivate">Deactivate (Expire)</SelectItem>
-                            <SelectItem value="extend_trial">Extend Trial</SelectItem>
-                            <SelectItem value="extend_premium">Extend Premium</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="half-yearly">Half-Yearly</SelectItem>
+                            <SelectItem value="yearly">Yearly</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                    )}
 
-                      {bulkAction === 'activate_premium' && (
-                        <div className="space-y-2">
-                          <Label>Plan Type</Label>
-                          <Select value={bulkPlan} onValueChange={setBulkPlan}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select plan" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="quarterly">Quarterly</SelectItem>
-                              <SelectItem value="half-yearly">Half-Yearly</SelectItem>
-                              <SelectItem value="yearly">Yearly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      {(bulkAction === 'activate_premium' || bulkAction === 'extend_premium' || bulkAction === 'extend_trial') && (
-                        <div className="space-y-2">
-                          <Label>
-                            {bulkAction === 'extend_trial' ? 'Trial End Date' : 'Premium End Date'}
-                          </Label>
-                          <Input
-                            type="date"
-                            value={bulkEndDate}
-                            onChange={(e) => setBulkEndDate(e.target.value)}
-                          />
-                        </div>
-                      )}
-
-                      <Button onClick={handleBulkAction} className="w-full">
-                        Apply to {selectedUsers.length} User(s)
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={telegramDialogOpen} onOpenChange={setTelegramDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="secondary" size="sm">
-                      <Send className="h-4 w-4 mr-2" />
-                      Telegram Msg ({telegramSelectedCount})
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Send Bulk Telegram Message</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <p className="text-xs text-muted-foreground">
-                        Selected {selectedUsers.length} users me se {telegramSelectedCount} users ke paas valid Telegram Username hai.
-                      </p>
+                    {(bulkAction === 'activate_premium' || bulkAction === 'extend_premium' || bulkAction === 'extend_trial') && (
                       <div className="space-y-2">
-                        <Label>Message Text</Label>
-                        <Textarea
-                          rows={4}
-                          placeholder="Write message..."
-                          value={telegramMessage}
-                          onChange={(e) => setTelegramMessage(e.target.value)}
+                        <Label>
+                          {bulkAction === 'extend_trial' ? 'Trial End Date' : 'Premium End Date'}
+                        </Label>
+                        <Input
+                          type="date"
+                          value={bulkEndDate}
+                          onChange={(e) => setBulkEndDate(e.target.value)}
                         />
                       </div>
-                      <Button onClick={handleSendTelegramBulk} disabled={sendingTelegram || telegramSelectedCount === 0} className="w-full">
-                        {sendingTelegram ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                        Send to {telegramSelectedCount} Users
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    )}
+
+                    <Button onClick={handleBulkAction} className="w-full">
+                      Apply to {selectedUsers.length} User(s)
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               </div>
             )}
           </div>
-
+          <p className="mt-2 text-xs text-muted-foreground">
+            Showing {filteredUsers.length} user(s) • {selectedUsers.length} selected
+          </p>
           <div className="relative mt-3">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -531,10 +487,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox 
-                      checked={
-                        filteredUsers.length > 0 && 
-                        filteredUsers.every(u => selectedUsers.includes(u.id))
-                      }
+                      checked={filteredUsers.length > 0 && filteredUsers.every(u => selectedUsers.includes(u.id))}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
@@ -560,7 +513,13 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                           onCheckedChange={() => toggleUserSelection(user.id)}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{user.email}</TableCell>
+                      <TableCell className="font-medium">
+                        {String(user.email || "").endsWith("@telegram.invalid") ? (
+                          <span className="text-muted-foreground">Telegram login</span>
+                        ) : (
+                          user.email
+                        )}
+                      </TableCell>
                       <TableCell>{user.full_name}</TableCell>
                       <TableCell>
                         {telegramByUser[user.id] ? (
@@ -599,6 +558,14 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                         </span>
                       </TableCell>
                       <TableCell>
+                        {/* "Trial Remaining" only means something for a free-trial
+                           user. A premium user's plan length lives in "Premium
+                           Expires" — trial_end_date is a leftover field from
+                           their original free trial and is unrelated to any
+                           plan they later bought, so don't show it here once
+                           they're premium (it was confusingly showing e.g.
+                           "31 days" for every paid plan, regardless of
+                           monthly/quarterly/yearly/lifetime). */}
                         {user.subscription_status === 'premium'
                           ? '—'
                           : calculateDaysRemaining(user.trial_end_date)}
@@ -730,6 +697,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                             </Dialog>
                           )}
 
+                          {/* Delete User Button */}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button 
