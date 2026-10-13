@@ -93,7 +93,11 @@ const TelegramLoginButton = ({ returnUrl, label = "Continue with Telegram" }: Te
         await finish(data.token_hash);
         return;
       }
-      if (data?.status === "expired" || data?.status === "invalid" || data?.status === "used") {
+      if (
+        data?.status === "expired" ||
+        data?.status === "invalid" ||
+        data?.status === "used"
+      ) {
         toast.error("Telegram login expired. Please try again.");
         reset();
       }
@@ -142,13 +146,23 @@ const TelegramLoginButton = ({ returnUrl, label = "Continue with Telegram" }: Te
     }
   };
 
-  // Coming back from Telegram: check right away instead of waiting for the next tick.
+  // Coming back from Telegram (app switch, Back button, or the bot's "Back to App" button):
+  // check right away instead of waiting for the next tick.
   useEffect(() => {
+    const check = () => {
+      if (reqRef.current && !doneRef.current) poll();
+    };
     const onVisible = () => {
-      if (document.visibilityState === "visible" && reqRef.current && !doneRef.current) poll();
+      if (document.visibilityState === "visible") check();
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", check);
+    window.addEventListener("pageshow", check);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", check);
+      window.removeEventListener("pageshow", check);
+    };
   }, [poll]);
 
   useEffect(() => () => {
@@ -164,7 +178,7 @@ const TelegramLoginButton = ({ returnUrl, label = "Continue with Telegram" }: Te
           Waiting for Telegram…
         </div>
         <p className="mb-3 text-xs text-slate-600 dark:text-slate-300">
-          Tap <b>Start</b> in the bot, then come back here. You will be signed in automatically.
+          Tap <b>Start</b> in the bot, then tap <b>Back to App</b>. You will be signed in automatically.
         </p>
         <div className="flex gap-2">
           <Button
