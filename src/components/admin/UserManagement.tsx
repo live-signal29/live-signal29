@@ -57,6 +57,8 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const [bulkAction, setBulkAction] = useState("");
   const [bulkPlan, setBulkPlan] = useState("");
   const [bulkEndDate, setBulkEndDate] = useState("");
+  // Telegram contact of each user (connected via "Continue with Telegram" / "Connect Telegram")
+  const [telegramByUser, setTelegramByUser] = useState<Record<string, { username: string | null; first_name: string | null }>>({});
 
   useEffect(() => {
     fetchUsers();
@@ -84,6 +86,14 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
 
       if (subsError) throw subsError;
       setSubscriptions(subsData || []);
+
+      // Telegram contacts (best-effort: the list still works without them)
+      const { data: tgRows } = await supabase
+        .from('user_telegram' as any)
+        .select('user_id, username, first_name');
+      const tgMap: Record<string, { username: string | null; first_name: string | null }> = {};
+      for (const r of (tgRows as any[]) || []) tgMap[r.user_id] = { username: r.username, first_name: r.first_name };
+      setTelegramByUser(tgMap);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
@@ -328,7 +338,8 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     if (statIds && !statIds.has(u.id)) return false;
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
-    return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q);
+    const tgName = (telegramByUser[u.id]?.username || "").toLowerCase();
+    return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q) || tgName.includes(q.replace(/^@/, ""));
   });
 
   if (loading) {
@@ -460,6 +471,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                   </TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Telegram</TableHead>
                   <TableHead>Plan Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Trial Remaining</TableHead>
@@ -481,6 +493,24 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                       </TableCell>
                       <TableCell className="font-medium">{user.email}</TableCell>
                       <TableCell>{user.full_name}</TableCell>
+                      <TableCell>
+                        {telegramByUser[user.id] ? (
+                          telegramByUser[user.id].username ? (
+                            <a
+                              href={`https://t.me/${telegramByUser[user.id].username}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sky-600 hover:underline"
+                            >
+                              @{telegramByUser[user.id].username}
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Connected (no username)</span>
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${
                           user.subscription_plan ? 'bg-primary/20 text-primary' : 'bg-muted'
