@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import UserStatsCards, { STAT_LABELS } from "./UserStatsCards";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface UserProfile {
   id: string;
@@ -58,12 +58,9 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const [bulkPlan, setBulkPlan] = useState("");
   const [bulkEndDate, setBulkEndDate] = useState("");
 
-  // Telegram messaging state
   const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
   const [telegramMessage, setTelegramMessage] = useState("");
   const [sendingTelegram, setSendingTelegram] = useState(false);
-
-  // Telegram contact map
   const [telegramByUser, setTelegramByUser] = useState<Record<string, { username: string | null; first_name: string | null }>>({});
 
   useEffect(() => {
@@ -96,7 +93,13 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
         .from('user_telegram' as any)
         .select('user_id, username, first_name');
       const tgMap: Record<string, { username: string | null; first_name: string | null }> = {};
-      for (const r of (tgRows as any[]) || []) tgMap[r.user_id] = { username: r.username, first_name: r.first_name };
+      if (tgRows) {
+        for (const r of (tgRows as any[])) {
+          if (r && r.user_id) {
+            tgMap[r.user_id] = { username: r.username, first_name: r.first_name };
+          }
+        }
+      }
       setTelegramByUser(tgMap);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -135,7 +138,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     }
   };
 
-  // BOX CLICK HANDLER: Isse box par click karke wahi users filter honge
   const handleStatSelect = async (key: string) => {
     if (statFilter === key) {
       setStatFilter(null);
@@ -146,7 +148,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
 
     setStatFilter(key);
     setStatLoading(true);
-    setSelectedUsers([]); // reset previous selection on filter change
+    setSelectedUsers([]);
 
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -175,7 +177,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     }
   };
 
-  // Filtered users: Search ya Box Click ke hisab se
   const filteredUsers = users.filter((u) => {
     if (statIds && !statIds.has(u.id)) return false;
     const q = searchTerm.trim().toLowerCase();
@@ -184,7 +185,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q) || tgName.includes(q.replace(/^@/, ""));
   });
 
-  // SELECT ALL FIX: Sirf screen par dikhne waale (Filtered) users ko hi select karega
   const toggleSelectAll = () => {
     const filteredIds = filteredUsers.map(u => u.id);
     const isAllFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedUsers.includes(id));
@@ -309,7 +309,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     }
   };
 
-  // Telegram Messaging Handler
   const handleSendTelegramBulk = async () => {
     if (!telegramMessage.trim()) {
       toast.error("Kripya message likhein");
@@ -386,7 +385,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
 
   return (
     <div className="space-y-6">
-      {/* Box Cards Component - Stat Click Connected */}
       <UserStatsCards selected={statFilter} onSelect={handleStatSelect} />
 
       <div ref={listRef} />
@@ -417,7 +415,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
             
             {selectedUsers.length > 0 && (
               <div className="flex gap-2">
-                {/* Bulk Actions Button */}
                 <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="default" size="sm">
@@ -482,7 +479,6 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                   </DialogContent>
                 </Dialog>
 
-                {/* Bulk Telegram Message Button */}
                 <Dialog open={telegramDialogOpen} onOpenChange={setTelegramDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="secondary" size="sm">
