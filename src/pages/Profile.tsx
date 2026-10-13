@@ -27,6 +27,7 @@ import {
   LogOut,
   Star,
   ExternalLink,
+  Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -601,20 +602,36 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Email */}
-              <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/50 flex items-center gap-3">
-                <Mail className="h-5 w-5 text-primary shrink-0" />
+              {/* Email (Telegram sign-ups have an internal placeholder address, so show the login method instead) */}
+              {String(profile.email || "").toLowerCase().endsWith("@telegram.invalid") ? (
+                <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/50 flex items-center gap-3">
+                  <Send className="h-5 w-5 text-primary shrink-0" />
 
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground mb-0.5">
-                    Email (cannot be changed)
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Login method
+                    </p>
 
-                  <p className="font-semibold text-sm truncate">
-                    {profile.email || "Not available"}
-                  </p>
+                    <p className="font-semibold text-sm truncate">
+                      Telegram
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/50 flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-primary shrink-0" />
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Email (cannot be changed)
+                    </p>
+
+                    <p className="font-semibold text-sm truncate">
+                      {profile.email || "Not available"}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Phone */}
               {profile.phone_number && (
