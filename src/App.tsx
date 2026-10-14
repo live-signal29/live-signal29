@@ -30,6 +30,7 @@ import { NetworkQualityToast } from "@/components/NetworkQualityToast";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import BottomNavigation from "@/components/BottomNavigation";
 import AdBanner from "@/components/AdBanner";
+import TelegramOfferPopup from "@/components/TelegramOfferPopup";
 
 // Lazy load all pages for better performance
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
@@ -444,6 +445,9 @@ const App = () => (
 
           {/* 🎉 Premium activated (Google Play + manual payment approved) */}
           <PremiumCelebration />
+
+          {/* 🎁 Offer: connect Telegram (bonus trial days) */}
+          <TelegramOfferPopup />
 
           <div className="has-bottom-nav">
             <ErrorBoundary label="Something went wrong loading this page.">
