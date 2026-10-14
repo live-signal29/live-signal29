@@ -32,9 +32,10 @@ type Submission = {
   profile?: { email: string | null; full_name: string | null } | null;
 };
 
-const monthsFor = (duration: string | null): number | "lifetime" => {
+const monthsFor = (duration: string | null): number | "lifetime" | "week" => {
   const d = (duration || "").toLowerCase();
   if (d.includes("lifetime")) return "lifetime";
+  if (d.includes("week")) return "week"; // Weekly plan = 7 days (not 1 month)
   const m = d.match(/(\d+)/);
   return m ? parseInt(m[1], 10) : 1; // "month" -> 1
 };
@@ -42,6 +43,7 @@ const monthsFor = (duration: string | null): number | "lifetime" => {
 const planIdFor = (planName: string) => {
   const n = planName.toLowerCase();
   if (n.includes("life")) return "lifetime";
+  if (n.includes("week")) return "weekly";
   if (n.includes("half")) return "half-yearly";
   if (n.includes("year")) return "yearly";
   if (n.includes("quarter")) return "quarterly";
@@ -113,7 +115,8 @@ const PremiumPayments = () => {
         const base =
           profile?.subscription_status === "premium" && current && current > now ? current : now;
         const d = new Date(base);
-        d.setMonth(d.getMonth() + months);
+        if (months === "week") d.setDate(d.getDate() + 7);
+        else d.setMonth(d.getMonth() + months);
         endDate = d.toISOString();
       }
 

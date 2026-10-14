@@ -27,7 +27,7 @@ const CouponManagement = () => {
     is_active: true,
   });
 
-  const plans = ["Monthly", "Quarterly", "Half-Yearly", "Yearly"];
+  const plans = ["Weekly", "Monthly", "Quarterly", "Half-Yearly", "Yearly"];
 
   const { data: coupons, isLoading } = useQuery({
     queryKey: ["admin-coupons"],

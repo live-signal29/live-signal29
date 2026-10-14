@@ -18,7 +18,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const LIFETIME_END_DATE = "2099-12-31T23:59:59.000Z";
 
 // Plan values are stored in profiles.subscription_plan as "premium-<id>" (same as payments / Play Billing).
-const PLAN_OPTIONS = [
+const PLAN_OPTIONS: { value: string; label: string; months: number; days?: number }[] = [
+  { value: "premium-weekly", label: "Weekly", months: 0, days: 7 },
   { value: "premium-monthly", label: "Monthly", months: 1 },
   { value: "premium-quarterly", label: "Quarterly", months: 3 },
   { value: "premium-half-yearly", label: "Half-Yearly", months: 6 },
@@ -286,7 +287,8 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
             // no date given: plan length, counted from the current end date if still premium, else from today
             const base = isPremium && currentEnd && currentEnd > now ? currentEnd : now;
             const d = new Date(base);
-            d.setMonth(d.getMonth() + (planInfo?.months || 1));
+            if (planInfo?.days) d.setDate(d.getDate() + planInfo.days);
+            else d.setMonth(d.getMonth() + (planInfo?.months || 1));
             end = d.toISOString();
           }
 
