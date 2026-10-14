@@ -603,7 +603,7 @@ const Profile = () => {
               </div>
 
               {/* Email (Telegram sign-ups have an internal placeholder address, so show the login method instead) */}
-              {String(profile.email || "").toLowerCase().endsWith("@telegram.invalid") ? (
+              {/@telegram\.invalid$|@telegram-login\.livesignals\.app$/i.test(String(profile.email || "")) ? (
                 <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/50 flex items-center gap-3">
                   <Send className="h-5 w-5 text-primary shrink-0" />
 
