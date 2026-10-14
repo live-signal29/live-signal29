@@ -34,7 +34,9 @@ export default function TelegramBroadcastDialog({ userIds, connectedIds, onDone 
   const [buttons, setButtons] = useState(true);
   const [sending, setSending] = useState(false);
 
-  const reachable = useMemo(() => userIds.filter((id) => connectedIds.has(id)).length, [userIds, connectedIds]);
+  // only users who really connected Telegram can get a Telegram message
+  const reachableIds = useMemo(() => userIds.filter((id) => connectedIds.has(id)), [userIds, connectedIds]);
+  const reachable = reachableIds.length;
 
   const send = async () => {
     const text = message.trim();
@@ -45,9 +47,9 @@ export default function TelegramBroadcastDialog({ userIds, connectedIds, onDone 
     setSending(true);
     let sent = 0, blocked = 0, failed = 0, noTelegram = 0;
     try {
-      for (let i = 0; i < userIds.length; i += BATCH) {
+      for (let i = 0; i < reachableIds.length; i += BATCH) {
         const { data, error } = await supabase.functions.invoke("admin-telegram-broadcast", {
-          body: { user_ids: userIds.slice(i, i + BATCH), message: text, buttons },
+          body: { user_ids: reachableIds.slice(i, i + BATCH), message: text, buttons },
         });
         if (error || !data || (data as any).error) {
           throw new Error((data as any)?.error || error?.message || "Sending failed");
@@ -78,9 +80,9 @@ export default function TelegramBroadcastDialog({ userIds, connectedIds, onDone 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="border-sky-500 text-sky-600">
+        <Button variant="outline" size="sm" className="border-sky-500 text-sky-600" disabled={reachable === 0}>
           <Send className="h-4 w-4 mr-2" />
-          Telegram message ({userIds.length})
+          Telegram message ({reachable})
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -90,12 +92,12 @@ export default function TelegramBroadcastDialog({ userIds, connectedIds, onDone 
         <div className="space-y-4 py-2">
           <div className="rounded-lg bg-muted p-3 text-sm">
             <p>
-              <strong>{userIds.length}</strong> user(s) selected, <strong>{reachable}</strong> can receive it
-              (Telegram connected).
+              <strong>{reachable}</strong> of <strong>{userIds.length}</strong> selected user(s) logged in /
+              connected with Telegram and will get this message.
             </p>
             {userIds.length - reachable > 0 && (
               <p className="mt-1 text-xs text-muted-foreground">
-                {userIds.length - reachable} selected user(s) have not connected Telegram and will be skipped.
+                {userIds.length - reachable} selected user(s) have no Telegram and will not get it.
               </p>
             )}
           </div>
