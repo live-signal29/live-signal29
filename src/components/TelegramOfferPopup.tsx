@@ -20,9 +20,13 @@ import TelegramLoginButton from "@/components/TelegramLoginButton";
 
 const BONUS_DAYS = 5;
 const SHOW_BONUS_TEXT = true; // set false to hide the "+5 days" promise
-const SNOOZE_DAYS = 2; // "Maybe later" hides it for this many days
 const SHOW_DELAY_MS = 3500; // wait so it does not clash with other popups
-const SNOOZE_KEY = "tg-offer-snoozed-at";
+
+// Lives only in memory: it resets every time the app is closed and opened
+// again, so the popup comes back on every fresh app start until Telegram
+// is connected. Within one app session it shows once ("Maybe later" hides
+// it until the next app start).
+let handledThisLaunch = false;
 
 const HIDE_ON = [
   "/login",
@@ -50,12 +54,7 @@ const TelegramOfferPopup = () => {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     (async () => {
-      try {
-        const last = Number(localStorage.getItem(SNOOZE_KEY) || 0);
-        if (last && Date.now() - last < SNOOZE_DAYS * 86400000) return;
-      } catch {
-        /* storage unavailable: just continue */
-      }
+      if (handledThisLaunch) return;
 
       const { data: auth } = await supabase.auth.getUser();
       if (!auth?.user || cancelled) return;
@@ -69,7 +68,10 @@ const TelegramOfferPopup = () => {
       if (cancelled || data) return; // already connected
 
       timer = setTimeout(() => {
-        if (!cancelled) setOpen(true);
+        if (!cancelled && !handledThisLaunch) {
+          handledThisLaunch = true;
+          setOpen(true);
+        }
       }, SHOW_DELAY_MS);
     })();
 
@@ -80,11 +82,7 @@ const TelegramOfferPopup = () => {
   }, [hidden, path]);
 
   const snooze = () => {
-    try {
-      localStorage.setItem(SNOOZE_KEY, String(Date.now()));
-    } catch {
-      /* ignore */
-    }
+    handledThisLaunch = true;
     setOpen(false);
   };
 
