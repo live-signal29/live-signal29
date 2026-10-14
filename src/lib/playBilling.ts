@@ -22,8 +22,9 @@ export const PREMIUM_PRODUCT_ID = "premium";
 // Console "one-time product", not a base plan of the subscription above.
 export const LIFETIME_PRODUCT_ID = "premium_lifetime";
 
-// One-time products for the Chinese Bot license (create both in Play Console -> Monetize -> One-time products).
+// One-time products for the Chinese Bot license (create all three in Play Console -> Monetize -> One-time products).
 export const LICENSE_PRODUCT_IDS = {
+  weekly: "chinese_bot_weekly",
   "6m": "chinese_bot_6m",
   lifetime: "chinese_bot_lifetime",
 } as const;
