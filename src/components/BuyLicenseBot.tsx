@@ -31,7 +31,7 @@ import {
 /* =========================================================
    LIVE SIGNALS CHINESE BOT
    - Activate a license key (RPC activate_license_key)
-   - Buy a license: 6 Months $30 / Lifetime $70 (manual crypto, same
+   - Buy a license: Weekly $7 / 6 Months $30 / Lifetime $70 (manual crypto, same
      addresses as the Premium page) -> table license_orders
    - Admin is notified on Telegram + the admin panel; the key is sent
      back through the Telegram bot (and the in-app inbox).
@@ -45,7 +45,7 @@ const db = supabase as any;
 const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "Queenisupport_bot";
 const botLink = (payload: string) => `https://t.me/${BOT_USERNAME}?start=${payload}`;
 
-type PlanId = "6m" | "lifetime";
+type PlanId = "weekly" | "6m" | "lifetime";
 
 const PLANS: {
   id: PlanId;
@@ -56,6 +56,15 @@ const PLANS: {
   badge?: string;
   features: string[];
 }[] = [
+  {
+    id: "weekly",
+    label: "Weekly",
+    price: 7,
+    period: "7 days access",
+    note: "Only $1/day • 7 days = $7",
+    badge: "STARTER",
+    features: ["Full Chinese Bot access", "Try it first, upgrade anytime", "Key delivered on Telegram"],
+  },
   {
     id: "6m",
     label: "6 Months",
@@ -414,12 +423,18 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
               className={`relative w-full rounded-3xl border p-5 text-left transition active:scale-[0.99] ${
                 p.id === "lifetime"
                   ? "border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-card to-card ring-1 ring-amber-500/30"
-                  : "border-border bg-card hover:border-emerald-500/50"
+                  : p.id === "weekly"
+                    ? "border-sky-500/50 bg-gradient-to-br from-sky-500/10 via-card to-card ring-1 ring-sky-500/30"
+                    : "border-border bg-card hover:border-emerald-500/50"
               }`}
             >
               {p.badge && (
-                <span className="absolute -top-3 right-5 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 px-3 py-1 text-[11px] font-bold text-white">
-                  <Crown className="h-3 w-3" />
+                <span
+                  className={`absolute -top-3 right-5 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold text-white ${
+                    p.id === "weekly" ? "bg-gradient-to-r from-sky-500 to-cyan-500" : "bg-gradient-to-r from-amber-500 to-yellow-600"
+                  }`}
+                >
+                  {p.id === "weekly" ? <Zap className="h-3 w-3" /> : <Crown className="h-3 w-3" />}
                   {p.badge}
                 </span>
               )}
@@ -429,7 +444,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
                   <p className="text-xs text-muted-foreground">{p.period}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-4xl font-black ${p.id === "lifetime" ? "text-amber-500" : "text-emerald-500"}`}>${p.price}</p>
+                  <p className={`text-4xl font-black ${p.id === "lifetime" ? "text-amber-500" : p.id === "weekly" ? "text-sky-500" : "text-emerald-500"}`}>${p.price}</p>
                   <p className="text-xs text-muted-foreground">{p.note}</p>
                 </div>
               </div>
@@ -443,7 +458,11 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
               </ul>
               <span
                 className={`mt-5 flex h-12 w-full items-center justify-center rounded-2xl font-bold ${
-                  p.id === "lifetime" ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white" : "bg-emerald-400 text-emerald-950"
+                  p.id === "lifetime"
+                    ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white"
+                    : p.id === "weekly"
+                      ? "bg-gradient-to-r from-sky-500 to-cyan-500 text-white"
+                      : "bg-emerald-400 text-emerald-950"
                 }`}
               >
                 {buyingPlanId === p.id ? <Loader2 className="h-5 w-5 animate-spin" /> : playAvailable ? `Buy with Google Play — $${p.price}` : `Select ${p.label} — $${p.price}`}
@@ -817,7 +836,7 @@ export const BuyLicenseBot = ({ onBack }: BuyLicenseBotProps) => {
       >
         <ShoppingCart className="h-5 w-5 shrink-0" />
         Buy License Key
-        <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold">from $30</span>
+        <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold">from $7</span>
       </button>
 
       <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-muted-foreground">
