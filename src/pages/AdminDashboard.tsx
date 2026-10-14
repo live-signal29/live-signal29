@@ -14,6 +14,7 @@ import {
   Bell,
   BriefcaseBusiness,
   ChevronRight,
+  ClipboardPaste,
   CircleDollarSign,
   Clock3,
   Coins,
@@ -108,6 +109,10 @@ const LicenseOrders = lazyWithRetry(
   () => import("@/components/admin/LicenseOrders")
 );
 
+const QuickSignalPaste = lazyWithRetry(
+  () => import("@/components/admin/QuickSignalPaste")
+);
+
 const AdminHome = lazyWithRetry(
   () => import("@/components/admin/AdminHome")
 );
@@ -140,6 +145,12 @@ const menuItems = [
     id: "signals",
     label: "Signals",
     icon: Signal,
+    color: "text-emerald-600",
+  },
+  {
+    id: "quick-signal",
+    label: "Quick Signal",
+    icon: ClipboardPaste,
     color: "text-emerald-600",
   },
   {
@@ -733,6 +744,8 @@ const AdminDashboard = () => {
           {/* =================================================
               IDEAS
           ================================================= */}
+
+          {activeTab === "quick-signal" && <QuickSignalPaste />}
 
           {activeTab === "ideas" && (
             <div className="space-y-3">
