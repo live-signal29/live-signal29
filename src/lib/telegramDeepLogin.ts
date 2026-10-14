@@ -34,7 +34,9 @@ export async function tryTelegramDeepLogin(): Promise<void> {
 
   // remove the login data from the address bar right away (it must not stay in history / shares)
   for (const k of [...FIELDS, "tgd"]) p.delete(k);
-  const clean = url.pathname + (p.toString() ? `?${p.toString()}` : "") + url.hash;
+  // the Premium page scrolls to its plan cards when the address ends with #plans-section
+  const hash = url.hash || (url.pathname.replace(/\/+$/, "") === "/premium" ? "#plans-section" : "");
+  const clean = url.pathname + (p.toString() ? `?${p.toString()}` : "") + hash;
   window.history.replaceState(null, "", clean);
 
   try {
