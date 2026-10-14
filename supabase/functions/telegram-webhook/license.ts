@@ -1,5 +1,5 @@
 // Chinese Bot license purchase flow for the Telegram bot.
-// Plans: 6 months = $30, lifetime = $70. Payment methods are read live from the admin's Payment Settings.
+// Plans: weekly = $7, 6 months = $30, lifetime = $70. Payment methods are read live from the admin's Payment Settings.
 
 type Ctx = {
   supabase: any;
@@ -13,6 +13,7 @@ type Ctx = {
 type From = { username?: string | null; name?: string | null };
 
 export const LICENSE_PLANS: Record<string, { label: string; amount: number; short: string }> = {
+  weekly: { label: "Weekly", amount: 7, short: "Weekly" },
   "6m": { label: "6 Months", amount: 30, short: "6 Months" },
   lifetime: { label: "Lifetime", amount: 70, short: "Lifetime" },
 };
@@ -72,6 +73,7 @@ export async function sendLicenseMenu(ctx: Ctx, chatId: number, messageId?: numb
     `🤖 <b>Live Signals Chinese Bot</b>\n` +
     `<i>Premium Trading Signals • License Key</i>\n\n` +
     `To get your license key you need to complete a payment. Choose a plan:\n\n` +
+    `🚀 <b>Weekly</b> — <b>$7</b>  (only $1/day • 7 days)\n` +
     `▫️ <b>6 Months</b> — <b>$30</b>\n` +
     `▫️ <b>Lifetime</b> — <b>$70</b>  ⭐ Best value\n\n` +
     `After you pay, your key is sent to you right here in this chat.`;
@@ -79,6 +81,7 @@ export async function sendLicenseMenu(ctx: Ctx, chatId: number, messageId?: numb
     chatId,
     text,
     [
+      [{ text: "🚀 Weekly — $7  ($1/day)", callback_data: "lic_plan:weekly" }],
       [{ text: "6 Months — $30", callback_data: "lic_plan:6m" }],
       [{ text: "Lifetime — $70  ⭐", callback_data: "lic_plan:lifetime" }],
       menuKb(),
@@ -92,7 +95,7 @@ export async function notifyLicenseLead(ctx: Ctx, from: From, chatId: number, vi
   await notifyAdmin(
     ctx,
     `🔑 <b>LICENSE KEY INQUIRY (Bot)</b>\n\n${who(ctx, from)}\n🆔 Chat: <code>${chatId}</code>\n📍 Via: ${ctx.esc(via)}\n\n` +
-      `<i>User was shown: 6 Months $30 / Lifetime $70 and the payment steps.</i>`
+      `<i>User was shown: Weekly $7 / 6 Months $30 / Lifetime $70 and the payment steps.</i>`
   );
 }
 

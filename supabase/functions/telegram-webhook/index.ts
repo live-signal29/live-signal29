@@ -881,21 +881,21 @@ serve(async (req) => {
         return new Response("ok", { status: 200 });
       }
 
-      const licPlan = data?.match(/^lic_plan:(6m|lifetime)$/);
+      const licPlan = data?.match(/^lic_plan:(weekly|6m|lifetime)$/);
       if (licPlan) {
         await answerCallback(callback.id);
         await sendLicensePayment(licenseCtx(supabase), chatId, licPlan[1], "0", callbackMessageId);
         return new Response("ok", { status: 200 });
       }
 
-      const licPay = data?.match(/^lic_pay:(6m|lifetime):([A-Z0-9_]+)$/);
+      const licPay = data?.match(/^lic_pay:(weekly|6m|lifetime):([A-Z0-9_]+)$/);
       if (licPay) {
         await answerCallback(callback.id);
         await sendLicensePayment(licenseCtx(supabase), chatId, licPay[1], licPay[2], callbackMessageId);
         return new Response("ok", { status: 200 });
       }
 
-      const licPaid = data?.match(/^lic_paid:(6m|lifetime):([A-Z0-9_]+)$/);
+      const licPaid = data?.match(/^lic_paid:(weekly|6m|lifetime):([A-Z0-9_]+)$/);
       if (licPaid) {
         await answerCallback(callback.id);
         await licensePaid(licenseCtx(supabase), chatId, from, licPaid[1], licPaid[2]);
