@@ -20,6 +20,7 @@ export { PREMIUM_PRODUCT_ID, LIFETIME_PRODUCT_ID };
 // "premium" subscription in Play Console (and the values the admin panel
 // stores in profiles.subscription_plan).
 export const PREMIUM_BASE_PLANS = {
+  weekly: "weekly",
   monthly: "monthly",
   quarterly: "quarterly",
   halfyearly: "half-yearly",
