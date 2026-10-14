@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
 import { loadGoogleTranslate } from "./lib/googleTranslate";
+import { tryTelegramDeepLogin } from "./lib/telegramDeepLogin";
 
 loadGoogleTranslate();
 
@@ -26,15 +27,22 @@ const hideSplash = () => {
 // leave the user stuck behind the splash forever.
 setTimeout(hideSplash, MAX_SPLASH_MS);
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <App />
-  </HelmetProvider>
-);
+const start = () => {
+  createRoot(document.getElementById("root")!).render(
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
+  );
 
-// Hides the native splash screen now that React has taken over from the
-// static boot-splash in index.html. The double rAF waits for the browser
-// to actually paint this first render.
-requestAnimationFrame(() => {
-  requestAnimationFrame(hideSplash);
-});
+  // Hides the native splash screen now that React has taken over from the
+  // static boot-splash in index.html. The double rAF waits for the browser
+  // to actually paint this first render.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(hideSplash);
+  });
+};
+
+// Opened from the bot's "Get Premium" button? Sign the user in first (no-op for every other visit).
+tryTelegramDeepLogin()
+  .catch(() => {})
+  .finally(start);
