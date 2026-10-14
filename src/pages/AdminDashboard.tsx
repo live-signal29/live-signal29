@@ -18,6 +18,7 @@ import {
   Clock3,
   Coins,
   Eye,
+  Home,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -107,6 +108,10 @@ const LicenseOrders = lazyWithRetry(
   () => import("@/components/admin/LicenseOrders")
 );
 
+const AdminHome = lazyWithRetry(
+  () => import("@/components/admin/AdminHome")
+);
+
 import AdminGlobalSearch from "@/components/admin/AdminGlobalSearch";
 import AdminNotificationBell from "@/components/admin/AdminNotificationBell";
 
@@ -125,6 +130,12 @@ const TabLoader = () => (
 ========================================================= */
 
 const menuItems = [
+  {
+    id: "home",
+    label: "Home",
+    icon: Home,
+    color: "text-slate-700",
+  },
   {
     id: "signals",
     label: "Signals",
@@ -227,7 +238,7 @@ const AdminDashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState("signals");
+  const [activeTab, setActiveTab] = useState("home");
   const [searchHandoff, setSearchHandoff] = useState<{ tab: string; term: string } | null>(null);
 
   const [showSignalForm, setShowSignalForm] = useState(false);
@@ -597,7 +608,9 @@ const AdminDashboard = () => {
             </div>
 
             <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-              Manage your {activeMenu.label.toLowerCase()} quickly
+              {activeTab === "home"
+                ? "Everything at a glance"
+                : `Manage your ${activeMenu.label.toLowerCase()} quickly`}
             </p>
 
           </div>
@@ -606,6 +619,17 @@ const AdminDashboard = () => {
 
         <ErrorBoundary label="This admin section failed to load.">
         <Suspense fallback={<TabLoader />}>
+
+          {/* =================================================
+              HOME
+          ================================================= */}
+
+          {activeTab === "home" && (
+            <AdminHome
+              items={menuItems.filter((item) => item.id !== "home")}
+              onOpen={openTab}
+            />
+          )}
 
           {/* =================================================
               SIGNALS
@@ -855,15 +879,15 @@ const AdminDashboard = () => {
         <div className="mx-auto flex max-w-md items-center justify-around">
 
           <button
-            onClick={() => openTab("signals")}
+            onClick={() => openTab("home")}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 text-[10px] font-medium ${
-              activeTab === "signals"
+              activeTab === "home"
                 ? "text-slate-900"
                 : "text-slate-400"
             }`}
           >
-            <Signal className="h-5 w-5" />
-            Signals
+            <Home className="h-5 w-5" />
+            Home
           </button>
 
           <button
