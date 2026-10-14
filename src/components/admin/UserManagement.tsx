@@ -15,6 +15,28 @@ import UserStatsCards, { STAT_LABELS } from "./UserStatsCards";
 import TelegramBroadcastDialog from "./TelegramBroadcastDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
+const LIFETIME_END_DATE = "2099-12-31T23:59:59.000Z";
+
+// Plan values are stored in profiles.subscription_plan as "premium-<id>" (same as payments / Play Billing).
+const PLAN_OPTIONS = [
+  { value: "premium-monthly", label: "Monthly", months: 1 },
+  { value: "premium-quarterly", label: "Quarterly", months: 3 },
+  { value: "premium-half-yearly", label: "Half-Yearly", months: 6 },
+  { value: "premium-yearly", label: "Yearly", months: 12 },
+  { value: "premium-lifetime", label: "Lifetime", months: 0 },
+];
+
+// older admin edits saved plain "monthly" etc. -> show them as the matching "premium-..." option
+const normalizePlan = (plan: string | null) => {
+  if (!plan) return "";
+  if (PLAN_OPTIONS.some((o) => o.value === plan)) return plan;
+  const prefixed = `premium-${plan}`;
+  return PLAN_OPTIONS.some((o) => o.value === prefixed) ? prefixed : plan;
+};
+
+// "2026-11-14" from a date input -> end of that day (local time) as an ISO string
+const endOfDayIso = (d: string) => new Date(`${d}T23:59:59`).toISOString();
+
 interface UserProfile {
   id: string;
   email: string;
@@ -58,6 +80,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const [bulkAction, setBulkAction] = useState("");
   const [bulkPlan, setBulkPlan] = useState("");
   const [bulkEndDate, setBulkEndDate] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
   // Telegram contact of each user (connected via "Continue with Telegram" / "Connect Telegram")
   const [telegramByUser, setTelegramByUser] = useState<Record<string, { username: string | null; first_name: string | null }>>({});
 
@@ -112,7 +135,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     return diffDays > 0 ? `${diffDays} days` : "Expired";
   };
 
-  const logAdminAction = async (actionType: string, targetUserId: string, targetUserEmail: string, details: any) => {
+  const logAdminAction = async (actionType: string, targetUserId: string | null, targetUserEmail: string | null, details: any) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -126,7 +149,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
           target_user_id: targetUserId,
           target_user_email: targetUserEmail,
           details: details
-        });
+        } as any);
     } catch (error) {
       console.error("Error logging admin action:", error);
     }
@@ -136,26 +159,33 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     if (!editingUser) return;
 
     try {
+      const status = newStatus || editingUser.subscription_status;
+      const plan = newPlan || editingUser.subscription_plan;
       const updates: any = {
-        subscription_status: newStatus || editingUser.subscription_status,
-        subscription_plan: newPlan || editingUser.subscription_plan,
+        subscription_status: status,
+        subscription_plan: plan,
       };
 
-      if (newEndDate) {
-        if (newStatus === 'premium') {
-          updates.subscription_end_date = newEndDate;
-          updates.subscription_start_date = new Date().toISOString();
+      if (status === 'premium' && plan === 'premium-lifetime') {
+        updates.subscription_end_date = LIFETIME_END_DATE;
+        if (editingUser.subscription_status !== 'premium') updates.subscription_start_date = new Date().toISOString();
+      } else if (newEndDate) {
+        if (status === 'premium') {
+          updates.subscription_end_date = endOfDayIso(newEndDate);
+          if (editingUser.subscription_status !== 'premium') updates.subscription_start_date = new Date().toISOString();
         } else {
-          updates.trial_end_date = newEndDate;
+          updates.trial_end_date = endOfDayIso(newEndDate);
         }
       }
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', editingUser.id);
+        .eq('id', editingUser.id)
+        .select('id');
 
       if (error) throw error;
+      if (!updated || updated.length === 0) throw new Error("No permission to update this user");
 
       // Log the action
       await logAdminAction(
@@ -164,8 +194,8 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
         editingUser.email,
         {
           old_status: editingUser.subscription_status,
-          new_status: newStatus,
-          plan: newPlan,
+          new_status: status,
+          plan: plan,
           end_date: newEndDate
         }
       );
@@ -182,7 +212,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   const openEditDialog = (user: UserProfile) => {
     setEditingUser(user);
     setNewStatus(user.subscription_status);
-    setNewPlan(user.subscription_plan || "");
+    setNewPlan(normalizePlan(user.subscription_plan));
     setNewEndDate("");
   };
 
@@ -207,66 +237,151 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
   };
 
   const handleBulkAction = async () => {
+    if (bulkBusy) return;
+
     if (selectedUsers.length === 0) {
       toast.error("Please select at least one user");
       return;
     }
-
     if (!bulkAction) {
       toast.error("Please select an action");
       return;
     }
+    if (bulkAction === 'activate_premium' && !bulkPlan) {
+      toast.error("Please select a plan");
+      return;
+    }
+    if ((bulkAction === 'extend_premium' || bulkAction === 'extend_trial') && !bulkEndDate) {
+      toast.error("Please choose an end date");
+      return;
+    }
 
+    setBulkBusy(true);
     try {
-      const updates: any = {};
-      
-      if (bulkAction === 'activate_premium') {
-        updates.subscription_status = 'premium';
-        updates.subscription_start_date = new Date().toISOString();
-        if (bulkPlan) updates.subscription_plan = bulkPlan;
-        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
-      } else if (bulkAction === 'deactivate') {
-        updates.subscription_status = 'expired';
-      } else if (bulkAction === 'extend_trial') {
-        updates.subscription_status = 'free_trial';
-        if (bulkEndDate) updates.trial_end_date = bulkEndDate;
-      } else if (bulkAction === 'extend_premium') {
-        if (bulkEndDate) updates.subscription_end_date = bulkEndDate;
-      }
+      const byId = new Map(users.map((u) => [u.id, u]));
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const planInfo = PLAN_OPTIONS.find((o) => o.value === bulkPlan);
+      const jobs: { id: string; updates: Record<string, unknown> }[] = [];
+      let skipped = 0;
 
-      // Update all selected users
-      for (const userId of selectedUsers) {
-        const { error } = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', userId);
+      for (const id of selectedUsers) {
+        const u = byId.get(id);
+        if (!u) { skipped++; continue; }
 
-        if (error) throw error;
-      }
+        const isPremium = u.subscription_status === 'premium';
+        const isLifetime = u.subscription_plan === 'premium-lifetime';
+        const currentEnd = u.subscription_end_date ? new Date(u.subscription_end_date) : null;
 
-      // Log the bulk action
-      await logAdminAction(
-        `bulk_${bulkAction}`,
-        '',
-        '',
-        {
-          user_count: selectedUsers.length,
-          action: bulkAction,
-          plan: bulkPlan,
-          end_date: bulkEndDate
+        if (bulkAction === 'activate_premium') {
+          // never downgrade someone who already has Lifetime
+          if (isPremium && isLifetime) { skipped++; continue; }
+
+          let end: string;
+          if (bulkPlan === 'premium-lifetime') {
+            end = LIFETIME_END_DATE;
+          } else if (bulkEndDate) {
+            end = endOfDayIso(bulkEndDate);
+          } else {
+            // no date given: plan length, counted from the current end date if still premium, else from today
+            const base = isPremium && currentEnd && currentEnd > now ? currentEnd : now;
+            const d = new Date(base);
+            d.setMonth(d.getMonth() + (planInfo?.months || 1));
+            end = d.toISOString();
+          }
+
+          const updates: Record<string, unknown> = {
+            subscription_status: 'premium',
+            subscription_plan: bulkPlan,
+            subscription_end_date: end,
+          };
+          if (!isPremium) updates.subscription_start_date = nowIso;
+          jobs.push({ id, updates });
+        } else if (bulkAction === 'deactivate') {
+          jobs.push({ id, updates: { subscription_status: 'expired' } });
+        } else if (bulkAction === 'extend_trial') {
+          // trial extension is only for non-premium users (it would otherwise cancel their premium)
+          if (isPremium) { skipped++; continue; }
+          jobs.push({
+            id,
+            updates: { subscription_status: 'free_trial', trial_end_date: endOfDayIso(bulkEndDate) },
+          });
+        } else if (bulkAction === 'extend_premium') {
+          if (!isPremium || isLifetime) { skipped++; continue; }
+          jobs.push({ id, updates: { subscription_end_date: endOfDayIso(bulkEndDate) } });
         }
-      );
+      }
 
-      toast.success(`Successfully updated ${selectedUsers.length} user(s)`);
-      setSelectedUsers([]);
-      setBulkActionDialogOpen(false);
-      setBulkAction("");
-      setBulkPlan("");
-      setBulkEndDate("");
+      if (jobs.length === 0) {
+        toast.error(
+          skipped
+            ? `Nothing to update: ${skipped} selected user(s) do not fit this action.`
+            : "Nothing to update."
+        );
+        return;
+      }
+
+      // update in small parallel batches; every row is checked so a blocked / failed update is never reported as success
+      const failedIds: string[] = [];
+      let okCount = 0;
+      for (let i = 0; i < jobs.length; i += 10) {
+        const results = await Promise.all(
+          jobs.slice(i, i + 10).map(async (j) => {
+            const { data, error } = await supabase
+              .from('profiles')
+              .update(j.updates as any)
+              .eq('id', j.id)
+              .select('id');
+            if (error) console.error("Bulk update failed for", j.id, error);
+            return { id: j.id, ok: !error && !!data && data.length > 0 };
+          })
+        );
+        for (const r of results) {
+          if (r.ok) okCount++;
+          else failedIds.push(r.id);
+        }
+      }
+
+      if (okCount > 0) {
+        await logAdminAction(
+          `bulk_${bulkAction}`,
+          null,
+          null,
+          {
+            user_count: okCount,
+            failed_count: failedIds.length,
+            skipped_count: skipped,
+            action: bulkAction,
+            plan: bulkPlan,
+            end_date: bulkEndDate
+          }
+        );
+      }
+
+      if (okCount > 0) {
+        toast.success(
+          `Updated ${okCount} user(s)` + (skipped ? ` • ${skipped} skipped` : "")
+        );
+      }
+      if (failedIds.length > 0) {
+        toast.error(`${failedIds.length} user(s) could not be updated. They stay selected, try again.`);
+      }
+
+      if (failedIds.length === 0) {
+        setSelectedUsers([]);
+        setBulkActionDialogOpen(false);
+        setBulkAction("");
+        setBulkPlan("");
+        setBulkEndDate("");
+      } else {
+        setSelectedUsers(failedIds);
+      }
       fetchUsers();
     } catch (error) {
       console.error("Error performing bulk action:", error);
       toast.error("Failed to perform bulk action");
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -436,16 +551,16 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                             <SelectValue placeholder="Select plan" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                            <SelectItem value="quarterly">Quarterly</SelectItem>
-                            <SelectItem value="half-yearly">Half-Yearly</SelectItem>
-                            <SelectItem value="yearly">Yearly</SelectItem>
+                            {PLAN_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                     )}
 
-                    {(bulkAction === 'activate_premium' || bulkAction === 'extend_premium' || bulkAction === 'extend_trial') && (
+                    {(bulkAction === 'activate_premium' || bulkAction === 'extend_premium' || bulkAction === 'extend_trial') &&
+                      !(bulkAction === 'activate_premium' && bulkPlan === 'premium-lifetime') && (
                       <div className="space-y-2">
                         <Label>
                           {bulkAction === 'extend_trial' ? 'Trial End Date' : 'Premium End Date'}
@@ -455,11 +570,19 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                           value={bulkEndDate}
                           onChange={(e) => setBulkEndDate(e.target.value)}
                         />
+                        <p className="text-xs text-muted-foreground">
+                          {bulkAction === 'activate_premium'
+                            ? 'Leave empty to use the plan length (added to the current end date if the user is still premium).'
+                            : bulkAction === 'extend_trial'
+                            ? 'Applies to non-premium users only.'
+                            : 'Applies to premium users only (Lifetime users are skipped).'}
+                        </p>
                       </div>
                     )}
 
-                    <Button onClick={handleBulkAction} className="w-full">
-                      Apply to {selectedUsers.length} User(s)
+                    <Button onClick={handleBulkAction} className="w-full" disabled={bulkBusy}>
+                      {bulkBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      {bulkBusy ? "Applying..." : `Apply to ${selectedUsers.length} User(s)`}
                     </Button>
                   </div>
                 </DialogContent>
@@ -514,11 +637,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {String(user.email || "").endsWith("@telegram.invalid") ? (
-                          <span className="text-muted-foreground">Telegram login</span>
-                        ) : (
-                          user.email
-                        )}
+                        {user.email}
                       </TableCell>
                       <TableCell>{user.full_name}</TableCell>
                       <TableCell>
@@ -616,10 +735,9 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                                       <SelectValue placeholder="Select plan" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="monthly">Monthly</SelectItem>
-                                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                                      <SelectItem value="half-yearly">Half-Yearly</SelectItem>
-                                      <SelectItem value="yearly">Yearly</SelectItem>
+                                      {PLAN_OPTIONS.map((o) => (
+                                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </div>
