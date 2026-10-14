@@ -170,12 +170,12 @@ const Premium = () => {
     planCarouselApi.on("select", onSelect);
     onSelect();
 
+    // Always start on the first plan (Weekly) on mobile.
     const isMobile = window.innerWidth < 640;
 
     if (isMobile) {
       setTimeout(() => {
-        const popularIndex = plans.findIndex((p) => p.popular);
-        planCarouselApi.scrollTo(popularIndex >= 0 ? popularIndex : 0, false);
+        planCarouselApi.scrollTo(0, false);
       }, 100);
     }
 
