@@ -64,20 +64,13 @@ export const BottomNavigation = () => {
     <nav
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-        "bg-background border-t border-border/50",
-        "px-2 pt-1.5 pb-[max(0.25rem,min(env(safe-area-inset-bottom),0.5rem))]"
+        // solid docked bar: nothing shows through it
+        "bg-card border-t border-border",
+        "shadow-[0_-6px_18px_-10px_rgba(15,23,42,0.18)]",
+        "pb-[min(env(safe-area-inset-bottom),0.5rem)]"
       )}
     >
       <div className="mx-auto max-w-md">
-        <div className="glow-border rounded-[17px]">
-          <div
-            className={cn(
-              "rounded-[17px]",
-              "border border-border/70",
-              "bg-card",
-              "shadow-[0_-5px_22px_-12px_hsl(var(--glow-primary)/0.55)]"
-            )}
-          >
             <div className="flex h-[58px] items-center justify-around px-1">
               {navItems.map((item) => {
                 const isSignals =
@@ -156,8 +149,6 @@ export const BottomNavigation = () => {
                 );
               })}
             </div>
-          </div>
-        </div>
       </div>
     </nav>
   );
