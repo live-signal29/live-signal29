@@ -72,7 +72,7 @@ export const BottomNavigation = () => {
         className={cn(
           "pointer-events-auto mx-auto max-w-md",
           "rounded-[28px] border border-border/50",
-          "bg-card/80 backdrop-blur-xl backdrop-saturate-150",
+          "bg-card/70 backdrop-blur-xl backdrop-saturate-150",
           "shadow-[0_8px_30px_-6px_rgba(15,23,42,0.28)]"
         )}
       >
@@ -94,8 +94,7 @@ export const BottomNavigation = () => {
                 className={cn(
                   "flex min-w-0 flex-1 flex-col items-center justify-center",
                   "gap-1 rounded-[22px] px-1 py-2",
-                  "transition-all duration-200 active:scale-95",
-                  isActive && "bg-emerald-500/15 dark:bg-emerald-500/20"
+                  "transition-all duration-200 active:scale-95"
                 )}
               >
                 <item.icon
