@@ -2,6 +2,7 @@
 // VERIFY GOOGLE PLAY LICENSE PURCHASE  (Chinese Bot, one-time in-app products)
 // ============================================================
 // Play Console one-time products (create these exact IDs):
+//   chinese_bot_weekly    -> $7   (7 days)
 //   chinese_bot_6m        -> $30  (6 months)
 //   chinese_bot_lifetime  -> $70  (lifetime)
 // The app sends the purchase token after Google's sheet succeeds. We verify it with Google
@@ -15,7 +16,8 @@ import { GoogleAuth } from "npm:google-auth-library@9";
 
 const PACKAGE_NAME = "co.median.android.krkqyaz";
 
-const PRODUCTS: Record<string, { plan: "6m" | "lifetime"; label: string; amount: number }> = {
+const PRODUCTS: Record<string, { plan: "weekly" | "6m" | "lifetime"; label: string; amount: number }> = {
+  chinese_bot_weekly: { plan: "weekly", label: "Weekly", amount: 7 },
   chinese_bot_6m: { plan: "6m", label: "6 Months", amount: 30 },
   chinese_bot_lifetime: { plan: "lifetime", label: "Lifetime", amount: 70 },
 };
@@ -148,7 +150,11 @@ Deno.serve(async (req: Request) => {
 
     const now = new Date();
     let expires: string | null = null;
-    if (product.plan === "6m") {
+    if (product.plan === "weekly") {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 7);
+      expires = d.toISOString();
+    } else if (product.plan === "6m") {
       const d = new Date(now);
       d.setMonth(d.getMonth() + 6);
       expires = d.toISOString();
