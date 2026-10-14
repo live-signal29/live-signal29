@@ -460,7 +460,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     if (statIds && !statIds.has(u.id)) return false;
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
-    const tgName = (telegramByUser[u.id]?.username || "").toLowerCase();
+    const tgName = `${telegramByUser[u.id]?.username || ""} ${telegramByUser[u.id]?.first_name || ""}`.trim().toLowerCase();
     return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q) || tgName.includes(q.replace(/^@/, ""));
   });
 
@@ -654,7 +654,12 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                               @{telegramByUser[user.id].username}
                             </a>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Connected (no username)</span>
+                            <span className="text-xs text-muted-foreground">
+                              Connected
+                              {telegramByUser[user.id].first_name
+                                ? ` • ${telegramByUser[user.id].first_name}`
+                                : " (no username)"}
+                            </span>
                           )
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
