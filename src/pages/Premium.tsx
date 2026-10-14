@@ -174,7 +174,8 @@ const Premium = () => {
 
     if (isMobile) {
       setTimeout(() => {
-        planCarouselApi.scrollTo(1, false);
+        const popularIndex = plans.findIndex((p) => p.popular);
+        planCarouselApi.scrollTo(popularIndex >= 0 ? popularIndex : 0, false);
       }, 100);
     }
 
@@ -325,6 +326,16 @@ const Premium = () => {
       button:
         "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
     },
+    starter: {
+      card: "border-sky-500/50 bg-gradient-to-br from-sky-500/10 via-background to-background shadow-lg ring-1 ring-sky-500/30",
+      badge: {
+        label: "🚀 Starter",
+        classes: "bg-gradient-to-r from-sky-500 to-cyan-500 text-white",
+      },
+      price: "bg-gradient-to-r from-sky-500 to-cyan-500 bg-clip-text text-transparent",
+      button:
+        "bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 shadow-sky-500/30",
+    },
     vip: {
       card: "border-violet-500/50 bg-gradient-to-br from-violet-500/10 via-background to-background shadow-xl ring-1 ring-violet-500/30",
       badge: {
@@ -348,6 +359,24 @@ const Premium = () => {
   };
 
   const plans = [
+    {
+      name: "Weekly",
+      planId: "weekly" as PremiumPlanId,
+      duration: "week",
+      pricePerMonth: null,
+      totalPrice: 7,
+      payOnly: 7,
+      discount: "Just $1/day",
+      dailyNote: "Only $1/day • 7 days = $7",
+      popular: false,
+      tier: "starter",
+      features: [
+        baseFeature,
+        "Daily 2-5 trade signals",
+        "Instant push notifications",
+        "Try us first — upgrade anytime & save up to 50%",
+      ],
+    },
     {
       name: "Monthly",
       planId: "monthly" as PremiumPlanId,
@@ -780,7 +809,7 @@ const Premium = () => {
 
       <SEO
         title="Premium Trading Signals Plans - TREND IS FRIEND"
-        description="Choose from flexible monthly, quarterly, half-yearly, and yearly premium plans. Get premium trading signals for Forex, Crypto, Commodities, and Indices."
+        description="Choose from flexible weekly ($7), monthly, quarterly, half-yearly, and yearly premium plans. Get premium trading signals for Forex, Crypto, Commodities, and Indices."
         keywords="premium trading signals, subscription plans, forex signals subscription, crypto signals premium, trading signals pricing"
         url="https://yourdomain.com/premium"
         structuredData={structuredData}
@@ -1206,6 +1235,12 @@ const Premium = () => {
                                 ? "one-time payment • no renewals"
                                 : `per ${plan.duration} • auto-renews`}
                             </p>
+
+                            {(plan as { dailyNote?: string }).dailyNote && (
+                              <p className="inline-block rounded-full bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                                {(plan as { dailyNote?: string }).dailyNote}
+                              </p>
+                            )}
 
                           </div>
 
