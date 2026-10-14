@@ -64,7 +64,8 @@ export const BottomNavigation = () => {
     <nav
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-        "px-2 pb-[max(0.25rem,min(env(safe-area-inset-bottom),0.5rem))]"
+        "bg-background border-t border-border/50",
+        "px-2 pt-1.5 pb-[max(0.25rem,min(env(safe-area-inset-bottom),0.5rem))]"
       )}
     >
       <div className="mx-auto max-w-md">
@@ -73,8 +74,7 @@ export const BottomNavigation = () => {
             className={cn(
               "rounded-[17px]",
               "border border-border/70",
-              "bg-background/95 dark:bg-background/95",
-              "backdrop-blur-2xl",
+              "bg-card",
               "shadow-[0_-5px_22px_-12px_hsl(var(--glow-primary)/0.55)]"
             )}
           >
