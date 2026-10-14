@@ -70,7 +70,12 @@ Deno.serve(async (req) => {
     let row = order;
     if (!row.bound_device_id) {
       const expires =
-        row.expires_at ?? (row.plan === "6m" ? new Date(Date.now() + 183 * 86400000).toISOString() : null);
+        row.expires_at ??
+        (row.plan === "weekly"
+          ? new Date(Date.now() + 7 * 86400000).toISOString()
+          : row.plan === "6m"
+            ? new Date(Date.now() + 183 * 86400000).toISOString()
+            : null);
       await supabase
         .from("license_orders")
         .update({
