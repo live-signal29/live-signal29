@@ -64,7 +64,7 @@ export const BottomNavigation = () => {
     <nav
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-        "px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))]"
+        "px-2 pb-[max(0.25rem,min(env(safe-area-inset-bottom),0.5rem))]"
       )}
     >
       <div className="mx-auto max-w-md">
