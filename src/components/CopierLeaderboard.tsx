@@ -25,10 +25,6 @@ import {
   RefreshCw,
   Clock,
   Database,
-  LineChart,
-  FileText,
-  UserCheck,
-  Wallet,
   DollarSign,
   Bot,
   LockKeyhole,
@@ -992,35 +988,6 @@ export const CopierLeaderboard = () => {
           <BuyLicenseBot onBack={() => setLicenseBotOpen(false)} />
         </DialogContent>
       </Dialog>
-
-      {/* BOTTOM NAVIGATION BAR */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border/40 px-4 py-2 flex items-center justify-between max-w-md mx-auto sm:max-w-xl">
-        <button className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 gap-0.5">
-          <LineChart className="h-5 w-5" />
-          <span className="text-[10px] font-bold">Signals</span>
-          <span className="h-1 w-6 bg-emerald-500 rounded-full mt-0.5" />
-        </button>
-
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-          <BarChart3 className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Results</span>
-        </button>
-
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-          <FileText className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Account</span>
-        </button>
-
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-          <Wallet className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Premium</span>
-        </button>
-
-        <button className="flex flex-col items-center text-muted-foreground hover:text-foreground gap-0.5">
-          <UserCheck className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Profile</span>
-        </button>
-      </div>
     </div>
   );
 };
