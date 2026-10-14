@@ -63,92 +63,65 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-        // solid docked bar: nothing shows through it
-        "bg-card border-t border-border",
-        "shadow-[0_-6px_18px_-10px_rgba(15,23,42,0.18)]",
-        "pb-[min(env(safe-area-inset-bottom),0.5rem)]"
+        "pointer-events-none fixed bottom-0 left-0 right-0 z-50 md:hidden",
+        "px-3 pb-[calc(0.5rem+min(env(safe-area-inset-bottom),0.5rem))]"
       )}
     >
-      <div className="mx-auto max-w-md">
-            <div className="flex h-[58px] items-center justify-around px-1">
-              {navItems.map((item) => {
-                const isSignals =
-                  item.label === "Signals";
+      {/* floating glass bar (Telegram style) */}
+      <div
+        className={cn(
+          "pointer-events-auto mx-auto max-w-md",
+          "rounded-[28px] border border-border/50",
+          "bg-card/80 backdrop-blur-xl backdrop-saturate-150",
+          "shadow-[0_8px_30px_-6px_rgba(15,23,42,0.28)]"
+        )}
+      >
+        <div className="flex items-center justify-around gap-1 p-1.5">
+          {navItems.map((item) => {
+            const isSignals = item.label === "Signals";
+            const isCopier = item.label === "MT5 Copy";
 
-                const isCopier =
-                  item.label === "MT5 Copy";
+            const isActive = isSignals
+              ? location.pathname === "/" && !isCopierTab
+              : isCopier
+              ? location.pathname === "/" && isCopierTab
+              : location.pathname === item.path;
 
-                const isActive =
-                  isSignals
-                    ? location.pathname === "/" &&
-                      !isCopierTab
-                    : isCopier
-                    ? location.pathname === "/" &&
-                      isCopierTab
-                    : location.pathname === item.path;
+            return (
+              <Link
+                key={item.label}
+                to={item.path}
+                className={cn(
+                  "flex min-w-0 flex-1 flex-col items-center justify-center",
+                  "gap-1 rounded-[22px] px-1 py-2",
+                  "transition-all duration-200 active:scale-95",
+                  isActive && "bg-emerald-500/15 dark:bg-emerald-500/20"
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "h-[21px] w-[21px]",
+                    isActive
+                      ? "text-emerald-600 dark:text-emerald-400 stroke-[2.3]"
+                      : "text-slate-600 dark:text-slate-300 stroke-[1.8]"
+                  )}
+                />
 
-                return (
-                  <Link
-                    key={item.label}
-                    to={item.path}
-                    className={cn(
-                      "relative flex min-w-0 flex-1 flex-col",
-                      "items-center justify-center",
-                      "gap-[3px] px-1 py-1",
-                      "transition-all duration-200",
-                      "active:scale-90"
-                    )}
-                  >
-                    {/* Icon */}
-                    <span
-                      className={cn(
-                        "icon-3d h-7 w-7",
-                        "flex items-center justify-center",
-                        "transition-all duration-200",
-                        isActive &&
-                          "icon-3d-active animate-glow-breathe bg-emerald-500/15 dark:bg-emerald-500/20 rounded-xl"
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          "relative z-[1] h-[17px] w-[17px]",
-                          isActive
-                            ? "text-emerald-600 dark:text-emerald-400 stroke-[2.4]"
-                            : "text-slate-500 dark:text-slate-400 stroke-[1.9]"
-                        )}
-                      />
-                    </span>
-
-                    {/* Label */}
-                    <span
-                      className={cn(
-                        "text-[9px] leading-none tracking-tight",
-                        "whitespace-nowrap",
-                        "transition-colors duration-200",
-                        isActive
-                          ? "font-bold text-emerald-600 dark:text-emerald-400"
-                          : "font-medium text-slate-500 dark:text-slate-400"
-                      )}
-                    >
-                      {item.label}
-                    </span>
-
-                    {/* Active indicator */}
-                    {isActive && (
-                      <span
-                        className={cn(
-                          "absolute -bottom-[1px]",
-                          "h-[2.5px] w-5 rounded-full",
-                          "bg-emerald-500",
-                          "shadow-[0_0_8px_hsl(var(--glow-primary)/0.8)]"
-                        )}
-                      />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
+                <span
+                  className={cn(
+                    "whitespace-nowrap text-[10px] leading-none tracking-tight",
+                    "transition-colors duration-200",
+                    isActive
+                      ? "font-bold text-emerald-600 dark:text-emerald-400"
+                      : "font-medium text-slate-600 dark:text-slate-300"
+                  )}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
