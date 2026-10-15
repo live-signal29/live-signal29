@@ -942,8 +942,8 @@ export const CopierLeaderboard = () => {
                 <Link2 className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-bold">Request Copy Trading</span>
-                <span className="mt-1 block text-xs text-muted-foreground">Continue with the existing MT5 copier request form.</span>
+                <span className="block font-bold">Connect Your Copy</span>
+                <span className="mt-1 block text-xs text-muted-foreground">Submit Request for copy trading</span>
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
