@@ -17,6 +17,12 @@ Upgrade to Premium and get:
 • Complete entry, take-profit and stop-loss levels in real time
 • Priority support
 
+Get Premium now:
+https://livesignals29.online/premium
+
+Need help? Contact our support:
+https://t.me/Queenisupport_bot
+
 Open the app and choose a Premium plan to continue trading with confidence.`;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
