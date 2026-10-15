@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Loader2, Edit, CheckSquare, Trash2 } from "lucide-react";
 import UserStatsCards, { STAT_LABELS } from "./UserStatsCards";
 import TelegramBroadcastDialog from "./TelegramBroadcastDialog";
+import EmailBlastDialog from "./EmailBlastDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const LIFETIME_END_DATE = "2099-12-31T23:59:59.000Z";
@@ -460,7 +461,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
     if (statIds && !statIds.has(u.id)) return false;
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
-    const tgName = `${telegramByUser[u.id]?.username || ""} ${telegramByUser[u.id]?.first_name || ""}`.trim().toLowerCase();
+    const tgName = (telegramByUser[u.id]?.username || "").toLowerCase();
     return (u.email || "").toLowerCase().includes(q) || (u.full_name || "").toLowerCase().includes(q) || tgName.includes(q.replace(/^@/, ""));
   });
 
@@ -517,6 +518,9 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                 userIds={selectedUsers}
                 connectedIds={new Set(Object.keys(telegramByUser))}
                 onDone={() => setSelectedUsers([])}
+              />
+              <EmailBlastDialog
+                emails={users.filter((u) => selectedUsers.includes(u.id)).map((u) => u.email)}
               />
               <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
                 <DialogTrigger asChild>
@@ -654,12 +658,7 @@ const UserManagement = ({ initialSearch }: { initialSearch?: string } = {}) => {
                               @{telegramByUser[user.id].username}
                             </a>
                           ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Connected
-                              {telegramByUser[user.id].first_name
-                                ? ` • ${telegramByUser[user.id].first_name}`
-                                : " (no username)"}
-                            </span>
+                            <span className="text-xs text-muted-foreground">Connected (no username)</span>
                           )
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
