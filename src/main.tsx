@@ -5,6 +5,7 @@ import "./index.css";
 import "./i18n";
 import { loadGoogleTranslate } from "./lib/googleTranslate";
 import { tryTelegramDeepLogin } from "./lib/telegramDeepLogin";
+import { restoreSession, startSessionBackup } from "./lib/sessionPersistence";
 
 loadGoogleTranslate();
 
@@ -43,6 +44,11 @@ const start = () => {
 };
 
 // Opened from the bot's "Get Premium" button? Sign the user in first (no-op for every other visit).
+// Then bring back the saved login if the phone/WebView wiped the main session storage, so the user stays
+// logged in until they press Logout themselves.
+startSessionBackup();
 tryTelegramDeepLogin()
+  .catch(() => {})
+  .then(() => restoreSession())
   .catch(() => {})
   .finally(start);
