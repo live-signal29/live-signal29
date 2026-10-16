@@ -19,6 +19,7 @@ import {
 import {
   Check,
   CheckSquare,
+  Copy,
   Crown,
   Edit,
   Eye,
@@ -37,6 +38,95 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 import SignalForm from "./SignalForm";
+
+/* =========================================================
+   COPY FOR WHATSAPP CHANNEL
+   Same layout as the Telegram post, in WhatsApp style (*bold*).
+   Admin taps the copy button, then pastes it in the channel.
+========================================================= */
+
+const buildWhatsAppText = (signal: any): string => {
+  const type = String(signal.type || signal.action || signal.direction || "").toUpperCase();
+  const emoji = type === "BUY" ? "💹" : type === "SELL" ? "🔻" : "";
+
+  let t = `*New Signal 🚦*\n`;
+  t += `━━━━━━━━━━━━━━━\n`;
+  t += `📊 *${signal.pair ?? ""} ${type}* ${emoji} (Open)\n\n`;
+  t += `💰 Entry: ${signal.entry ?? "-"}\n`;
+  t += `🎯 TP1: ${signal.tp1 ?? "-"}\n`;
+  if (signal.tp2) t += `🎯 TP2: ${signal.tp2}\n`;
+  if (signal.tp3) t += `🎯 TP3: ${signal.tp3}\n`;
+  if (signal.tp4) t += `🎯 TP4: ${signal.tp4}\n`;
+  t += `✖️ SL: ${signal.sl ?? "-"}\n`;
+  t += `━━━━━━━━━━━━━━━\n`;
+  t += `⏱ Type: ${signal.signal_type || "Scalping"}`;
+  return t;
+};
+
+// Result update (TP / SL hit) in the same wording as the Telegram updates.
+const getUpdateKey = (signal: any): string | null => {
+  if (signal.sl_hit) return "sl_hit";
+  if (signal.tp4_hit) return "tp4_hit";
+  if (signal.tp3_hit) return "tp3_hit";
+  if (signal.tp2_hit) return "tp2_hit";
+  if (signal.tp1_hit) return "tp1_hit";
+  return null;
+};
+
+const buildWhatsAppUpdate = (signal: any): string => {
+  const key = getUpdateKey(signal);
+  if (!key) return "";
+
+  let headline = "";
+  let banner = "🎯";
+  if (key === "tp1_hit") headline = "BOOM 💥 ! TP 1 Hit! 🚀 First Profit Secured ✅";
+  else if (key === "tp2_hit") headline = "BOOM! TP 2 Hit Secured! 💰 Enjoy Profit 💵 ✅✅";
+  else if (key === "tp3_hit") {
+    headline = "AMAZING! TP 3 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+    banner = "🏆";
+  } else if (key === "tp4_hit") {
+    headline = "AMAZING! TP 4 Hit Final target Hit 🎉 Maximum Profit Secured 💵✅";
+    banner = "🏆";
+  } else {
+    // SL hit: breakeven wording when TP1/TP2 was already hit
+    if (signal.tp2_hit) {
+      headline = "Signal Closed at Breakeven after TP2 Hit ✅✅";
+      banner = "⚪";
+    } else if (signal.tp1_hit) {
+      headline = "Signal Closed at Breakeven after TP1 Hit ✅";
+      banner = "⚪";
+    } else {
+      headline = "SL Hit ✖️ - Staying patient for a better entry.";
+      banner = "🙏";
+    }
+  }
+
+  const type = String(signal.type || signal.action || signal.direction || "").toUpperCase();
+  // WhatsApp has no "reply to the signal" here, so the pair is included for context.
+  return `${banner} *${headline}* ${banner}\n📊 ${signal.pair ?? ""} ${type}`.trim();
+};
+
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+};
 
 const SignalsList = () => {
   const queryClient = useQueryClient();
@@ -1257,6 +1347,42 @@ const SignalsList = () => {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1">
+
+                      {/* COPY FOR WHATSAPP */}
+
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={async () => {
+                          const ok = await copyToClipboard(buildWhatsAppText(signal));
+                          ok
+                            ? toast.success("Copied. Paste it in your WhatsApp channel.")
+                            : toast.error("Copy failed.");
+                        }}
+                        className="h-8 w-8 rounded-lg"
+                        title="Copy for WhatsApp"
+                      >
+                        <Copy className="h-3.5 w-3.5 text-green-600" />
+                      </Button>
+
+                      {/* COPY RESULT UPDATE FOR WHATSAPP */}
+
+                      {getUpdateKey(signal) && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={async () => {
+                            const ok = await copyToClipboard(buildWhatsAppUpdate(signal));
+                            ok
+                              ? toast.success("Update copied. Paste it in your WhatsApp channel.")
+                              : toast.error("Copy failed.");
+                          }}
+                          className="h-8 w-8 rounded-lg"
+                          title="Copy result update for WhatsApp"
+                        >
+                          <Copy className="h-3.5 w-3.5 text-amber-600" />
+                        </Button>
+                      )}
 
                       {/* EDIT */}
 
