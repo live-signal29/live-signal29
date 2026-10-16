@@ -320,12 +320,37 @@ async function sendTelegramPhoto(
    NEW SIGNAL FORMAT
 ========================================================= */
 
-function formatSignalMessage(signal: Signal): string {
+function formatSignalMessage(signal: Signal, manualPremium = false): string {
   const rawType = String(
     signal.type || (signal as any).action || (signal as any).direction || ""
   ).toUpperCase();
 
   const directionEmoji = rawType === "BUY" ? "💹" : rawType === "SELL" ? "🔻" : "";
+
+  /*
+   * Manually added PREMIUM signal (Admin Panel -> Quick Signal / Add Signal).
+   * Auto-generated signals never take this path, so they keep the old format.
+   */
+  if (manualPremium) {
+    const premiumEmoji = rawType === "BUY" ? "📈" : rawType === "SELL" ? "📉" : "";
+
+    let pm = `New Signal 📢 (premium)\n`;
+    pm += `━━━━━━━━━━━━━━━━━━\n`;
+    pm += `📊 ${escapeHtml(signal.pair)}  ${escapeHtml(rawType)} ${premiumEmoji}\n`;
+    pm += `                                      (Open)\n\n`;
+    pm += `💰 Entry: ${escapeHtml(signal.entry)}\n`;
+    pm += `🎯 TP1: ${escapeHtml(signal.tp1)}\n`;
+
+    if (signal.tp2) pm += `🎯 TP2: ${escapeHtml(signal.tp2)}\n`;
+    if (signal.tp3) pm += `🎯 TP3: ${escapeHtml(signal.tp3)}\n`;
+    if (signal.tp4) pm += `🎯 TP4: ${escapeHtml(signal.tp4)}\n`;
+
+    pm += `⚠️ SL: ${escapeHtml(signal.sl)}\n`;
+    pm += `━━━━━━━━━━━━━━━━━━\n`;
+    pm += `⏱ Type: ${escapeHtml(signal.signal_type || "Scalping")}\n`;
+
+    return pm;
+  }
 
   let message = `New Signal 🚦\n`;
   message += `━━━━━━━━━━━━━━━━━\n`;
@@ -540,7 +565,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { signal, idea, action, update_type, session_type, stats, force } = body;
+    const { signal, idea, action, update_type, session_type, stats, force, manual } = body;
     const phase = getMarketPhase();
 
     const resolvedAction =
@@ -570,7 +595,10 @@ serve(async (req) => {
           error: `Pair "${signal.pair}" not posted — outside allowed "${phase}" session`,
         };
       } else {
-        const message = formatSignalMessage(signal);
+        const message = formatSignalMessage(
+          signal,
+          manual === true && (signal as any)?.is_premium === true
+        );
         result = await sendTelegramMessage(message);
       }
     } else if (action === "update") {
