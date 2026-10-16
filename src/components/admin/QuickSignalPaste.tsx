@@ -174,7 +174,7 @@ const QuickSignalPaste = () => {
 
       void supabase.functions
         .invoke("telegram-signal-post", {
-          body: { signal: cleanedData, action: "new_signal" },
+          body: { signal: cleanedData, action: "new_signal", manual: true },
         })
         .then(({ data: tgData, error: tgError }) => {
           if (tgError) {
