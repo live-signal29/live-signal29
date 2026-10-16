@@ -21,6 +21,7 @@ import {
   Eye,
   Home,
   KeyRound,
+  MessageSquare,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -104,6 +105,9 @@ const PaymentShareManagement = lazyWithRetry(
 
 const PremiumPayments = lazyWithRetry(
   () => import("@/components/admin/PremiumPayments")
+);
+const PremiumFeedback = lazyWithRetry(
+  () => import("@/components/admin/PremiumFeedback")
 );
 const LicenseOrders = lazyWithRetry(
   () => import("@/components/admin/LicenseOrders")
@@ -194,6 +198,12 @@ const menuItems = [
     label: "Premium Pay",
     icon: Wallet,
     color: "text-emerald-600",
+  },
+  {
+    id: "premium-feedback",
+    label: "Feedback",
+    icon: MessageSquare,
+    color: "text-rose-600",
   },
   {
     id: "licenses",
@@ -849,6 +859,10 @@ const AdminDashboard = () => {
 
           {activeTab === "premium-payments" && (
             <PremiumPayments />
+          )}
+
+          {activeTab === "premium-feedback" && (
+            <PremiumFeedback />
           )}
 
           {activeTab === "licenses" && (
