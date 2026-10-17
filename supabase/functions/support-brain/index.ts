@@ -42,7 +42,7 @@ RULES:
 - If you cannot answer confidently, or the user asks for a human/agent/admin/support person, or is angry/has a payment problem: write a short helpful reply saying the team has been notified, and add the exact token [HANDOFF] at the very end.
 - Otherwise do NOT write [HANDOFF].`;
 
-const HUMAN_WORDS = /\b(human|real person|agent|admin|insan|insaan|banda|bande se|support person|talk to (a )?(person|someone)|refund|scam|fraud|chargeback|paisa|paise wapas|payment (issue|problem)|key (nahi|nahin|not)|nahi mili|not received)\b/i;
+const HUMAN_WORDS = /\b(human|real person|live chat|live support|agent|admin|insan|insaan|banda|bande se|support person|talk to (a )?(person|someone)|refund|scam|fraud|chargeback|paisa|paise wapas|payment (issue|problem)|key (nahi|nahin|not)|nahi mili|not received)\b/i;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -124,10 +124,31 @@ function whoLine(conv: any, sessionId: string): string {
   return `👤 ${name}\n🌐 Source: Website chat${conv.contact ? `\n📨 Contact: <b>${esc(conv.contact)}</b>` : "\n📨 Contact: not given yet"}`;
 }
 
-async function sendHandoffAlert(conv: any, sessionId: string, lastUserMsg: string, aiReply: string) {
+// Last messages of the conversation as HTML for the admin alert (newest kept, cut by whole lines).
+async function transcript(supabase: any, conversationId: string, limit = 12): Promise<string> {
+  const { data } = await supabase
+    .from("support_messages")
+    .select("role, content")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  const lines: string[] = [];
+  let total = 0;
+  for (const m of data ?? []) {
+    const line = `${m.role === "user" ? "🙋 User" : "🤖 AI"}: ${esc(String(m.content).slice(0, 300))}`;
+    if (total + line.length > 2400) break;
+    lines.unshift(line);
+    total += line.length + 1;
+  }
+  return lines.join("\n");
+}
+
+async function sendHandoffAlert(supabase: any, conv: any, sessionId: string, aiDown: boolean) {
+  const chat = await transcript(supabase, conv.id);
   await alertAdmin(
-    `🆘 <b>Live Support — human needed</b>\n\n${whoLine(conv, sessionId)}\n\n` +
-      `<b>User:</b> ${esc(lastUserMsg.slice(0, 400))}\n<b>AI replied:</b> ${esc(aiReply.slice(0, 300))}`
+    `🆘 <b>Live Support — human needed</b>\n\n${whoLine(conv, sessionId)}\n` +
+      (aiDown ? `\n⚠️ <i>AI was unavailable — fallback reply was sent.</i>\n` : "") +
+      `\n<b>Chat:</b>\n${chat}`
   );
 }
 
@@ -171,7 +192,7 @@ Deno.serve(async (req) => {
           display_name: displayName,
           username,
           user_id: body?.user_id && /^[0-9a-f-]{36}$/i.test(String(body.user_id)) ? body.user_id : null,
-          contact: body?.contact ? String(body.contact).slice(0, 120) : null,
+          contact: null,
         })
         .select("*")
         .single();
@@ -182,18 +203,21 @@ Deno.serve(async (req) => {
       conv = created;
     }
 
-    // ---- action: visitor leaves a contact after handoff (website) ----
+    // ---- action: visitor leaves a Telegram @username after handoff (website) ----
     if (body?.action === "contact") {
-      const contact = String(body?.contact ?? "").trim().slice(0, 120);
-      if (!contact) return json({ error: "Contact required" }, 400);
+      const raw = String(body?.contact ?? "").trim();
+      const m = raw.match(/^(?:https?:\/\/t\.me\/)?@?([A-Za-z][A-Za-z0-9_]{4,31})$/);
+      if (!m) return json({ error: "Please enter a valid Telegram @username" }, 400);
+      const contact = "@" + m[1];
       await supabase
         .from("support_conversations")
-        .update({ contact, updated_at: new Date().toISOString() })
+        .update({ contact, status: "handoff", updated_at: new Date().toISOString() })
         .eq("id", conv.id);
+      const chat = await transcript(supabase, conv.id);
       await alertAdmin(
-        `📨 <b>Live Support — contact received</b>\n\n${whoLine({ ...conv, contact }, sessionId)}`
+        `📨 <b>Live Support — contact received</b>\n\n${whoLine({ ...conv, contact }, sessionId)}\n\n<b>Chat:</b>\n${chat || "(no messages)"}`
       );
-      return json({ ok: true });
+      return json({ ok: true, contact });
     }
 
     // ---- normal message ----
@@ -253,7 +277,7 @@ Deno.serve(async (req) => {
       const last = conv.last_handoff_at ? new Date(conv.last_handoff_at).getTime() : 0;
       if (Date.now() - last > HANDOFF_ALERT_COOLDOWN_MS) {
         update.last_handoff_at = nowIso;
-        await sendHandoffAlert({ ...conv, ...update }, sessionId, message, reply);
+        await sendHandoffAlert(supabase, { ...conv, ...update }, sessionId, !aiRaw);
       }
     }
     await supabase.from("support_conversations").update(update).eq("id", conv.id);
