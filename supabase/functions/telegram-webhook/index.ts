@@ -11,6 +11,8 @@ import {
   notifyLicenseLead,
 } from "./license.ts";
 import { sendSignalAccess, signalKeyText } from "./signal.ts";
+import { handleTelegramAuthStart } from "./telegram-auth.ts";
+import { supportAutoReply } from "./support.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -29,8 +31,56 @@ const TRENDO_URL = "https://trendo.com/invite?market=googleplay&code=3317391";
 const GROUP_URL = "https://t.me/livesignals_tradings";
 // Fill this in when available (empty = command shows a support fallback)
 const XM_URL = "";
-// Banner photo shown above the main menu (falls back to a text-only menu if the link doesn't load)
-const BANNER_URL = "https://chinese-bot29.vercel.app/banner.jpg";
+
+// ---- Banner photo shown above the main menu ----
+// The banner link can be changed without redeploying: set bot_secrets key 'banner_url'.
+// Telegram's file_id for that link is cached in bot_secrets ('banner_file_id' = "<url>|<file_id>") so the menu is instant;
+// the cache is only used while it matches the current banner link, so changing the link always refreshes the image.
+const BANNER_FALLBACK_URLS = [
+  "https://raw.githubusercontent.com/live-signal29/chinese-bot/main/public/banner.jpg",
+  "https://chinese-bot29.vercel.app/banner.jpg",
+];
+const BANNER_URL_KEY = "banner_url";
+const BANNER_FILE_KEY = "banner_file_id";
+const bannerDb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+async function loadBannerConfig(): Promise<{ urls: string[]; fileId: string | null }> {
+  let custom: string | null = null;
+  let cached: string | null = null;
+  try {
+    const { data } = await bannerDb
+      .from("bot_secrets")
+      .select("key,value")
+      .in("key", [BANNER_URL_KEY, BANNER_FILE_KEY]);
+    for (const r of (data ?? []) as any[]) {
+      const v = String(r.value ?? "").trim();
+      if (r.key === BANNER_URL_KEY && /^https?:\/\//i.test(v)) custom = v;
+      if (r.key === BANNER_FILE_KEY) cached = v;
+    }
+  } catch (e) {
+    console.error("banner config load failed:", e);
+  }
+  const urls = custom ? [custom, ...BANNER_FALLBACK_URLS.filter((u) => u !== custom)] : BANNER_FALLBACK_URLS;
+  let fileId: string | null = null;
+  if (cached && cached.startsWith(urls[0] + "|")) fileId = cached.slice(urls[0].length + 1) || null;
+  return { urls, fileId };
+}
+
+async function saveBannerFileId(url: string, fileId: string) {
+  try {
+    await bannerDb.from("bot_secrets").upsert({ key: BANNER_FILE_KEY, value: `${url}|${fileId}` }, { onConflict: "key" });
+  } catch (e) {
+    console.error("banner cache save failed:", e);
+  }
+}
+
+async function clearBannerFileId() {
+  try {
+    await bannerDb.from("bot_secrets").delete().eq("key", BANNER_FILE_KEY);
+  } catch (e) {
+    console.error("banner cache clear failed:", e);
+  }
+}
 
 let cachedDbSecret: string | null | undefined;
 async function getWebhookSecret(
@@ -216,6 +266,30 @@ function moreMenuKeyboard() {
 
 const MAIN_MENU_TEXT = `<b>Live Signals</b>\nWelcome back. What would you like to do?`;
 
+// Sends the banner photo with the menu. Uses the cached Telegram file_id when it matches the current banner link (instant),
+// otherwise downloads from the banner links once and caches the new file_id.
+async function sendBannerMenu(chatId: number | string, reply_markup: Record<string, unknown>) {
+  const base = { chat_id: chatId, caption: MAIN_MENU_TEXT, parse_mode: "HTML", reply_markup };
+  const { urls, fileId } = await loadBannerConfig();
+
+  if (fileId) {
+    const res = await tg("sendPhoto", { ...base, photo: fileId });
+    if (res?.ok) return res;
+    await clearBannerFileId(); // stale id -> fall through to the links
+  }
+
+  for (const url of urls) {
+    const res = await tg("sendPhoto", { ...base, photo: url });
+    if (res?.ok) {
+      const sizes = res.result?.photo;
+      const newId = Array.isArray(sizes) ? sizes[sizes.length - 1]?.file_id : null;
+      if (newId) await saveBannerFileId(urls[0], newId);
+      return res;
+    }
+  }
+  return null;
+}
+
 // Banner photo + menu. Falls back to the plain text menu if the banner can't be sent.
 async function showMainMenu(chatId: number | string, messageId?: number) {
   const reply_markup = { inline_keyboard: mainMenuKeyboard() };
@@ -232,13 +306,7 @@ async function showMainMenu(chatId: number | string, messageId?: number) {
     if (edited?.ok) return edited;
   }
 
-  const photo = await tg("sendPhoto", {
-    chat_id: chatId,
-    photo: BANNER_URL,
-    caption: MAIN_MENU_TEXT,
-    parse_mode: "HTML",
-    reply_markup,
-  });
+  const photo = await sendBannerMenu(chatId, reply_markup);
   if (photo?.ok) {
     if (messageId) await tg("deleteMessage", { chat_id: chatId, message_id: messageId });
     return photo;
@@ -1379,6 +1447,12 @@ This will stop copying your trades.`,
       const parts = text.trim().split(/\s+/);
       const payload = parts[1];
 
+      // Website / app "Continue with Telegram" (login or connect Telegram)
+      if (payload?.startsWith("tl_")) {
+        await handleTelegramAuthStart(licenseCtx(supabase), chatId, message?.from, payload.slice(3));
+        return new Response("ok", { status: 200 });
+      }
+
       // App's "Get License Key DM on Telegram" button
       if (payload === "license") {
         await notifyLicenseLead(licenseCtx(supabase), from, chatId, "App • Get License Key DM");
@@ -1455,6 +1529,11 @@ This will stop copying your trades.`,
       }
 
       await showMainMenu(chatId);
+      return new Response("ok", { status: 200 });
+    }
+
+    // ===== AI SUPPORT AUTO-REPLY (free text nothing above handled; private chats only) =====
+    if (text && !text.startsWith("/") && (await supportAutoReply(chatId, message?.chat?.type, from, text))) {
       return new Response("ok", { status: 200 });
     }
 
