@@ -8,6 +8,8 @@ const SESSION_KEY = "ls_support_session";
 const MSGS_KEY = "ls_support_msgs";
 const RATE_URL = "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
 
+const HIDDEN_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/onboarding", "/admin"];
+
 type Msg = { role: "user" | "assistant"; content: string };
 
 const GREETING: Msg = {
@@ -58,6 +60,7 @@ const SupportChatWidget = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [handoff, setHandoff] = useState(false);
+  const [offer, setOffer] = useState(false);
   const [contact, setContact] = useState("");
   const [contactSent, setContactSent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
@@ -85,8 +88,9 @@ const SupportChatWidget = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open, handoff, ended]);
 
-  // Hidden on admin pages
-  if (location.pathname.toLowerCase().startsWith("/admin")) return null;
+  // Hidden on login / signup / onboarding and admin pages
+  const path = location.pathname.toLowerCase();
+  if (HIDDEN_PATHS.some((p) => path === p || path.startsWith(p + "/"))) return null;
 
   const hasConversation = messages.some((m) => m.role === "user");
 
@@ -96,6 +100,7 @@ const SupportChatWidget = () => {
     setMessages([GREETING]);
     setInput("");
     setHandoff(false);
+    setOffer(false);
     setContact("");
     setContactSent(false);
     setContactError("");
@@ -126,10 +131,11 @@ const SupportChatWidget = () => {
     setOpen(false);
   };
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (override?: string) => {
+    const text = (override ?? input).trim();
     if (!text || loading) return;
     setInput("");
+    setOffer(false);
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
     try {
@@ -144,6 +150,7 @@ const SupportChatWidget = () => {
       });
       setMessages((m) => [...m, { role: "assistant", content: data.reply }]);
       if (data.handoff) setHandoff(true);
+      if (data.offer) setOffer(true);
     } catch {
       setMessages((m) => [
         ...m,
@@ -261,6 +268,20 @@ const SupportChatWidget = () => {
                   </div>
                 )}
 
+                {offer && !loading && !handoff && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => send("Haan, team se connect karein")}
+                      className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                    >
+                      ✅ Haan, connect karein
+                    </button>
+                    <button onClick={() => setOffer(false)} className="rounded-full border px-3 py-1.5 text-xs">
+                      Nahi, shukriya
+                    </button>
+                  </div>
+                )}
+
                 {handoff && !contactSent && (
                   <div className="rounded-xl border bg-muted/50 p-3 text-xs">
                     <p className="mb-2">Team aapko Telegram par reply karegi. Apna Telegram @username likhein:</p>
@@ -307,7 +328,7 @@ const SupportChatWidget = () => {
                   className="min-w-0 flex-1 rounded-full border bg-background px-3 py-2 text-sm"
                 />
                 <button
-                  onClick={send}
+                  onClick={() => send()}
                   disabled={loading || !input.trim()}
                   aria-label="Send"
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
