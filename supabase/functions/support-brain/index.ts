@@ -220,6 +220,19 @@ Deno.serve(async (req) => {
       return json({ ok: true, contact });
     }
 
+    // ---- action: visitor closed the chat (website) ----
+    if (body?.action === "close") {
+      const wasHandoff = conv.status === "handoff";
+      await supabase
+        .from("support_conversations")
+        .update({ status: "closed", updated_at: new Date().toISOString() })
+        .eq("id", conv.id);
+      if (wasHandoff) {
+        await alertAdmin(`✅ <b>Live Support — user closed the chat</b>\n\n${whoLine(conv, sessionId)}`);
+      }
+      return json({ ok: true });
+    }
+
     // ---- normal message ----
     const message = String(body?.message ?? "").trim().slice(0, MAX_MESSAGE_LEN);
     if (!message) return json({ error: "Empty message" }, 400);
