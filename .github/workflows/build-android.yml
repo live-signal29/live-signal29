@@ -651,6 +651,48 @@ jobs:
           }
           EOF
 
+      - name: Enable R8 code shrinking + obfuscation (Play "DEX code optimization")
+        run: |
+          # Turn on minify/shrink for the release build (appended last, so it wins over the template default)
+          cat >> android/app/build.gradle << 'EOF'
+
+          android {
+              buildTypes {
+                  release {
+                      minifyEnabled true
+                      shrinkResources true
+                  }
+              }
+          }
+          EOF
+
+          # Keep rules: classes the website / Capacitor call by name must keep their names
+          cat >> android/app/proguard-rules.pro << 'EOF'
+
+          # ---- Website <-> native bridges (called by name from JavaScript) ----
+          -keepattributes *Annotation*,JavascriptInterface,Signature,InnerClasses,EnclosingMethod
+          -keepclassmembers class * {
+              @android.webkit.JavascriptInterface <methods>;
+          }
+          -keep class co.median.android.krkqyaz.MainActivity { *; }
+          -keep class co.median.android.krkqyaz.MainActivity$NativePush { *; }
+          -keep class co.median.android.krkqyaz.MainActivity$NativeBrowser { *; }
+          -keep class co.median.android.krkqyaz.BillingBridge { *; }
+          -keep class co.median.android.krkqyaz.OneSignalApp { *; }
+
+          # ---- Capacitor + plugins (splash screen, AdMob) ----
+          -keep class com.getcapacitor.** { *; }
+          -dontwarn com.getcapacitor.**
+
+          # ---- OneSignal, Play Billing, AdMob (extra safety on top of their own rules) ----
+          -keep class com.onesignal.** { *; }
+          -dontwarn com.onesignal.**
+          -keep class com.android.billingclient.** { *; }
+          -dontwarn com.android.billingclient.**
+          -keep class com.google.android.gms.ads.** { *; }
+          -dontwarn com.google.android.gms.**
+          EOF
+
       - name: Build Release AAB (for Play Store)
         run: cd android && ./gradlew bundleRelease
         env:
