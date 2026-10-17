@@ -50,6 +50,8 @@ const SupportChatWidget = () => {
   const [handoff, setHandoff] = useState(false);
   const [contact, setContact] = useState("");
   const [contactSent, setContactSent] = useState(false);
+  const [contactSending, setContactSending] = useState(false);
+  const [contactError, setContactError] = useState("");
   const [messages, setMessages] = useState<Msg[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(MSGS_KEY) || "[]");
@@ -87,7 +89,6 @@ const SupportChatWidget = () => {
         message: text,
         name: user?.user_metadata?.full_name || user?.user_metadata?.name || null,
         user_id: user?.id || null,
-        contact: user?.email || null,
       });
       setMessages((m) => [...m, { role: "assistant", content: data.reply }]);
       if (data.handoff) setHandoff(true);
@@ -103,12 +104,21 @@ const SupportChatWidget = () => {
 
   const sendContact = async () => {
     const c = contact.trim();
-    if (!c) return;
+    if (contactSending) return;
+    if (!/^(https?:\/\/t\.me\/)?@?[A-Za-z][A-Za-z0-9_]{4,31}$/.test(c)) {
+      setContactError("Sahi Telegram @username likhein (kam az kam 5 haroof).");
+      return;
+    }
+    setContactError("");
+    setContactSending(true);
     try {
-      await callSupport({ channel: "web", session_id: getSessionId(), action: "contact", contact: c });
+      const res = await callSupport({ channel: "web", session_id: getSessionId(), action: "contact", contact: c });
+      if (res?.contact) setContact(res.contact);
       setContactSent(true);
     } catch {
-      /* ignore */
+      setContactError("Send nahi hua. Dobara try karein.");
+    } finally {
+      setContactSending(false);
     }
   };
 
@@ -158,23 +168,34 @@ const SupportChatWidget = () => {
 
             {handoff && !contactSent && (
               <div className="rounded-xl border bg-muted/50 p-3 text-xs">
-                <p className="mb-2">Team aapko reply kare, uske liye Telegram username ya email likhein (optional):</p>
+                <p className="mb-2">Team aapko Telegram par reply karegi. Apna Telegram @username likhein:</p>
                 <div className="flex gap-2">
                   <input
                     value={contact}
-                    onChange={(e) => setContact(e.target.value)}
-                    placeholder="@username ya email"
-                    maxLength={120}
+                    onChange={(e) => {
+                      setContact(e.target.value);
+                      setContactError("");
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && sendContact()}
+                    placeholder="@telegram_username"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    maxLength={60}
                     className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1 text-sm"
                   />
-                  <button onClick={sendContact} className="rounded-md bg-primary px-3 text-primary-foreground">
-                    Send
+                  <button
+                    onClick={sendContact}
+                    disabled={contactSending || !contact.trim()}
+                    className="flex min-w-[64px] items-center justify-center rounded-md bg-primary px-3 text-primary-foreground disabled:opacity-60"
+                  >
+                    {contactSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
                   </button>
                 </div>
+                {contactError && <p className="mt-2 text-destructive">{contactError}</p>}
               </div>
             )}
             {handoff && contactSent && (
-              <p className="text-center text-xs text-muted-foreground">✅ Contact mil gaya. Team jald reply karegi.</p>
+              <p className="text-center text-xs text-muted-foreground">✅ {contact} mil gaya. Team jald Telegram par reply karegi.</p>
             )}
             <div ref={bottomRef} />
           </div>
