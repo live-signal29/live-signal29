@@ -55,35 +55,40 @@ function esc(v: unknown): string {
   return String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Tried in order; the first model that answers wins (so a retired model name can't break support again).
+const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-flash-latest"];
+
 async function askGemini(history: { role: string; content: string }[]): Promise<string | null> {
   if (!GEMINI_API_KEY) return null;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 20000);
-  try {
-    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: { Authorization: `Bearer ${GEMINI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
-        temperature: 0.4,
-        max_tokens: 1024,
-      }),
-    });
-    if (!res.ok) {
-      console.error("support-brain gemini error:", res.status, await res.text());
-      return null;
+  for (const model of GEMINI_MODELS) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);
+    try {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { Authorization: `Bearer ${GEMINI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
+          temperature: 0.4,
+          max_tokens: 2048,
+        }),
+      });
+      if (!res.ok) {
+        console.error(`support-brain gemini error (${model}):`, res.status, await res.text());
+        continue;
+      }
+      const data = await res.json();
+      const out = data?.choices?.[0]?.message?.content;
+      if (typeof out === "string" && out.trim()) return out.trim();
+    } catch (e) {
+      console.error(`support-brain gemini failed (${model}):`, e);
+    } finally {
+      clearTimeout(timer);
     }
-    const data = await res.json();
-    const out = data?.choices?.[0]?.message?.content;
-    return typeof out === "string" && out.trim() ? out.trim() : null;
-  } catch (e) {
-    console.error("support-brain gemini failed:", e);
-    return null;
-  } finally {
-    clearTimeout(timer);
   }
+  return null;
 }
 
 async function alertAdmin(html: string) {
