@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { MessageCircle, Minus, X, Send, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const SUPPORT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/support-brain`;
 const SESSION_KEY = "ls_support_session";
 const MSGS_KEY = "ls_support_msgs";
+const RATE_URL = "https://play.google.com/store/apps/details?id=co.median.android.krkqyaz";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -24,6 +25,15 @@ function getSessionId(): string {
     return id;
   } catch {
     return `web:${Math.random().toString(36).slice(2, 14)}x`;
+  }
+}
+
+function clearStoredChat() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(MSGS_KEY);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -52,6 +62,8 @@ const SupportChatWidget = () => {
   const [contactSent, setContactSent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
   const [contactError, setContactError] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [ended, setEnded] = useState(false);
   const [messages, setMessages] = useState<Msg[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(MSGS_KEY) || "[]");
@@ -63,16 +75,56 @@ const SupportChatWidget = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(MSGS_KEY, JSON.stringify(messages.slice(-30)));
-    } catch {
-      /* ignore */
+    if (!ended) {
+      try {
+        localStorage.setItem(MSGS_KEY, JSON.stringify(messages.slice(-30)));
+      } catch {
+        /* ignore */
+      }
     }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open, handoff]);
+  }, [messages, open, handoff, ended]);
 
   // Hidden on admin pages
   if (location.pathname.toLowerCase().startsWith("/admin")) return null;
+
+  const hasConversation = messages.some((m) => m.role === "user");
+
+  // Fresh chat: new session id + greeting
+  const resetChat = () => {
+    clearStoredChat();
+    setMessages([GREETING]);
+    setInput("");
+    setHandoff(false);
+    setContact("");
+    setContactSent(false);
+    setContactError("");
+    setConfirmClose(false);
+    setEnded(false);
+  };
+
+  // X button: ask first (only if the visitor actually chatted)
+  const requestClose = () => {
+    if (!hasConversation) {
+      setOpen(false);
+      return;
+    }
+    setConfirmClose(true);
+  };
+
+  const endChat = () => {
+    const sessionId = getSessionId();
+    // tell the backend (fire and forget), then forget this chat locally
+    callSupport({ channel: "web", session_id: sessionId, action: "close" }).catch(() => {});
+    clearStoredChat();
+    setConfirmClose(false);
+    setEnded(true);
+  };
+
+  const finishAndClose = () => {
+    resetChat();
+    setOpen(false);
+  };
 
   const send = async () => {
     const text = input.trim();
@@ -135,89 +187,159 @@ const SupportChatWidget = () => {
       )}
 
       {open && (
-        <div className="fixed inset-x-3 bottom-24 z-50 flex max-h-[70vh] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl sm:left-auto sm:right-4 sm:w-96">
+        <div className="fixed inset-x-3 bottom-24 z-50 flex max-h-[70vh] min-h-[320px] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl sm:left-auto sm:right-4 sm:w-96">
+          {/* Header */}
           <div className="flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
             <div>
               <div className="text-sm font-semibold">Live Support</div>
               <div className="text-xs opacity-80">Auto-reply • human help available</div>
             </div>
-            <button onClick={() => setOpen(false)} aria-label="Close">
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              {!ended && (
+                <button onClick={() => setOpen(false)} aria-label="Minimize">
+                  <Minus className="h-5 w-5" />
+                </button>
+              )}
+              <button onClick={ended ? finishAndClose : requestClose} aria-label="Close chat">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto p-3">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
-                    m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                  }`}
-                >
-                  {m.content}
-                </div>
+          {/* Rating screen after the chat is closed */}
+          {ended ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+              <div className="text-3xl">✅</div>
+              <div className="text-base font-semibold">Chat band ho gayi</div>
+              <p className="text-sm text-muted-foreground">
+                Hamari madad ka shukriya! Agar aapko support pasand aayi to app ko rate zaroor karein.
+              </p>
+              <div className="flex gap-1 text-yellow-500">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Star key={i} className="h-5 w-5 fill-current" />
+                ))}
               </div>
-            ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl bg-muted px-3 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              </div>
-            )}
+              <a
+                href={RATE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              >
+                ⭐ App ko rate karein
+              </a>
+              <button
+                onClick={() => {
+                  resetChat();
+                }}
+                className="w-full rounded-full border px-4 py-2 text-sm"
+              >
+                Naya chat shuru karein
+              </button>
+              <button onClick={finishAndClose} className="text-xs text-muted-foreground underline">
+                Close
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="relative flex-1 space-y-2 overflow-y-auto p-3">
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                        m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                      }`}
+                    >
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="rounded-2xl bg-muted px-3 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  </div>
+                )}
 
-            {handoff && !contactSent && (
-              <div className="rounded-xl border bg-muted/50 p-3 text-xs">
-                <p className="mb-2">Team aapko Telegram par reply karegi. Apna Telegram @username likhein:</p>
+                {handoff && !contactSent && (
+                  <div className="rounded-xl border bg-muted/50 p-3 text-xs">
+                    <p className="mb-2">Team aapko Telegram par reply karegi. Apna Telegram @username likhein:</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={contact}
+                        onChange={(e) => {
+                          setContact(e.target.value);
+                          setContactError("");
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && sendContact()}
+                        placeholder="@telegram_username"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        maxLength={60}
+                        className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1 text-sm"
+                      />
+                      <button
+                        onClick={sendContact}
+                        disabled={contactSending || !contact.trim()}
+                        className="flex min-w-[64px] items-center justify-center rounded-md bg-primary px-3 text-primary-foreground disabled:opacity-60"
+                      >
+                        {contactSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+                      </button>
+                    </div>
+                    {contactError && <p className="mt-2 text-destructive">{contactError}</p>}
+                  </div>
+                )}
+                {handoff && contactSent && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    ✅ {contact} mil gaya. Team jald Telegram par reply karegi.
+                  </p>
+                )}
+                <div ref={bottomRef} />
+              </div>
+
+              <div className="flex items-center gap-2 border-t p-2">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && send()}
+                  placeholder="Apna sawal likhein..."
+                  maxLength={600}
+                  className="min-w-0 flex-1 rounded-full border bg-background px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={send}
+                  disabled={loading || !input.trim()}
+                  aria-label="Send"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Close confirmation */}
+          {confirmClose && !ended && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90 p-6">
+              <div className="w-full max-w-xs rounded-2xl border bg-background p-5 text-center shadow-xl">
+                <div className="mb-1 text-base font-semibold">Chat band karein?</div>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Band karne par ye chat khatam ho jayegi aur dobara kholne par naya chat shuru hoga.
+                </p>
                 <div className="flex gap-2">
-                  <input
-                    value={contact}
-                    onChange={(e) => {
-                      setContact(e.target.value);
-                      setContactError("");
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && sendContact()}
-                    placeholder="@telegram_username"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    maxLength={60}
-                    className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1 text-sm"
-                  />
+                  <button onClick={() => setConfirmClose(false)} className="flex-1 rounded-full border px-4 py-2 text-sm">
+                    Cancel
+                  </button>
                   <button
-                    onClick={sendContact}
-                    disabled={contactSending || !contact.trim()}
-                    className="flex min-w-[64px] items-center justify-center rounded-md bg-primary px-3 text-primary-foreground disabled:opacity-60"
+                    onClick={endChat}
+                    className="flex-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
                   >
-                    {contactSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+                    Yes, close
                   </button>
                 </div>
-                {contactError && <p className="mt-2 text-destructive">{contactError}</p>}
               </div>
-            )}
-            {handoff && contactSent && (
-              <p className="text-center text-xs text-muted-foreground">✅ {contact} mil gaya. Team jald Telegram par reply karegi.</p>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          <div className="flex items-center gap-2 border-t p-2">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="Apna sawal likhein..."
-              maxLength={600}
-              className="min-w-0 flex-1 rounded-full border bg-background px-3 py-2 text-sm"
-            />
-            <button
-              onClick={send}
-              disabled={loading || !input.trim()}
-              aria-label="Send"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       )}
     </>
